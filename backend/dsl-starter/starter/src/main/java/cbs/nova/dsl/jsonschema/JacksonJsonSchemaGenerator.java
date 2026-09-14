@@ -44,15 +44,25 @@ public class JacksonJsonSchemaGenerator implements JsonSchemaGenerator {
           .maximumSize(1_024L)
           .build();
 
+  // Parameter-list cache keyed on List.copyOf(parameters). ParameterDescriptor is a record
+  // with value equality, so equal-but-distinct lists produce the same cache key.
+  // Cached values are deeply unmodifiable so callers cannot corrupt the shared entry.
+  private final Cache<List<ParameterDescriptor>, Map<String, Object>> parameterCache = Caffeine
+          .newBuilder()
+          .maximumSize(1_024L)
+          .build();
+
   @Override
-  // TODO: this overload could be memoized too by keying on List.copyOf(parameters) since
-  // ParameterDescriptor is a record with value equality; left uncached for now.
   public Map<String, Object> generateSchema(@Nullable List<ParameterDescriptor> parameters) {
-    Map<String, Object> schema = emptyObjectSchema();
     if (parameters == null || parameters.isEmpty()) {
-      return schema;
+      return emptyObjectSchema();
     }
 
+    return parameterCache.get(List.copyOf(parameters), this::computeParameterSchema);
+  }
+
+  private Map<String, Object> computeParameterSchema(List<ParameterDescriptor> parameters) {
+    Map<String, Object> schema = emptyObjectSchema();
     Map<String, Object> properties = new LinkedHashMap<>();
     List<String> required = new ArrayList<>();
     for (ParameterDescriptor descriptor : parameters) {
@@ -61,7 +71,7 @@ public class JacksonJsonSchemaGenerator implements JsonSchemaGenerator {
     }
     schema.put("properties", properties);
     schema.put("required", required);
-    return schema;
+    return (Map<String, Object>) deepUnmodifiable(schema);
   }
 
   @Override

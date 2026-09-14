@@ -175,6 +175,60 @@ class JsonSchemaGeneratorTest {
     assertThat(schema).doesNotContainKey("properties");
   }
 
+  // --- T496: parameter-list cache + deep-immutability tests ---
+
+  @Test
+  void sameParameterListIsCachedAcrossCalls() {
+    List<ParameterDescriptor> params = List.of(
+            ParameterDescriptor.ofString("name"),
+            ParameterDescriptor.ofNumber("age"));
+    Map<String, Object> first = generator.generateSchema(params);
+    Map<String, Object> second = generator.generateSchema(params);
+    assertThat(first).isEqualTo(second);
+    assertThat(first).isSameAs(second);
+  }
+
+  @Test
+  void equalButDistinctParameterListsHitSameCacheEntry() {
+    List<ParameterDescriptor> first = List.of(
+            ParameterDescriptor.ofString("name"),
+            ParameterDescriptor.ofNumber("age"));
+    List<ParameterDescriptor> second = List.of(
+            new ParameterDescriptor("name", cbs.nova.dsl.ParameterType.STRING, null),
+            new ParameterDescriptor("age", cbs.nova.dsl.ParameterType.NUMBER, null));
+    assertThat(first).isNotSameAs(second).isEqualTo(second);
+
+    Map<String, Object> schema1 = generator.generateSchema(first);
+    Map<String, Object> schema2 = generator.generateSchema(second);
+    assertThat(schema1).isSameAs(schema2);
+  }
+
+  @Test
+  void cachedParameterListSchemaIsDeeplyUnmodifiable() {
+    List<ParameterDescriptor> params = List.of(
+            ParameterDescriptor.ofString("name"),
+            ParameterDescriptor.ofObject("address", Address.class));
+    Map<String, Object> schema = generator.generateSchema(params);
+
+    assertThrows(UnsupportedOperationException.class,
+            () -> schema.put("sneaky", "value"));
+
+    @SuppressWarnings("unchecked")
+    Map<String, Object> properties = (Map<String, Object>) schema.get("properties");
+    @SuppressWarnings("unchecked")
+    Map<String, Object> nameSchema = (Map<String, Object>) properties.get("name");
+    assertThrows(UnsupportedOperationException.class,
+            () -> nameSchema.put("sneaky", "value"));
+
+    @SuppressWarnings("unchecked")
+    List<String> required = (List<String>) schema.get("required");
+    assertThrows(UnsupportedOperationException.class,
+            () -> required.add("sneaky"));
+
+    Map<String, Object> second = generator.generateSchema(params);
+    assertThat(second).isSameAs(schema);
+  }
+
   // --- T423: cache + deep-immutability tests for generateSchema(Class<?>) ---
 
   @Test
