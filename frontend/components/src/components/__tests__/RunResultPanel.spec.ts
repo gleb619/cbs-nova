@@ -17,7 +17,7 @@ function mountPanel(
       output: null,
       status: 'idle',
       ...props,
-    },
+    } as never,
     global: {
       components: { SchemaFormField },
       stubs: {
@@ -319,7 +319,7 @@ describe('RunResultPanel', () => {
   })
 
   it('shows skeleton while schema is loading in Form mode', async () => {
-    const wrapper = mountPanel({ type: 'Process' }, () => new Promise(() => {}))
+    const wrapper = mountPanel({ type: 'Process' }, vi.fn(() => new Promise(() => {})))
     await flushPromises()
 
     await wrapper.find('[data-testid="mode-form"]').trigger('click')

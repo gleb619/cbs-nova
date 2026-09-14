@@ -10,6 +10,7 @@ import ExecutionsListPage from '../index.vue'
 
 interface ExecutionsHarness {
   executions: Ref<Execution[]>
+  filters: Ref<ExecutionFilters>
   loading: Ref<boolean>
   error: Ref<string | null>
   loadExecutions: ReturnType<typeof vi.fn>
@@ -402,7 +403,7 @@ describe('executions/index.vue list page', () => {
 
     const select = wrapper.find('[data-testid="executions-live-polling-interval"]')
     expect(select.exists()).toBe(true)
-    expect(select.element.disabled).toBe(true)
+    expect((select.element as HTMLSelectElement).disabled).toBe(true)
 
     const options = select.findAll('option')
     expect(options.map((o) => ({ value: o.element.value, text: o.text() }))).toEqual([
@@ -417,7 +418,7 @@ describe('executions/index.vue list page', () => {
     await toggle.dispatchEvent(new Event('change', { bubbles: true }))
     await flush()
 
-    expect(select.element.disabled).toBe(false)
+    expect((select.element as HTMLSelectElement).disabled).toBe(false)
 
     wrapper.unmount()
   })

@@ -28,7 +28,7 @@ const KIND_CASES: KindCase[] = [
 ]
 
 function mountLine(props: Record<string, unknown>) {
-  return mount(DiffLine, { props })
+  return mount(DiffLine, { props: props as never })
 }
 
 describe('DiffLine', () => {

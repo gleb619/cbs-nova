@@ -1,6 +1,6 @@
 import { mount } from '@vue/test-utils'
 import { afterEach, beforeAll, describe, expect, it } from 'vitest'
-import type { TransactionExecutionDto, TransactionExecutionStatus } from '../../types/execution'
+import type { TransactionExecutionDto, TransactionExecutionStatus } from '../../../types/execution'
 import ExecutionTimeline from '../ExecutionTimeline.vue'
 
 const baseDate = new Date('2026-01-01T00:00:00.000Z')
@@ -13,10 +13,13 @@ function tx(
   overrides: Partial<TransactionExecutionDto> & { name?: string } = {},
 ): TransactionExecutionDto {
   const name = overrides.name ?? overrides.transactionName ?? 'apply'
-  const { name: _name, transactionName: _txn, ...rest } = overrides
+  const executedAt = overrides.executedAt ?? iso(0)
+  const { name: _name, transactionName: _txn, executedAt: _executedAt, ...rest } = overrides
   return {
     input: undefined,
-    executedAt: iso(0),
+    executedAt,
+    status: 'SUCCESS' as TransactionExecutionStatus,
+    startedAt: executedAt,
     ...rest,
     transactionName: name,
   }
@@ -43,7 +46,7 @@ function mountTimeline(props: Record<string, unknown>) {
     }
     return originalGetBoundingClientRect.call(this)
   }
-  return mount(ExecutionTimeline, { props })
+  return mount(ExecutionTimeline, { props: props as never })
 }
 
 describe('ExecutionTimeline', () => {
@@ -149,7 +152,7 @@ describe('ExecutionTimeline', () => {
     })
 
     const bars = wrapper.findAll('[data-testid^="execution-timeline-bar-"]')
-    const widths = bars.map((bar) => parseFloat(bar.element.style.width))
+    const widths = bars.map((bar) => parseFloat((bar.element as HTMLElement).style.width))
     expect(widths[0]).toBeCloseTo(800 / 3, 0)
     expect(widths[1]).toBeCloseTo(800, 0)
   })

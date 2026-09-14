@@ -7,7 +7,7 @@ import HelperSearchPanel from '../dsl/HelperSearchPanel.vue'
 // lets us drive form interactions and emitted events through the wrapper itself,
 // which the sibling Teleport-based spec drives solely via document queries.
 const mountPanel = (props: Record<string, unknown>) =>
-  mount(HelperSearchPanel, { props, global: { stubs: { teleport: true } } })
+  mount(HelperSearchPanel, { props: props as never, global: { stubs: { teleport: true } } })
 
 const results: ObjectSearchResult[] = [
   {

@@ -21,7 +21,7 @@ function execution(overrides: Partial<ExecutionDetail> = {}): ExecutionDetail {
 
 function mountSummary(props: Record<string, unknown> = {}, slots: Record<string, string> = {}) {
   return mount(ExecutionSummary, {
-    props,
+    props: props as never,
     slots,
     global: { components: { ExecutionsStatusBadge } },
   })

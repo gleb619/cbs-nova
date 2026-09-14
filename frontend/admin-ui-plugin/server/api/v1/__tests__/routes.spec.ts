@@ -16,7 +16,7 @@ vi.mock('~/server/utils/httpClient', () => ({
 // files use explicit imports). Mock just those three on the real `h3` module
 // so each test can configure what the route sees; `defineEventHandler` and
 // everything else pass through unmocked.
-type RouterParamMap = Record<string, string | undefined>
+type RouterParamMap = Record<string, string | string[] | undefined>
 let routerParams: RouterParamMap = {}
 let bodyValue: unknown = {}
 let queryValue: Record<string, unknown> = {}

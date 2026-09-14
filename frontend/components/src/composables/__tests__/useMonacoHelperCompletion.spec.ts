@@ -118,7 +118,7 @@ function createFakeMonaco(options: FakeMonacoOptions = {}): {
 
   function triggerProvider(model: unknown, position: unknown) {
     if (!stored) throw new Error('no provider registered')
-    return stored.provideCompletionItems(model, position)
+    return stored.provideCompletionItems(model, position) as Promise<unknown>
   }
 
   return { monaco, registerSpy, disposeSpy, triggerProvider }

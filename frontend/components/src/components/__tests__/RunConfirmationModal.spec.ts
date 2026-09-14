@@ -7,7 +7,7 @@ const flushPromises = () => new Promise((resolve) => setTimeout(resolve, 0))
 
 const mountModal = (props: Record<string, unknown>) =>
   mount(RunConfirmationModal, {
-    props,
+    props: props as never,
     global: { stubs: { teleport: true } },
     attachTo: document.body,
   })
@@ -51,7 +51,7 @@ describe('RunConfirmationModal', () => {
     wrapper = mountModal({ show: true, payload: null })
 
     const confirmButton = wrapper.find('[data-testid="run-confirmation-modal-confirm"]')
-    expect(confirmButton.element.disabled).toBe(true)
+    expect((confirmButton.element as HTMLButtonElement).disabled).toBe(true)
     // The enable-on-acknowledge round trip is covered by the "emits confirm when
     // acknowledged" and "does not emit confirm when not acknowledged" tests below —
     // this component is Teleported and stubbed here, and VTU's teleport stub doesn't

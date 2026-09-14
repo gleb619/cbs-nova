@@ -3,7 +3,11 @@
     "target": "ESNext",
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "lib": [
+      "ESNext",
+      "DOM",
+      "DOM.Iterable"
+    ],
     "strict": true,
     "noEmit": true,
     "esModuleInterop": true,
@@ -12,14 +16,20 @@
     "resolveJsonModule": true,
     "declaration": false,
     "sourceMap": false,
-    "types": ["vitest/globals"]
+    "types": [
+      "vitest/globals"
+    ]
   },
   "include": [
     "src/**/*.ts",
     "src/**/*.vue",
+    "src/**/*.d.ts",
     "vite.config.ts",
     "vitest.config.ts",
     "vitest.setup.ts"
   ],
-  "exclude": ["node_modules", "dist"]
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
 }

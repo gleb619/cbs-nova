@@ -34,7 +34,7 @@ export function useSchedules() {
   }
 
   async function create(payload: CreateSchedulePayload) {
-    await api.createSchedule(payload as Record<string, unknown>)
+    await api.createSchedule(payload as unknown as Record<string, unknown>)
     await load()
   }
 

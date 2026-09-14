@@ -7,7 +7,7 @@ const flushPromises = () => new Promise((resolve) => setTimeout(resolve, 0))
 
 const mountModal = (props: Record<string, unknown>) =>
   mount(DeleteDraftConfirmationModal, {
-    props,
+    props: props as never,
     global: { stubs: { teleport: true } },
     attachTo: document.body,
   })

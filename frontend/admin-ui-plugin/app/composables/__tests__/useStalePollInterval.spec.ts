@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 type RuntimeConfig = {
-  public?: {
+  public: {
     stalePollMs?: number
   }
 }

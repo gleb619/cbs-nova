@@ -13,13 +13,13 @@ const props = withDefaults(
     items: NavItem[]
     title?: string
     shortTitle?: string
-    linkComponent?: 'a' | unknown
+    linkComponent?: string | object
     activeClass?: string
   }>(),
   {
     title: 'CBS Nova',
     shortTitle: 'N',
-    linkComponent: 'a',
+    linkComponent: () => 'a',
     activeClass: 'bg-primary-500 text-white',
   },
 )

@@ -25,7 +25,7 @@ const isEmpty = computed(() => {
   return false
 })
 
-const showError = computed(() => Boolean(props.required) && touched.value && isEmpty.value)
+function showError() { return Boolean(props.required) && touched.value && isEmpty.value }
 
 function emitValue(value: unknown) {
   emit('update:modelValue', value)
@@ -66,8 +66,8 @@ function onBlur() {
       :data-testid="`input-field-${props.name}`"
       :value="(props.modelValue as string | undefined) ?? ''"
       class="px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-      :class="showError ? 'border-red-400' : 'border-gray-300'"
-      :aria-invalid="showError"
+      :class="showError() ? 'border-red-400' : 'border-gray-300'"
+      :aria-invalid="showError()"
       @input="onTextInput"
       @blur="onBlur"
     >
@@ -79,8 +79,8 @@ function onBlur() {
       :data-testid="`input-field-${props.name}`"
       :value="(props.modelValue as number | undefined) ?? ''"
       class="px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-      :class="showError ? 'border-red-400' : 'border-gray-300'"
-      :aria-invalid="showError"
+      :class="showError() ? 'border-red-400' : 'border-gray-300'"
+      :aria-invalid="showError()"
       @input="onTextInput"
       @blur="onBlur"
     >
@@ -110,12 +110,12 @@ function onBlur() {
       rows="4"
       :placeholder="normalizedType === 'array' ? 'JSON array' : 'JSON object'"
       class="px-3 py-2 border rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
-      :class="showError ? 'border-red-400' : 'border-gray-300'"
-      :aria-invalid="showError"
+      :class="showError() ? 'border-red-400' : 'border-gray-300'"
+      :aria-invalid="showError()"
       @input="onJsonInput"
       @blur="onBlur"
     />
 
-    <span v-if="showError" class="text-xs text-red-600">{{ props.name }} is required</span>
+    <span v-if="showError()" class="text-xs text-red-600">{{ props.name }} is required</span>
   </div>
 </template>

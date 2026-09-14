@@ -65,10 +65,7 @@ declare const useCookie: UseCookieFactory | undefined
 const useBodyEditorStorage = createNamespacedLocalStorageState('cbs-nova:body-editor')
 
 const tab = useBodyEditorStorage<BodyEditorTab>('active-tab', 'structure', {
-  useCookie:
-    typeof useCookie !== 'undefined'
-      ? (name, options) => useCookie<BodyEditorTab>(name, options)
-      : undefined,
+  useCookie: typeof useCookie !== 'undefined' ? useCookie : undefined,
   read: (raw) => {
     if (raw === null) return undefined
     try {

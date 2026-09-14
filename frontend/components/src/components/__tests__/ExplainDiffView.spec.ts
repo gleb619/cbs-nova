@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import ExplainDiffView from '../runner/ExplainDiffView.vue'
 
 function mountExplainDiffView(props: Record<string, unknown>) {
-  return mount(ExplainDiffView, { props })
+  return mount(ExplainDiffView, { props: props as never })
 }
 
 afterEach(() => {

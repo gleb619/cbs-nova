@@ -1,9 +1,10 @@
 import type { Execution, ExecutionDetail, TransactionExecutionDto } from '@cbs/components/types'
+import type { TransactionExecutionStatus } from '@cbs/components/types/execution'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useExecutionsApi } from '../useExecutionsApi'
 
 describe('useExecutionsApi', () => {
-  const fetchMock = vi.mocked($fetch)
+  const fetchMock = vi.mocked($fetch as unknown as import("vitest").Mock)
 
   beforeEach(() => {
     fetchMock.mockReset()
@@ -128,6 +129,8 @@ describe('useExecutionsApi', () => {
         transactionName: 'apply',
         input: { amount: 100 },
         executedAt: '2026-01-01T00:00:00Z',
+        status: 'SUCCESS' as TransactionExecutionStatus,
+        startedAt: '2026-01-01T00:00:00Z',
       },
     ]
     fetchMock.mockResolvedValueOnce(response)

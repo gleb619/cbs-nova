@@ -265,8 +265,8 @@ describe('executions/[id].vue run-again button', () => {
   it('renders ExecutionsExecutionTrace when the detail payload carries trace steps', async () => {
     harness.selectedExecution.value = detail({
       trace: [
-        { id: '0', stepType: 'Helper', name: 'lookup', isCompensation: false },
-        { id: '1', stepType: 'Transaction', name: 'apply', isCompensation: false },
+        { id: '0', stepType: 'Helper', name: 'lookup', status: 'Completed', isCompensation: false },
+        { id: '1', stepType: 'Transaction', name: 'apply', status: 'Completed', isCompensation: false },
       ],
     })
 
@@ -285,8 +285,8 @@ describe('executions/[id].vue run-again button', () => {
   it('renders CompensationLane with compensation steps when present', async () => {
     harness.selectedExecution.value = detail({
       trace: [
-        { id: '0', stepType: 'Helper', name: 'lookup', isCompensation: false },
-        { id: '1', stepType: 'Process', name: 'rolled back', isCompensation: true },
+        { id: '0', stepType: 'Helper', name: 'lookup', status: 'Completed', isCompensation: false },
+        { id: '1', stepType: 'Process', name: 'rolled back', status: 'Compensated', isCompensation: true },
       ],
     })
 

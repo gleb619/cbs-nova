@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import {afterEach, beforeEach, describe, expect, it, vi, type Mock} from 'vitest'
 import { useExecutions } from '../useExecutions'
 
 // useExecutions now resolves the stale-poll interval through the shared
@@ -32,13 +32,13 @@ const { executionEventsState, useExecutionEventsMock } = vi.hoisted(() => {
     },
     simulateOpen: () => {
       state.status.value = 'open'
-      state.openHandlers.forEach((h) => {
+      state.openHandlers.forEach((h: () => void) => {
         h()
       })
     },
     simulateError: () => {
       state.status.value = 'error'
-      state.errorHandlers.forEach((h) => {
+      state.errorHandlers.forEach((h: (err?: Event) => void) => {
         h()
       })
     },
@@ -500,9 +500,9 @@ describe('useExecutions', () => {
     })
 
     it('startPolling defaults to the resolved stalePollMs, not 3000', async () => {
-      vi.mocked(useRuntimeConfig as never).mockReturnValue({
+      vi.mocked(useRuntimeConfig as Mock).mockReturnValue({
         public: { stalePollMs: 7000 },
-      } as ReturnType<typeof useRuntimeConfig>)
+      } as unknown as ReturnType<typeof useRuntimeConfig>)
       const detail = {
         id: 'e1',
         entity: 'ent',
@@ -534,9 +534,9 @@ describe('useExecutions', () => {
       vi.useFakeTimers()
       // speed up the default 5s stale poll interval so tests can drive
       // tick transitions without sleeping for seconds of fake time.
-      vi.mocked(useRuntimeConfig as never).mockReturnValue({
+      vi.mocked(useRuntimeConfig as Mock).mockReturnValue({
         public: { stalePollMs: 1000 },
-      } as ReturnType<typeof useRuntimeConfig>)
+      } as unknown as ReturnType<typeof useRuntimeConfig>)
     })
 
     it('loadExecutions auto-starts stale polling for Stale rows and exposes isStalePolling', async () => {
@@ -720,9 +720,9 @@ describe('useExecutions', () => {
   describe('list polling (T269)', () => {
     beforeEach(() => {
       vi.useFakeTimers()
-      vi.mocked(useRuntimeConfig as never).mockReturnValue({
+      vi.mocked(useRuntimeConfig as Mock).mockReturnValue({
         public: { stalePollMs: 1000 },
-      } as ReturnType<typeof useRuntimeConfig>)
+      } as unknown as ReturnType<typeof useRuntimeConfig>)
     })
 
     const flushAll = async () => {
@@ -894,7 +894,9 @@ describe('useExecutions', () => {
       await flushAll()
       expect(list).toHaveBeenCalledTimes(2)
 
-      resolveSecond?.([runningRow])
+      if (resolveSecond) {
+        ;(resolveSecond as any)([runningRow])
+      }
       await userLoad
       expect(list).toHaveBeenCalledTimes(2)
       expect(loading.value).toBe(false)
@@ -904,9 +906,9 @@ describe('useExecutions', () => {
   describe('SSE events', () => {
     beforeEach(() => {
       vi.useFakeTimers()
-      vi.mocked(useRuntimeConfig as never).mockReturnValue({
+      vi.mocked(useRuntimeConfig as Mock).mockReturnValue({
         public: { stalePollMs: 1000 },
-      } as ReturnType<typeof useRuntimeConfig>)
+      } as unknown as ReturnType<typeof useRuntimeConfig>)
     })
 
     const flushAll = async () => {

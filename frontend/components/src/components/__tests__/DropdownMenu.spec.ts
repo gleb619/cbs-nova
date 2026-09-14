@@ -1,4 +1,4 @@
-import { mount } from '@vue/test-utils'
+import { mount, type VueWrapper } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { nextTick } from 'vue'
 import DropdownMenu from '../dropdownMenu/DropdownMenu.vue'
@@ -12,22 +12,22 @@ const items: DropdownMenuItem[] = [
 
 // The component moves real DOM focus between trigger and items; mount attached
 // to the document so document.activeElement assertions work in happy-dom.
-let wrapper: ReturnType<typeof mountMenu> | null = null
+let wrapper: VueWrapper | null = null
 
 const mountMenu = (props: Record<string, unknown> = {}) => {
   wrapper = mount(DropdownMenu, {
-    props: { label: 'Actions', items, ...props },
+    props: { label: 'Actions', items, ...props } as never,
     attachTo: document.body,
   })
   return wrapper
 }
 
-const triggerOf = (w: ReturnType<typeof mountMenu>) =>
+const triggerOf = (w: VueWrapper) =>
   w.get('[data-testid="dropdown-menu-trigger"]')
 
-const menuOf = (w: ReturnType<typeof mountMenu>) => w.get('[role="menu"]')
+const menuOf = (w: VueWrapper) => w.get('[role="menu"]')
 
-const itemOf = (w: ReturnType<typeof mountMenu>, value: string) =>
+const itemOf = (w: VueWrapper, value: string) =>
   w.get(`[data-testid="dropdown-menu-item-${value}"]`)
 
 const activeElement = () => document.activeElement as HTMLElement
@@ -204,7 +204,7 @@ describe('DropdownMenu', () => {
     await triggerOf(w).trigger('click')
     expect(w.find('[role="menu"]').exists()).toBe(true)
 
-    w.vm.close()
+    ;(w.vm as any).close()
     await nextTick()
 
     expect(w.find('[role="menu"]').exists()).toBe(false)

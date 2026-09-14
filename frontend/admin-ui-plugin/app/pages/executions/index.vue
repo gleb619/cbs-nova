@@ -35,7 +35,7 @@ await loadExecutions()
 
 function resolveStalePollMs(): number {
   const cfg = useRuntimeConfig()
-  return cfg.public?.stalePollMs ?? 5000
+  return (cfg.public as { stalePollMs?: number }).stalePollMs ?? 5000
 }
 
 const defaultPollMs = resolveStalePollMs()

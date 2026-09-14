@@ -204,7 +204,10 @@ function diffAst(
       name: baseline.name,
       kind: baseline.kind,
       success: baseline.success,
-      children: (baseline.children ?? []).map((c) => diffAst(c, undefined, 'removed')),
+      children: (baseline.children ?? []).flatMap((c) => {
+          const n = diffAst(c, undefined, 'removed')
+          return n ? [n] : []
+        }),
       propertyChanges: [],
     }
   }
@@ -214,7 +217,10 @@ function diffAst(
       name: current.name,
       kind: current.kind,
       success: current.success,
-      children: (current.children ?? []).map((c) => diffAst(undefined, c, 'added')),
+      children: (current.children ?? []).flatMap((c) => {
+          const n = diffAst(undefined, c, 'added')
+          return n ? [n] : []
+        }),
       propertyChanges: [],
     }
   }

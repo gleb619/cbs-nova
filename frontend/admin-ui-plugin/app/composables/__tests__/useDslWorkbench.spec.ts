@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { ValidationError } from '~/types'
 import { compileDiagnosticsToValidationErrors, useDslWorkbench } from '../useDslWorkbench'
+
+function setValidationErrors(wb: ReturnType<typeof useDslWorkbench>, errors: ValidationError[]) {
+  ;(wb.state.value as unknown as { validationErrors: ValidationError[] }).validationErrors = errors
+}
 
 // The composable under test imports the real useDslApi module, so the module
 // itself must be mocked (the globalThis.useDslApi stub from vitest.setup.ts is
@@ -397,9 +402,9 @@ describe('useDslWorkbench', () => {
       const wb = useDslWorkbench()
       await wb.loadConstructs()
       wb.selectConstruct('c2')
-      wb.state.value.validationErrors = [
+      setValidationErrors(wb, [
         { field: 'old', message: 'old', severity: 'error' as const },
-      ]
+      ])
 
       await wb.publishConstruct()
 

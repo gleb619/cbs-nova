@@ -18,7 +18,7 @@ function step(overrides: Partial<TraceStep> = {}): TraceStep {
 
 function mountCompensationLane(props: Record<string, unknown>) {
   return mount(CompensationLane, {
-    props,
+    props: props as never,
     global: { components: { ExecutionsTraceNode, ExecutionsStatusBadge } },
   })
 }

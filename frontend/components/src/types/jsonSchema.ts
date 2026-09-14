@@ -8,5 +8,9 @@ export interface JsonSchema {
   items?: JsonSchema
   enum?: unknown[]
   default?: unknown
+  inputSchema?: JsonSchema | null
+  outputSchema?: JsonSchema | null
+  inputType?: string | null
+  outputType?: string | null
   // deferred: oneOf, anyOf, allOf, $ref, format, minLength, pattern, minimum, maximum
 }

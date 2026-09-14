@@ -1,6 +1,6 @@
 import { mount } from '@vue/test-utils'
 import { afterEach, describe, expect, it } from 'vitest'
-import type { HelperCatalogEntry } from '../../types/dsl'
+import type { HelperCatalogEntry } from '../../../types/dsl'
 import HelperCatalog from '../HelperCatalog.vue'
 
 const helpers: HelperCatalogEntry[] = [
@@ -21,7 +21,7 @@ const helpers: HelperCatalogEntry[] = [
   },
 ]
 
-const mountCatalog = (props: Record<string, unknown>) => mount(HelperCatalog, { props })
+const mountCatalog = (props: Record<string, unknown>) => mount(HelperCatalog, { props: props as never })
 
 describe('HelperCatalog', () => {
   let wrapper: ReturnType<typeof mountCatalog>

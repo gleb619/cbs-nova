@@ -161,11 +161,11 @@ export function useWorkbenchDraft(name: string | Ref<string> = ''): UseWorkbench
   loadFor(currentName.value)
 
   // Event-driven side effects replace the previous `watch` usage.
-  const stopNameListener = emitter.on('nameChanged', (next) => {
+  const stopNameListener = emitter.on('nameChanged', (next: string) => {
     loadFor(next)
   })
 
-  const stopBodyListener = emitter.on('bodyChanged', (value) => {
+  const stopBodyListener = emitter.on('bodyChanged', (value: string) => {
     clearSaveTimer()
     if (!currentName.value) return
     if (value === savedBody.value) return

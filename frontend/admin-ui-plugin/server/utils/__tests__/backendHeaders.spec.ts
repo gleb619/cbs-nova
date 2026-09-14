@@ -1,7 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import {beforeEach, describe, expect, it, vi, type Mock} from 'vitest'
 import { buildBackendHeaders } from '../backendHeaders'
 
-type HeaderMap = Record<string, string | undefined>
+type HeaderMap = Record<string, string | string[] | undefined>
 let headerMap: HeaderMap = {}
 
 const makeEvent = (headers: HeaderMap = {}) => {
@@ -14,7 +14,7 @@ const makeEvent = (headers: HeaderMap = {}) => {
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 const setApiKey = (value: string) => {
-  vi.mocked(useRuntimeConfig as never).mockReturnValue({
+  vi.mocked(useRuntimeConfig as Mock).mockReturnValue({
     backendBaseUrl: 'http://localhost:8090',
     backendApiKey: value,
     backendTimeoutMs: 10000,

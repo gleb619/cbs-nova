@@ -7,6 +7,7 @@ describe('useLogger', () => {
   beforeEach(() => {
     window.localStorage.clear()
     spies = {
+      trace: vi.spyOn(console, 'trace').mockImplementation(() => {}),
       debug: vi.spyOn(console, 'debug').mockImplementation(() => {}),
       info: vi.spyOn(console, 'info').mockImplementation(() => {}),
       warn: vi.spyOn(console, 'warn').mockImplementation(() => {}),

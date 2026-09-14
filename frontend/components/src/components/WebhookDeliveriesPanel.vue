@@ -29,15 +29,15 @@ const rows = computed<WebhookDeliveryRecord[]>(() => page.value?.items ?? [])
 
 const rangeText = computed(() => {
   if (!page.value || page.value.items.length === 0) return ''
-  const start = page.value.offset + 1
-  const end = page.value.offset + page.value.items.length
-  return `${start}–${end} of ${page.value.total}`
+  const start = (page.value!.offset ?? 0) + 1
+  const end = (page.value!.offset ?? 0) + page.value.items.length
+  return `${start}–${end} of ${page.value!.total ?? 0}`
 })
 
 const canGoPrev = computed(() => offset.value > 0)
 const canGoNext = computed(() => {
   if (!page.value) return false
-  return page.value.offset + page.value.items.length < page.value.total
+  return (page.value!.offset + page.value.items.length) < (page.value!.total ?? 0)
 })
 
 async function load(targetOffset: number) {

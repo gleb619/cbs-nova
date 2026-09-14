@@ -1,8 +1,8 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import {beforeEach, describe, expect, it, vi, type Mock} from 'vitest'
 import { useAuthConfig, useBackendConfig } from '../config'
 
 const setRuntimeConfig = (overrides: Record<string, unknown> = {}) => {
-  vi.mocked(useRuntimeConfig as never).mockReturnValue({
+  vi.mocked(useRuntimeConfig as Mock).mockReturnValue({
     backendBaseUrl: 'http://localhost:8090',
     backendApiKey: '',
     backendTimeoutMs: 10000,
@@ -17,7 +17,7 @@ const setRuntimeConfig = (overrides: Record<string, unknown> = {}) => {
     authSessionRotateOnRefresh: '',
     public: { appName: 'CBS Nova Admin', authEnabled: false },
     ...overrides,
-  } as ReturnType<typeof useRuntimeConfig>)
+  } as unknown as ReturnType<typeof useRuntimeConfig>)
 }
 
 describe('useBackendConfig', () => {

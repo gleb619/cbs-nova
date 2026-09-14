@@ -17,7 +17,7 @@ function node(overrides: Partial<CallNode> = {}): CallNode {
 
 function mountCallTreeNode(props: Record<string, unknown>) {
   return mount(CallTreeNode, {
-    props,
+    props: props as never,
     global: { components: { ExternalCallsBadge } },
   })
 }

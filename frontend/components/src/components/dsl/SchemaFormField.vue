@@ -34,7 +34,7 @@ const isEmpty = computed(() => {
   return false
 })
 
-const showError = computed(() => Boolean(props.required) && touched.value && isEmpty.value)
+function showError() { return Boolean(props.required) && touched.value && isEmpty.value }
 
 const enumOptions = computed(() => props.schema.enum ?? [])
 
@@ -153,8 +153,8 @@ if (fieldEvents) {
       :value="(modelValue as string | undefined) ?? ''"
       :data-testid="`schema-field-${name}`"
       class="w-full px-2 py-1 text-xs border border-line rounded-sm focus:outline-none focus:ring-1 focus:ring-accent-500 disabled:opacity-60 disabled:bg-surface"
-      :class="showError ? 'border-danger' : ''"
-      :aria-invalid="showError"
+      :class="showError() ? 'border-danger' : ''"
+      :aria-invalid="showError()"
       :aria-required="required"
       :disabled="readonly"
       @input="onTextInput"
@@ -169,8 +169,8 @@ if (fieldEvents) {
       :value="(modelValue as number | undefined) ?? ''"
       :data-testid="`schema-field-${name}`"
       class="w-full px-2 py-1 text-xs border border-line rounded-sm focus:outline-none focus:ring-1 focus:ring-accent-500 disabled:opacity-60 disabled:bg-surface"
-      :class="showError ? 'border-danger' : ''"
-      :aria-invalid="showError"
+      :class="showError() ? 'border-danger' : ''"
+      :aria-invalid="showError()"
       :aria-required="required"
       :disabled="readonly"
       @input="onNumberInput"
@@ -241,6 +241,6 @@ if (fieldEvents) {
       <span v-if="jsonError" class="text-xs text-danger">Invalid JSON: {{ jsonError }}</span>
     </label>
 
-    <span v-if="showError" class="text-xs text-danger">{{ name }} is required</span>
+    <span v-if="showError()" class="text-xs text-danger">{{ name }} is required</span>
   </div>
 </template>

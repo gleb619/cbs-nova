@@ -1,23 +1,24 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import {beforeEach, describe, expect, it, vi, type Mock} from 'vitest'
 import { useAuth } from '../useAuth'
 
 describe('useAuth', () => {
   beforeEach(() => {
-    vi.mocked(useRuntimeConfig as never).mockReturnValue({
+    vi.mocked(useRuntimeConfig as Mock).mockReturnValue({
       public: { authEnabled: true },
-    } as ReturnType<typeof useRuntimeConfig>)
+    } as unknown as ReturnType<typeof useRuntimeConfig>)
   })
 
   it('enabled reflects public.authEnabled', async () => {
-    vi.mocked(useRuntimeConfig as never).mockReturnValue({
+    vi.mocked(useRuntimeConfig as Mock).mockReturnValue({
       public: { authEnabled: false },
-    } as ReturnType<typeof useRuntimeConfig>)
+    } as unknown as ReturnType<typeof useRuntimeConfig>)
     const auth = await useAuth()
     expect(auth.enabled).toBe(false)
   })
 
   it('login navigates to /api/v1/auth/login with current path as redirect', async () => {
-    vi.mocked(useRoute as never).mockReturnValue({ path: '/runner' } as ReturnType<typeof useRoute>)
+    const routeMock = useRoute as unknown as Mock
+    vi.mocked(routeMock).mockReturnValue({ path: '/runner' } as ReturnType<typeof useRoute>)
     const auth = await useAuth()
     auth.login()
     expect(navigateTo).toHaveBeenCalledWith(
@@ -27,7 +28,8 @@ describe('useAuth', () => {
   })
 
   it('logout POSTs to /api/v1/auth/logout with X-Requested-With and navigates to the returned redirect', async () => {
-    vi.mocked($fetch as never).mockImplementation((url: string) =>
+    const fetchMock = $fetch as unknown as Mock
+    vi.mocked(fetchMock).mockImplementation((url: string) =>
       Promise.resolve(
         url === '/api/v1/auth/logout'
           ? { redirect: '/signed-out' }
@@ -47,7 +49,8 @@ describe('useAuth', () => {
   })
 
   it('logout falls back to / navigation on failure', async () => {
-    vi.mocked($fetch as never).mockImplementation((url: string) =>
+    const fetchMock = $fetch as unknown as Mock
+    vi.mocked(fetchMock).mockImplementation((url: string) =>
       url === '/api/v1/auth/logout'
         ? Promise.reject(new Error('boom'))
         : Promise.resolve({ authenticated: false, user: null }),
@@ -58,7 +61,8 @@ describe('useAuth', () => {
   })
 
   it('fetches session and populates user/authenticated before returning', async () => {
-    vi.mocked($fetch as never).mockResolvedValueOnce({
+    const fetchMock = $fetch as unknown as Mock
+    vi.mocked(fetchMock).mockResolvedValueOnce({
       authenticated: true,
       user: { sub: 'u-1', preferred_username: 'devuser' },
     })
@@ -69,12 +73,13 @@ describe('useAuth', () => {
   })
 
   it('fetches the session exactly once per mount', async () => {
-    vi.mocked($fetch as never).mockResolvedValue({ authenticated: false, user: null })
+    const fetchMock = $fetch as unknown as Mock
+    vi.mocked(fetchMock).mockResolvedValue({ authenticated: false, user: null })
 
     await useAuth()
 
     const sessionCalls = vi
-      .mocked($fetch)
+      .mocked(fetchMock)
       .mock.calls.filter(([url]) => url === '/api/v1/auth/session')
     expect(sessionCalls).toHaveLength(1)
   })

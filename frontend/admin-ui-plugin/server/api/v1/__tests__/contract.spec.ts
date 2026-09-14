@@ -52,7 +52,7 @@ type RouteCase = {
   /** Human-readable route label for test titles. */
   name: string
   /** Nitro handler under test. */
-  handler: (event: unknown) => Promise<unknown>
+  handler: (event: any) => Promise<unknown>
   /** Canonical backend response fixture. */
   fixture: unknown
   /** JSON-path-ish dotted paths to strip before comparison (intentional deltas). */

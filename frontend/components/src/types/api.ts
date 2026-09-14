@@ -16,7 +16,10 @@ type Schemas = components['schemas']
 export type CompileDiagnostic = Schemas['CompileDiagnostic']
 
 /** Generic paged response wrapper (`items` is untyped in the spec — see Page<T> below). */
-export type PageResponse = Schemas['PageResponse']
+export type PageResponse = Omit<Schemas['PageResponse'], 'total' | 'offset'> & {
+  total: number
+  offset: number
+}
 
 /**
  * `PageResponse` as actually returned by list endpoints: the spec leaves

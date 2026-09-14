@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import {beforeEach, describe, expect, it, vi, type Mock} from 'vitest'
 
 let queryValue: Record<string, unknown> = {}
 let cookieJar: Record<string, string | undefined> = {}
@@ -80,7 +80,7 @@ const sessionHandler = (await import('../session.get')).default
 const fakeEvent = {} as Parameters<typeof loginHandler>[0]
 
 function setRuntimeConfig(overrides: Record<string, unknown> = {}) {
-  vi.mocked(useRuntimeConfig as never).mockReturnValue({
+  vi.mocked(useRuntimeConfig as Mock).mockReturnValue({
     backendBaseUrl: 'http://localhost:8090',
     backendApiKey: '',
     backendTimeoutMs: 10000,
@@ -95,8 +95,8 @@ function setRuntimeConfig(overrides: Record<string, unknown> = {}) {
     authSessionRotateOnRefresh: '',
     public: { appName: 'CBS Nova Admin', authEnabled: false },
     ...overrides,
-  } as ReturnType<typeof useRuntimeConfig>)
-  vi.mocked(useAuthConfig as never).mockReturnValue({
+  } as unknown as ReturnType<typeof useRuntimeConfig>)
+  vi.mocked(useAuthConfig as Mock).mockReturnValue({
     issuer: overrides.authIssuer ?? '',
     clientId: overrides.authClientId ?? 'cbs-nova-bff',
     clientSecret: overrides.authClientSecret ?? '',

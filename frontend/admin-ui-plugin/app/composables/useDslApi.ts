@@ -135,7 +135,7 @@ export function useDslApi() {
     const query = dryRun ? { dryRun: 'true' } : {}
     return $fetch('/api/v1/dsl/definitions/import', {
       method: 'POST',
-      body: bundle,
+      body: bundle as any,
       query,
     })
   }
