@@ -13,6 +13,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import org.springframework.http.MediaType;
@@ -20,23 +21,13 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import tools.jackson.databind.ObjectMapper;
 
 @Slf4j
+@RequiredArgsConstructor
 public final class ApiKeyAuthFilter extends OncePerRequestFilter {
 
   private final @Nullable String configuredApiKey;
   private final @Nullable ApiKeyStore apiKeyStore;
   private final ObjectMapper objectMapper;
   private final AtomicBoolean deprecationLogged = new AtomicBoolean(false);
-
-  // TODO: replace with lombok's constructor and spring config class
-  public ApiKeyAuthFilter(@Nullable String configuredApiKey,
-          @Nullable ApiKeyStore apiKeyStore,
-          ObjectMapper objectMapper) {
-    this.configuredApiKey = (configuredApiKey != null && !configuredApiKey.isBlank())
-            ? configuredApiKey
-            : null;
-    this.apiKeyStore = apiKeyStore;
-    this.objectMapper = objectMapper;
-  }
 
   @Override
   protected void doFilterInternal(
@@ -54,7 +45,7 @@ public final class ApiKeyAuthFilter extends OncePerRequestFilter {
       return;
     }
 
-    if (configuredApiKey != null
+    if (hasConfiguredApiKey()
             && MessageDigest.isEqual(headerValue.getBytes(StandardCharsets.UTF_8),
                     configuredApiKey.getBytes(StandardCharsets.UTF_8))) {
       if (deprecationLogged.compareAndSet(false, true)) {
@@ -80,7 +71,11 @@ public final class ApiKeyAuthFilter extends OncePerRequestFilter {
   }
 
   private boolean authRequired() {
-    return configuredApiKey != null || apiKeyStore != null;
+    return hasConfiguredApiKey() || apiKeyStore != null;
+  }
+
+  private boolean hasConfiguredApiKey() {
+    return configuredApiKey != null && !configuredApiKey.isBlank();
   }
 
   private void writeUnauthorized(HttpServletResponse response, String message) throws IOException {
