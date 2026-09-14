@@ -194,7 +194,7 @@ class DslRuntimeResourceTest {
 
   @Test
   void explainReturns200WithReport() throws Exception {
-    ExplainReport report = new ExplainReport("P", "desc", "graph TD\n  P[P]");
+    ExplainReport report = new ExplainReport("P", "desc", "graph TD\n  P[P]", List.of());
     doReturn(report).when(dslRuntime).explain(eq("P"), any());
 
     mockMvc

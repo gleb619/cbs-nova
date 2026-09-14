@@ -8,6 +8,7 @@ import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.core.pipe.DslPipeContext;
 import cbs.nova.starter.core.pipe.DslPipeStage;
+import cbs.nova.starter.core.pipe.ExplainGraphAccumulators;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 
@@ -38,7 +39,13 @@ public final class ExecutionTreeStage implements DslPipeStage {
       return next.proceed(wrappedContext);
     } finally {
       collector.finish();
-      context.setAttribute(StarterConstants.AST_TREE_ATTRIBUTE, collector.tree().orElse(null));
+      var accumulator = ExplainGraphAccumulators.resolve(context);
+      if (accumulator.isPresent()) {
+        collector.tree().ifPresent(accumulator.get()::astTree);
+      } else {
+        context.setAttribute(StarterConstants.AST_TREE_ATTRIBUTE,
+                collector.tree().orElse(null));
+      }
     }
   }
 }

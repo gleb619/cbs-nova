@@ -57,7 +57,7 @@ public class MathHelper implements Executable<MathIn, MathOut> {
     String description = MathModeExplanation.describe(mode, input);
     String mermaid = MathModeExplanation.diagram(mode);
     return ExplainReports.truncateTo(
-            new ExplainReport("math", description, mermaid), ExplainBudget.of(ctx));
+            new ExplainReport("math", description, mermaid, List.of()), ExplainBudget.of(ctx));
   }
 
   private static @NonNull Result<MathOut> sum(List<Number> numbers) {
