@@ -8,7 +8,7 @@ import cbs.nova.dsl.DslErrorCode;
 import cbs.nova.dsl.exception.DslException;
 import cbs.nova.starter.converter.DefaultDslExceptionMapper;
 import cbs.nova.starter.converter.DslExceptionMapper;
-import cbs.nova.starter.model.ErrorResponse;
+import cbs.nova.dsl.model.ErrorResponse;
 import io.sentry.Sentry;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
@@ -41,6 +41,7 @@ class DefaultDslExceptionMapperTest {
                     + "\"message\":\"dsl failed\","
                     + "\"entityName\":null,"
                     + "\"runId\":\"run-abc\","
+                    + "\"correlationId\":null,"
                     + "\"exceptionId\":\"" + response.getBody().getExceptionId() + "\"}");
   }
 
@@ -58,6 +59,7 @@ class DefaultDslExceptionMapperTest {
                     + "\"message\":\"bad arg\","
                     + "\"entityName\":null,"
                     + "\"runId\":null,"
+                    + "\"correlationId\":null,"
                     + "\"exceptionId\":null}");
   }
 
@@ -74,6 +76,7 @@ class DefaultDslExceptionMapperTest {
                     + "\"message\":\"boom\","
                     + "\"entityName\":null,"
                     + "\"runId\":null,"
+                    + "\"correlationId\":null,"
                     + "\"exceptionId\":null}");
   }
 

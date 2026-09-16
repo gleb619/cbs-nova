@@ -1,4 +1,4 @@
-import {afterEach, beforeEach, describe, expect, it, vi, type Mock} from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
 import { useExecutions } from '../useExecutions'
 
 // useExecutions now resolves the stale-poll interval through the shared

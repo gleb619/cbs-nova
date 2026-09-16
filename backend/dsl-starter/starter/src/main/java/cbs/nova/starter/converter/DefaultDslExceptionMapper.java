@@ -1,7 +1,7 @@
 package cbs.nova.starter.converter;
 
 import cbs.nova.dsl.exception.DslException;
-import cbs.nova.starter.model.ErrorResponse;
+import cbs.nova.dsl.model.ErrorResponse;
 import io.sentry.Sentry;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.context.request.WebRequest;
@@ -13,19 +13,19 @@ public class DefaultDslExceptionMapper implements DslExceptionMapper {
     if (exception instanceof DslException dsl) {
       capture(dsl, dsl.runId());
       return ResponseEntity.unprocessableEntity()
-              .body(new ErrorResponse(dsl.code().name(), dsl.getMessage(), null, dsl.runId(),
-                      dsl.exceptionId(), null));
+              .body(new ErrorResponse(dsl.code().name(), dsl.getMessage(), null, dsl.runId(), null,
+                      dsl.exceptionId(), null, null, null));
     }
     if (exception instanceof IllegalArgumentException illegalArgument) {
       return ResponseEntity.badRequest()
-              .body(new ErrorResponse("BAD_REQUEST", illegalArgument.getMessage(), null, null,
-                      null, null));
+              .body(new ErrorResponse("BAD_REQUEST", illegalArgument.getMessage(), null, null, null,
+                      null, null, null, null));
     }
     String runId = runIdFrom(request);
     capture(exception, runId);
     return ResponseEntity.internalServerError()
             .body(new ErrorResponse("INTERNAL_ERROR", exception.getMessage(), null, null, null,
-                    null));
+                    null, null, null, null));
   }
 
   private static String runIdFrom(WebRequest request) {

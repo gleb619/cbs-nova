@@ -7,7 +7,7 @@ import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.model.ExplainReport;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.PreviewErrorCode;
-import cbs.nova.dsl.PreviewErrorDetail;
+import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.dsl.model.PreviewReport;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
@@ -111,8 +111,8 @@ class DevDslRuntimeErrorHandlingTest {
     assertThat(report.output()).isNull();
     assertThat(report.errors()).isNotEmpty();
 
-    PreviewErrorDetail firstError = report.errors().get(0);
-    assertThat(firstError.code()).isEqualTo(PreviewErrorCode.HELPER_NOT_FOUND);
+    ErrorResponse firstError = report.errors().get(0);
+    assertThat(firstError.code()).isEqualTo(PreviewErrorCode.HELPER_NOT_FOUND.name());
     assertThat(firstError.context()).containsEntry("name", MISSING_HELPER);
     assertThat(firstError.suggestion()).isNotBlank()
             .containsIgnoringCase("register");

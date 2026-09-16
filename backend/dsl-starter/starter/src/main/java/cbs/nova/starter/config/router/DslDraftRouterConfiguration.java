@@ -1,7 +1,7 @@
 package cbs.nova.starter.config.router;
 
 import cbs.nova.starter.controller.DslDraftHandler;
-import cbs.nova.starter.model.ErrorResponse;
+import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.starter.model.PageResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;

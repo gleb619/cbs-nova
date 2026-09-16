@@ -2,7 +2,7 @@ package cbs.nova.starter;
 
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.DslRuntime;
-import cbs.nova.dsl.PreviewErrorDetail;
+import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.model.ExplainGraphReport;
 import cbs.nova.dsl.model.ExplainReport;
@@ -39,7 +39,7 @@ public final class DevDslRuntime implements DslRuntime {
     if (traceReport != null) {
       return toExplainReport(traceReport);
     }
-    PreviewErrorDetail error = PreviewErrorHandler.from(result.cause(), name);
+    ErrorResponse error = PreviewErrorHandler.from(result.cause(), name);
     return new ExplainReport(
             name,
             "Entity: " + name + " — explain failed: " + error.message(),

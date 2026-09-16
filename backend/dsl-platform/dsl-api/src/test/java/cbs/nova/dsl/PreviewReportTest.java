@@ -84,14 +84,15 @@ class PreviewReportTest {
 
   @Test
   void errorsFieldExposesPopulatedList() {
-    var detail = new PreviewErrorDetail(PreviewErrorCode.HELPER_NOT_FOUND, "missing",
+    var detail = new ErrorResponse(PreviewErrorCode.HELPER_NOT_FOUND.name(), "missing", "Missing",
+            null, null, null, null,
             "register the helper", Map.of("name", "Missing"));
     var report = new PreviewReport(
             "p", ExecutionMode.PREVIEW, false, null, List.of(), List.of(), Map.of(), null,
             List.of(), null, List.of(detail));
 
     assertThat(report.errors()).containsExactly(detail);
-    assertThat(report.errors().get(0).code()).isEqualTo(PreviewErrorCode.HELPER_NOT_FOUND);
+    assertThat(report.errors().get(0).code()).isEqualTo(PreviewErrorCode.HELPER_NOT_FOUND.name());
   }
 
   @Test

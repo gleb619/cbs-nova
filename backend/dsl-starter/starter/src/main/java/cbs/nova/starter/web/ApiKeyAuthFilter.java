@@ -1,7 +1,7 @@
 package cbs.nova.starter.web;
 
 import cbs.nova.starter.core.StarterConstants;
-import cbs.nova.starter.model.ErrorResponse;
+import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.starter.service.ApiKeyStore;
 import cbs.nova.starter.service.ApiKeyStore.StoredKeyMatch;
 import jakarta.servlet.FilterChain;
@@ -82,6 +82,6 @@ public final class ApiKeyAuthFilter extends OncePerRequestFilter {
     response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
     response.setContentType(MediaType.APPLICATION_JSON_VALUE);
     objectMapper.writeValue(response.getOutputStream(),
-            new ErrorResponse("UNAUTHORIZED", message, null, null, null, null));
+            new ErrorResponse("UNAUTHORIZED", message, null, null, null, null, null, null, null));
   }
 }

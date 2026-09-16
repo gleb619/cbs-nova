@@ -266,7 +266,13 @@ describe('executions/[id].vue run-again button', () => {
     harness.selectedExecution.value = detail({
       trace: [
         { id: '0', stepType: 'Helper', name: 'lookup', status: 'Completed', isCompensation: false },
-        { id: '1', stepType: 'Transaction', name: 'apply', status: 'Completed', isCompensation: false },
+        {
+          id: '1',
+          stepType: 'Transaction',
+          name: 'apply',
+          status: 'Completed',
+          isCompensation: false,
+        },
       ],
     })
 
@@ -286,7 +292,13 @@ describe('executions/[id].vue run-again button', () => {
     harness.selectedExecution.value = detail({
       trace: [
         { id: '0', stepType: 'Helper', name: 'lookup', status: 'Completed', isCompensation: false },
-        { id: '1', stepType: 'Process', name: 'rolled back', status: 'Compensated', isCompensation: true },
+        {
+          id: '1',
+          stepType: 'Process',
+          name: 'rolled back',
+          status: 'Compensated',
+          isCompensation: true,
+        },
       ],
     })
 

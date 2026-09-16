@@ -7,7 +7,13 @@ vi.mock('../useDslApi', () => {
   const pauseSchedule = vi.fn()
   const resumeSchedule = vi.fn()
   return {
-    useDslApi: () => ({ listSchedules, createSchedule, deleteSchedule, pauseSchedule, resumeSchedule }),
+    useDslApi: () => ({
+      listSchedules,
+      createSchedule,
+      deleteSchedule,
+      pauseSchedule,
+      resumeSchedule,
+    }),
   }
 })
 
@@ -173,7 +179,11 @@ describe('useSchedules', () => {
   it('pause(definition) calls pauseSchedule, marks pausing, then reloads', async () => {
     const api = getApiMocks()
     let resolve: (value?: unknown) => void = () => {}
-    api.pauseSchedule.mockReturnValue(new Promise((r) => { resolve = r }))
+    api.pauseSchedule.mockReturnValue(
+      new Promise((r) => {
+        resolve = r
+      }),
+    )
     api.listSchedules.mockResolvedValue([])
 
     const { pausing, pause } = useSchedules()
@@ -195,7 +205,11 @@ describe('useSchedules', () => {
   it('resume(definition) calls resumeSchedule, marks pausing, then reloads', async () => {
     const api = getApiMocks()
     let resolve: (value?: unknown) => void = () => {}
-    api.resumeSchedule.mockReturnValue(new Promise((r) => { resolve = r }))
+    api.resumeSchedule.mockReturnValue(
+      new Promise((r) => {
+        resolve = r
+      }),
+    )
     api.listSchedules.mockResolvedValue([])
 
     const { pausing, resume } = useSchedules()

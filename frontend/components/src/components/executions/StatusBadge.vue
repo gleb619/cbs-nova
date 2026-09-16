@@ -17,7 +17,6 @@ const styles: Record<ExecutionStatus, string> = {
   FAILED: 'bg-red-500 text-white',
   RUNNING: 'bg-blue-500 text-white animate-pulse',
 }
-
 </script>
 
 <template>

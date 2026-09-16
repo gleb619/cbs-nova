@@ -7,7 +7,7 @@ import static cbs.nova.starter.core.StarterConstants.COMPILE_DIAGNOSTIC_SEVERITY
 import static cbs.nova.starter.core.StarterConstants.COMPILE_DIAGNOSTIC_SOURCE_MAX_LENGTH;
 
 import cbs.nova.starter.core.StarterConstants;
-import cbs.nova.starter.model.CompileDiagnostic;
+import cbs.nova.dsl.model.CompileDiagnostic;
 import cbs.nova.starter.model.CompileDiagnosticRecord;
 import cbs.nova.starter.model.CompileDiagnosticSource;
 import java.sql.Timestamp;

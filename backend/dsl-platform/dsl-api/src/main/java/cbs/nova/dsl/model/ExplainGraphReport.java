@@ -3,7 +3,7 @@ package cbs.nova.dsl.model;
 import cbs.nova.dsl.CallNode;
 import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.ExecutableDescriptor;
-import cbs.nova.dsl.PreviewErrorDetail;
+
 import cbs.nova.dsl.PreviewMetricsSnapshot;
 import java.util.List;
 import java.util.Map;
@@ -29,7 +29,7 @@ public record ExplainGraphReport(
         @Nullable CallNode astTree,
         @NonNull List<Map<String, Object>> dryRunLogs,
         @Nullable PreviewMetricsSnapshot metrics,
-        @Nullable List<PreviewErrorDetail> errors,
+        @Nullable List<ErrorResponse> errors,
         @NonNull List<ExplainGraphReport> children,
         @Nullable String mermaidDiagram) {
 

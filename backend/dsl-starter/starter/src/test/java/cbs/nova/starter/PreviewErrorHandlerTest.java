@@ -3,7 +3,7 @@ package cbs.nova.starter;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.PreviewErrorCode;
-import cbs.nova.dsl.PreviewErrorDetail;
+import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.dsl.exception.DslCompensationException;
 import cbs.nova.dsl.exception.DslEntityNotFoundException;
 import cbs.nova.dsl.exception.DslValidationException;
@@ -20,9 +20,9 @@ class PreviewErrorHandlerTest {
   void noSuchBeanDefinitionExceptionMapsToHelperNotFound() {
     var ex = new NoSuchBeanDefinitionException("MyHelper");
 
-    PreviewErrorDetail detail = PreviewErrorHandler.from(ex, "MyHelper");
+    ErrorResponse detail = PreviewErrorHandler.from(ex, "MyHelper");
 
-    assertThat(detail.code()).isEqualTo(PreviewErrorCode.HELPER_NOT_FOUND);
+    assertThat(detail.code()).isEqualTo(PreviewErrorCode.HELPER_NOT_FOUND.name());
     assertThat(detail.message()).contains("MyHelper");
     assertThat(detail.suggestion()).containsIgnoringCase("register");
     assertThat(detail.context()).containsEntry("name", "MyHelper");
@@ -32,9 +32,9 @@ class PreviewErrorHandlerTest {
   void sqlExceptionMapsToExternalCallFailedWithSqlInContext() {
     var ex = new SQLException("syntax error at or near \"FROM\"", "42601", 1001);
 
-    PreviewErrorDetail detail = PreviewErrorHandler.from(ex, "ChargeCard");
+    ErrorResponse detail = PreviewErrorHandler.from(ex, "ChargeCard");
 
-    assertThat(detail.code()).isEqualTo(PreviewErrorCode.EXTERNAL_CALL_FAILED);
+    assertThat(detail.code()).isEqualTo(PreviewErrorCode.EXTERNAL_CALL_FAILED.name());
     assertThat(detail.context()).containsEntry("sql", "syntax error at or near \"FROM\"");
     assertThat(detail.context()).containsEntry("sqlState", "42601");
     assertThat(detail.context()).containsEntry("errorCode", 1001);
@@ -47,9 +47,9 @@ class PreviewErrorHandlerTest {
     var ex = new ClassCastException(
             "class java.lang.Integer cannot be cast to class java.lang.String");
 
-    PreviewErrorDetail detail = PreviewErrorHandler.from(ex, "CustomerLookup");
+    ErrorResponse detail = PreviewErrorHandler.from(ex, "CustomerLookup");
 
-    assertThat(detail.code()).isEqualTo(PreviewErrorCode.INPUT_VALIDATION_ERROR);
+    assertThat(detail.code()).isEqualTo(PreviewErrorCode.INPUT_VALIDATION_ERROR.name());
     assertThat(detail.message()).contains("Integer", "String");
     assertThat(detail.context()).containsEntry("exceptionType",
             "java.lang.ClassCastException");
@@ -61,9 +61,9 @@ class PreviewErrorHandlerTest {
   void timeoutExceptionMapsToTimeoutExceededWithSuggestion() {
     var ex = new TimeoutException("preview exceeded 5s budget");
 
-    PreviewErrorDetail detail = PreviewErrorHandler.from(ex, "LongRunning");
+    ErrorResponse detail = PreviewErrorHandler.from(ex, "LongRunning");
 
-    assertThat(detail.code()).isEqualTo(PreviewErrorCode.TIMEOUT_EXCEEDED);
+    assertThat(detail.code()).isEqualTo(PreviewErrorCode.TIMEOUT_EXCEEDED.name());
     assertThat(detail.message()).contains("5s budget");
     assertThat(detail.suggestion()).containsIgnoringCase("timeout");
     assertThat(detail.context()).containsEntry("name", "LongRunning");
@@ -73,9 +73,9 @@ class PreviewErrorHandlerTest {
   void genericRuntimeExceptionMapsToUnknownError() {
     var ex = new RuntimeException("something exploded");
 
-    PreviewErrorDetail detail = PreviewErrorHandler.from(ex, "MysteryProcess");
+    ErrorResponse detail = PreviewErrorHandler.from(ex, "MysteryProcess");
 
-    assertThat(detail.code()).isEqualTo(PreviewErrorCode.UNKNOWN_ERROR);
+    assertThat(detail.code()).isEqualTo(PreviewErrorCode.UNKNOWN_ERROR.name());
     assertThat(detail.message()).isEqualTo("something exploded");
     assertThat(detail.context()).containsEntry("exceptionType",
             "java.lang.RuntimeException");
@@ -85,8 +85,8 @@ class PreviewErrorHandlerTest {
 
   @Test
   void nullCauseProducesUnknownError() {
-    PreviewErrorDetail detail = PreviewErrorHandler.from(null, "X");
-    assertThat(detail.code()).isEqualTo(PreviewErrorCode.UNKNOWN_ERROR);
+    ErrorResponse detail = PreviewErrorHandler.from(null, "X");
+    assertThat(detail.code()).isEqualTo(PreviewErrorCode.UNKNOWN_ERROR.name());
     assertThat(detail.context()).containsEntry("name", "X");
   }
 
@@ -94,9 +94,9 @@ class PreviewErrorHandlerTest {
   void dslValidationExceptionMapsToDslCompilationError() {
     var ex = new DslValidationException("run-1", "missing required field");
 
-    PreviewErrorDetail detail = PreviewErrorHandler.from(ex, "BadProcess");
+    ErrorResponse detail = PreviewErrorHandler.from(ex, "BadProcess");
 
-    assertThat(detail.code()).isEqualTo(PreviewErrorCode.DSL_COMPILATION_ERROR);
+    assertThat(detail.code()).isEqualTo(PreviewErrorCode.DSL_COMPILATION_ERROR.name());
     assertThat(detail.message()).isEqualTo("missing required field");
     assertThat(detail.context()).containsEntry("runId", "run-1");
     assertThat(detail.context()).containsEntry("name", "BadProcess");
@@ -106,9 +106,9 @@ class PreviewErrorHandlerTest {
   void dslCompensationExceptionMapsToCompensationError() {
     var ex = new DslCompensationException("run-2", "saga rollback failed", null);
 
-    PreviewErrorDetail detail = PreviewErrorHandler.from(ex, "RefundFlow");
+    ErrorResponse detail = PreviewErrorHandler.from(ex, "RefundFlow");
 
-    assertThat(detail.code()).isEqualTo(PreviewErrorCode.COMPENSATION_ERROR);
+    assertThat(detail.code()).isEqualTo(PreviewErrorCode.COMPENSATION_ERROR.name());
     assertThat(detail.message()).contains("saga rollback failed");
     assertThat(detail.context()).containsEntry("runId", "run-2");
     assertThat(detail.context()).containsEntry("name", "RefundFlow");
@@ -118,9 +118,9 @@ class PreviewErrorHandlerTest {
   void dslEntityNotFoundHelperPrefixMapsToHelperNotFound() {
     var ex = new DslEntityNotFoundException("run-3", "Helper not found: MyMissingHelper");
 
-    PreviewErrorDetail detail = PreviewErrorHandler.from(ex, "MyMissingHelper");
+    ErrorResponse detail = PreviewErrorHandler.from(ex, "MyMissingHelper");
 
-    assertThat(detail.code()).isEqualTo(PreviewErrorCode.HELPER_NOT_FOUND);
+    assertThat(detail.code()).isEqualTo(PreviewErrorCode.HELPER_NOT_FOUND.name());
     assertThat(detail.context()).containsEntry("name", "MyMissingHelper");
     assertThat(detail.suggestion()).containsIgnoringCase("register");
   }
@@ -129,9 +129,9 @@ class PreviewErrorHandlerTest {
   void illegalArgumentExceptionUnknownEntityPrefixMapsToHelperNotFound() {
     var ex = new IllegalArgumentException("No DSL entity registered: LostEntity");
 
-    PreviewErrorDetail detail = PreviewErrorHandler.from(ex, "LostEntity");
+    ErrorResponse detail = PreviewErrorHandler.from(ex, "LostEntity");
 
-    assertThat(detail.code()).isEqualTo(PreviewErrorCode.HELPER_NOT_FOUND);
+    assertThat(detail.code()).isEqualTo(PreviewErrorCode.HELPER_NOT_FOUND.name());
     assertThat(detail.context()).containsEntry("name", "LostEntity");
     assertThat(detail.suggestion()).containsIgnoringCase("register");
   }
@@ -140,9 +140,9 @@ class PreviewErrorHandlerTest {
   void fromOverloadWithoutEntityNameStillProducesCode() {
     var ex = new TimeoutException("timed out");
 
-    PreviewErrorDetail detail = PreviewErrorHandler.from(ex);
+    ErrorResponse detail = PreviewErrorHandler.from(ex);
 
-    assertThat(detail.code()).isEqualTo(PreviewErrorCode.TIMEOUT_EXCEEDED);
+    assertThat(detail.code()).isEqualTo(PreviewErrorCode.TIMEOUT_EXCEEDED.name());
     assertThat(detail.context()).doesNotContainKey("name");
   }
 }

@@ -59,7 +59,7 @@ public record PreviewReport(
     CallNode astTree,
     List<Map<String, Object>> dryRunLogs,
     PreviewMetricsSnapshot metrics,
-    List<PreviewErrorDetail> errors
+    List<ErrorResponse> errors
 ) {}
 ```
 

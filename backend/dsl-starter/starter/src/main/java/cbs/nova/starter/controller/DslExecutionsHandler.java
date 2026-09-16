@@ -20,7 +20,7 @@ import cbs.nova.dsl.transaction.TransactionExecution;
 import cbs.nova.starter.config.router.DslExecutionsRouterConfiguration;
 import cbs.nova.starter.converter.RequestQueryConverter;
 import cbs.nova.starter.core.StarterConstants;
-import cbs.nova.starter.model.ErrorResponse;
+import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.starter.model.ExecutionDto;
 import cbs.nova.starter.model.PageResponse;
 import cbs.nova.starter.controller.Pagination;
@@ -194,8 +194,8 @@ public class DslExecutionsHandler {
     return runRepository.findByRunId(id)
             .map(run -> ServerResponse.ok().body(ExecutionDto.fromDetail(run, objectMapper)))
             .orElse(ServerResponse.status(HttpStatus.NOT_FOUND)
-                    .body(new ErrorResponse("NOT_FOUND", "Execution run not found: " + id,
-                            null, id, null, null)));
+                    .body(new ErrorResponse("NOT_FOUND", "Execution run not found: " + id, null, id,
+                            null, null, null, null, null)));
   }
 
   /**
@@ -213,8 +213,8 @@ public class DslExecutionsHandler {
     String id = request.pathVariable("id");
     if (runRepository.findByRunId(id).isEmpty()) {
       return ServerResponse.status(HttpStatus.NOT_FOUND)
-              .body(new ErrorResponse("NOT_FOUND", "Execution run not found: " + id,
-                      null, id, null, null));
+              .body(new ErrorResponse("NOT_FOUND", "Execution run not found: " + id, null, id, null,
+                      null, null, null, null));
     }
     List<TransactionExecutionDto> transactions = transactionExecutionRepository.findByRunId(id)
             .stream()
@@ -272,8 +272,8 @@ public class DslExecutionsHandler {
       case NOT_FOUND -> {
         audit(request, id, StarterConstants.OUTCOME_FAILURE, Map.of("reason", "NOT_FOUND"));
         yield ServerResponse.status(HttpStatus.NOT_FOUND)
-                .body(new ErrorResponse("NOT_FOUND", "Execution run not found: " + id,
-                        null, id, null, null));
+                .body(new ErrorResponse("NOT_FOUND", "Execution run not found: " + id, null, id,
+                        null, null, null, null, null));
       }
       case NOT_CANCELLABLE -> {
         audit(request, id, StarterConstants.OUTCOME_FAILURE,
@@ -283,7 +283,7 @@ public class DslExecutionsHandler {
                 .body(new ErrorResponse("CONFLICT",
                         "Execution run is not cancellable: " + id + " (status "
                                 + result.currentStatus() + ")",
-                        null, id, null, null));
+                        null, id, null, null, null, null, null));
       }
       case CANCELLED -> {
         audit(request, id, StarterConstants.OUTCOME_SUCCESS, null);

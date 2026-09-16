@@ -2,7 +2,7 @@ package cbs.nova.dsl.model;
 
 import cbs.nova.dsl.CallNode;
 import cbs.nova.dsl.ExecutionMode;
-import cbs.nova.dsl.PreviewErrorDetail;
+
 import cbs.nova.dsl.PreviewMetricsSnapshot;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -21,7 +21,7 @@ public record PreviewReport(
         @Nullable CallNode astTree,
         @NonNull List<Map<String, Object>> dryRunLogs,
         @Nullable PreviewMetricsSnapshot metrics,
-        @Nullable List<PreviewErrorDetail> errors) {
+        @Nullable List<ErrorResponse> errors) {
 
   public PreviewReport {
     dryRunLogs = dryRunLogs == null ? List.of() : List.copyOf(dryRunLogs);

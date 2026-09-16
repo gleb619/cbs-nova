@@ -76,7 +76,7 @@ class ExplainGraphReportTest {
   @Test
   void listComponentsAreCopiedFromMutableSources() {
     var dryRunLogs = new ArrayList<Map<String, Object>>();
-    var errors = new ArrayList<cbs.nova.dsl.PreviewErrorDetail>();
+    var errors = new ArrayList<ErrorResponse>();
     var children = new ArrayList<ExplainGraphReport>();
     var report = new ExplainGraphReport(
             "n", "d", List.of(), List.of(), Map.of(),

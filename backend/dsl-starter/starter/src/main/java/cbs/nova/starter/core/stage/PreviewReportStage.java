@@ -2,7 +2,7 @@ package cbs.nova.starter.core.stage;
 
 import cbs.nova.dsl.CallNode;
 import cbs.nova.dsl.ExecutionMode;
-import cbs.nova.dsl.PreviewErrorDetail;
+import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.dsl.PreviewMetricsSnapshot;
 import cbs.nova.dsl.model.PreviewReport;
 import cbs.nova.dsl.Result;
@@ -29,7 +29,7 @@ public final class PreviewReportStage implements DslPipeStage {
 
     boolean success = dslResult != null && dslResult.isSuccess();
     Object output = success ? dslResult.value() : null;
-    List<PreviewErrorDetail> errors = new ArrayList<>();
+    List<ErrorResponse> errors = new ArrayList<>();
     if (dslResult != null && !dslResult.isSuccess()) {
       errors.add(PreviewErrorHandler.from(dslResult.cause(), context.name()));
     }

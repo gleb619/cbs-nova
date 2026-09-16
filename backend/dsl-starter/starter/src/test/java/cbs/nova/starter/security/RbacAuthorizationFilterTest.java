@@ -3,7 +3,7 @@ package cbs.nova.starter.security;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.starter.core.StarterConstants;
-import cbs.nova.starter.model.ErrorResponse;
+import cbs.nova.dsl.model.ErrorResponse;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;

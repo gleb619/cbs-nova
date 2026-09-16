@@ -151,7 +151,7 @@ entities with name and type. It is the runner's primary definition picker. The b
 
 - `ResultTab` — rendered JSON output.
 - `MetadataTab` — execution metadata.
-- `ErrorsTab` — structured errors from `PreviewErrorDetail` / `ErrorResponse`.
+- `ErrorsTab` — structured errors from `ErrorResponse`.
 
 ### Preview/Explain specific tabs
 

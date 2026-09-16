@@ -1,10 +1,9 @@
 package cbs.nova.starter.converter;
 
-import cbs.nova.dsl.PreviewErrorDetail;
+import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.dsl.model.PreviewReport;
 import cbs.nova.dsl.exception.DslException;
 import cbs.nova.starter.core.pipe.PreviewTimeoutException;
-import cbs.nova.starter.model.ErrorResponse;
 import cbs.nova.starter.model.ErrorResponseContext;
 import org.mapstruct.Mapper;
 import org.mapstruct.ReportingPolicy;
@@ -49,16 +48,22 @@ public interface DslRuntimeMapper {
     String exceptionId = runId + ":ex:" + UUID.randomUUID();
     return new ErrorResponseContext("PREVIEW_TIMEOUT", message, entityName, runId, exceptionId);
   }
+
   default ErrorResponseContext fromPreviewReport(String entityName, String runId,
           PreviewReport report) {
-    PreviewErrorDetail firstError = report != null && !report.errors().isEmpty()
+    ErrorResponse firstError = report != null && !report.errors().isEmpty()
             ? report.errors().get(0)
             : null;
-    String code = firstError != null ? firstError.code().name() : "EXECUTION_FAILED";
+    String code = firstError != null && firstError.code() != null
+            ? firstError.code()
+            : "EXECUTION_FAILED";
     String message = firstError != null && firstError.message() != null
             ? firstError.message()
             : "Preview failed";
     String exceptionId = runId + ":ex:" + UUID.randomUUID();
-    return new ErrorResponseContext(code, message, entityName, runId, exceptionId);
+    String suggestion = firstError != null ? firstError.suggestion() : null;
+    java.util.Map<String, Object> context = firstError != null ? firstError.context() : null;
+    return new ErrorResponseContext(code, message, entityName, runId, exceptionId, suggestion,
+            context);
   }
 }

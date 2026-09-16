@@ -105,7 +105,8 @@ class PreviewTimeoutTest {
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value().success()).isFalse();
     assertThat(result.value().errors()).hasSize(1);
-    assertThat(result.value().errors().get(0).code()).isEqualTo(PreviewErrorCode.PREVIEW_TIMEOUT);
+    assertThat(result.value().errors().get(0).code())
+            .isEqualTo(PreviewErrorCode.PREVIEW_TIMEOUT.name());
     assertThat(elapsed).isLessThan(500);
     assertThat(meterRegistry.counter("dsl.preview.timeout").count()).isEqualTo(1.0);
   }
@@ -153,7 +154,8 @@ class PreviewTimeoutTest {
 
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value().errors())
-            .anySatisfy(e -> assertThat(e.code()).isEqualTo(PreviewErrorCode.PREVIEW_TIMEOUT));
+            .anySatisfy(
+                    e -> assertThat(e.code()).isEqualTo(PreviewErrorCode.PREVIEW_TIMEOUT.name()));
     assertThat(elapsed).isLessThan(500);
   }
 

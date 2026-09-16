@@ -30,42 +30,42 @@ public final class ExplainResourceGenerator {
 
   private static final String SOURCE_TEMPLATE = // language=java
           """
-            package ${pkg};
+                  package ${pkg};
 
-            import cbs.nova.dsl.explain.ExplainResourceProvider;
-            import cbs.nova.dsl.annotation.DslGenerated;
-            import javax.annotation.processing.Generated;
-            import org.jspecify.annotations.NonNull;
+                  import cbs.nova.dsl.explain.ExplainResourceProvider;
+                  import cbs.nova.dsl.annotation.DslGenerated;
+                  import javax.annotation.processing.Generated;
+                  import org.jspecify.annotations.NonNull;
 
-            ${annotation}
-            public final class ${className} implements ExplainResourceProvider {
+                  ${annotation}
+                  public final class ${className} implements ExplainResourceProvider {
 
-              private static final String NAME = "${nameLiteral}";
-              private static final String DESCRIPTION = "${descriptionLiteral}";
-              private static final String FILENAME = "${filenameLiteral}";
-              private static final String CONTENT = "${contentLiteral}";
+                    private static final String NAME = "${nameLiteral}";
+                    private static final String DESCRIPTION = "${descriptionLiteral}";
+                    private static final String FILENAME = "${filenameLiteral}";
+                    private static final String CONTENT = "${contentLiteral}";
 
-              @Override
-              public @NonNull String name() {
-                return NAME;
-              }
+                    @Override
+                    public @NonNull String name() {
+                      return NAME;
+                    }
 
-              @Override
-              public @NonNull String description() {
-                return DESCRIPTION;
-              }
+                    @Override
+                    public @NonNull String description() {
+                      return DESCRIPTION;
+                    }
 
-              @Override
-              public @NonNull String filename() {
-                return FILENAME;
-              }
+                    @Override
+                    public @NonNull String filename() {
+                      return FILENAME;
+                    }
 
-              @Override
-              public @NonNull String content() {
-                return CONTENT;
-              }
-            }
-            """;
+                    @Override
+                    public @NonNull String content() {
+                      return CONTENT;
+                    }
+                  }
+                  """;
 
   private final CodeWriter codeWriter;
 

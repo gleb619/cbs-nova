@@ -1,5 +1,8 @@
 package cbs.nova.starter.model;
 
+import cbs.nova.dsl.model.ErrorResponse;
+import cbs.nova.dsl.model.CompileDiagnostic;
+
 import cbs.nova.dsl.model.PreviewReport;
 import org.jspecify.annotations.Nullable;
 

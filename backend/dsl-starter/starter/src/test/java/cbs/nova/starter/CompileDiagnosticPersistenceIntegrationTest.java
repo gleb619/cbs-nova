@@ -11,7 +11,7 @@ import cbs.nova.dsl.GlobalManager;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.controller.DslDiagnosticsHandler;
 import cbs.nova.starter.controller.DslReloadHandler;
-import cbs.nova.starter.model.CompileDiagnostic;
+import cbs.nova.dsl.model.CompileDiagnostic;
 import cbs.nova.starter.model.CompileDiagnosticSource;
 import cbs.nova.starter.persistence.CompileDiagnosticRecordRepository;
 import java.io.IOException;

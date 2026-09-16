@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import cbs.nova.starter.config.DslErrorHandlingConfiguration;
 import cbs.nova.starter.converter.DefaultDslExceptionMapper;
 import cbs.nova.starter.converter.DslExceptionMapper;
-import cbs.nova.starter.model.ErrorResponse;
+import cbs.nova.dsl.model.ErrorResponse;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
@@ -48,8 +48,8 @@ class DslExceptionMapperConfigurationTest {
         @Override
         public ResponseEntity<ErrorResponse> handle(Exception exception, WebRequest request) {
           return ResponseEntity.ok()
-                  .body(new ErrorResponse("CUSTOM", exception.getMessage(), null, null, null,
-                          null));
+                  .body(new ErrorResponse("CUSTOM", exception.getMessage(), null, null, null, null,
+                          null, null, null));
         }
       };
     }

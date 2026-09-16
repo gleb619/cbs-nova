@@ -12,7 +12,7 @@ import cbs.nova.starter.model.DefinitionTestCaseResult;
 import cbs.nova.starter.model.DefinitionTestCaseStatus;
 import cbs.nova.starter.model.DefinitionTestRunReport;
 import cbs.nova.starter.model.DslRequest;
-import cbs.nova.starter.model.ErrorResponse;
+import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.starter.model.RuntimeOutcome;
 import cbs.nova.starter.persistence.DslDefinitionTestRepository;
 import cbs.nova.starter.util.JsonDeepEquals;
@@ -105,7 +105,7 @@ public class DslDefinitionTestService {
     } catch (Exception e) {
       long durationMs = elapsedMillis(start);
       ErrorResponse diagnostics = new ErrorResponse(STATUS_TEST_CASE_ERROR, e.getMessage(),
-              definitionName, null, null, null);
+              definitionName, null, null, null, null, null, null);
       return new DefinitionTestCaseResult(entity.caseName(), DefinitionTestCaseStatus.ERROR,
               null, expected, durationMs, diagnostics);
     }

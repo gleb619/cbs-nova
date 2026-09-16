@@ -3,7 +3,7 @@ package cbs.nova.starter.config.router;
 import cbs.nova.starter.controller.DslDefinitionTestHandler;
 import cbs.nova.starter.model.DefinitionTestCase;
 import cbs.nova.starter.model.DefinitionTestRunReport;
-import cbs.nova.starter.model.ErrorResponse;
+import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.starter.service.DslAuditService;
 import cbs.nova.starter.service.DslDefinitionTestService;
 import io.swagger.v3.oas.annotations.Operation;

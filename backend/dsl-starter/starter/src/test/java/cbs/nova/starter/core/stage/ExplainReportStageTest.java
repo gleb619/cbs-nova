@@ -15,7 +15,7 @@ import cbs.nova.dsl.model.ExplainGraphAccumulator;
 import cbs.nova.dsl.model.ExplainGraphReport;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.PreviewErrorCode;
-import cbs.nova.dsl.PreviewErrorDetail;
+import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.Constants;
 import cbs.nova.dsl.config.ContextFactory;
@@ -238,8 +238,8 @@ class ExplainReportStageTest {
 
     ExplainGraphReport report = (ExplainGraphReport) result.value();
     assertThat(report.errors()).hasSize(1);
-    PreviewErrorDetail detail = report.errors().get(0);
-    assertThat(detail.code()).isEqualTo(PreviewErrorCode.UNKNOWN_ERROR);
+    ErrorResponse detail = report.errors().get(0);
+    assertThat(detail.code()).isEqualTo(PreviewErrorCode.UNKNOWN_ERROR.name());
     assertThat(detail.message()).isEqualTo("kaboom");
   }
 

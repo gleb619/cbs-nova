@@ -22,8 +22,7 @@ const mountMenu = (props: Record<string, unknown> = {}) => {
   return wrapper
 }
 
-const triggerOf = (w: VueWrapper) =>
-  w.get('[data-testid="dropdown-menu-trigger"]')
+const triggerOf = (w: VueWrapper) => w.get('[data-testid="dropdown-menu-trigger"]')
 
 const menuOf = (w: VueWrapper) => w.get('[role="menu"]')
 

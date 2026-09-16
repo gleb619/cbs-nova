@@ -1,4 +1,4 @@
-import {beforeEach, describe, expect, it, vi, type Mock} from 'vitest'
+import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
 
 let queryValue: Record<string, unknown> = {}
 let cookieJar: Record<string, string | undefined> = {}

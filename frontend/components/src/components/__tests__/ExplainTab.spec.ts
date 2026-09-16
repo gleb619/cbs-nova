@@ -97,12 +97,10 @@ describe('ExplainTab', () => {
   })
 
   it('calls the explain prop and shows done on success', async () => {
-    const explain = vi
-      .fn()
-      .mockResolvedValue({
-        description: 'explain ok',
-        mermaid: 'graph TD',
-      } as unknown as RunnerOutput)
+    const explain = vi.fn().mockResolvedValue({
+      description: 'explain ok',
+      mermaid: 'graph TD',
+    } as unknown as RunnerOutput)
     const wrapper = mountTab({}, explain)
     await wrapper.find('[data-testid="json-textarea"]').setValue('{"a":1}')
     await wrapper

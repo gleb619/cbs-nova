@@ -279,11 +279,18 @@
           "code": {
             "type": "string"
           },
+          "context": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "correlationId": {
+            "type": "string"
+          },
           "diagnostics": {
+            "type": "array",
             "items": {
               "$ref": "#/components/schemas/CompileDiagnostic"
-            },
-            "type": "array"
+            }
           },
           "entityName": {
             "type": "string"
@@ -295,6 +302,9 @@
             "type": "string"
           },
           "runId": {
+            "type": "string"
+          },
+          "suggestion": {
             "type": "string"
           }
         },
@@ -541,34 +551,6 @@
         },
         "type": "object"
       },
-      "PreviewErrorDetail": {
-        "properties": {
-          "code": {
-            "enum": [
-              "DSL_COMPILATION_ERROR",
-              "HELPER_NOT_FOUND",
-              "EXTERNAL_CALL_FAILED",
-              "INPUT_VALIDATION_ERROR",
-              "COMPENSATION_ERROR",
-              "PREVIEW_TIMEOUT",
-              "TIMEOUT_EXCEEDED",
-              "UNKNOWN_ERROR"
-            ],
-            "type": "string"
-          },
-          "context": {
-            "additionalProperties": {},
-            "type": "object"
-          },
-          "message": {
-            "type": "string"
-          },
-          "suggestion": {
-            "type": "string"
-          }
-        },
-        "type": "object"
-      },
       "PreviewMetricsSnapshot": {
         "properties": {
           "callCounts": {
@@ -617,7 +599,7 @@
           },
           "errors": {
             "items": {
-              "$ref": "#/components/schemas/PreviewErrorDetail"
+              "$ref": "#/components/schemas/ErrorResponse"
             },
             "type": "array"
           },

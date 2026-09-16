@@ -313,7 +313,6 @@ export function useDslApi() {
     return $fetch(`/api/v1/dsl/processes/${name}/diagram`, { query: { format } })
   }
 
-
   async function pauseSchedule(definition: string, reason?: string) {
     log.info('pauseSchedule request', { definition })
     return $fetch(`/api/v1/dsl/schedules/${definition}/pause`, {

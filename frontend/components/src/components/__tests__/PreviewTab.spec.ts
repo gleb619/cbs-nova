@@ -14,9 +14,7 @@ function mountTab(
     name: string,
     body: unknown,
     metadata?: Record<string, unknown>,
-  ) => RunnerOutput | Promise<RunnerOutput> = vi
-    .fn()
-    .mockResolvedValue({ result: { ok: true } }),
+  ) => RunnerOutput | Promise<RunnerOutput> = vi.fn().mockResolvedValue({ result: { ok: true } }),
   fetchMock = vi.fn().mockResolvedValue({}),
 ) {
   return mount(PreviewTab, {

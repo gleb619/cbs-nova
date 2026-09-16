@@ -3,7 +3,7 @@ package cbs.nova.starter.web;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.starter.core.StarterConstants;
-import cbs.nova.starter.model.ErrorResponse;
+import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.starter.persistence.JdbcApiKeyRepository;
 import cbs.nova.starter.service.ApiKeyStore;
 import jakarta.servlet.FilterChain;

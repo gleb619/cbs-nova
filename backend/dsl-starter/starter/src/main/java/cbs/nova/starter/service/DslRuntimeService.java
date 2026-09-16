@@ -15,7 +15,7 @@ import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.core.pipe.PreviewTimeoutException;
 import cbs.nova.starter.logging.LoggingExecutionListener;
 import cbs.nova.starter.model.DslRequest;
-import cbs.nova.starter.model.ErrorResponse;
+import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.starter.model.RuntimeOutcome;
 import java.util.HashMap;
 import lombok.RequiredArgsConstructor;
