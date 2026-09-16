@@ -20,13 +20,13 @@ import io.temporal.client.schedules.ScheduleActionStartWorkflow;
 import io.temporal.client.schedules.ScheduleAlreadyRunningException;
 import io.temporal.client.schedules.ScheduleClient;
 import io.temporal.client.schedules.ScheduleDescription;
+import io.temporal.client.schedules.ScheduleException;
 import io.temporal.client.schedules.ScheduleHandle;
 import io.temporal.client.schedules.ScheduleInfo;
 import io.temporal.client.schedules.ScheduleListDescription;
 import io.temporal.client.schedules.ScheduleOptions;
 import io.temporal.client.schedules.SchedulePolicy;
 import io.temporal.client.schedules.ScheduleSpec;
-import io.temporal.client.schedules.ScheduleException;
 import io.temporal.client.WorkflowOptions;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -46,8 +46,8 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 /**
- * Service for creating, listing and deleting Temporal Schedules that start DSL process workflows
- * directly via {@link ScheduleActionStartWorkflow}.
+ * Service for creating, listing, pausing, resuming and deleting Temporal Schedules that start DSL
+ * process workflows directly via {@link ScheduleActionStartWorkflow}.
  *
  * <p>
  * The bean only loads when a {@link ScheduleClient} is available, keeping the schedule surface
@@ -60,6 +60,8 @@ import java.util.stream.Stream;
 public class DslScheduleService {
 
   private static final Pattern DEFINITION_NAME_PATTERN = Pattern.compile("^[A-Za-z0-9._-]{1,120}$");
+  private static final String DEFAULT_PAUSE_REASON = "Paused via DSL schedule API";
+  private static final String DEFAULT_RESUME_REASON = "Resumed via DSL schedule API";
 
   private final ScheduleClient scheduleClient;
   private final ObjectMapper objectMapper;
@@ -156,6 +158,42 @@ public class DslScheduleService {
   }
 
   /**
+   * Pauses the schedule for a definition. If the schedule does not exist, a
+   * {@link DefinitionNotFoundException} is thrown so the caller receives a 404.
+   */
+  public void pause(@NonNull String definition, @Nullable String reason) {
+    String scheduleId = scheduleIdFor(definition);
+    ScheduleHandle handle = scheduleClient.getHandle(scheduleId);
+    try {
+      handle.pause(reasonOrDefault(reason, DEFAULT_PAUSE_REASON));
+      log.info("[DSL schedules] paused {}", scheduleId);
+    } catch (Exception e) {
+      if (isNotFound(e)) {
+        throw new DefinitionNotFoundException(definition);
+      }
+      throw e;
+    }
+  }
+
+  /**
+   * Resumes (unpauses) the schedule for a definition. If the schedule does not exist, a
+   * {@link DefinitionNotFoundException} is thrown so the caller receives a 404.
+   */
+  public void resume(@NonNull String definition, @Nullable String reason) {
+    String scheduleId = scheduleIdFor(definition);
+    ScheduleHandle handle = scheduleClient.getHandle(scheduleId);
+    try {
+      handle.unpause(reasonOrDefault(reason, DEFAULT_RESUME_REASON));
+      log.info("[DSL schedules] resumed {}", scheduleId);
+    } catch (Exception e) {
+      if (isNotFound(e)) {
+        throw new DefinitionNotFoundException(definition);
+      }
+      throw e;
+    }
+  }
+
+  /**
    * Deletes the schedule for a definition. If the schedule does not exist, the call succeeds
    * idempotently.
    */
@@ -188,6 +226,10 @@ public class DslScheduleService {
             description.getSchedule().getState().getNote(),
             nextRunAt,
             description.getSchedule().getState().isPaused());
+  }
+
+  private static @Nullable String reasonOrDefault(@Nullable String reason, String defaultReason) {
+    return reason != null && !reason.isBlank() ? reason : defaultReason;
   }
 
   private static @Nullable String firstInstant(List<Instant> instants) {

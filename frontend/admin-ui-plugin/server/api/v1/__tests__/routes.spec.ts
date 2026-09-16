@@ -82,6 +82,8 @@ const processDiagramHandler = (await import('../dsl/processes/[name]/diagram.get
 const schedulesIndexHandler = (await import('../dsl/schedules/index.get')).default
 const schedulesCreateHandler = (await import('../dsl/schedules/index.post')).default
 const schedulesDeleteHandler = (await import('../dsl/schedules/[definition].delete')).default
+const schedulesPauseHandler = (await import('../dsl/schedules/[definition]/pause.post')).default
+const schedulesResumeHandler = (await import('../dsl/schedules/[definition]/resume.post')).default
 const listApiKeysHandler = (await import('../dsl/auth/keys/index.get')).default
 const createApiKeyHandler = (await import('../dsl/auth/keys/index.post')).default
 const revokeApiKeyHandler = (await import('../dsl/auth/keys/[id]/index.delete')).default
@@ -821,6 +823,48 @@ describe('dsl/schedules/[definition].delete', () => {
   })
 })
 
+
+describe('dsl/schedules/[definition]/pause.post', () => {
+  it('interpolates the :definition router param and POSTs readBody() to the pause path', async () => {
+    routerParams = { definition: 'A' }
+    bodyValue = { reason: 'maintenance' }
+
+    await schedulesPauseHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/schedules/A/pause', {
+      method: 'POST',
+      body: { reason: 'maintenance' },
+    })
+  })
+
+  it('forwards a falsy body through unchanged', async () => {
+    routerParams = { definition: 'A' }
+    bodyValue = null
+
+    await schedulesPauseHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/schedules/A/pause', {
+      method: 'POST',
+      body: null,
+    })
+  })
+})
+
+describe('dsl/schedules/[definition]/resume.post', () => {
+  it('interpolates the :definition router param and POSTs readBody() to the resume path', async () => {
+    routerParams = { definition: 'A' }
+    bodyValue = { reason: 'back online' }
+
+    await schedulesResumeHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/schedules/A/resume', {
+      method: 'POST',
+      body: { reason: 'back online' },
+    })
+  })
+})
 describe('dsl/auth/keys/index.get', () => {
   it('GETs /api/dsl/auth/keys with no body', async () => {
     await listApiKeysHandler(fakeEvent)

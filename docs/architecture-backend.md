@@ -219,6 +219,10 @@ Sourced from `DslScheduleRouterConfiguration`:
 | `GET` | `/api/dsl/schedules` | `DslScheduleHandler.list` | List schedules created by this service (ids prefixed `sched-`). Paginated via `?limit=&offset=`; envelope is `PageResponse<ScheduleSummary>` (see [roadmap § Epic 1 / pagination convention](roadmap.md)). |
 | `POST` | `/api/dsl/schedules` | `DslScheduleHandler.create` | Create a schedule that fires the definition's workflow on the given cron. Returns `201` with `CreateScheduleResponse{scheduleId, definition, cron}` or `400` / `404` / `409` (see `RouterOperation` annotations). |
 | `DELETE` | `/api/dsl/schedules/{definition}` | `DslScheduleHandler.delete` | Delete the schedule for `{definition}`. Idempotent: `200 {deleted:true}` whether the schedule existed or not. |
+| `POST` | `/api/dsl/schedules/{definition}/pause` | `DslScheduleHandler.pause` | Pause the schedule for `{definition}`. Optional `reason` body field is forwarded to Temporal; returns `200 {paused:true}`. |
+| `POST` | `/api/dsl/schedules/{definition}/resume` | `DslScheduleHandler.resume` | Resume the schedule for `{definition}`. Optional `reason` body field is forwarded to Temporal; returns `200 {resumed:true}`. |
+
+`ScheduleSummary.paused` is read from the live `ScheduleDescription` state on every `list()` call, so it reflects the current Temporal schedule state rather than a stale local flag.
 
 The BFF exposes matching proxies under [`frontend/admin-ui-plugin/server/api/v1/dsl/schedules/`](../../frontend/admin-ui-plugin/server/api/v1/dsl/schedules/) (`index.get.ts`, `index.post.ts`, `[definition].delete.ts`); curl against `http://localhost:3000/api/v1/dsl/schedules*` reaches the same backend. See the recipe in the runbook: [Schedule a definition](runbook.md#schedule-a-definition).
 
@@ -241,7 +245,7 @@ public record ScheduleSummary(
     String timezone,
     @Nullable String note,
     @Nullable String nextRunAt,   // Instant.toString() of next fire, or null
-    boolean paused) {}            // always false in the current API (see Known gaps)
+    boolean paused) {}            // live state from Temporal ScheduleDescription (see routes and known gaps)
 
 public record CreateScheduleResponse(
     String scheduleId,
@@ -279,6 +283,8 @@ The schedule surface sits under `/api/*`, so:
 - **RBAC filter** (`RbacFilterConfiguration` → `/api/*`) gates the route when `cbs.dsl.auth.rbac.enabled=true`. From `RbacAuthorizationFilter.RULES`:
   - `POST /api/dsl/schedules` → requires `Role.OPERATOR`.
   - `DELETE /api/dsl/schedules/*` → requires `Role.OPERATOR`.
+  - `POST /api/dsl/schedules/*/pause` → requires `Role.OPERATOR`.
+  - `POST /api/dsl/schedules/*/resume` → requires `Role.OPERATOR`.
   - `GET /api/dsl/schedules` → defaults to `Role.VIEWER` (no explicit rule; reads always default to `VIEWER` per `requiredRole`).
   - Service-to-service API-key callers are mapped to `Role.ADMIN` by `RoleResolver`, so an API key satisfies every schedule route regardless of the explicit rule.
 - **OIDC / JWT resource-server** (`cbs.security.oidc.enabled=true`) requires a valid JWT on the same `/api/dsl/**` path; RBAC then resolves the role from the configured claim (default `roles`, with `scope` / `scp` fallback for OIDC-standard conventions).

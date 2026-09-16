@@ -533,11 +533,13 @@ curl -sS -X DELETE http://localhost:3000/api/v1/dsl/schedules/monthly-closing
 Returns `200 {"deleted":true}`. Calling the schedule does **not** require the schedule to exist —
 the service treats "not found" as success (`isNotFound(e)` check) so deletes are idempotent.
 
-> **Pause / unpause is not currently exposed** via the REST API. `GET …/schedules` returns a
-> `paused` flag but no route toggles it. To stop a schedule, `DELETE` it; to start it again,
-> `POST` it back. Updating an existing schedule (cron change, timezone change) requires
-> delete + recreate. See
-> [Known gaps](architecture-backend.md#known-gaps-not-currently-exposed--unclear).
+### Pause a schedule
+
+```bash
+curl -sS -X POST http://localhost:3000/api/v1/dsl/schedules/monthly-closing/pause -H 'Content-Type: application/json' -d '{"reason":"maintenance window"}'
+```
+
+Returns `200 {"paused":true}`. Resume with `POST /api/v1/dsl/schedules/monthly-closing/resume`.
 
 ### Common failure cases
 

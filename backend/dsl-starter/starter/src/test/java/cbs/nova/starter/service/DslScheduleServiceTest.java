@@ -161,6 +161,23 @@ class DslScheduleServiceTest {
   }
 
   @Test
+  void listReflectsPausedStateFromScheduleDescription() {
+    ScheduleListDescription ours = mock(ScheduleListDescription.class);
+    when(ours.getScheduleId()).thenReturn("sched-LoanDisbursement");
+    when(scheduleClient.listSchedules()).thenReturn(Stream.of(ours));
+
+    ScheduleDescription description = description("sched-LoanDisbursement", "0 9 * * *",
+            "UTC", "note-1", true);
+    when(scheduleClient.getHandle("sched-LoanDisbursement")).thenReturn(handle);
+    when(handle.describe()).thenReturn(description);
+
+    List<ScheduleSummary> result = service.list();
+
+    assertThat(result).hasSize(1);
+    assertThat(result.get(0).paused()).isTrue();
+  }
+
+  @Test
   void deleteInvokesHandleDelete() {
     when(scheduleClient.getHandle("sched-LoanDisbursement")).thenReturn(handle);
 
@@ -177,6 +194,62 @@ class DslScheduleServiceTest {
     assertThatNoExceptionThrown(() -> service.delete("LoanDisbursement"));
 
     verify(handle).delete();
+  }
+
+  @Test
+  void pauseInvokesHandlePauseWithDefaultReason() {
+    when(scheduleClient.getHandle("sched-LoanDisbursement")).thenReturn(handle);
+
+    service.pause("LoanDisbursement", null);
+
+    verify(handle).pause("Paused via DSL schedule API");
+  }
+
+  @Test
+  void pauseInvokesHandlePauseWithProvidedReason() {
+    when(scheduleClient.getHandle("sched-LoanDisbursement")).thenReturn(handle);
+
+    service.pause("LoanDisbursement", "maintenance window");
+
+    verify(handle).pause("maintenance window");
+  }
+
+  @Test
+  void pauseThrowsDefinitionNotFoundWhenScheduleMissing() {
+    when(scheduleClient.getHandle("sched-LoanDisbursement")).thenReturn(handle);
+    doThrow(new StatusRuntimeException(Status.NOT_FOUND)).when(handle).pause(any());
+
+    assertThatThrownBy(() -> service.pause("LoanDisbursement", null))
+            .isInstanceOf(DefinitionNotFoundException.class)
+            .hasMessageContaining("No published definition: LoanDisbursement");
+  }
+
+  @Test
+  void resumeInvokesHandleUnpauseWithDefaultReason() {
+    when(scheduleClient.getHandle("sched-LoanDisbursement")).thenReturn(handle);
+
+    service.resume("LoanDisbursement", null);
+
+    verify(handle).unpause("Resumed via DSL schedule API");
+  }
+
+  @Test
+  void resumeInvokesHandleUnpauseWithProvidedReason() {
+    when(scheduleClient.getHandle("sched-LoanDisbursement")).thenReturn(handle);
+
+    service.resume("LoanDisbursement", "issue resolved");
+
+    verify(handle).unpause("issue resolved");
+  }
+
+  @Test
+  void resumeThrowsDefinitionNotFoundWhenScheduleMissing() {
+    when(scheduleClient.getHandle("sched-LoanDisbursement")).thenReturn(handle);
+    doThrow(new StatusRuntimeException(Status.NOT_FOUND)).when(handle).unpause(any());
+
+    assertThatThrownBy(() -> service.resume("LoanDisbursement", null))
+            .isInstanceOf(DefinitionNotFoundException.class)
+            .hasMessageContaining("No published definition: LoanDisbursement");
   }
 
   private static ScheduleDescription description(String scheduleId, String cron, String timezone,

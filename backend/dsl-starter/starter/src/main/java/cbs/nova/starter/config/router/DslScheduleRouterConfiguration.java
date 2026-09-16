@@ -2,7 +2,6 @@ package cbs.nova.starter.config.router;
 
 import cbs.nova.starter.controller.DslScheduleHandler;
 import cbs.nova.starter.model.ErrorResponse;
-import cbs.nova.starter.model.ScheduleModels.CreateScheduleResponse;
 import cbs.nova.starter.model.PageResponse;
 import io.swagger.v3.oas.annotations.Operation;
 
@@ -37,10 +36,22 @@ public class DslScheduleRouterConfiguration {
           "DSL Schedules"}, responses = @ApiResponse(responseCode = "200", content = @Content(mediaType = "application/json", schema = @Schema(implementation = PageResponse.class))))),
       @RouterOperation(path = "/api/dsl/schedules", beanClass = DslScheduleHandler.class, beanMethod = "create", method = RequestMethod.POST, operation = @Operation(operationId = "createSchedule", summary = "Create a Temporal schedule that starts a DSL definition workflow", tags = {
           "DSL Schedules"}, responses = {
-              @ApiResponse(responseCode = "201", description = "Schedule created", content = @Content(mediaType = "application/json", schema = @Schema(implementation = CreateScheduleResponse.class))),
+              @ApiResponse(responseCode = "201", description = "Schedule created", content = @Content(mediaType = "application/json", schema = @Schema(implementation = cbs.nova.starter.model.ScheduleModels.CreateScheduleResponse.class))),
               @ApiResponse(responseCode = "400", description = "Invalid request", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
               @ApiResponse(responseCode = "404", description = "Definition not published", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
               @ApiResponse(responseCode = "409", description = "Schedule already exists", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+          })),
+      @RouterOperation(path = "/api/dsl/schedules/{definition}/pause", beanClass = DslScheduleHandler.class, beanMethod = "pause", method = RequestMethod.POST, operation = @Operation(operationId = "pauseSchedule", summary = "Pause the Temporal schedule for a DSL definition", tags = {
+          "DSL Schedules"}, responses = {
+              @ApiResponse(responseCode = "200", description = "Schedule paused", content = @Content(mediaType = "application/json", schema = @Schema(implementation = Map.class))),
+              @ApiResponse(responseCode = "400", description = "Invalid definition name", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+              @ApiResponse(responseCode = "404", description = "Schedule not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+          })),
+      @RouterOperation(path = "/api/dsl/schedules/{definition}/resume", beanClass = DslScheduleHandler.class, beanMethod = "resume", method = RequestMethod.POST, operation = @Operation(operationId = "resumeSchedule", summary = "Resume the Temporal schedule for a DSL definition", tags = {
+          "DSL Schedules"}, responses = {
+              @ApiResponse(responseCode = "200", description = "Schedule resumed", content = @Content(mediaType = "application/json", schema = @Schema(implementation = Map.class))),
+              @ApiResponse(responseCode = "400", description = "Invalid definition name", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+              @ApiResponse(responseCode = "404", description = "Schedule not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
           })),
       @RouterOperation(path = "/api/dsl/schedules/{definition}", beanClass = DslScheduleHandler.class, beanMethod = "delete", method = RequestMethod.DELETE, operation = @Operation(operationId = "deleteSchedule", summary = "Delete the Temporal schedule for a DSL definition", tags = {
           "DSL Schedules"}, responses = {
@@ -52,6 +63,8 @@ public class DslScheduleRouterConfiguration {
     return RouterFunctions.route()
             .GET("/api/dsl/schedules", handler::list)
             .POST("/api/dsl/schedules", handler::create)
+            .POST("/api/dsl/schedules/{definition}/pause", handler::pause)
+            .POST("/api/dsl/schedules/{definition}/resume", handler::resume)
             .DELETE("/api/dsl/schedules/{definition}", handler::delete)
             .build();
   }

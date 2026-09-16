@@ -313,6 +313,23 @@ export function useDslApi() {
     return $fetch(`/api/v1/dsl/processes/${name}/diagram`, { query: { format } })
   }
 
+
+  async function pauseSchedule(definition: string, reason?: string) {
+    log.info('pauseSchedule request', { definition })
+    return $fetch(`/api/v1/dsl/schedules/${definition}/pause`, {
+      method: 'POST',
+      body: reason ? { reason } : undefined,
+    })
+  }
+
+  async function resumeSchedule(definition: string, reason?: string) {
+    log.info('resumeSchedule request', { definition })
+    return $fetch(`/api/v1/dsl/schedules/${definition}/resume`, {
+      method: 'POST',
+      body: reason ? { reason } : undefined,
+    })
+  }
+
   return {
     getDefinitions,
     listHelpers,
@@ -344,6 +361,8 @@ export function useDslApi() {
     listSchedules,
     createSchedule,
     deleteSchedule,
+    pauseSchedule,
+    resumeSchedule,
     getProcessDiagram,
   }
 }

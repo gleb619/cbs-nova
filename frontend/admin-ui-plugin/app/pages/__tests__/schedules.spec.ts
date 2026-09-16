@@ -12,9 +12,12 @@ interface SchedulesHarness {
   schedules: Ref<ScheduleSummary[]>
   loading: Ref<boolean>
   error: Ref<string | null>
+  pausing: Ref<Record<string, boolean>>
   load: ReturnType<typeof vi.fn>
   create: ReturnType<typeof vi.fn>
   remove: ReturnType<typeof vi.fn>
+  pause: ReturnType<typeof vi.fn>
+  resume: ReturnType<typeof vi.fn>
 }
 
 const { useSchedulesMock } = vi.hoisted(() => {
@@ -33,9 +36,12 @@ const harness: SchedulesHarness = (() => {
     schedules: vue.ref<ScheduleSummary[]>([]),
     loading: vue.ref(false),
     error: vue.ref<string | null>(null),
+    pausing: vue.ref<Record<string, boolean>>({}),
     load: vi.fn(),
     create: vi.fn(),
     remove: vi.fn(),
+    pause: vi.fn(),
+    resume: vi.fn(),
   }
 })()
 
@@ -51,7 +57,7 @@ vi.mock('@cbs/admin-ui-plugin/composables/useSchedules', () => ({
 
 const DslScheduleListProbe = defineComponent({
   name: 'ScheduleList',
-  props: ['schedules', 'loading', 'error'],
+  props: ['schedules', 'loading', 'error', 'pausingDefinitions'],
   setup(props, { emit }) {
     return () =>
       h('div', { 'data-testid': 'dsl-schedule-list' }, [
@@ -75,6 +81,22 @@ const DslScheduleListProbe = defineComponent({
             onClick: () => emit('delete', 'daily'),
           },
           'Delete',
+        ),
+        h(
+          'button',
+          {
+            'data-testid': 'probe-pause-button',
+            onClick: () => emit('pause', 'hourly'),
+          },
+          'Pause',
+        ),
+        h(
+          'button',
+          {
+            'data-testid': 'probe-resume-button',
+            onClick: () => emit('resume', 'hourly'),
+          },
+          'Resume',
         ),
         h('pre', { 'data-testid': 'probe-props' }, JSON.stringify(props)),
       ])
@@ -103,9 +125,12 @@ describe('schedules.vue page wiring', () => {
     harness.schedules.value = []
     harness.loading.value = false
     harness.error.value = null
+    harness.pausing.value = {}
     harness.load.mockClear()
     harness.create.mockClear()
     harness.remove.mockClear()
+    harness.pause.mockClear()
+    harness.resume.mockClear()
   })
 
   afterEach(() => {
@@ -138,6 +163,7 @@ describe('schedules.vue page wiring', () => {
     ]
     harness.loading.value = true
     harness.error.value = 'Backend unreachable'
+    harness.pausing.value = { hourly: true }
     await flush()
 
     const probe = wrapper.findComponent(DslScheduleListProbe)
@@ -154,6 +180,7 @@ describe('schedules.vue page wiring', () => {
     ])
     expect(probe.props('loading')).toBe(true)
     expect(probe.props('error')).toBe('Backend unreachable')
+    expect(probe.props('pausingDefinitions')).toEqual({ hourly: true })
 
     wrapper.unmount()
   })
@@ -184,6 +211,32 @@ describe('schedules.vue page wiring', () => {
 
     expect(harness.remove).toHaveBeenCalledTimes(1)
     expect(harness.remove).toHaveBeenCalledWith('daily')
+
+    wrapper.unmount()
+  })
+
+  it('forwards pause event to the pause spy with definition', async () => {
+    const wrapper = mountPage()
+    await flush()
+
+    await wrapper.find('[data-testid="probe-pause-button"]').trigger('click')
+    await flush()
+
+    expect(harness.pause).toHaveBeenCalledTimes(1)
+    expect(harness.pause).toHaveBeenCalledWith('hourly')
+
+    wrapper.unmount()
+  })
+
+  it('forwards resume event to the resume spy with definition', async () => {
+    const wrapper = mountPage()
+    await flush()
+
+    await wrapper.find('[data-testid="probe-resume-button"]').trigger('click')
+    await flush()
+
+    expect(harness.resume).toHaveBeenCalledTimes(1)
+    expect(harness.resume).toHaveBeenCalledWith('hourly')
 
     wrapper.unmount()
   })

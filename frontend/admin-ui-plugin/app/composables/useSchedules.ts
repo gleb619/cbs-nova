@@ -16,6 +16,7 @@ export function useSchedules() {
   const schedules = ref<ScheduleSummary[]>([])
   const loading = ref(false)
   const error = ref<string | null>(null)
+  const pausing = ref<Record<string, boolean>>({})
 
   async function load() {
     loading.value = true
@@ -43,12 +44,39 @@ export function useSchedules() {
     await load()
   }
 
+  async function pause(definition: string) {
+    pausing.value = { ...pausing.value, [definition]: true }
+    try {
+      await api.pauseSchedule(definition)
+      await load()
+    } finally {
+      const next = { ...pausing.value }
+      delete next[definition]
+      pausing.value = next
+    }
+  }
+
+  async function resume(definition: string) {
+    pausing.value = { ...pausing.value, [definition]: true }
+    try {
+      await api.resumeSchedule(definition)
+      await load()
+    } finally {
+      const next = { ...pausing.value }
+      delete next[definition]
+      pausing.value = next
+    }
+  }
+
   return {
     schedules,
     loading,
     error,
+    pausing,
     load,
     create,
     remove,
+    pause,
+    resume,
   }
 }

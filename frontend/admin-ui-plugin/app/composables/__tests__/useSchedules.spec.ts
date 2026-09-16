@@ -4,8 +4,10 @@ vi.mock('../useDslApi', () => {
   const listSchedules = vi.fn()
   const createSchedule = vi.fn()
   const deleteSchedule = vi.fn()
+  const pauseSchedule = vi.fn()
+  const resumeSchedule = vi.fn()
   return {
-    useDslApi: () => ({ listSchedules, createSchedule, deleteSchedule }),
+    useDslApi: () => ({ listSchedules, createSchedule, deleteSchedule, pauseSchedule, resumeSchedule }),
   }
 })
 
@@ -28,6 +30,8 @@ type ApiMock = {
   listSchedules: ReturnType<typeof vi.fn>
   createSchedule: ReturnType<typeof vi.fn>
   deleteSchedule: ReturnType<typeof vi.fn>
+  pauseSchedule: ReturnType<typeof vi.fn>
+  resumeSchedule: ReturnType<typeof vi.fn>
 }
 
 type LoggerMock = {
@@ -47,6 +51,8 @@ describe('useSchedules', () => {
     getApiMocks().listSchedules.mockReset()
     getApiMocks().createSchedule.mockReset()
     getApiMocks().deleteSchedule.mockReset()
+    getApiMocks().pauseSchedule.mockReset()
+    getApiMocks().resumeSchedule.mockReset()
     getLoggerMocks().error.mockReset()
     getLoggerMocks().info.mockReset()
     getLoggerMocks().warn.mockReset()
@@ -162,5 +168,49 @@ describe('useSchedules', () => {
     const deleteOrder = api.deleteSchedule.mock.invocationCallOrder[0]
     const listOrder = api.listSchedules.mock.invocationCallOrder[0]
     expect(deleteOrder).toBeLessThan(listOrder)
+  })
+
+  it('pause(definition) calls pauseSchedule, marks pausing, then reloads', async () => {
+    const api = getApiMocks()
+    let resolve: () => void = () => {}
+    api.pauseSchedule.mockReturnValue(new Promise((r) => { resolve = r }))
+    api.listSchedules.mockResolvedValue([])
+
+    const { pausing, pause } = useSchedules()
+    const p = pause('daily')
+
+    expect(pausing.value.daily).toBe(true)
+
+    resolve()
+    await p
+
+    expect(api.pauseSchedule).toHaveBeenCalledWith('daily')
+    expect(api.listSchedules).toHaveBeenCalled()
+    expect(pausing.value.daily).toBeUndefined()
+    const pauseOrder = api.pauseSchedule.mock.invocationCallOrder[0]
+    const listOrder = api.listSchedules.mock.invocationCallOrder[0]
+    expect(pauseOrder).toBeLessThan(listOrder)
+  })
+
+  it('resume(definition) calls resumeSchedule, marks pausing, then reloads', async () => {
+    const api = getApiMocks()
+    let resolve: () => void = () => {}
+    api.resumeSchedule.mockReturnValue(new Promise((r) => { resolve = r }))
+    api.listSchedules.mockResolvedValue([])
+
+    const { pausing, resume } = useSchedules()
+    const p = resume('daily')
+
+    expect(pausing.value.daily).toBe(true)
+
+    resolve()
+    await p
+
+    expect(api.resumeSchedule).toHaveBeenCalledWith('daily')
+    expect(api.listSchedules).toHaveBeenCalled()
+    expect(pausing.value.daily).toBeUndefined()
+    const resumeOrder = api.resumeSchedule.mock.invocationCallOrder[0]
+    const listOrder = api.listSchedules.mock.invocationCallOrder[0]
+    expect(resumeOrder).toBeLessThan(listOrder)
   })
 })

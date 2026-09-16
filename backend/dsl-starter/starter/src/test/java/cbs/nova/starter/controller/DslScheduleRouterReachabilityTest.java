@@ -129,6 +129,24 @@ class DslScheduleRouterReachabilityTest {
   }
 
   @Test
+  void postSchedulePauseReachesHandler() throws Exception {
+    mockMvc.perform(post("/api/dsl/schedules/A/pause"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.paused").value(true));
+
+    verify(mockService()).pause("A", null);
+  }
+
+  @Test
+  void postScheduleResumeReachesHandler() throws Exception {
+    mockMvc.perform(post("/api/dsl/schedules/A/resume"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.resumed").value(true));
+
+    verify(mockService()).resume("A", null);
+  }
+
+  @Test
   void routerFunctionBeanIsAbsentWithoutScheduleClient() {
     context.close();
     context = new AnnotationConfigApplicationContext();

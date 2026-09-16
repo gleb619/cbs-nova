@@ -7,11 +7,14 @@ defineProps<{
   schedules: ScheduleSummary[]
   loading?: boolean
   error?: string | null
+  pausingDefinitions?: Record<string, boolean>
 }>()
 
 const emit = defineEmits<{
   create: [payload: CreateSchedulePayload]
   delete: [definition: string]
+  pause: [definition: string]
+  resume: [definition: string]
 }>()
 
 const definition = ref('')
@@ -29,6 +32,18 @@ onSchedulesChanged(() => {
 })
 
 const canCreate = computed(() => definition.value.trim().length > 0 && cron.value.trim().length > 0)
+
+function isPausing(definition: string) {
+  return !!pausingDefinitions?.[definition]
+}
+
+function onTogglePause(schedule: ScheduleSummary) {
+  if (schedule.paused) {
+    emit('resume', schedule.definition)
+  } else {
+    emit('pause', schedule.definition)
+  }
+}
 
 function resetForm() {
   definition.value = ''
@@ -236,6 +251,34 @@ function onPendingKeydown(event: KeyboardEvent) {
               {{ schedule.note }}
             </div>
           </div>
+          <button
+            type="button"
+            data-testid="schedule-pause-toggle"
+            :disabled="isPausing(schedule.definition)"
+            class="p-1.5 rounded border border-gray-300 text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+            :title="schedule.paused ? 'Resume schedule' : 'Pause schedule'"
+            @click="onTogglePause(schedule)"
+          >
+            <svg
+              v-if="!schedule.paused"
+              class="w-4 h-4"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              aria-hidden="true"
+            >
+              <rect x="6" y="4" width="4" height="16" rx="1" />
+              <rect x="14" y="4" width="4" height="16" rx="1" />
+            </svg>
+            <svg
+              v-else
+              class="w-4 h-4"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              aria-hidden="true"
+            >
+              <path d="M8 5v14l11-7z" />
+            </svg>
+          </button>
           <button
             v-if="pendingConfirm !== schedule.scheduleId"
             type="button"

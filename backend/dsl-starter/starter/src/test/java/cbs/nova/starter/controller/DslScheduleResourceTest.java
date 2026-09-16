@@ -3,6 +3,7 @@ package cbs.nova.starter.controller;
 import static org.hamcrest.Matchers.hasSize;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -152,6 +153,7 @@ class DslScheduleResourceTest {
             .andExpect(jsonPath("$.items", hasSize(2)))
             .andExpect(jsonPath("$.items[0].scheduleId").value("sched-A"))
             .andExpect(jsonPath("$.items[0].definition").value("A"))
+            .andExpect(jsonPath("$.items[0].paused").value(false))
             .andExpect(jsonPath("$.total").value(2))
             .andExpect(jsonPath("$.offset").value(0))
             .andExpect(jsonPath("$.limit").value(50));
@@ -231,5 +233,133 @@ class DslScheduleResourceTest {
     mockMvc.perform(delete("/api/dsl/schedules/A"))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.code").value("BAD_REQUEST"));
+  }
+
+  @Test
+  void pauseReturns200AndCallsServiceWithReason() throws Exception {
+    mockMvc.perform(post("/api/dsl/schedules/A/pause")
+            .contentType("application/json")
+            .content("{\"reason\":\"maintenance\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.paused").value(true));
+
+    verify(service).pause("A", "maintenance");
+  }
+
+  @Test
+  void pauseReturns200WithNoBody() throws Exception {
+    mockMvc.perform(post("/api/dsl/schedules/A/pause"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.paused").value(true));
+
+    verify(service).pause(eq("A"), any());
+  }
+
+  @Test
+  void pauseReturns404ForMissingSchedule() throws Exception {
+    doThrow(new DefinitionNotFoundException("ghost")).when(service).pause(eq("ghost"), any());
+
+    mockMvc.perform(post("/api/dsl/schedules/ghost/pause"))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.code").value("NOT_FOUND"));
+  }
+
+  @Test
+  void pauseWritesAuditRowOnSuccess() throws Exception {
+    var audit = AuditTestSupport.h2();
+    mockMvc = mockMvc(new DslScheduleHandler(service, objectMapper,
+            AuditTestSupport.providerOf(audit.service())));
+
+    mockMvc.perform(post("/api/dsl/schedules/A/pause"))
+            .andExpect(status().isOk());
+
+    var result = audit.service().search(null, 0, 10);
+    assertThat(result.total()).isEqualTo(1);
+    var row = result.items().get(0);
+    assertThat(row.action()).isEqualTo("schedule.paused");
+    assertThat(row.outcome()).isEqualTo("SUCCESS");
+    assertThat(row.target()).isEqualTo("A");
+  }
+
+  @Test
+  void pauseWritesAuditRowOnFailure() throws Exception {
+    var audit = AuditTestSupport.h2();
+    doThrow(new DefinitionNotFoundException("ghost")).when(service).pause(eq("ghost"), any());
+    mockMvc = mockMvc(new DslScheduleHandler(service, objectMapper,
+            AuditTestSupport.providerOf(audit.service())));
+
+    mockMvc.perform(post("/api/dsl/schedules/ghost/pause"))
+            .andExpect(status().isNotFound());
+
+    var result = audit.service().search(null, 0, 10);
+    assertThat(result.total()).isEqualTo(1);
+    var row = result.items().get(0);
+    assertThat(row.action()).isEqualTo("schedule.paused");
+    assertThat(row.outcome()).isEqualTo("FAILURE");
+    assertThat(row.target()).isEqualTo("ghost");
+  }
+
+  @Test
+  void resumeReturns200AndCallsServiceWithReason() throws Exception {
+    mockMvc.perform(post("/api/dsl/schedules/A/resume")
+            .contentType("application/json")
+            .content("{\"reason\":\"back online\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.resumed").value(true));
+
+    verify(service).resume("A", "back online");
+  }
+
+  @Test
+  void resumeReturns200WithNoBody() throws Exception {
+    mockMvc.perform(post("/api/dsl/schedules/A/resume"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.resumed").value(true));
+
+    verify(service).resume(eq("A"), any());
+  }
+
+  @Test
+  void resumeReturns404ForMissingSchedule() throws Exception {
+    doThrow(new DefinitionNotFoundException("ghost")).when(service).resume(eq("ghost"), any());
+
+    mockMvc.perform(post("/api/dsl/schedules/ghost/resume"))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.code").value("NOT_FOUND"));
+  }
+
+  @Test
+  void resumeWritesAuditRowOnSuccess() throws Exception {
+    var audit = AuditTestSupport.h2();
+    mockMvc = mockMvc(new DslScheduleHandler(service, objectMapper,
+            AuditTestSupport.providerOf(audit.service())));
+
+    mockMvc.perform(post("/api/dsl/schedules/A/resume"))
+            .andExpect(status().isOk());
+
+    var result = audit.service().search(null, 0, 10);
+    assertThat(result.total()).isEqualTo(1);
+    var row = result.items().get(0);
+    assertThat(row.action()).isEqualTo("schedule.resumed");
+    assertThat(row.outcome()).isEqualTo("SUCCESS");
+    assertThat(row.target()).isEqualTo("A");
+  }
+
+  @Test
+  void resumeWritesAuditRowOnFailure() throws Exception {
+    var audit = AuditTestSupport.h2();
+    doThrow(new DefinitionNotFoundException("ghost")).when(service).resume(eq("ghost"), any());
+    mockMvc = mockMvc(new DslScheduleHandler(service, objectMapper,
+            AuditTestSupport.providerOf(audit.service())));
+
+    mockMvc.perform(post("/api/dsl/schedules/ghost/resume"))
+            .andExpect(status().isNotFound());
+
+    var result = audit.service().search(null, 0, 10);
+    assertThat(result.total()).isEqualTo(1);
+    var row = result.items().get(0);
+    assertThat(row.action()).isEqualTo("schedule.resumed");
+    assertThat(row.outcome()).isEqualTo("FAILURE");
+    assertThat(row.target()).isEqualTo("ghost");
   }
 }

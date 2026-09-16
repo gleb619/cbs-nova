@@ -6,6 +6,7 @@ import cbs.nova.starter.model.PageResponse;
 import cbs.nova.starter.controller.Pagination;
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.model.ScheduleModels.CreateScheduleRequest;
+import cbs.nova.starter.model.ScheduleModels.ScheduleActionRequest;
 import cbs.nova.starter.model.ScheduleModels.ScheduleSummary;
 import cbs.nova.starter.service.DslAuditService;
 import cbs.nova.starter.service.DslScheduleService;
@@ -39,13 +40,15 @@ public class DslScheduleHandler {
 
   static final String ACTION_SCHEDULE_CREATE = "SCHEDULE_CREATE";
   static final String ACTION_SCHEDULE_DELETE = "SCHEDULE_DELETE";
+  static final String ACTION_SCHEDULE_PAUSE = "schedule.paused";
+  static final String ACTION_SCHEDULE_RESUME = "schedule.resumed";
 
   private final DslScheduleService service;
   private final ObjectMapper objectMapper;
   private final ObjectProvider<DslAuditService> auditServiceProvider;
 
   public ServerResponse create(ServerRequest request) throws IOException {
-    CreateScheduleRequest body = parse(request);
+    CreateScheduleRequest body = parse(request, CreateScheduleRequest.class);
     if (body == null) {
       audit(request, ACTION_SCHEDULE_CREATE, "-", StarterConstants.OUTCOME_FAILURE,
               Map.of("error", "request body is required"));
@@ -99,6 +102,42 @@ public class DslScheduleHandler {
     }
   }
 
+  public ServerResponse pause(ServerRequest request) throws IOException {
+    String definition = request.pathVariable("definition");
+    ScheduleActionRequest body = parse(request, ScheduleActionRequest.class);
+    String reason = body != null ? body.reason() : null;
+    try {
+      service.pause(definition, reason);
+      audit(request, ACTION_SCHEDULE_PAUSE, definition, StarterConstants.OUTCOME_SUCCESS,
+              Map.of("definition", definition));
+      return ServerResponse.ok()
+              .contentType(MediaType.APPLICATION_JSON)
+              .body(Map.of("paused", true));
+    } catch (RuntimeException e) {
+      audit(request, ACTION_SCHEDULE_PAUSE, definition, StarterConstants.OUTCOME_FAILURE,
+              Map.of("error", String.valueOf(e.getMessage())));
+      throw e;
+    }
+  }
+
+  public ServerResponse resume(ServerRequest request) throws IOException {
+    String definition = request.pathVariable("definition");
+    ScheduleActionRequest body = parse(request, ScheduleActionRequest.class);
+    String reason = body != null ? body.reason() : null;
+    try {
+      service.resume(definition, reason);
+      audit(request, ACTION_SCHEDULE_RESUME, definition, StarterConstants.OUTCOME_SUCCESS,
+              Map.of("definition", definition));
+      return ServerResponse.ok()
+              .contentType(MediaType.APPLICATION_JSON)
+              .body(Map.of("resumed", true));
+    } catch (RuntimeException e) {
+      audit(request, ACTION_SCHEDULE_RESUME, definition, StarterConstants.OUTCOME_FAILURE,
+              Map.of("error", String.valueOf(e.getMessage())));
+      throw e;
+    }
+  }
+
   private void audit(ServerRequest request, String action, String target, String outcome,
           Object details) {
     if (auditServiceProvider == null) {
@@ -112,13 +151,13 @@ public class DslScheduleHandler {
             DslAuditService.correlationIdOf(request), outcome, details);
   }
 
-  private CreateScheduleRequest parse(ServerRequest request) throws IOException {
+  private <T> T parse(ServerRequest request, Class<T> type) throws IOException {
     try {
       String body = request.body(String.class);
       if (body == null || body.isBlank()) {
         return null;
       }
-      return objectMapper.readValue(body, CreateScheduleRequest.class);
+      return objectMapper.readValue(body, type);
     } catch (JacksonException e) {
       log.warn("[DSL schedules] failed to parse request body: {}", e.getMessage());
       return null;

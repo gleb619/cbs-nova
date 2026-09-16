@@ -15,6 +15,10 @@ public final class ScheduleModels {
           @Nullable String note) {
   }
 
+  public record ScheduleActionRequest(
+          @Nullable String reason) {
+  }
+
   public record ScheduleSummary(
           String scheduleId,
           String definition,
