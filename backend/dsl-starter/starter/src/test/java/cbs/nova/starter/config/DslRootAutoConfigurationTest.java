@@ -75,6 +75,7 @@ class DslRootAutoConfigurationTest {
             ApiKeyAuthMisconfigurationWarning.class,
             ProductionSecurityPostureValidator.class,
             SecurityPostureReporter.class,
+            SentryStatusReporter.class,
             DslHealthIndicatorConfiguration.class,
             BuilderClientConfiguration.class);
   }

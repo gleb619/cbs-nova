@@ -471,6 +471,58 @@ curl -s http://localhost:8090/actuator/prometheus | grep -E "dsl_run|dsl_preview
 ```
 
 If the counter or bucket names differ from the conventional names used in `alerts.yml`, update the expressions and this runbook to match the live output. This check is intentionally deferred to a human or CI boot because it requires Postgres + Temporal.
+
+---
+
+## Reading errors in Bugsink
+
+Bugsink is a self-hosted Sentry-compatible error tracker. The Spring Boot app ships unhandled exceptions to Bugsink via the Sentry SDK when `SENTRY_DSN` is set.
+
+**URL:** `http://localhost:8000` (compose port mapping in `app/compose/error-tracking.yml`).
+
+**Default superuser:** `admin@example.com` / `admin` — created automatically by the `CREATE_SUPERUSER` env var on first boot. This is a dev-only credential; rotate or disable in production.
+
+### DSN injection end-to-end
+
+1. `app/compose/error-tracking.yml` runs the Bugsink container.
+2. `app/compose/app.yml` passes `SENTRY_DSN: "${BUGSINK_DSN:-}"` to the Spring app container.
+3. `application.yml` binds `sentry.dsn: ${SENTRY_DSN:}` — when empty, the SDK is inert (no network calls, no-op).
+4. On first Bugsink boot, create a project via the UI (`http://localhost:8000`) and copy the DSN from the project settings.
+5. Set `BUGSINK_DSN` in your environment or `.env` file and restart the app.
+
+### What gets captured
+
+Two call sites capture exceptions to Sentry:
+
+- **`DefaultDslExceptionMapper`** — catches DSL exceptions and unhandled errors from REST endpoints. Sets a `runId` tag (from the `DslException.runId()` or the request attribute) before calling `Sentry.captureException()`.
+- **`TemporalDslProcessService.propagateRunId()`** — sets the `runId` tag on the current Sentry scope for every Temporal run, so any exception captured during workflow execution carries the run id.
+
+Both sites guard with `try/catch (Exception ignored)` — Sentry is optional and unconfigured SDK calls are safe no-ops.
+
+### Correlating a `dsl_runs` run id to a Bugsink event
+
+1. Note the `run_id` from the failing run (app log, `dsl_runs` table, or API response).
+2. In Bugsink UI, search events by the `runId` tag: the tag is set on every captured exception.
+3. Alternatively, grep the app log for the run id — Sentry breadcrumbs (when `minimum-breadcrumb-level: debug`) appear in the log as well.
+
+### Verifying the integration
+
+```bash
+# 1. Confirm Sentry is active at startup (look for the startup log line):
+docker compose -f app/docker-compose.yml logs app | grep -i "sentry"
+
+# 2. Trigger an exception via the ExceptionProbe DSL (preview mode):
+curl -sS -X POST http://localhost:8090/api/dsl/preview/ExceptionProbe \
+  -H 'Content-Type: application/json' \
+  -d '{"body": {"shouldFail": true, "reason": "integration test"}}'
+
+# 3. Check Bugsink for the event:
+curl -sS http://localhost:8000/api/0/organizations/default/issues/ \
+  -H "Authorization: Bearer <your-auth-token>" | jq
+```
+
+**Note:** Bugsink requires manual project/DSN setup through the UI on first boot. The Sentry SDK cannot auto-create projects. If `SENTRY_DSN` is empty, the SDK is inert and no events are sent.
+
 ## Schedule a definition
 
 Attach a Temporal Schedule to a published DSL definition so the engine fires it on a cron and

@@ -152,9 +152,10 @@ management:
 sentry:
   dsn: ${SENTRY_DSN:}
   environment: ${SENTRY_ENVIRONMENT:development}
-  release: ${SENTRY_RELEASE:}
+  # release: auto-wired from git-properties plugin (sentry-spring-boot-4 reads
+  # git.commit.id at startup). Override via SENTRY_RELEASE env only if needed.
   traces-sample-rate: ${SENTRY_TRACES_SAMPLE_RATE:0.0}
-  send-default-pii: true
+  send-default-pii: false
   logging:
     enabled: true
     minimum-event-level: warn
