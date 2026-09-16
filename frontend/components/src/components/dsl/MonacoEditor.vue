@@ -2,8 +2,9 @@
 import type * as Monaco from 'monaco-editor'
 import { type Component, computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { useHelperCompletion } from '../../composables/useHelperCompletion'
+import { useMonacoConstructCompletion } from '../../composables/useMonacoConstructCompletion'
 import { useMonacoHelperCompletion } from '../../composables/useMonacoHelperCompletion'
-import type { HelperCatalogEntry } from '../../types/dsl'
+import type { DslConstruct, HelperCatalogEntry } from '../../types/dsl'
 
 /** Monaco marker owner — shared between every code tab instance. */
 const MARKER_OWNER = 'dsl'
@@ -24,6 +25,7 @@ const props = withDefaults(
     readOnly?: boolean
     placeholder?: string
     helperCatalogFetch?: () => Promise<HelperCatalogEntry[]>
+    constructsFetch?: () => Promise<DslConstruct[]>
     /** Inline diagnostic markers — rendered via `monaco.editor.setModelMarkers`. */
     markers?: EditorMarker[]
   }>(),
@@ -39,6 +41,7 @@ const editor = ref<Monaco.editor.IStandaloneCodeEditor | null>(null)
 let monaco: typeof Monaco | null = null
 const codeEditorComponent = shallowRef<Component | null>(null)
 let releaseHelperCompletion: (() => void) | null = null
+let releaseConstructCompletion: (() => void) | null = null
 let disposed = false
 
 function installWorkerlessEnvironment() {
@@ -116,6 +119,14 @@ function onEditorDidMount(instance: Monaco.editor.IStandaloneCodeEditor) {
     })
   }
 
+  if (props.constructsFetch) {
+    releaseConstructCompletion = useMonacoConstructCompletion({
+      monaco: api,
+      getConstructs: props.constructsFetch,
+      language: props.language,
+    })
+  }
+
   applyMarkers(props.markers)
 }
 
@@ -143,6 +154,8 @@ onBeforeUnmount(() => {
   }
   releaseHelperCompletion?.()
   releaseHelperCompletion = null
+  releaseConstructCompletion?.()
+  releaseConstructCompletion = null
   editor.value = null
 })
 

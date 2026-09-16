@@ -168,6 +168,13 @@ async function fetchHelperCatalog(): Promise<HelperCatalogEntry[]> {
   return helpersCatalog.value
 }
 
+// Reuses the constructs already loaded into the workbench store (no extra
+// fetch layer); loads them on first demand only.
+async function fetchConstructs(): Promise<DslConstruct[]> {
+  if (!state.value.constructs.length) await loadConstructs()
+  return state.value.constructs as DslConstruct[]
+}
+
 function toggleHelperCatalog() {
   helperCatalogOpen.value = !helperCatalogOpen.value
   if (helperCatalogOpen.value) {
@@ -536,6 +543,7 @@ onBeforeUnmount(() => {
             :save-status="draftSave.status.value"
             :last-saved-at="draftSave.lastSavedAt.value"
             :helper-catalog-fetch="fetchHelperCatalog"
+            :constructs-fetch="fetchConstructs"
             :preview="runPreview"
             :explain="runExplain"
             :markers="editorMarkers"
