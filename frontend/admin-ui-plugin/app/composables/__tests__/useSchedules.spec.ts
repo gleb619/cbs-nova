@@ -172,7 +172,7 @@ describe('useSchedules', () => {
 
   it('pause(definition) calls pauseSchedule, marks pausing, then reloads', async () => {
     const api = getApiMocks()
-    let resolve: () => void = () => {}
+    let resolve: (value?: unknown) => void = () => {}
     api.pauseSchedule.mockReturnValue(new Promise((r) => { resolve = r }))
     api.listSchedules.mockResolvedValue([])
 
@@ -194,7 +194,7 @@ describe('useSchedules', () => {
 
   it('resume(definition) calls resumeSchedule, marks pausing, then reloads', async () => {
     const api = getApiMocks()
-    let resolve: () => void = () => {}
+    let resolve: (value?: unknown) => void = () => {}
     api.resumeSchedule.mockReturnValue(new Promise((r) => { resolve = r }))
     api.listSchedules.mockResolvedValue([])
 

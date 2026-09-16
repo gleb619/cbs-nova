@@ -3,7 +3,7 @@ import { computed, nextTick, ref } from 'vue'
 import { onSchedulesChanged } from '../../composables/useScheduleListEvents'
 import type { CreateSchedulePayload, ScheduleSummary } from '../../types/dsl'
 
-defineProps<{
+const props = defineProps<{
   schedules: ScheduleSummary[]
   loading?: boolean
   error?: string | null
@@ -34,7 +34,7 @@ onSchedulesChanged(() => {
 const canCreate = computed(() => definition.value.trim().length > 0 && cron.value.trim().length > 0)
 
 function isPausing(definition: string) {
-  return !!pausingDefinitions?.[definition]
+  return !!props.pausingDefinitions?.[definition]
 }
 
 function onTogglePause(schedule: ScheduleSummary) {
