@@ -3,7 +3,6 @@ plugins {
   alias(libs.plugins.spring.boot)
   alias(libs.plugins.spring.dm)
   alias(libs.plugins.test.logger)
-  //alias(libs.plugins.sentry)
   // T414: apply OWASP dependency-check ONLY to the deployable launcher module.
   // This bounds the NVD scan to the Spring Boot runtime classpath that ships.
   // Pinned in backend/gradle/libs.versions.toml as `dependency-check`.
