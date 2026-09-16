@@ -78,3 +78,35 @@ jobs:
       - name: Build frontend
         working-directory: frontend
         run: pnpm build
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # make lint runs backend Spotless via backend/dsl-platform/gradlew, which
+      # requires Java 25 and benefits from Gradle caching.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: gradle
+
+      # No explicit version — pnpm/action-setup reads the packageManager field
+      # (pnpm@9.0.0) from frontend/package.json.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: pnpm install
+
+      # python3 is pre-installed on ubuntu-latest; make lint's kanban step
+      # invokes scripts/cbs_cli.py via python3.
+      - name: Run make lint
+        run: make lint
