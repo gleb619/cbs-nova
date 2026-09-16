@@ -93,6 +93,19 @@
   },
   "overrides": [
     {
+      "includes": [
+        "components/src/composables/useMonacoConstructCompletion.ts",
+        "components/src/composables/__tests__/useMonacoConstructCompletion.spec.ts"
+      ],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noTemplateCurlyInString": "off"
+          }
+        }
+      }
+    },
+    {
       "includes": ["admin-ui-plugin/app/pages/**/*.vue"],
       "linter": {
         "rules": {

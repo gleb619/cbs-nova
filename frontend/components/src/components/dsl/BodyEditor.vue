@@ -27,6 +27,7 @@ const props = withDefaults(
     lastSavedAt?: Date | null
     savedHash?: number | null
     helperCatalogFetch?: () => Promise<HelperCatalogEntry[]>
+    constructsFetch?: () => Promise<DslConstruct[]>
     explain?: (
       name: string,
       body: unknown,
@@ -213,6 +214,7 @@ defineExpose({ revealPosition, insertAtCursor, selectProblem })
         :last-saved-at="lastSavedAt"
         :saved-hash="savedHash"
         :helper-catalog-fetch="helperCatalogFetch"
+        :constructs-fetch="constructsFetch"
         :markers="markers"
         @save="emit('save', $event)"
       />

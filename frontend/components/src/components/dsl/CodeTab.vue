@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useCrc32 } from '../../composables/useCrc32'
 import { createNamespacedLocalStorageState } from '../../composables/useLocalStorageState'
-import type { HelperCatalogEntry } from '../../types/dsl'
+import type { DslConstruct, HelperCatalogEntry } from '../../types/dsl'
 import HotkeyTooltip from '../HotkeyTooltip.vue'
 import MonacoEditor, { type EditorMarker } from './MonacoEditor.vue'
 
@@ -15,6 +15,7 @@ const props = withDefaults(
     lastSavedAt?: Date | null
     savedHash?: number | null
     helperCatalogFetch?: () => Promise<HelperCatalogEntry[]>
+    constructsFetch?: () => Promise<DslConstruct[]>
     markers?: EditorMarker[]
   }>(),
   { language: 'java', saveStatus: 'idle', lastSavedAt: null, savedHash: null, markers: () => [] },
@@ -240,6 +241,7 @@ defineExpose({ revealPosition, insertAtCursor })
           :read-only="readOnly"
           :placeholder="placeholder"
           :helper-catalog-fetch="helperCatalogFetch"
+          :constructs-fetch="constructsFetch"
           :markers="markers"
           @update:model-value="onEditorInput"
           @blur="handleBlur"

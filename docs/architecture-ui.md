@@ -252,6 +252,10 @@ full editing experience. Editor-depth features shipped incrementally:
 - **Schema-aware autocomplete** (T362) — `useMonacoHelperCompletion` registers a completion provider that
   suggests helper/function names (with input/output types) from the helper catalog, triggered inside string
   literals.
+- **Construct scaffold completion** (T510) — `useMonacoConstructCompletion` registers a second provider
+  (triggers `.`/space) that suggests `Dsl.process`/`Dsl.transaction`/`Dsl.function` snippet scaffolds, stage-builder
+  keywords, and known constructs (processes/transactions/functions only) from the workbench store — helper names stay
+  exclusive to the helper provider so the two never overlap.
 - **Inline compile diagnostics** (T396) — `useDslWorkbench.state.validationErrors` (from preview / publish /
   reload) are mapped to Monaco markers (`setModelMarkers`, owner `'dsl'`) so failing lines are squiggled in
   place; markers clear on the next successful validation. `DslProblemsPanel` rows are click-to-jump — selecting
