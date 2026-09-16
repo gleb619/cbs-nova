@@ -166,10 +166,10 @@
             "type": "string"
           },
           "expectedOutput": {
-            "$ref": "#/components/schemas/JsonNode"
+            "$ref": "#/components/schemas/PreviewReport"
           },
           "input": {
-            "$ref": "#/components/schemas/JsonNode"
+            "$ref": "#/components/schemas/DslRequest"
           }
         },
         "type": "object"
@@ -177,20 +177,27 @@
       "DefinitionTestCaseResult": {
         "properties": {
           "actual": {
-            "$ref": "#/components/schemas/JsonNode"
+            "$ref": "#/components/schemas/PreviewReport"
           },
-          "diagnostics": {},
+          "diagnostics": {
+            "$ref": "#/components/schemas/ErrorResponse"
+          },
           "durationMs": {
             "format": "int64",
             "type": "integer"
           },
           "expected": {
-            "$ref": "#/components/schemas/JsonNode"
+            "$ref": "#/components/schemas/PreviewReport"
           },
           "name": {
             "type": "string"
           },
           "status": {
+            "enum": [
+              "PASS",
+              "FAIL",
+              "ERROR"
+            ],
             "type": "string"
           }
         },
@@ -243,49 +250,12 @@
         },
         "type": "object"
       },
-      "DslDescriptor": {
+      "DslRequest": {
         "properties": {
-          "description": {
-            "type": "string"
-          },
-          "hasCompensation": {
-            "type": "boolean"
-          },
-          "hasSideEffects": {
-            "type": "boolean"
-          },
-          "heartbeatTimeout": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "parameters": {
-            "items": {
-              "$ref": "#/components/schemas/ParameterDescriptor"
-            },
-            "type": "array"
-          },
-          "previewBehavior": {
-            "type": "string"
-          },
-          "startToCloseTimeout": {
-            "type": "string"
-          },
-          "taskQueue": {
-            "type": "string"
-          },
-          "type": {
-            "enum": [
-              "PROCESS",
-              "TRANSACTION",
-              "FUNCTION",
-              "OTHER"
-            ],
-            "type": "string"
-          },
-          "version": {
-            "type": "string"
+          "body": {},
+          "metadata": {
+            "additionalProperties": {},
+            "type": "object"
           }
         },
         "type": "object"
@@ -330,35 +300,15 @@
         },
         "type": "object"
       },
-      "ExecutableDescriptor": {
-        "properties": {
-          "description": {
-            "type": "string"
-          },
-          "hasSideEffects": {
-            "type": "boolean"
-          },
-          "name": {
-            "type": "string"
-          },
-          "parameters": {
-            "items": {
-              "$ref": "#/components/schemas/ParameterDescriptor"
-            },
-            "type": "array"
-          },
-          "previewBehavior": {
-            "type": "string"
-          }
-        },
-        "type": "object"
-      },
       "ExecutionDto": {
         "properties": {
           "completedAt": {
             "type": "string"
           },
           "correlationId": {
+            "type": "string"
+          },
+          "definitionHash": {
             "type": "string"
           },
           "duration": {
@@ -473,56 +423,17 @@
       },
       "ExplainReport": {
         "properties": {
-          "astTree": {
-            "$ref": "#/components/schemas/CallNode"
-          },
-          "callCounts": {
-            "additionalProperties": {
-              "format": "int32",
-              "type": "integer"
+          "children": {
+            "items": {
+              "$ref": "#/components/schemas/ExplainReport"
             },
-            "type": "object"
+            "type": "array"
           },
           "description": {
             "type": "string"
           },
-          "dryRunLogs": {
-            "items": {
-              "additionalProperties": {},
-              "type": "object"
-            },
-            "type": "array"
-          },
-          "dslDescriptor": {
-            "$ref": "#/components/schemas/DslDescriptor"
-          },
-          "errors": {
-            "items": {
-              "$ref": "#/components/schemas/PreviewErrorDetail"
-            },
-            "type": "array"
-          },
-          "executableDescriptor": {
-            "$ref": "#/components/schemas/ExecutableDescriptor"
-          },
-          "executionTrace": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array"
-          },
-          "externalCalls": {
-            "items": {
-              "additionalProperties": {},
-              "type": "object"
-            },
-            "type": "array"
-          },
-          "mermaidDiagram": {
+          "mermaid": {
             "type": "string"
-          },
-          "metrics": {
-            "$ref": "#/components/schemas/PreviewMetricsSnapshot"
           },
           "name": {
             "type": "string"
@@ -598,95 +509,6 @@
         },
         "type": "object"
       },
-      "JsonNode": {
-        "properties": {
-          "array": {
-            "type": "boolean"
-          },
-          "bigDecimal": {
-            "type": "boolean"
-          },
-          "bigInteger": {
-            "type": "boolean"
-          },
-          "binary": {
-            "type": "boolean"
-          },
-          "boolean": {
-            "type": "boolean"
-          },
-          "container": {
-            "type": "boolean"
-          },
-          "double": {
-            "type": "boolean"
-          },
-          "embeddedValue": {
-            "type": "boolean"
-          },
-          "empty": {
-            "type": "boolean"
-          },
-          "float": {
-            "type": "boolean"
-          },
-          "floatingPointNumber": {
-            "type": "boolean"
-          },
-          "int": {
-            "type": "boolean"
-          },
-          "integralNumber": {
-            "type": "boolean"
-          },
-          "long": {
-            "type": "boolean"
-          },
-          "missingNode": {
-            "type": "boolean"
-          },
-          "nodeType": {
-            "enum": [
-              "ARRAY",
-              "BINARY",
-              "BOOLEAN",
-              "MISSING",
-              "NULL",
-              "NUMBER",
-              "OBJECT",
-              "POJO",
-              "STRING"
-            ],
-            "type": "string"
-          },
-          "null": {
-            "type": "boolean"
-          },
-          "number": {
-            "type": "boolean"
-          },
-          "object": {
-            "type": "boolean"
-          },
-          "pojo": {
-            "type": "boolean"
-          },
-          "short": {
-            "type": "boolean"
-          },
-          "string": {
-            "type": "boolean"
-          },
-          "textual": {
-            "deprecated": true,
-            "type": "boolean"
-          },
-          "valueNode": {
-            "type": "boolean"
-          }
-        },
-        "type": "object"
-      },
       "NamesResponse": {
         "properties": {
           "names": {
@@ -715,23 +537,6 @@
           "total": {
             "format": "int64",
             "type": "integer"
-          }
-        },
-        "type": "object"
-      },
-      "ParameterDescriptor": {
-        "properties": {
-          "name": {
-            "type": "string"
-          },
-          "type": {
-            "enum": [
-              "STRING",
-              "NUMBER",
-              "BOOLEAN",
-              "OBJECT"
-            ],
-            "type": "string"
           }
         },
         "type": "object"
@@ -1028,31 +833,6 @@
           }
         },
         "type": "object"
-      },
-      "WebhookDeliveryInfo": {
-        "properties": {
-          "definitionPattern": {
-            "type": "string"
-          },
-          "lastAttempts": {
-            "format": "int32",
-            "type": "integer"
-          },
-          "lastDeliveredAt": {
-            "format": "date-time",
-            "type": "string"
-          },
-          "lastError": {
-            "type": "string"
-          },
-          "lastStatus": {
-            "type": "string"
-          },
-          "url": {
-            "type": "string"
-          }
-        },
-        "type": "object"
       }
     }
   },
@@ -1307,54 +1087,6 @@
         "summary": "Import a definition metadata bundle, snapshotting history and reloading DSL",
         "tags": [
           "DSL Admin"
-        ]
-      }
-    },
-    "/api/dsl/definitions/{name}/description": {
-      "patch": {
-        "operationId": "updateDescription",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "name",
-            "required": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServerResponse"
-                }
-              }
-            },
-            "description": "Description updated"
-          },
-          "400": {
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServerResponse"
-                }
-              }
-            },
-            "description": "Invalid request"
-          },
-          "404": {
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServerResponse"
-                }
-              }
-            },
-            "description": "Construct not found"
-          }
-        },
-        "summary": "Update DSL construct description",
-        "tags": [
-          "DSL Introspection"
         ]
       }
     },
@@ -2569,44 +2301,6 @@
         ]
       }
     },
-    "/api/dsl/webhooks/deliveries": {
-      "get": {
-        "operationId": "listWebhookDeliveryRows",
-        "parameters": [
-          {
-            "description": "Optional exact subscription id filter (definition pattern)",
-            "in": "query",
-            "name": "subscriptionId"
-          },
-          {
-            "description": "Maximum number of deliveries to return",
-            "in": "query",
-            "name": "limit"
-          },
-          {
-            "description": "Number of matching deliveries to skip before returning results",
-            "in": "query",
-            "name": "offset"
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PageResponse"
-                }
-              }
-            },
-            "description": "Paged append-only delivery log, newest first"
-          }
-        },
-        "summary": "List persisted webhook delivery outcomes",
-        "tags": [
-          "Webhooks"
-        ]
-      }
-    },
     "/api/executions": {
       "get": {
         "operationId": "listExecutions",
@@ -2830,6 +2524,44 @@
         ]
       }
     },
+    "/api/executions/{id}/events": {
+      "get": {
+        "operationId": "events",
+        "parameters": [
+          {
+            "description": "Run id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/event-stream": {}
+            },
+            "description": "SSE stream of execution status changes"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No run with the given id"
+          }
+        },
+        "summary": "Stream status events for a single execution run",
+        "tags": [
+          "DSL Executions"
+        ]
+      }
+    },
     "/api/executions/{id}/transactions": {
       "get": {
         "operationId": "getExecutionTransactions",
@@ -2870,30 +2602,6 @@
           "DSL Executions"
         ]
       }
-    },
-    "/api/webhooks/deliveries": {
-      "get": {
-        "operationId": "listWebhookDeliveries",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/WebhookDeliveryInfo"
-                  },
-                  "type": "array"
-                }
-              }
-            },
-            "description": "Last delivery outcome per configured subscription"
-          }
-        },
-        "summary": "List last webhook delivery outcomes",
-        "tags": [
-          "Webhooks"
-        ]
-      }
     }
   },
   "servers": [
@@ -2904,8 +2612,8 @@
   ],
   "tags": [
     {
-      "description": "Run-completion webhook diagnostics",
-      "name": "Webhooks"
+      "description": "Execution status Server-Sent Events",
+      "name": "DSL Executions"
     },
     {
       "description": "Inspect DSL execution runs",
