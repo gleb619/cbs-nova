@@ -202,6 +202,105 @@ Outside compose (e.g. running the backend via `make backend`), set `OTEL_EXPORTE
 
 Run attribution and correlation are stored on the `dsl_runs` table: migrations `V5__dsl_runs_triggered_by.sql` and `V6__dsl_runs_correlation_id.sql` add `triggered_by` and `correlation_id` columns. See [Runtime Engine — Run idempotency](dsl/runtime.md#run-idempotency) and [Correlation id](dsl/runtime.md#correlation-id) for the header semantics.
 
+### Scheduling
+
+The starter ships a thin REST CRUD surface over [Temporal Schedules](https://docs.temporal.io/workflows#schedule) so a published DSL definition can be triggered on a cron without writing a Temporal client. Every schedule created here starts a fresh workflow execution per fire and routes through the same `TemporalDslProcessService.startProcess` path as a manual `POST /api/dsl/run/{name}`, so each fire produces exactly one row in `dsl_runs`.
+
+#### What it is
+
+REST CRUD over Temporal Schedules, registered by [`DslScheduleRouterConfiguration`](../../backend/dsl-starter/starter/src/main/java/cbs/nova/starter/config/router/DslScheduleRouterConfiguration.java) and handled by [`DslScheduleHandler`](../../backend/dsl-starter/starter/src/main/java/cbs/nova/starter/controller/DslScheduleHandler.java) + [`DslScheduleService`](../../backend/dsl-starter/starter/src/main/java/cbs/nova/starter/service/DslScheduleService.java). The whole router is `@ConditionalOnBean(ScheduleClient.class)`, so the routes vanish in non-Temporal deployments — Temporal-gated surface, by design.
+
+#### Exact routes
+
+Sourced from `DslScheduleRouterConfiguration`:
+
+| Verb | Path | Handler | Purpose |
+|---|---|---|---|
+| `GET` | `/api/dsl/schedules` | `DslScheduleHandler.list` | List schedules created by this service (ids prefixed `sched-`). Paginated via `?limit=&offset=`; envelope is `PageResponse<ScheduleSummary>` (see [roadmap § Epic 1 / pagination convention](roadmap.md)). |
+| `POST` | `/api/dsl/schedules` | `DslScheduleHandler.create` | Create a schedule that fires the definition's workflow on the given cron. Returns `201` with `CreateScheduleResponse{scheduleId, definition, cron}` or `400` / `404` / `409` (see `RouterOperation` annotations). |
+| `DELETE` | `/api/dsl/schedules/{definition}` | `DslScheduleHandler.delete` | Delete the schedule for `{definition}`. Idempotent: `200 {deleted:true}` whether the schedule existed or not. |
+
+The BFF exposes matching proxies under [`frontend/admin-ui-plugin/server/api/v1/dsl/schedules/`](../../frontend/admin-ui-plugin/server/api/v1/dsl/schedules/) (`index.get.ts`, `index.post.ts`, `[definition].delete.ts`); curl against `http://localhost:3000/api/v1/dsl/schedules*` reaches the same backend. See the recipe in the runbook: [Schedule a definition](runbook.md#schedule-a-definition).
+
+#### Request / response shapes
+
+From [`ScheduleModels`](../../backend/dsl-starter/starter/src/main/java/cbs/nova/starter/model/ScheduleModels.java):
+
+```java
+public record CreateScheduleRequest(
+    String definition,            // required; must match ^[A-Za-z0-9._-]{1,120}$
+    String cron,                  // required
+    @Nullable String timezone,    // optional; IANA TZ id; default UTC
+    @Nullable Object input,       // optional; workflow input; default {}
+    @Nullable String note) {}     // optional; user note on the schedule
+
+public record ScheduleSummary(
+    String scheduleId,            // "sched-<definition>"
+    String definition,
+    String cron,
+    String timezone,
+    @Nullable String note,
+    @Nullable String nextRunAt,   // Instant.toString() of next fire, or null
+    boolean paused) {}            // always false in the current API (see Known gaps)
+
+public record CreateScheduleResponse(
+    String scheduleId,
+    String definition,
+    String cron) {}
+```
+
+The schedule id format is fixed: `sched-` + `definition`. The pattern `^[A-Za-z0-9._-]{1,120}$` is enforced by `DslScheduleService.scheduleIdFor(...)` so the id can be embedded in the Temporal schedule id without escaping surprises.
+
+#### How a fired schedule triggers a DSL run
+
+Traced from `DslScheduleService.create(...)`:
+
+1. `definition` is resolved against `GlobalManager.findGeneratedProcess(definition)`; missing → `404 DefinitionNotFoundException`.
+2. `timezone` (default `UTC`) is validated via `ZoneId.of(timezone)`; bad zone → `400 IllegalArgumentException("Invalid timezone: …")`.
+3. `ScheduleActionStartWorkflow` is built with:
+   - workflow type = `descriptor.temporalInterface()`,
+   - arguments = `new DslTemporalProcessRequest<>("scheduled", input)` — `"scheduled"` is a payload marker, **not** the Temporal Workflow id,
+   - `WorkflowOptions` set only the `taskQueue` from the descriptor (no fixed workflow id — Temporal assigns `<scheduleId>-<scheduled-time>` per fire, per the service Javadoc).
+4. `ScheduleSpec` is built with `setCronExpressions(List.of(cron))` and `setTimeZoneName(timezone)`.
+5. `SchedulePolicy` is fixed:
+   - `Overlap = SCHEDULE_OVERLAP_POLICY_SKIP` — if the previous fire is still running, the new fire is skipped (no parallel runs).
+   - `CatchupWindow = Duration.ofMinutes(1)` — fires missed during downtime are caught up only within 1 minute of the missed time.
+6. `scheduleClient.createSchedule(scheduleId, schedule, ScheduleOptions.newBuilder().build())`; existing id → `409 ScheduleConflictException`.
+
+When the schedule fires, Temporal starts the workflow on the descriptor's task queue. That workflow executes through the same generated dispatch path as a manual run, calling `TemporalDslProcessService.startProcess(...)`, which generates a fresh `runId` via `contextFactory.generateRunId()` and writes one `dsl_runs` row per fire. Because there is no HTTP request and no Spring Security context on the Temporal worker thread, `RunIdentityResolver.resolve()` returns `null` — so **`triggered_by` is `NULL` on every scheduled run**. The Temporal Workflow id (`<scheduleId>-<scheduled-time>`) is visible in Temporal UI as the way to trace a fire back to its schedule; the `dsl_runs.run_id` is a fresh UUID per fire.
+
+`DslScheduleHandler` writes `dsl_audit` rows for `SCHEDULE_CREATE` (with `details={definition, cron}`) and `SCHEDULE_DELETE`; audit is opportunistic via `ObjectProvider<DslAuditService>` and is a no-op when no audit bean is present (e.g. no `DataSource` configured).
+
+#### Auth posture
+
+The schedule surface sits under `/api/*`, so:
+
+- **API-key filter** (`ApiKeyAuthFilterConfiguration` → `/api/*`) gates the route when `cbs.dsl.auth.enabled=true`; missing/invalid `X-Api-Key` → `401 UNAUTHORIZED`. With `enabled=false` (default) the filter is not registered and the route is anonymous.
+- **RBAC filter** (`RbacFilterConfiguration` → `/api/*`) gates the route when `cbs.dsl.auth.rbac.enabled=true`. From `RbacAuthorizationFilter.RULES`:
+  - `POST /api/dsl/schedules` → requires `Role.OPERATOR`.
+  - `DELETE /api/dsl/schedules/*` → requires `Role.OPERATOR`.
+  - `GET /api/dsl/schedules` → defaults to `Role.VIEWER` (no explicit rule; reads always default to `VIEWER` per `requiredRole`).
+  - Service-to-service API-key callers are mapped to `Role.ADMIN` by `RoleResolver`, so an API key satisfies every schedule route regardless of the explicit rule.
+- **OIDC / JWT resource-server** (`cbs.security.oidc.enabled=true`) requires a valid JWT on the same `/api/dsl/**` path; RBAC then resolves the role from the configured claim (default `roles`, with `scope` / `scp` fallback for OIDC-standard conventions).
+
+#### Temporal ScheduleSpec cron format
+
+`ScheduleSpec.setCronExpressions(List.of(cron))` accepts the **standard 5-field Unix cron** the SDK ships with (`minute hour day-of-month month day-of-week`); the existing test (`DslScheduleRouterReachabilityTest`) writes `"0 9 * * *"`, and `DslScheduleService.create` passes the user string through verbatim. Differences from classic POSIX cron:
+
+- **No seconds field** in our code path. Temporal's `ScheduleSpec` SDK supports an optional 6-field variant (`seconds minute hour …`) but the API never emits a leading-seconds cron — caller-supplied 5-field expressions are forwarded as-is.
+- **Timezone is separate**, not in the expression. The cron is interpreted in `setTimeZoneName(timezone)`, which the API validates as an IANA `ZoneId`. Default is `UTC` (`StarterConstants.DEFAULT_TIMEZONE = "UTC"`).
+- **Range / step syntax** follows Temporal's parser (same as standard cron `* / , -` with Temporal's own range rules). When in doubt, treat the value as the canonical Temporal SDK input and validate by listing the schedule and reading back `cron` + `nextRunAt`.
+
+#### Known gaps (not currently exposed / unclear)
+
+- **Pause / unpause is not exposed.** `GET /api/dsl/schedules` returns a `paused` flag but no route sets it. There is no `PATCH` / `POST /pause` / `POST /unpause` in `DslScheduleRouterConfiguration`. Operators who need to stop a schedule today must `DELETE /api/dsl/schedules/{definition}` (idempotent) and re-`POST` it later, losing the workflow id mapping.
+- **No update / modify endpoint.** The cron and timezone are immutable after creation; changing the schedule requires delete + recreate. The service does not call `updateSchedule(...)`.
+- **Schedule id derived only from definition.** Re-creating a schedule for the same definition always collides on `sched-<definition>` (caught as `409 ScheduleConflictException`). There is no way to have two coexisting schedules for the same definition.
+- **`triggered_by` is `NULL` for scheduled runs.** Confirmed by tracing: `RunIdentityResolver.resolve()` cannot read a Spring Security context or a request attribute from a Temporal worker thread, so it returns `null`. Operators querying `SELECT … FROM dsl_runs WHERE triggered_by IS NULL` will see scheduled runs; joining back to the originating schedule requires the Temporal Workflow id (`<scheduleId>-<scheduled-time>`) from Temporal UI.
+- **Catchup window is fixed at 1 minute** (`SchedulePolicy.catchupWindow = Duration.ofMinutes(1)`). A Temporal outage longer than 1 minute silently drops the missed fires — they do not backfill when Temporal recovers.
+- **Audit is best-effort.** `DslScheduleHandler.audit(...)` swallows the absence of a `DslAuditService` bean (no DataSource). A schedule create/delete against an unaudited deployment will succeed but leave no `dsl_audit` row.
+- **`DslTemporalProcessRequest.runId` payload field is `"scheduled"`.** This is a payload marker carried into the workflow body, not the `dsl_runs.run_id` (which is freshly generated per fire by `contextFactory.generateRunId()`). It's a name collision with the run-id concept and may confuse anyone reading generated workflow code.
+
 Definition-version attribution (T492): migration `V8__dsl_runs_definition_hash.sql` adds a nullable `definition_hash` column, stamped at run submission (`RunDefinitionHash`, called from `TemporalDslProcessService.startProcess`) and exposed as `ExecutionDto.definitionHash`. **This is DESCRIPTOR identity, not full logic identity** — it is the same sha256 over the Jackson-serialized `DslDescriptor` (taskQueue / version / timeouts) that the preview cache keys on, so two functionally different definitions with the same descriptor collide. It is null for historical rows and for runs whose descriptor cannot be resolved (never a run failure). A true content hash computed at publish/reload time is a planned Epic 5 follow-up.
 
 See [Starter Configuration Reference](dsl/configuration.md) for the full key tables, and

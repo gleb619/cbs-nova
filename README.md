@@ -16,6 +16,7 @@ CBS-Nova: Business Orchestration Engine for core banking operations. Built on Ja
 - **Admin UI** ([`frontend/admin-ui-plugin/`](frontend/admin-ui-plugin/)) — a Nuxt module that mounts the UI into any host Nuxt app, with a Nitro BFF in front of the backend.
 
 See [`docs/architecture-backend.md`](docs/architecture-backend.md) and [`docs/architecture-ui.md`](docs/architecture-ui.md) for the full designs.
+- [Scheduling DSL definitions on a cron](docs/architecture-backend.md#scheduling) — REST CRUD over Temporal schedules, request shapes, auth posture, and the runbook [recipe](docs/runbook.md#schedule-a-definition) for create/list/delete.
 
 ## Prerequisites
 

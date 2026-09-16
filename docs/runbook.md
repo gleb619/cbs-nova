@@ -471,6 +471,105 @@ curl -s http://localhost:8090/actuator/prometheus | grep -E "dsl_run|dsl_preview
 ```
 
 If the counter or bucket names differ from the conventional names used in `alerts.yml`, update the expressions and this runbook to match the live output. This check is intentionally deferred to a human or CI boot because it requires Postgres + Temporal.
+## Schedule a definition
+
+Attach a Temporal Schedule to a published DSL definition so the engine fires it on a cron and
+each fire produces a fresh `dsl_runs` row. Backed by
+[`DslScheduleService`](../../backend/dsl-starter/starter/src/main/java/cbs/nova/starter/service/DslScheduleService.java)
+via the routes registered in
+[`DslScheduleRouterConfiguration`](../../backend/dsl-starter/starter/src/main/java/cbs/nova/starter/config/router/DslScheduleRouterConfiguration.java);
+architecture detail in [§ Scheduling](architecture-backend.md#scheduling).
+
+Use the BFF paths (`/api/v1/dsl/schedules*`) so the browser's `X-Api-Key` / JWT / RBAC posture
+is applied consistently. The backend at `:8090` exposes the same routes at `/api/dsl/schedules*`
+and behaves identically; pick whichever your client can reach.
+
+### Create a schedule
+
+```bash
+curl -sS -X POST http://localhost:3000/api/v1/dsl/schedules \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "definition": "monthly-closing",
+    "cron": "0 9 * * *",
+    "timezone": "Europe/Vienna",
+    "input": {"batchSize": 500},
+    "note": "monthly close of books"
+  }'
+```
+
+Returns `201 Created` with `{"scheduleId":"sched-monthly-closing","definition":"monthly-closing","cron":"0 9 * * *"}`.
+
+Fields:
+
+- `definition` (required) — must be published in the DSL module and match `^[A-Za-z0-9._-]{1,120}$`.
+- `cron` (required) — standard 5-field Unix cron (`minute hour dom month dow`); the SDK parses
+  this. See [§ Scheduling / Temporal ScheduleSpec cron format](architecture-backend.md#temporal-schedulespec-cron-format)
+  for the precise contract.
+- `timezone` (optional) — IANA zone id, default `UTC`.
+- `input` (optional) — JSON object passed as the workflow input on every fire; default `{}`.
+- `note` (optional) — free-form note attached to the schedule (returned by `list`).
+
+Each fire produces one `dsl_runs` row with `triggered_by = NULL` (Temporal worker thread has no
+HTTP/auth context — see [Known gaps](architecture-backend.md#known-gaps-not-currently-exposed--unclear)).
+
+### List schedules
+
+```bash
+curl -sS 'http://localhost:3000/api/v1/dsl/schedules?limit=50&offset=0' | jq
+```
+
+Returns `PageResponse<ScheduleSummary>`: `{items: [...], total, offset, limit}`. Each item carries
+`scheduleId`, `definition`, `cron`, `timezone`, `note`, `nextRunAt`, `paused`. Only schedules whose
+id starts with `sched-` (those this service created) are listed — unrelated Temporal schedules are
+filtered out by `listSchedules()`.
+
+### Delete a schedule
+
+```bash
+curl -sS -X DELETE http://localhost:3000/api/v1/dsl/schedules/monthly-closing
+```
+
+Returns `200 {"deleted":true}`. Calling the schedule does **not** require the schedule to exist —
+the service treats "not found" as success (`isNotFound(e)` check) so deletes are idempotent.
+
+> **Pause / unpause is not currently exposed** via the REST API. `GET …/schedules` returns a
+> `paused` flag but no route toggles it. To stop a schedule, `DELETE` it; to start it again,
+> `POST` it back. Updating an existing schedule (cron change, timezone change) requires
+> delete + recreate. See
+> [Known gaps](architecture-backend.md#known-gaps-not-currently-exposed--unclear).
+
+### Common failure cases
+
+| Symptom | HTTP | Cause | Fix |
+|---|---|---|---|
+| `400 BAD_REQUEST "definition is required"` / `"cron is required"` | 400 | Missing one of the required fields. | Include both in the JSON body. |
+| `400 BAD_REQUEST "Invalid timezone: <id>"` | 400 | `timezone` is not a valid IANA `ZoneId`. | Use a real IANA id (e.g. `Europe/Vienna`, `America/New_York`); default is `UTC`. |
+| `400 BAD_REQUEST "Invalid definition name: must match …"` | 400 | `definition` contains characters outside `^[A-Za-z0-9._-]{1,120}$` (e.g. spaces, `/`, accented letters). | Rename the definition in the DSL module and re-publish. |
+| `404 NOT_FOUND "Definition … not found"` | 404 | `definition` is not in `GlobalManager.findGeneratedProcess(…)` — usually not yet published, or a typo. | Confirm `GET /api/dsl/definitions` lists it; publish via `POST /api/dsl/drafts/<name>/publish` or re-deploy the DSL module. |
+| `409 CONFLICT` (schedule already exists) | 409 | A schedule for this definition already exists (id `sched-<definition>` is unique). | `DELETE /api/dsl/schedules/<definition>` first, then `POST` again. |
+| `401 UNAUTHORIZED` | 401 | `cbs.dsl.auth.enabled=true` and `X-Api-Key` is missing/invalid (when going direct to backend). | Supply the configured `X-Api-Key`. The BFF forwards it via `proxyToBackend`. |
+| `403 FORBIDDEN` mentioning `OPERATOR` | 403 | `cbs.dsl.auth.rbac.enabled=true` and the caller's role is `< OPERATOR` (e.g. `VIEWER`, `RUNNER`, `AUTHOR`). | Use a principal mapped to `OPERATOR` or `ADMIN` (API-key callers are `ADMIN`). |
+| `500` / `503` from the backend, with `UNAVAILABLE` / `DEADLINE_EXCEEDED` in app logs | 5xx | Temporal is unreachable. The `createSchedule` call fails on gRPC. | Go to [incident #1 — Temporal disconnect](#1-temporal-disconnect--p0). |
+| Schedule created but no `dsl_runs` rows appear at fire time | n/a | Either Temporal skipped the fire (overlap policy `SKIP` while the previous run was still going) or the workflow failed before reaching `startProcess`. | Check Temporal UI for the schedule's action history; check `dsl_runs` for `RUNNING` / `FAILED` rows; check app logs for workflow start failures. |
+
+### Verifying a fired schedule
+
+```bash
+# 1. Confirm the next fire time
+curl -sS http://localhost:3000/api/v1/dsl/schedules | \
+  jq '.items[] | select(.definition=="monthly-closing") | {cron, timezone, nextRunAt, paused}'
+
+# 2. After the fire, find the run row (no triggered_by — schedule has no caller identity)
+docker exec -i $(docker ps -qf name=postgres) psql -U nova -d nova \
+  -c "SELECT run_id, process_name, status, started_at, finished_at FROM dsl_runs \
+      WHERE process_name='monthly-closing' AND triggered_by IS NULL \
+      ORDER BY started_at DESC LIMIT 5;"
+
+# 3. Trace the fire in Temporal UI — the Workflow id is "<scheduleId>-<scheduled-time>"
+xdg-open http://localhost:8233  # or the URL behind your tunnel
+```
+
 ## Maintaining this runbook
 
 Every new ops-relevant change (a scheduled job, a new failure mode, a new external dependency)
