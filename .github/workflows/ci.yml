@@ -110,3 +110,20 @@ jobs:
       # invokes scripts/cbs_cli.py via python3.
       - name: Run make lint
         run: make lint
+
+  dsl-plugins-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # dsl-plugins resolves cbs.nova:* from Maven Local (same as dsl-starter);
+      # uses backend/dsl-platform/gradlew since backend/gradlew (8.13) fails
+      # under Java 25.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: gradle
+
+      - name: Run dsl-plugins tests
+        run: backend/dsl-platform/gradlew -p backend/dsl-plugins test --no-daemon
