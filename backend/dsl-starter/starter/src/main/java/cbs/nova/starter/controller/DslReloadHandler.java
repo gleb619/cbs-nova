@@ -21,11 +21,11 @@ import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.config.router.DslReloadRouterConfiguration;
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.exception.DslCompilationException;
-import cbs.nova.starter.model.CompileDiagnostic;
+import cbs.nova.dsl.model.CompileDiagnostic;
 import cbs.nova.starter.model.CompileDiagnosticSource;
 import cbs.nova.starter.model.CompileModels.CompileRequest;
 import cbs.nova.starter.model.CompileModels.CompileResult;
-import cbs.nova.starter.model.ErrorResponse;
+import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.starter.model.ReloadResponse;
 import cbs.nova.starter.persistence.CompileDiagnosticRecordRepository;
 import cbs.nova.starter.events.DomainEvent;
@@ -110,15 +110,15 @@ public class DslReloadHandler {
     if (sourceDirProperty == null || sourceDirProperty.isBlank()) {
       audit(request, "-", StarterConstants.OUTCOME_FAILURE,
               Map.of("error", "NOT_CONFIGURED: csb.dsl.source-dir is not configured"));
-      return error(HttpStatus.CONFLICT, new ErrorResponse(
-              "NOT_CONFIGURED", "csb.dsl.source-dir is not configured", null, null, null, null));
+      return error(HttpStatus.CONFLICT, new ErrorResponse("NOT_CONFIGURED",
+              "csb.dsl.source-dir is not configured", null, null, null, null, null, null, null));
     }
     var dir = Path.of(sourceDirProperty);
     if (!Files.isDirectory(dir)) {
       audit(request, dir.toString(), StarterConstants.OUTCOME_FAILURE,
               Map.of("error", "NOT_FOUND: Source directory does not exist: " + dir));
-      return error(HttpStatus.CONFLICT, new ErrorResponse(
-              "NOT_FOUND", "Source directory does not exist: " + dir, null, null, null, null));
+      return error(HttpStatus.CONFLICT, new ErrorResponse("NOT_FOUND",
+              "Source directory does not exist: " + dir, null, null, null, null, null, null, null));
     }
 
     reloadLock.lock();
@@ -145,11 +145,12 @@ public class DslReloadHandler {
       if (e instanceof DslCompilationException dce) {
         recordDiagnostics(CompileDiagnosticSource.RELOAD, dir.toString(), dce.diagnostics());
         var responseDiagnostics = dce.diagnostics().stream().limit(20).toList();
-        return error(HttpStatus.INTERNAL_SERVER_ERROR, new ErrorResponse(
-                "RELOAD_FAILED", dce.getMessage(), null, null, null, responseDiagnostics));
+        return error(HttpStatus.INTERNAL_SERVER_ERROR, new ErrorResponse("RELOAD_FAILED",
+                dce.getMessage(), null, null, null, null, responseDiagnostics, null, null));
       }
       return error(HttpStatus.INTERNAL_SERVER_ERROR,
-              new ErrorResponse("RELOAD_FAILED", e.getMessage(), null, null, null, null));
+              new ErrorResponse("RELOAD_FAILED", e.getMessage(), null, null, null, null, null, null,
+                      null));
     } finally {
       reloadLock.unlock();
     }

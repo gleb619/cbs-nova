@@ -22,10 +22,10 @@ import cbs.nova.starter.model.VcsModels.DraftSummary;
 import cbs.nova.starter.model.VcsModels.HistoryDiffResponse;
 import cbs.nova.starter.model.VcsModels.ImportBundleResult;
 import cbs.nova.starter.model.VcsModels.ImportEntryResult;
-import cbs.nova.starter.model.CompileDiagnostic;
+import cbs.nova.dsl.model.CompileDiagnostic;
 import cbs.nova.starter.model.CompileDiagnosticSource;
 import cbs.nova.starter.model.PageResponse;
-import cbs.nova.starter.model.ErrorResponse;
+import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.starter.service.DslAuditService;
 import cbs.nova.starter.persistence.CompileDiagnosticRecordRepository;
 import cbs.nova.starter.events.DomainEvent;
@@ -84,7 +84,8 @@ public class DslDraftHandler {
       audit(request, ACTION_DRAFT_WRITE, name, StarterConstants.OUTCOME_FAILURE,
               Map.of("error", "name is required"));
       return error(HttpStatus.BAD_REQUEST,
-              new ErrorResponse("INVALID_REQUEST", "name is required", name, null, null, null));
+              new ErrorResponse("INVALID_REQUEST", "name is required", name, null, null, null, null,
+                      null, null));
     }
     var dir = ensureConfigured(name);
     if (dir.isError()) {
@@ -134,7 +135,8 @@ public class DslDraftHandler {
       audit(request, ACTION_DEFINITION_PUBLISH, name, StarterConstants.OUTCOME_FAILURE,
               Map.of("error", "name is required"));
       return error(HttpStatus.BAD_REQUEST,
-              new ErrorResponse("INVALID_REQUEST", "name is required", name, null, null, null));
+              new ErrorResponse("INVALID_REQUEST", "name is required", name, null, null, null, null,
+                      null, null));
     }
     var dir = ensureConfigured(name);
     if (dir.isError()) {
@@ -229,8 +231,8 @@ public class DslDraftHandler {
     if (entry.isEmpty()) {
       return error(HttpStatus.NOT_FOUND,
               new ErrorResponse("NOT_FOUND",
-                      "No publish history entry " + timestamp + " for " + name,
-                      name, null, null, null));
+                      "No publish history entry " + timestamp + " for " + name, name, null, null,
+                      null, null, null, null));
     }
     return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(entry.get());
   }
@@ -251,8 +253,8 @@ public class DslDraftHandler {
     if (entry.isEmpty()) {
       return error(HttpStatus.NOT_FOUND,
               new ErrorResponse("NOT_FOUND",
-                      "No publish history entry " + timestamp + " for " + name,
-                      name, null, null, null));
+                      "No publish history entry " + timestamp + " for " + name, name, null, null,
+                      null, null, null, null));
     }
     String after = pretty(entry.get());
     var published = historyService.readPublished(dir.path(), name);
@@ -290,8 +292,8 @@ public class DslDraftHandler {
     if (entry.isEmpty()) {
       return error(HttpStatus.NOT_FOUND,
               new ErrorResponse("NOT_FOUND",
-                      "No publish history entry " + timestamp + " for " + name,
-                      name, null, null, null));
+                      "No publish history entry " + timestamp + " for " + name, name, null, null,
+                      null, null, null, null));
     }
     historyService.snapshotBeforePublish(dir.path(), name);
     var payload = withStatus(entry.get(), "Published");
@@ -318,7 +320,8 @@ public class DslDraftHandler {
     Path draftFile = draftsDir.resolve(safeFileName(name) + ".json").normalize();
     if (!draftFile.startsWith(draftsDir) || !Files.exists(draftFile)) {
       return error(HttpStatus.NOT_FOUND,
-              new ErrorResponse("NOT_FOUND", "Draft not found: " + name, name, null, null, null));
+              new ErrorResponse("NOT_FOUND", "Draft not found: " + name, name, null, null, null,
+                      null, null, null));
     }
     Files.delete(draftFile);
     log.info("[DSL drafts] deleted {} from {}", name, draftFile);
@@ -401,7 +404,8 @@ public class DslDraftHandler {
     Path draftFile = drafts.resolve(safeFileName(name) + ".json").normalize();
     if (!draftFile.startsWith(drafts) || !Files.exists(draftFile)) {
       return error(HttpStatus.NOT_FOUND,
-              new ErrorResponse("NOT_FOUND", "Draft not found: " + name, name, null, null, null));
+              new ErrorResponse("NOT_FOUND", "Draft not found: " + name, name, null, null, null,
+                      null, null, null));
     }
     DraftRequest payload = objectMapper.readValue(draftFile.toFile(), DraftRequest.class);
     log.info("[DSL drafts] read {} from {}", name, draftFile);
@@ -441,8 +445,8 @@ public class DslDraftHandler {
     } catch (JacksonException e) {
       log.warn("[DSL bundle] failed to parse bundle body: {}", e.getMessage());
       return error(HttpStatus.BAD_REQUEST,
-              new ErrorResponse("INVALID_REQUEST", "malformed bundle JSON", null, null, null,
-                      null));
+              new ErrorResponse("INVALID_REQUEST", "malformed bundle JSON", null, null, null, null,
+                      null, null, null));
     } catch (ServletException e) {
       throw new IOException("Failed to read bundle body", e);
     }
@@ -465,13 +469,14 @@ public class DslDraftHandler {
         }
       }
       log.warn("[DSL bundle] import validation failed: {}", e.getMessage());
-      return error(HttpStatus.BAD_REQUEST, new ErrorResponse(code, detail, null, null, null, null));
+      return error(HttpStatus.BAD_REQUEST,
+              new ErrorResponse(code, detail, null, null, null, null, null, null, null));
     }
 
     if (bundle.definitions().size() > BUNDLE_MAX_DEFINITIONS) {
       return error(HttpStatus.BAD_REQUEST,
               new ErrorResponse("INVALID_REQUEST", "bundle too large (max " + BUNDLE_MAX_DEFINITIONS
-                      + " definitions)", null, null, null, null));
+                      + " definitions)", null, null, null, null, null, null, null));
     }
 
     if (dryRun) {
@@ -698,14 +703,13 @@ public class DslDraftHandler {
     if (sourceDirProperty == null || sourceDirProperty.isBlank()) {
       return new PathResult.Err(error(HttpStatus.CONFLICT,
               new ErrorResponse("NOT_CONFIGURED", "csb.dsl.source-dir is not configured", name,
-                      null,
-                      null, null)));
+                      null, null, null, null, null, null)));
     }
     Path dir = Path.of(sourceDirProperty);
     if (!Files.isDirectory(dir)) {
       return new PathResult.Err(error(HttpStatus.CONFLICT,
               new ErrorResponse("NOT_FOUND", "Source directory does not exist: " + dir, name, null,
-                      null, null)));
+                      null, null, null, null, null)));
     }
     return new PathResult.Ok(dir);
   }

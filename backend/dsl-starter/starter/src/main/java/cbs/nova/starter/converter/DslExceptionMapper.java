@@ -1,6 +1,6 @@
 package cbs.nova.starter.converter;
 
-import cbs.nova.starter.model.ErrorResponse;
+import cbs.nova.dsl.model.ErrorResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.context.request.WebRequest;
 

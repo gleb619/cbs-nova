@@ -2,7 +2,7 @@ package cbs.nova.starter.controller;
 
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.model.DslRequest;
-import cbs.nova.starter.model.ErrorResponse;
+import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.starter.model.RuntimeOutcome;
 import cbs.nova.starter.model.ValidationError;
 import cbs.nova.starter.model.ValidationErrorsResponse;
@@ -50,16 +50,16 @@ public class DslRuntimeHandler {
               request.headers().firstHeader(StarterConstants.CORRELATION_ID_HEADER));
     } catch (IllegalArgumentException e) {
       return ServerResponse.status(HttpStatus.BAD_REQUEST)
-              .body(new ErrorResponse("INVALID_CORRELATION_ID",
-                      "Invalid X-Correlation-Id header", name, null, null, null));
+              .body(new ErrorResponse("INVALID_CORRELATION_ID", "Invalid X-Correlation-Id header",
+                      name, null, null, null, null, null, null));
     }
     String key = request.headers().firstHeader(StarterConstants.IDEMPOTENCY_KEY_HEADER);
     if (key != null) {
       String trimmed = key.trim();
       if (!IdempotencyKeys.isValid(trimmed)) {
         return ServerResponse.status(HttpStatus.BAD_REQUEST)
-                .body(new ErrorResponse("INVALID_IDEMPOTENCY_KEY",
-                        "Invalid Idempotency-Key header", name, null, null, null));
+                .body(new ErrorResponse("INVALID_IDEMPOTENCY_KEY", "Invalid Idempotency-Key header",
+                        name, null, null, null, null, null, null));
       }
       String runId = IdempotencyKeys.deriveRunId(name, trimmed);
       return validationOrExecute(name, dslRequest,

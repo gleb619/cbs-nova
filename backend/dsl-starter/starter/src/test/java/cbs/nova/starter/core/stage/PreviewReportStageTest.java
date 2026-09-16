@@ -7,7 +7,7 @@ import cbs.nova.dsl.CallNode;
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.PreviewErrorCode;
-import cbs.nova.dsl.PreviewErrorDetail;
+import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.dsl.PreviewMetricsSnapshot;
 import cbs.nova.dsl.model.PreviewReport;
 import cbs.nova.dsl.Result;
@@ -57,8 +57,8 @@ class PreviewReportStageTest {
     assertThat(report.success()).isFalse();
     assertThat(report.output()).isNull();
     assertThat(report.errors()).hasSize(1);
-    PreviewErrorDetail detail = report.errors().get(0);
-    assertThat(detail.code()).isEqualTo(PreviewErrorCode.UNKNOWN_ERROR);
+    ErrorResponse detail = report.errors().get(0);
+    assertThat(detail.code()).isEqualTo(PreviewErrorCode.UNKNOWN_ERROR.name());
     assertThat(detail.message()).isEqualTo("kaboom");
   }
 

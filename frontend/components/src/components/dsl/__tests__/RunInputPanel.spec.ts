@@ -205,7 +205,10 @@ describe('RunInputPanel', () => {
   })
 
   it('shows schema loading skeleton while the schema is loading', async () => {
-    const wrapper = mountPanel({ type: 'Process' }, vi.fn(() => new Promise(() => {})))
+    const wrapper = mountPanel(
+      { type: 'Process' },
+      vi.fn(() => new Promise(() => {})),
+    )
     await flushPromises()
 
     expect(wrapper.find('[data-testid="input-skeleton"]').exists()).toBe(true)

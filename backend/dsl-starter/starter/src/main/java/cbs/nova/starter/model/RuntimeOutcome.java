@@ -1,5 +1,8 @@
 package cbs.nova.starter.model;
 
+import cbs.nova.dsl.model.ErrorResponse;
+import cbs.nova.dsl.model.CompileDiagnostic;
+
 public record RuntimeOutcome(boolean success, Object value, ErrorResponse error, boolean replayed) {
 
   public static RuntimeOutcome ok(Object value) {

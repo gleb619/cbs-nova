@@ -52,7 +52,11 @@ describe('buildConstructCompletionItems', () => {
     const items = buildConstructCompletionItems({ wordRange, constructs: [] })
 
     const scaffolds = items.filter((i) => i.kind === 28 /* Snippet */)
-    expect(scaffolds.map((i) => i.label)).toEqual(['Dsl.process', 'Dsl.transaction', 'Dsl.function'])
+    expect(scaffolds.map((i) => i.label)).toEqual([
+      'Dsl.process',
+      'Dsl.transaction',
+      'Dsl.function',
+    ])
     for (const scaffold of scaffolds) {
       expect(scaffold.insertText).toContain('${1:name}')
       expect(scaffold.insertTextRules).toBe(4 /* InsertAsSnippet */)
@@ -74,9 +78,7 @@ describe('buildConstructCompletionItems', () => {
   it('derives one item per non-helper construct with its name as label', () => {
     const items = buildConstructCompletionItems({ wordRange, constructs: sampleConstructs })
 
-    const derived = items.filter(
-      (i) => i.kind === 5 /* Class */ || i.kind === 1 /* Function */,
-    )
+    const derived = items.filter((i) => i.kind === 5 /* Class */ || i.kind === 1 /* Function */)
     expect(derived.map((i) => i.label)).toEqual(['OrderSaga', 'KYC_CHECK', 'greetFn'])
   })
 

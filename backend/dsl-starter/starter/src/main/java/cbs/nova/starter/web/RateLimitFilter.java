@@ -7,7 +7,7 @@ import static cbs.nova.starter.core.StarterConstants.X_FORWARDED_FOR_HEADER;
 
 import cbs.nova.starter.config.properties.CbsSecurityRateLimitProperties;
 import cbs.nova.starter.core.StarterConstants;
-import cbs.nova.starter.model.ErrorResponse;
+import cbs.nova.dsl.model.ErrorResponse;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -61,7 +61,8 @@ public final class RateLimitFilter extends OncePerRequestFilter {
     response.setHeader(RETRY_AFTER_HEADER, String.valueOf(consumption.retryAfterSeconds()));
     response.setContentType(MediaType.APPLICATION_JSON_VALUE);
     objectMapper.writeValue(response.getOutputStream(),
-            new ErrorResponse(RATE_LIMITED_CODE, RATE_LIMITED_MESSAGE, null, null, null, null));
+            new ErrorResponse(RATE_LIMITED_CODE, RATE_LIMITED_MESSAGE, null, null, null, null, null,
+                    null, null));
   }
 
   private boolean shouldRateLimit(HttpServletRequest request) {

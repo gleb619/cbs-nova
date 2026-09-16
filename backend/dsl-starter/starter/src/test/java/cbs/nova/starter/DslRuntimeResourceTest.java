@@ -21,7 +21,7 @@ import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.model.ExplainReport;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.PreviewErrorCode;
-import cbs.nova.dsl.PreviewErrorDetail;
+import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.dsl.model.PreviewReport;
 import cbs.nova.starter.core.pipe.PreviewTimeoutException;
 import cbs.nova.dsl.Result;
@@ -131,8 +131,8 @@ class DslRuntimeResourceTest {
             null,
             List.of(),
             null,
-            List.of(new PreviewErrorDetail(PreviewErrorCode.UNKNOWN_ERROR,
-                    "boom", "Review the failure", Map.of())));
+            List.of(new ErrorResponse("UNKNOWN_ERROR", "boom", null, null, null, null, null,
+                    "Review the failure", Map.of())));
     doReturn(Result.success(report)).when(dslRuntime).preview(eq("Fail"), any());
 
     mockMvc

@@ -822,7 +822,9 @@ describe('dsl-workbench.vue save-status pill and Ctrl+S', () => {
 
     expect(findEditorSaveStatus(wrapper)).toBe('saving')
 
-    if (resolveSave) { (resolveSave as any)() }
+    if (resolveSave) {
+      ;(resolveSave as any)()
+    }
     await flushPromises()
 
     expect(findEditorSaveStatus(wrapper)).toBe('saved')
@@ -870,7 +872,9 @@ describe('dsl-workbench.vue save-status pill and Ctrl+S', () => {
     expect(findEditorSaveStatus(wrapper)).toBe('saving')
     expect(harness.saveConstruct).toHaveBeenCalledTimes(2)
 
-    if (resolveRetry) { (resolveRetry as any)() }
+    if (resolveRetry) {
+      ;(resolveRetry as any)()
+    }
     await flushPromises()
 
     expect(findEditorSaveStatus(wrapper)).toBe('saved')

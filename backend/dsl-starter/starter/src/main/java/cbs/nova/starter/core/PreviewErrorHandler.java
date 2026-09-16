@@ -4,7 +4,7 @@ import static cbs.nova.starter.core.StarterConstants.HELPER_NOT_FOUND_PREFIX;
 import static cbs.nova.starter.core.StarterConstants.UNKNOWN_ENTITY_PREFIX;
 
 import cbs.nova.dsl.PreviewErrorCode;
-import cbs.nova.dsl.PreviewErrorDetail;
+import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.dsl.exception.DslCompensationException;
 import cbs.nova.dsl.exception.DslEntityNotFoundException;
 import cbs.nova.starter.core.pipe.PreviewTimeoutException;
@@ -22,11 +22,11 @@ import java.util.concurrent.TimeoutException;
 @NoArgsConstructor
 public class PreviewErrorHandler {
 
-  public static @NonNull PreviewErrorDetail from(@Nullable Throwable cause) {
+  public static @NonNull ErrorResponse from(@Nullable Throwable cause) {
     return from(cause, null);
   }
 
-  public static @NonNull PreviewErrorDetail from(@Nullable Throwable cause,
+  public static @NonNull ErrorResponse from(@Nullable Throwable cause,
           @Nullable String entityName) {
     switch (cause) {
       case null -> {
@@ -87,7 +87,7 @@ public class PreviewErrorHandler {
             Map.of("exceptionType", cause.getClass().getName()), entityName);
   }
 
-  private static @NonNull PreviewErrorDetail helperNotFound(@NonNull String message,
+  private static @NonNull ErrorResponse helperNotFound(@NonNull String message,
           @Nullable String helperName, @Nullable String entityName) {
     Map<String, Object> ctx = new HashMap<>();
     String name = helperName != null && !helperName.isBlank()
@@ -96,22 +96,29 @@ public class PreviewErrorHandler {
     if (name != null && !name.isBlank()) {
       ctx.put("name", name);
     }
-    return new PreviewErrorDetail(PreviewErrorCode.HELPER_NOT_FOUND, message,
+    return new ErrorResponse(PreviewErrorCode.HELPER_NOT_FOUND.name(), message, name, null, null,
+            null, null,
             "Register the helper class with @Helper or ensure it is on the classpath; check helper registration.",
             ctx);
   }
 
-  private static @NonNull PreviewErrorDetail build(@NonNull PreviewErrorCode code,
+  private static @NonNull ErrorResponse build(@NonNull PreviewErrorCode code,
           @Nullable String message, @NonNull Map<String, Object> ctx, @Nullable String entityName) {
     String msg = message != null ? message : code.name();
     Map<String, Object> merged = new HashMap<>(ctx);
     if (entityName != null && !entityName.isBlank() && !merged.containsKey("name")) {
       merged.put("name", entityName);
     }
-    return new PreviewErrorDetail(code, msg, defaultSuggestion(code), merged);
+    String runId = null;
+    Object ctxRunId = merged.get("runId");
+    if (ctxRunId instanceof String s && !s.isBlank()) {
+      runId = s;
+    }
+    return new ErrorResponse(code.name(), msg, entityName, runId, null, null, null,
+            defaultSuggestion(code), merged);
   }
 
-  private static @NonNull PreviewErrorDetail externalCallFailed(@NonNull String message,
+  private static @NonNull ErrorResponse externalCallFailed(@NonNull String message,
           @NonNull SQLException sql, @Nullable String entityName) {
     Map<String, Object> ctx = new HashMap<>();
     ctx.put("sqlState", sql.getSQLState());
@@ -119,34 +126,40 @@ public class PreviewErrorHandler {
     if (sql.getMessage() != null) {
       ctx.put("sql", sql.getMessage());
     }
-    if (entityName != null && !entityName.isBlank()) {
-      ctx.put("name", entityName);
+    String name = entityName != null && !entityName.isBlank() ? entityName : null;
+    if (name != null) {
+      ctx.put("name", name);
     }
-    return new PreviewErrorDetail(PreviewErrorCode.EXTERNAL_CALL_FAILED, message,
+    return new ErrorResponse(PreviewErrorCode.EXTERNAL_CALL_FAILED.name(), message, name, null,
+            null, null, null,
             "Inspect the SQL query, table, and database connectivity; verify the DataSource is reachable.",
             ctx);
   }
 
-  private static @NonNull PreviewErrorDetail inputValidationError(@NonNull String message,
+  private static @NonNull ErrorResponse inputValidationError(@NonNull String message,
           @NonNull ClassCastException cce, @Nullable String entityName) {
     Map<String, Object> ctx = new HashMap<>();
     ctx.put("exceptionType", cce.getClass().getName());
-    if (entityName != null && !entityName.isBlank()) {
-      ctx.put("name", entityName);
+    String name = entityName != null && !entityName.isBlank() ? entityName : null;
+    if (name != null) {
+      ctx.put("name", name);
     }
-    return new PreviewErrorDetail(PreviewErrorCode.INPUT_VALIDATION_ERROR, message,
+    return new ErrorResponse(PreviewErrorCode.INPUT_VALIDATION_ERROR.name(), message, name, null,
+            null, null, null,
             "Verify the input matches the expected schema; check the type and required fields.",
             ctx);
   }
 
-  private static @NonNull PreviewErrorDetail timeoutExceeded(@Nullable String message,
+  private static @NonNull ErrorResponse timeoutExceeded(@Nullable String message,
           @Nullable String entityName) {
     String msg = message != null ? message : "Preview execution exceeded the allowed timeout";
     Map<String, Object> ctx = new HashMap<>();
-    if (entityName != null && !entityName.isBlank()) {
-      ctx.put("name", entityName);
+    String name = entityName != null && !entityName.isBlank() ? entityName : null;
+    if (name != null) {
+      ctx.put("name", name);
     }
-    return new PreviewErrorDetail(PreviewErrorCode.TIMEOUT_EXCEEDED, msg,
+    return new ErrorResponse(PreviewErrorCode.TIMEOUT_EXCEEDED.name(), msg, name, null, null,
+            null, null,
             "Increase the preview timeout or simplify the DSL to reduce execution time.", ctx);
   }
 

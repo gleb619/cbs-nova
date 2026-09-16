@@ -179,10 +179,9 @@ function constructItemKind(type: ConstructType): Monaco.languages.CompletionItem
   }
 }
 
-function isCompletableConstruct(type: ConstructType | undefined): type is
-  | 'Process'
-  | 'Transaction'
-  | 'Function' {
+function isCompletableConstruct(
+  type: ConstructType | undefined,
+): type is 'Process' | 'Transaction' | 'Function' {
   return type === 'Process' || type === 'Transaction' || type === 'Function'
 }
 

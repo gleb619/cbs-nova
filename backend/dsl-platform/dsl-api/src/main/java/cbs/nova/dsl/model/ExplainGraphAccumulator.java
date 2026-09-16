@@ -3,7 +3,7 @@ package cbs.nova.dsl.model;
 import cbs.nova.dsl.CallNode;
 import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.ExecutableDescriptor;
-import cbs.nova.dsl.PreviewErrorDetail;
+
 import cbs.nova.dsl.PreviewMetricsSnapshot;
 import java.util.List;
 import java.util.Map;
@@ -24,7 +24,7 @@ public final class ExplainGraphAccumulator {
   private @NonNull Map<String, Integer> callCounts = Map.of();
   private @NonNull List<Map<String, Object>> dryRunLogs = List.of();
   private @Nullable PreviewMetricsSnapshot metrics;
-  private @NonNull List<PreviewErrorDetail> errors = List.of();
+  private @NonNull List<ErrorResponse> errors = List.of();
   private boolean hasCompensation;
 
   public @Nullable CallNode astTree() {
@@ -83,11 +83,11 @@ public final class ExplainGraphAccumulator {
     return this;
   }
 
-  public @NonNull List<PreviewErrorDetail> errors() {
+  public @NonNull List<ErrorResponse> errors() {
     return errors;
   }
 
-  public @NonNull ExplainGraphAccumulator errors(@NonNull List<PreviewErrorDetail> errors) {
+  public @NonNull ExplainGraphAccumulator errors(@NonNull List<ErrorResponse> errors) {
     this.errors = List.copyOf(errors);
     return this;
   }

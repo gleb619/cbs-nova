@@ -1,7 +1,7 @@
 package cbs.nova.starter.sse;
 
 import cbs.nova.dsl.history.DslRunRepository;
-import cbs.nova.starter.model.ErrorResponse;
+import cbs.nova.dsl.model.ErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;

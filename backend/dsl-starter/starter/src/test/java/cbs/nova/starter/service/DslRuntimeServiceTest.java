@@ -18,7 +18,7 @@ import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.model.ExplainReport;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.PreviewErrorCode;
-import cbs.nova.dsl.PreviewErrorDetail;
+import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.dsl.model.PreviewReport;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.Constants;
@@ -79,7 +79,7 @@ class DslRuntimeServiceTest {
   @Test
   void previewReturnsErrorForFailedReport() {
     PreviewReport report = previewReport("Ping", false,
-            List.of(new PreviewErrorDetail(PreviewErrorCode.UNKNOWN_ERROR, "boom", "fix",
+            List.of(new ErrorResponse("UNKNOWN_ERROR", "boom", null, null, null, null, null, "fix",
                     Map.of())));
     doReturn(Result.success(report)).when(dslRuntime).preview(eq("Ping"), any());
 
@@ -224,7 +224,7 @@ class DslRuntimeServiceTest {
   }
 
   private static PreviewReport previewReport(String name, boolean success,
-          List<PreviewErrorDetail> errors) {
+          List<ErrorResponse> errors) {
     return new PreviewReport(
             name,
             ExecutionMode.PREVIEW,

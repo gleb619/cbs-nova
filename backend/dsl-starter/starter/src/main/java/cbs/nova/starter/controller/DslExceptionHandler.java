@@ -9,7 +9,7 @@ import cbs.nova.starter.exception.ApiKeyNotFoundException;
 import cbs.nova.starter.exception.DefinitionNotFoundException;
 import cbs.nova.starter.exception.DslPayloadTooLargeException;
 import cbs.nova.starter.exception.ScheduleConflictException;
-import cbs.nova.starter.model.ErrorResponse;
+import cbs.nova.dsl.model.ErrorResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -43,7 +43,7 @@ public class DslExceptionHandler extends ResponseEntityExceptionHandler {
     log.error("PAYLOAD_TOO_LARGE: {}", ex.getMessage(), ex);
     return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
             .body(new ErrorResponse("PAYLOAD_TOO_LARGE", ex.getMessage(), ex.getEntityName(), null,
-                    null, null));
+                    null, null, null, null, null));
   }
 
   @ExceptionHandler(DslException.class)
@@ -58,7 +58,7 @@ public class DslExceptionHandler extends ResponseEntityExceptionHandler {
     log.error("NOT_FOUND: {}", ex.getMessage(), ex);
     return ResponseEntity.status(HttpStatus.NOT_FOUND)
             .body(new ErrorResponse("NOT_FOUND", ex.getMessage(), ex.getEntityName(), null, null,
-                    null));
+                    null, null, null, null));
   }
 
   @ExceptionHandler(ApiKeyNotFoundException.class)
@@ -66,8 +66,8 @@ public class DslExceptionHandler extends ResponseEntityExceptionHandler {
           WebRequest request) {
     log.error("API_KEY_NOT_FOUND: {}", ex.getMessage(), ex);
     return ResponseEntity.status(HttpStatus.NOT_FOUND)
-            .body(new ErrorResponse("NOT_FOUND", ex.getMessage(),
-                    "api-key:" + ex.getKeyId(), null, null, null));
+            .body(new ErrorResponse("NOT_FOUND", ex.getMessage(), "api-key:" + ex.getKeyId(), null,
+                    null, null, null, null, null));
   }
 
   @ExceptionHandler(ScheduleConflictException.class)
@@ -75,7 +75,8 @@ public class DslExceptionHandler extends ResponseEntityExceptionHandler {
           WebRequest request) {
     log.error("CONFLICT: {}", ex.getMessage(), ex);
     return ResponseEntity.status(HttpStatus.CONFLICT)
-            .body(new ErrorResponse("CONFLICT", ex.getMessage(), null, null, null, null));
+            .body(new ErrorResponse("CONFLICT", ex.getMessage(), null, null, null, null, null, null,
+                    null));
   }
 
   @ExceptionHandler(BuilderUnavailableException.class)
@@ -83,8 +84,8 @@ public class DslExceptionHandler extends ResponseEntityExceptionHandler {
           WebRequest request) {
     log.error("BUILDER_UNAVAILABLE: {}", ex.getMessage(), ex);
     return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-            .body(new ErrorResponse("BUILDER_UNAVAILABLE", ex.getMessage(), null, null, null,
-                    null));
+            .body(new ErrorResponse("BUILDER_UNAVAILABLE", ex.getMessage(), null, null, null, null,
+                    null, null, null));
   }
 
   @ExceptionHandler(BuilderClientBusyException.class)
@@ -92,7 +93,8 @@ public class DslExceptionHandler extends ResponseEntityExceptionHandler {
           WebRequest request) {
     log.error("BUILDER_BUSY: {}", ex.getMessage(), ex);
     return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
-            .body(new ErrorResponse("BUILDER_BUSY", ex.getMessage(), null, null, null, null));
+            .body(new ErrorResponse("BUILDER_BUSY", ex.getMessage(), null, null, null, null, null,
+                    null, null));
   }
 
   @ExceptionHandler(BuilderApiException.class)
@@ -100,7 +102,8 @@ public class DslExceptionHandler extends ResponseEntityExceptionHandler {
           WebRequest request) {
     log.error("BUILDER_API_ERROR: {}", ex.getMessage(), ex);
     return ResponseEntity.status(ex.getStatusCode())
-            .body(new ErrorResponse(ex.getCode(), ex.getMessage(), null, null, null, null));
+            .body(new ErrorResponse(ex.getCode(), ex.getMessage(), null, null, null, null, null,
+                    null, null));
   }
 
   @ExceptionHandler(IllegalArgumentException.class)

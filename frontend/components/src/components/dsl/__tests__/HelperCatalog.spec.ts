@@ -21,7 +21,8 @@ const helpers: HelperCatalogEntry[] = [
   },
 ]
 
-const mountCatalog = (props: Record<string, unknown>) => mount(HelperCatalog, { props: props as never })
+const mountCatalog = (props: Record<string, unknown>) =>
+  mount(HelperCatalog, { props: props as never })
 
 describe('HelperCatalog', () => {
   let wrapper: ReturnType<typeof mountCatalog>

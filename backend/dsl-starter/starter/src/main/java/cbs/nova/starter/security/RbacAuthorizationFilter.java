@@ -2,7 +2,7 @@ package cbs.nova.starter.security;
 
 import cbs.nova.starter.config.RbacFilterConfiguration;
 import cbs.nova.starter.core.StarterConstants;
-import cbs.nova.starter.model.ErrorResponse;
+import cbs.nova.dsl.model.ErrorResponse;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -97,12 +97,10 @@ public final class RbacAuthorizationFilter extends OncePerRequestFilter {
     response.setStatus(HttpServletResponse.SC_FORBIDDEN);
     response.setContentType(MediaType.APPLICATION_JSON_VALUE);
     objectMapper.writeValue(response.getOutputStream(),
-            new ErrorResponse(StarterConstants.FORBIDDEN_CODE,
-                    "Role " + required.name()
-                            + " is required for " + request.getMethod()
-                            + " " + request.getRequestURI()
-                            + "; caller has role " + principal,
-                    null, null, null, null));
+            new ErrorResponse(StarterConstants.FORBIDDEN_CODE, "Role " + required.name()
+                    + " is required for " + request.getMethod()
+                    + " " + request.getRequestURI()
+                    + "; caller has role " + principal, null, null, null, null, null, null, null));
   }
 
   /**

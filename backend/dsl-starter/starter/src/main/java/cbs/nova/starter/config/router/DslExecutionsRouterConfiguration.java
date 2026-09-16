@@ -4,7 +4,7 @@ import cbs.nova.dsl.history.DslRunRepository;
 import cbs.nova.dsl.history.TransactionExecutionRepository;
 import cbs.nova.starter.controller.DslExecutionsHandler;
 import cbs.nova.starter.converter.RequestQueryConverter;
-import cbs.nova.starter.model.ErrorResponse;
+import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.starter.model.ExecutionDto;
 import cbs.nova.starter.model.PageResponse;
 import cbs.nova.starter.model.ExecutionStatsResponse;

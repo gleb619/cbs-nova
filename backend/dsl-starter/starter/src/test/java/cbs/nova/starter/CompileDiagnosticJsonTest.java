@@ -2,7 +2,7 @@ package cbs.nova.starter;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import cbs.nova.starter.model.CompileDiagnostic;
+import cbs.nova.dsl.model.CompileDiagnostic;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.ObjectMapper;
 

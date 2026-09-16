@@ -823,7 +823,6 @@ describe('dsl/schedules/[definition].delete', () => {
   })
 })
 
-
 describe('dsl/schedules/[definition]/pause.post', () => {
   it('interpolates the :definition router param and POSTs readBody() to the pause path', async () => {
     routerParams = { definition: 'A' }

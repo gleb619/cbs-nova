@@ -190,7 +190,8 @@ onMounted(() => {
               {{ new Date(entry.timestampMillis).toLocaleString() }}
             </div>
             <div class="text-xs text-gray-500">
-              {{ entry.sizeBytes }} bytes · modified
+              {{ entry.sizeBytes }}
+              bytes · modified
               {{ new Date(entry.lastModifiedMillis).toLocaleString() }}
             </div>
           </button>

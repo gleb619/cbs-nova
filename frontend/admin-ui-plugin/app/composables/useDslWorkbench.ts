@@ -56,7 +56,10 @@ function basename(path: string): string {
   return index >= 0 ? path.slice(index + 1) : path
 }
 
-type CompileDiagnosticInput = Omit<CompileDiagnostic, "line" | "column"> & { line?: number | null; column?: number | null }
+type CompileDiagnosticInput = Omit<CompileDiagnostic, 'line' | 'column'> & {
+  line?: number | null
+  column?: number | null
+}
 
 export function compileDiagnosticsToValidationErrors(
   diags: CompileDiagnosticInput[],

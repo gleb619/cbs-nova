@@ -1,4 +1,4 @@
-import {beforeEach, describe, expect, it, vi, type Mock} from 'vitest'
+import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
 import { proxyToBackend } from '../httpClient'
 import { __resetOidcDiscoveryCache } from '../oidcSession'
 
@@ -49,9 +49,7 @@ const setRuntimeConfig = (overrides: Record<string, unknown> = {}) => {
     public: { appName: 'CBS Nova Admin', authEnabled: false },
     ...overrides,
   }
-  vi.mocked(useRuntimeConfig as Mock).mockReturnValue(
-    merged as ReturnType<typeof useRuntimeConfig>,
-  )
+  vi.mocked(useRuntimeConfig as Mock).mockReturnValue(merged as ReturnType<typeof useRuntimeConfig>)
   vi.mocked(useBackendConfig as Mock).mockReturnValue({
     baseUrl: merged.backendBaseUrl as string,
     apiKey: merged.backendApiKey as string,

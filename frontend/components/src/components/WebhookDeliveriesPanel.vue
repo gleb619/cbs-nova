@@ -37,7 +37,7 @@ const rangeText = computed(() => {
 const canGoPrev = computed(() => offset.value > 0)
 const canGoNext = computed(() => {
   if (!page.value) return false
-  return (page.value!.offset + page.value.items.length) < (page.value!.total ?? 0)
+  return page.value!.offset + page.value.items.length < (page.value!.total ?? 0)
 })
 
 async function load(targetOffset: number) {

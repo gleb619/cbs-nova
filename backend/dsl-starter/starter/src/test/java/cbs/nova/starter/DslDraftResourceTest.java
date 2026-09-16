@@ -19,7 +19,7 @@ import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.controller.DslDraftHandler;
 import cbs.nova.starter.controller.DslReloadHandler;
 import cbs.nova.starter.exception.DslCompilationException;
-import cbs.nova.starter.model.CompileDiagnostic;
+import cbs.nova.dsl.model.CompileDiagnostic;
 import cbs.nova.starter.model.VcsModels.DefinitionHistoryEntry;
 import cbs.nova.starter.model.VcsModels.DraftRequest;
 import cbs.nova.starter.model.VcsModels.HistoryDiffResponse;

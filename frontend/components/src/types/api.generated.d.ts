@@ -128,23 +128,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/dsl/definitions/{name}/description": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** Update DSL construct description */
-        patch: operations["updateDescription"];
-        trace?: never;
-    };
     "/api/dsl/definitions/{name}/tests": {
         parameters: {
             query?: never;
@@ -642,23 +625,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/dsl/webhooks/deliveries": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List persisted webhook delivery outcomes */
-        get: operations["listWebhookDeliveryRows"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/executions": {
         parameters: {
             query?: never;
@@ -761,6 +727,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/executions/{id}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Stream status events for a single execution run */
+        get: operations["events"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/executions/{id}/transactions": {
         parameters: {
             query?: never;
@@ -770,23 +753,6 @@ export interface paths {
         };
         /** List transaction executions for a run */
         get: operations["getExecutionTransactions"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/webhooks/deliveries": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List last webhook delivery outcomes */
-        get: operations["listWebhookDeliveries"];
         put?: never;
         post?: never;
         delete?: never;
@@ -861,17 +827,18 @@ export interface components {
         };
         DefinitionTestCase: {
             caseName?: string;
-            expectedOutput?: components["schemas"]["JsonNode"];
-            input?: components["schemas"]["JsonNode"];
+            expectedOutput?: components["schemas"]["PreviewReport"];
+            input?: components["schemas"]["DslRequest"];
         };
         DefinitionTestCaseResult: {
-            actual?: components["schemas"]["JsonNode"];
-            diagnostics?: unknown;
+            actual?: components["schemas"]["PreviewReport"];
+            diagnostics?: components["schemas"]["ErrorResponse"];
             /** Format: int64 */
             durationMs?: number;
-            expected?: components["schemas"]["JsonNode"];
+            expected?: components["schemas"]["PreviewReport"];
             name?: string;
-            status?: string;
+            /** @enum {string} */
+            status?: "PASS" | "FAIL" | "ERROR";
         };
         DefinitionTestRunReport: {
             cases?: components["schemas"]["DefinitionTestCaseResult"][];
@@ -891,19 +858,11 @@ export interface components {
             type?: string;
             version?: string;
         };
-        DslDescriptor: {
-            description?: string;
-            hasCompensation?: boolean;
-            hasSideEffects?: boolean;
-            heartbeatTimeout?: string;
-            name?: string;
-            parameters?: components["schemas"]["ParameterDescriptor"][];
-            previewBehavior?: string;
-            startToCloseTimeout?: string;
-            taskQueue?: string;
-            /** @enum {string} */
-            type?: "PROCESS" | "TRANSACTION" | "FUNCTION" | "OTHER";
-            version?: string;
+        DslRequest: {
+            body?: unknown;
+            metadata?: {
+                [key: string]: unknown;
+            };
         };
         ErrorEntry: {
             code?: string;
@@ -912,22 +871,21 @@ export interface components {
         };
         ErrorResponse: {
             code?: string;
+            context?: {
+                [key: string]: unknown;
+            };
+            correlationId?: string;
             diagnostics?: components["schemas"]["CompileDiagnostic"][];
             entityName?: string;
             exceptionId?: string;
             message?: string;
             runId?: string;
-        };
-        ExecutableDescriptor: {
-            description?: string;
-            hasSideEffects?: boolean;
-            name?: string;
-            parameters?: components["schemas"]["ParameterDescriptor"][];
-            previewBehavior?: string;
+            suggestion?: string;
         };
         ExecutionDto: {
             completedAt?: string;
             correlationId?: string;
+            definitionHash?: string;
             /** Format: int64 */
             duration?: number;
             entity?: string;
@@ -971,23 +929,9 @@ export interface components {
             windowStart?: string;
         };
         ExplainReport: {
-            astTree?: components["schemas"]["CallNode"];
-            callCounts?: {
-                [key: string]: number;
-            };
+            children?: components["schemas"]["ExplainReport"][];
             description?: string;
-            dryRunLogs?: {
-                [key: string]: unknown;
-            }[];
-            dslDescriptor?: components["schemas"]["DslDescriptor"];
-            errors?: components["schemas"]["PreviewErrorDetail"][];
-            executableDescriptor?: components["schemas"]["ExecutableDescriptor"];
-            executionTrace?: string[];
-            externalCalls?: {
-                [key: string]: unknown;
-            }[];
-            mermaidDiagram?: string;
-            metrics?: components["schemas"]["PreviewMetricsSnapshot"];
+            mermaid?: string;
             name?: string;
         };
         HelperSearchResult: {
@@ -1013,34 +957,6 @@ export interface components {
             name?: string;
             outcome?: string;
         };
-        JsonNode: {
-            array?: boolean;
-            bigDecimal?: boolean;
-            bigInteger?: boolean;
-            binary?: boolean;
-            boolean?: boolean;
-            container?: boolean;
-            double?: boolean;
-            embeddedValue?: boolean;
-            empty?: boolean;
-            float?: boolean;
-            floatingPointNumber?: boolean;
-            int?: boolean;
-            integralNumber?: boolean;
-            long?: boolean;
-            missingNode?: boolean;
-            /** @enum {string} */
-            nodeType?: "ARRAY" | "BINARY" | "BOOLEAN" | "MISSING" | "NULL" | "NUMBER" | "OBJECT" | "POJO" | "STRING";
-            null?: boolean;
-            number?: boolean;
-            object?: boolean;
-            pojo?: boolean;
-            short?: boolean;
-            string?: boolean;
-            /** @deprecated */
-            textual?: boolean;
-            valueNode?: boolean;
-        };
         NamesResponse: {
             names?: string[];
         };
@@ -1052,20 +968,6 @@ export interface components {
             offset?: number;
             /** Format: int64 */
             total?: number;
-        };
-        ParameterDescriptor: {
-            name?: string;
-            /** @enum {string} */
-            type?: "STRING" | "NUMBER" | "BOOLEAN" | "OBJECT";
-        };
-        PreviewErrorDetail: {
-            /** @enum {string} */
-            code?: "DSL_COMPILATION_ERROR" | "HELPER_NOT_FOUND" | "EXTERNAL_CALL_FAILED" | "INPUT_VALIDATION_ERROR" | "COMPENSATION_ERROR" | "PREVIEW_TIMEOUT" | "TIMEOUT_EXCEEDED" | "UNKNOWN_ERROR";
-            context?: {
-                [key: string]: unknown;
-            };
-            message?: string;
-            suggestion?: string;
         };
         PreviewMetricsSnapshot: {
             callCounts?: {
@@ -1087,7 +989,7 @@ export interface components {
             dryRunLogs?: {
                 [key: string]: unknown;
             }[];
-            errors?: components["schemas"]["PreviewErrorDetail"][];
+            errors?: components["schemas"]["ErrorResponse"][];
             executionTrace?: string[];
             externalCalls?: {
                 [key: string]: unknown;
@@ -1166,16 +1068,6 @@ export interface components {
         };
         ValidationErrorsResponse: {
             errors?: components["schemas"]["ValidationError"][];
-        };
-        WebhookDeliveryInfo: {
-            definitionPattern?: string;
-            /** Format: int32 */
-            lastAttempts?: number;
-            /** Format: date-time */
-            lastDeliveredAt?: string;
-            lastError?: string;
-            lastStatus?: string;
-            url?: string;
         };
     };
     responses: never;
@@ -1398,46 +1290,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    updateDescription: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                name: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Description updated */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ServerResponse"];
-                };
-            };
-            /** @description Invalid request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ServerResponse"];
-                };
-            };
-            /** @description Construct not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ServerResponse"];
                 };
             };
         };
@@ -2504,33 +2356,6 @@ export interface operations {
             };
         };
     };
-    listWebhookDeliveryRows: {
-        parameters: {
-            query?: {
-                /** @description Optional exact subscription id filter (definition pattern) */
-                subscriptionId?: string;
-                /** @description Maximum number of deliveries to return */
-                limit?: string;
-                /** @description Number of matching deliveries to skip before returning results */
-                offset?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Paged append-only delivery log, newest first */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PageResponse"];
-                };
-            };
-        };
-    };
     listExecutions: {
         parameters: {
             query?: {
@@ -2702,6 +2527,38 @@ export interface operations {
             };
         };
     };
+    events: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Run id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description SSE stream of execution status changes */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": unknown;
+                };
+            };
+            /** @description No run with the given id */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     getExecutionTransactions: {
         parameters: {
             query?: never;
@@ -2729,26 +2586,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    listWebhookDeliveries: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Last delivery outcome per configured subscription */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["WebhookDeliveryInfo"][];
                 };
             };
         };

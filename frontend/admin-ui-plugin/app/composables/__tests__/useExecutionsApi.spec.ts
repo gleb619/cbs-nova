@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useExecutionsApi } from '../useExecutionsApi'
 
 describe('useExecutionsApi', () => {
-  const fetchMock = vi.mocked($fetch as unknown as import("vitest").Mock)
+  const fetchMock = vi.mocked($fetch as unknown as import('vitest').Mock)
 
   beforeEach(() => {
     fetchMock.mockReset()

@@ -9,7 +9,7 @@ import cbs.nova.starter.model.DslFileModels.FileEntry;
 import cbs.nova.starter.model.DslFileModels.FlushResult;
 import cbs.nova.starter.model.DslFileModels.PendingWritesStatus;
 import cbs.nova.dsl.GlobalManager;
-import cbs.nova.starter.model.ErrorResponse;
+import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.starter.service.DslFileService;
 import jakarta.servlet.ServletException;
 import lombok.RequiredArgsConstructor;
@@ -238,13 +238,15 @@ public class DslFileHandler {
   private ServerResponse badRequest(String message) {
     return ServerResponse.badRequest()
             .contentType(MediaType.APPLICATION_JSON)
-            .body(new ErrorResponse("INVALID_REQUEST", message, null, null, null, null));
+            .body(new ErrorResponse("INVALID_REQUEST", message, null, null, null, null, null, null,
+                    null));
   }
 
   private ServerResponse serviceUnavailable(String message) {
     return ServerResponse.status(HttpStatus.SERVICE_UNAVAILABLE)
             .contentType(MediaType.APPLICATION_JSON)
-            .body(new ErrorResponse("BULKHEAD_SATURATED", message, null, null, null, null));
+            .body(new ErrorResponse("BULKHEAD_SATURATED", message, null, null, null, null, null,
+                    null, null));
   }
 
   private PathResult ensureConfigured() {
@@ -252,8 +254,7 @@ public class DslFileHandler {
     if (sourceDir == null || sourceDir.isBlank()) {
       return new PathResult.Err(error(HttpStatus.CONFLICT,
               new ErrorResponse("NOT_CONFIGURED", "csb.dsl.source-dir is not configured", null,
-                      null,
-                      null, null)));
+                      null, null, null, null, null, null)));
     }
     return new PathResult.Ok(null);
   }

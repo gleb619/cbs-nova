@@ -26,7 +26,7 @@ schema-driven; contract drift fails the build.
 | Schema source of truth | Publish a complete OpenAPI 3.1 document from the Spring Boot side (springdoc is already present). Treat it as a build artifact consumed by the frontend. |
 | Generated BFF client | Generate the typed backend client (`server/utils/httpClient` callers) from the OpenAPI doc instead of hand-writing `useXxxApi` composables. Kill the "add a matching proxy route" manual step — derive proxy routes from a route manifest. |
 | Contract enforcement | Promote T335 BFF↔backend contract tests into a required CI gate. Add schema-diff check: a breaking change to a backend DTO fails CI unless the OpenAPI version bumps. |
-| Error envelope unification | Single `ErrorResponse` / `PreviewErrorDetail` shape across run/preview/explain/executions/drafts. BFF passes it through verbatim; frontend has one error renderer (`ErrorsTab`). |
+| Error envelope unification | Single `ErrorResponse` shape across run/preview/explain/executions/drafts. BFF passes it through verbatim; frontend has one error renderer (`ErrorsTab`). |
 | Header & correlation plumbing | Formalize the pass-through allowlist (`Authorization`, `X-Api-Key`, `X-Request-Id`, `traceparent`, `Idempotency-Key`, `X-Correlation-Id`) as shared config, not a literal list in `proxyToBackend`. Propagate `traceparent` end-to-end (browser → BFF → backend → DSL execution). |
 | Streaming / long-poll | Replace `useStalePolling` fixed-interval polling with SSE or long-poll from the BFF for run status and dry-run logs. |
 | Pagination convention | One `{items, total, offset, limit}` envelope for every list endpoint (executions, drafts, definitions, schedules). |

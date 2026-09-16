@@ -1,5 +1,8 @@
 package cbs.nova.starter.model;
 
+import cbs.nova.dsl.model.ErrorResponse;
+import cbs.nova.dsl.model.CompileDiagnostic;
+
 import cbs.nova.dsl.model.DiffHunk;
 import cbs.nova.dsl.model.LoadResult;
 import com.fasterxml.jackson.annotation.JsonInclude;

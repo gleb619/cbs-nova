@@ -1,7 +1,7 @@
 package cbs.nova.starter.service;
 
 import cbs.nova.starter.exception.DslCompilationException;
-import cbs.nova.starter.model.CompileDiagnostic;
+import cbs.nova.dsl.model.CompileDiagnostic;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;

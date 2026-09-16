@@ -7,5 +7,7 @@ import { defineNuxtPlugin } from 'nuxt/app'
  * full schemas URL; this plugin satisfies that contract with Nuxt's $fetch.
  */
 export default defineNuxtPlugin((nuxtApp) => {
-  nuxtApp.vueApp.provide(DSL_SCHEMA_FETCH_KEY, (url: string) => ($fetch as (url: string) => Promise<unknown>)(url))
+  nuxtApp.vueApp.provide(DSL_SCHEMA_FETCH_KEY, (url: string) =>
+    ($fetch as (url: string) => Promise<unknown>)(url),
+  )
 })

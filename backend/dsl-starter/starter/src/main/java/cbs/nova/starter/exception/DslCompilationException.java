@@ -1,6 +1,6 @@
 package cbs.nova.starter.exception;
 
-import cbs.nova.starter.model.CompileDiagnostic;
+import cbs.nova.dsl.model.CompileDiagnostic;
 
 import java.util.List;
 

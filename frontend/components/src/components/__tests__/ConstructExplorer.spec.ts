@@ -104,7 +104,9 @@ describe('ConstructExplorer', () => {
     const wrapper = mountContainer({ constructs, selectedName: null, collapsed: true })
 
     expect(wrapper.find('input[type="text"]').exists()).toBe(true)
-    expect((wrapper.find('[data-testid="explorer-search"]').element as HTMLElement).style.display).toBe('none')
+    expect(
+      (wrapper.find('[data-testid="explorer-search"]').element as HTMLElement).style.display,
+    ).toBe('none')
     expect(wrapper.find('[aria-label="Expand constructs"]').exists()).toBe(true)
 
     await wrapper.find('[aria-label="Expand constructs"]').trigger('click')

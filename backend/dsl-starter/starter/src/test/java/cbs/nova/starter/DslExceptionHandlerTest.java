@@ -10,7 +10,7 @@ import cbs.nova.starter.controller.DslExceptionHandler;
 import cbs.nova.starter.exception.DslPayloadTooLargeException;
 import cbs.nova.starter.converter.DefaultDslExceptionMapper;
 import cbs.nova.starter.converter.DslExceptionMapper;
-import cbs.nova.starter.model.ErrorResponse;
+import cbs.nova.dsl.model.ErrorResponse;
 import io.sentry.Sentry;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
@@ -120,7 +120,7 @@ class DslExceptionHandlerTest {
       public ResponseEntity<ErrorResponse> handle(Exception exception, WebRequest request) {
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                 .body(new ErrorResponse("CUSTOM_CODE", "custom msg", "customEntity", "custom-run",
-                        "custom-ex", null));
+                        null, "custom-ex", null, null, null));
       }
     };
 

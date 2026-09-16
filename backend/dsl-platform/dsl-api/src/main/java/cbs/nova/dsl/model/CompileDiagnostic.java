@@ -1,4 +1,4 @@
-package cbs.nova.starter.model;
+package cbs.nova.dsl.model;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 

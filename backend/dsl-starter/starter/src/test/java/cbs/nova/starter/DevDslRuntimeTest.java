@@ -174,7 +174,7 @@ class DevDslRuntimeTest {
     assertThat(result.value()).isNotNull();
     assertThat(result.value().success()).isFalse();
     assertThat(result.value().errors()).isNotEmpty();
-    assertThat(result.value().errors().get(0).code().name()).isEqualTo("HELPER_NOT_FOUND");
+    assertThat(result.value().errors().get(0).code()).isEqualTo("HELPER_NOT_FOUND");
   }
 
   @Test

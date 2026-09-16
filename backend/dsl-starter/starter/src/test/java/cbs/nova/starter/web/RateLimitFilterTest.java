@@ -3,7 +3,7 @@ package cbs.nova.starter.web;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.starter.config.properties.CbsSecurityRateLimitProperties;
-import cbs.nova.starter.model.ErrorResponse;
+import cbs.nova.dsl.model.ErrorResponse;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletResponse;

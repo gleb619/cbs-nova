@@ -1,4 +1,4 @@
-import {beforeEach, describe, expect, it, vi, type Mock} from 'vitest'
+import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
 import { performLogout } from '../logout'
 import { useAuthConfig } from '../config'
 import { clearOidcSession, discoverOidc, readSession } from '../oidcSession'

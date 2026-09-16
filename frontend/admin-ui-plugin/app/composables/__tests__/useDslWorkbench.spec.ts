@@ -402,9 +402,7 @@ describe('useDslWorkbench', () => {
       const wb = useDslWorkbench()
       await wb.loadConstructs()
       wb.selectConstruct('c2')
-      setValidationErrors(wb, [
-        { field: 'old', message: 'old', severity: 'error' as const },
-      ])
+      setValidationErrors(wb, [{ field: 'old', message: 'old', severity: 'error' as const }])
 
       await wb.publishConstruct()
 

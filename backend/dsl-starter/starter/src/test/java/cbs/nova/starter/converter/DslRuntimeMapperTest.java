@@ -5,10 +5,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import cbs.nova.dsl.DslErrorCode;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.PreviewErrorCode;
-import cbs.nova.dsl.PreviewErrorDetail;
+import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.dsl.model.PreviewReport;
 import cbs.nova.dsl.exception.DslException;
-import cbs.nova.starter.model.ErrorResponse;
 import cbs.nova.starter.model.ErrorResponseContext;
 import java.util.List;
 import java.util.Map;
@@ -75,7 +74,7 @@ class DslRuntimeMapperTest {
             null,
             List.of(),
             null,
-            List.of(new PreviewErrorDetail(PreviewErrorCode.UNKNOWN_ERROR, "boom", "fix",
+            List.of(new ErrorResponse("UNKNOWN_ERROR", "boom", null, null, null, null, null, "fix",
                     Map.of())));
 
     ErrorResponseContext ctx = mapper.fromPreviewReport("Ping", "run-3", report);

@@ -22,7 +22,7 @@ import cbs.nova.starter.model.DefinitionTestCaseResult;
 import cbs.nova.starter.model.DefinitionTestCaseStatus;
 import cbs.nova.starter.model.DefinitionTestRunReport;
 import cbs.nova.starter.model.DslRequest;
-import cbs.nova.starter.model.ErrorResponse;
+import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.starter.model.RuntimeOutcome;
 import cbs.nova.starter.persistence.DslDefinitionTestRepository;
 import java.time.Instant;
@@ -123,8 +123,8 @@ class DslDefinitionTestServiceTest {
     when(previewService.preview(anyString(), any(DslRequest.class), any()))
             .thenReturn(RuntimeOutcome.ok(report(Map.of("y", 2))))
             .thenReturn(RuntimeOutcome.ok(report(Map.of("y", 3))))
-            .thenReturn(RuntimeOutcome.error(new ErrorResponse("DSL_ERROR",
-                    "boom", "LoanDisbursement", null, null, null)));
+            .thenReturn(RuntimeOutcome.error(new ErrorResponse("DSL_ERROR", "boom",
+                    "LoanDisbursement", null, null, null, null, null, null)));
 
     DefinitionTestRunReport report = service.run("LoanDisbursement", null);
 

@@ -4,7 +4,7 @@ import static cbs.nova.starter.core.StarterConstants.INVALID_CORRELATION_ID_CODE
 import static cbs.nova.starter.core.StarterConstants.INVALID_CORRELATION_ID_MESSAGE;
 
 import cbs.nova.starter.core.StarterConstants;
-import cbs.nova.starter.model.ErrorResponse;
+import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.starter.service.CorrelationId;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -38,8 +38,8 @@ public final class RequestIdFilter extends OncePerRequestFilter {
       response.setStatus(HttpStatus.BAD_REQUEST.value());
       response.setContentType(MediaType.APPLICATION_JSON_VALUE);
       objectMapper.writeValue(response.getOutputStream(),
-              new ErrorResponse(INVALID_CORRELATION_ID_CODE, INVALID_CORRELATION_ID_MESSAGE,
-                      null, null, null, null));
+              new ErrorResponse(INVALID_CORRELATION_ID_CODE, INVALID_CORRELATION_ID_MESSAGE, null,
+                      null, null, null, null, null, null));
       return;
     }
     String requestId = request.getHeader(StarterConstants.REQUEST_ID_HEADER);

@@ -34,7 +34,9 @@ const isEmpty = computed(() => {
   return false
 })
 
-function showError() { return Boolean(props.required) && touched.value && isEmpty.value }
+function showError() {
+  return Boolean(props.required) && touched.value && isEmpty.value
+}
 
 const enumOptions = computed(() => props.schema.enum ?? [])
 

@@ -1,7 +1,7 @@
 package cbs.nova.starter.controller;
 
 import cbs.nova.starter.config.router.DslScheduleRouterConfiguration;
-import cbs.nova.starter.model.ErrorResponse;
+import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.starter.model.PageResponse;
 import cbs.nova.starter.controller.Pagination;
 import cbs.nova.starter.core.StarterConstants;
@@ -168,6 +168,7 @@ public class DslScheduleHandler {
 
   private static ServerResponse badRequest(String message) {
     return ServerResponse.status(HttpStatus.BAD_REQUEST)
-            .body(new ErrorResponse("BAD_REQUEST", message, null, null, null, null));
+            .body(new ErrorResponse("BAD_REQUEST", message, null, null, null, null, null, null,
+                    null));
   }
 }

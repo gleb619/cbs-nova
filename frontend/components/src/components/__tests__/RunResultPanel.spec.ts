@@ -319,7 +319,10 @@ describe('RunResultPanel', () => {
   })
 
   it('shows skeleton while schema is loading in Form mode', async () => {
-    const wrapper = mountPanel({ type: 'Process' }, vi.fn(() => new Promise(() => {})))
+    const wrapper = mountPanel(
+      { type: 'Process' },
+      vi.fn(() => new Promise(() => {})),
+    )
     await flushPromises()
 
     await wrapper.find('[data-testid="mode-form"]').trigger('click')

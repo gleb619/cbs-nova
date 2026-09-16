@@ -17,7 +17,7 @@ public class SentryStatusReporter {
       boolean active = dsn != null && !dsn.isBlank();
       if (active) {
         log.info("Sentry error tracking ACTIVE (environment: {})",
-            environment.getProperty("sentry.environment", "unknown"));
+                environment.getProperty("sentry.environment", "unknown"));
       } else {
         log.info("Sentry error tracking INERT (no DSN configured)");
       }
