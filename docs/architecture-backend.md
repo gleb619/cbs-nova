@@ -299,7 +299,7 @@ The schedule surface sits under `/api/*`, so:
 
 #### Known gaps (not currently exposed / unclear)
 
-- **Pause / unpause is not exposed.** `GET /api/dsl/schedules` returns a `paused` flag but no route sets it. There is no `PATCH` / `POST /pause` / `POST /unpause` in `DslScheduleRouterConfiguration`. Operators who need to stop a schedule today must `DELETE /api/dsl/schedules/{definition}` (idempotent) and re-`POST` it later, losing the workflow id mapping.
+- **Pause / unpause (shipped — T507).** `POST /api/dsl/schedules/{definition}/pause` and `.../resume` are registered in `DslScheduleRouterConfiguration` and backed by `DslScheduleHandler.pause/resume`. Both write audit rows.
 - **No update / modify endpoint.** The cron and timezone are immutable after creation; changing the schedule requires delete + recreate. The service does not call `updateSchedule(...)`.
 - **Schedule id derived only from definition.** Re-creating a schedule for the same definition always collides on `sched-<definition>` (caught as `409 ScheduleConflictException`). There is no way to have two coexisting schedules for the same definition.
 - **`triggered_by` is `NULL` for scheduled runs.** Confirmed by tracing: `RunIdentityResolver.resolve()` cannot read a Spring Security context or a request attribute from a Temporal worker thread, so it returns `null`. Operators querying `SELECT … FROM dsl_runs WHERE triggered_by IS NULL` will see scheduled runs; joining back to the originating schedule requires the Temporal Workflow id (`<scheduleId>-<scheduled-time>`) from Temporal UI.
