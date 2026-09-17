@@ -1,11 +1,11 @@
 import cbs.nova.dsl.JsonValue;
 import cbs.nova.dslexamples.HelperPipelineModels.*;
+import cbs.nova.starter.helper.model.ArithmeticIn;
+import cbs.nova.starter.helper.model.ArithmeticOut;
 import cbs.nova.starter.helper.model.FilterRecordsIn;
 import cbs.nova.starter.helper.model.FilterRecordsOut;
 import cbs.nova.starter.helper.model.FormatMessageIn;
 import cbs.nova.starter.helper.model.FormatMessageOut;
-import cbs.nova.starter.helper.model.SumValuesIn;
-import cbs.nova.starter.helper.model.SumValuesOut;
 
 
 List<DslObject> define() {
@@ -26,11 +26,11 @@ List<DslObject> define() {
         List<Number> amounts = matched.stream()
             .map(r -> (Number) r.get("amount"))
             .toList();
-        var summed = ctx.runHelper("sumValues", new SumValuesIn(amounts, null));
+        var summed = ctx.runHelper("arithmetic", new ArithmeticIn(null, null, amounts, null, null, null, null, null, null));
         if (!summed.isSuccess()) {
           return Result.failure(summed.cause());
         }
-        SumValuesOut summedOut = summed.as(SumValuesOut.class);
+        ArithmeticOut summedOut = summed.as(ArithmeticOut.class);
 
         var rendered = ctx.runHelper("formatMessage",
             new FormatMessageIn(in.messageTemplate(),

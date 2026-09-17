@@ -1,7 +1,7 @@
 import cbs.nova.dslexamples.PricingModels.*;
 import cbs.nova.dsl.config.ContextFactory;
-import cbs.nova.starter.helper.model.MathIn;
-import cbs.nova.starter.helper.model.MathOut;
+import cbs.nova.starter.helper.model.ArithmeticIn;
+import cbs.nova.starter.helper.model.ArithmeticOut;
 import java.util.List;
 
 List<DslObject> define() {
@@ -13,12 +13,12 @@ List<DslObject> define() {
         List<Number> lineTotals = in.lines().stream()
             .<Number>map(line -> line.quantity() * line.unitPrice())
             .toList();
-        var summed = callHelper(ctx, "math",
-            new MathIn("sum", lineTotals, null, null, null, null, null));
+        var summed = callHelper(ctx, "arithmetic",
+            new ArithmeticIn("sum", null, lineTotals, null, null, null, null, null, null));
         if (!summed.isSuccess()) {
           return Result.failure(summed.cause());
         }
-        double subtotal = ((Number) summed.as(MathOut.class).result()).doubleValue();
+        double subtotal = ((Number) summed.as(ArithmeticOut.class).result()).doubleValue();
         return Result.success(new LineTotalsOut(subtotal));
       })
       .build();
@@ -100,7 +100,7 @@ List<DslObject> define() {
 
 // Rich contexts expose only Map-based runHelper overloads, and functions are dispatched
 // through GlobalManager.runFunction (not the helper path), so typed calls — other Functions
-// via callFunction, typed helpers like `math` via callHelper — build a context carrying the
+// via callFunction, typed helpers like `arithmetic` via callHelper — build a context carrying the
 // typed input body and go through GlobalManager directly.
 private static Result<?> callFunction(Context<?> ctx, String name, Object input) {
   var callCtx = new ContextFactory().of(input, ctx.mode(), ctx.runId());
@@ -113,10 +113,10 @@ private static Result<?> callHelper(Context<?> ctx, String name, Object input) {
 }
 
 private static Result<Double> round2(Context<?> ctx, double value) {
-  var rounded = callHelper(ctx, "math",
-      new MathIn("round", null, value, null, null, 2, null));
+  var rounded = callHelper(ctx, "arithmetic",
+      new ArithmeticIn("round", null, null, null, value, null, null, 2, null));
   if (!rounded.isSuccess()) {
     return Result.failure(rounded.cause());
   }
-  return Result.success(((Number) rounded.as(MathOut.class).result()).doubleValue());
+  return Result.success(((Number) rounded.as(ArithmeticOut.class).result()).doubleValue());
 }

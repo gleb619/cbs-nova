@@ -396,11 +396,15 @@ follow-up.
 
 ## Numeric aggregations
 
-`math` covers numeric aggregations (`sum`, `min`, `max`, `mean`, `median`, `percentile`,
-`stddev`) plus scalar transforms (`clamp`, `round`, `abs`, `floor`, `ceil`). The `mode`
-discriminator is matched case-insensitively. `MathOut.result` is `Double` for most
-operations and `Long` for `floor` and `ceil`. Aggregation modes take `numbers`; the
-scalar modes take `value` (plus `min`/`max` for `clamp`, `scale` for `round`).
+`arithmetic` (backward-compatible alias `math`) covers numeric aggregations (`sum`, `min`,
+`max`, `mean`, `median`, `percentile`, `stddev`) plus scalar transforms (`clamp`, `round`,
+`abs`, `floor`, `ceil`). The `mode` discriminator is matched case-insensitively.
+`ArithmeticOut.result` is `Double` for most operations and `Long` for `floor` and `ceil`.
+Aggregation modes take `numbers`; the scalar modes take `value` (plus `min`/`max` for
+`clamp`, `scale` for `round`).
+
+The helper also accepts the original `sumValues` calling shape (`operation` with `values`)
+for backward compatibility.
 
 ### Summarize a series of measurements
 
@@ -409,14 +413,14 @@ Hyndman-Fan type 7); `p` must be in `[0, 100]` inclusive. `stddev` is sample sta
 deviation (Bessel-corrected, divided by `N-1`) and requires at least two elements.
 
 ```java
-MathOut mean = ctx.runHelper("math",
-        new MathIn("mean", latencies, null, null, null, null, null))
-        .as(MathOut.class);
+ArithmeticOut mean = ctx.runHelper("arithmetic",
+        new ArithmeticIn("mean", null, latencies, null, null, null, null, null, null))
+        .as(ArithmeticOut.class);
 Double avgMs = (Double) mean.result();
 
-MathOut p99 = ctx.runHelper("math",
-        new MathIn("percentile", latencies, null, null, null, null, 99.0))
-        .as(MathOut.class);
+ArithmeticOut p99 = ctx.runHelper("arithmetic",
+        new ArithmeticIn("percentile", null, latencies, null, null, null, null, null, 99.0))
+        .as(ArithmeticOut.class);
 // For [1..100], p99 -> 99.01 via linear interpolation.
 ```
 
@@ -426,13 +430,13 @@ MathOut p99 = ctx.runHelper("math",
 `[-1, 15]` (default `0`). `floor` and `ceil` return a `Long`.
 
 ```java
-MathOut bounded = ctx.runHelper("math",
-        new MathIn("clamp", null, rawScore, 0, 100, null, null))
-        .as(MathOut.class);
+ArithmeticOut bounded = ctx.runHelper("arithmetic",
+        new ArithmeticIn("clamp", null, null, null, rawScore, 0, 100, null, null))
+        .as(ArithmeticOut.class);
 
-MathOut rounded = ctx.runHelper("math",
-        new MathIn("round", null, 3.14159, null, null, 2, null))
-        .as(MathOut.class);
+ArithmeticOut rounded = ctx.runHelper("arithmetic",
+        new ArithmeticIn("round", null, null, null, 3.14159, null, null, 2, null))
+        .as(ArithmeticOut.class);
 // rounded.result() == 3.14
 ```
 
@@ -440,7 +444,6 @@ A non-numeric element inside `numbers` surfaces an `IllegalArgumentException` th
 includes the offending index — useful when an upstream payload has been corrupted mid-stream.
 
 ---
-
 ## Date & time
 
 ### Format a timestamp for an HTTP header

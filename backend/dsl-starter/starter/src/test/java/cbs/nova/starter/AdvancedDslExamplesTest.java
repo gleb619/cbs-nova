@@ -157,9 +157,6 @@ class AdvancedDslExamplesTest {
       if (helperClass == ListOpsHelper.class) {
         return new ListOpsHelper();
       }
-      if (helperClass == MathHelper.class) {
-        return new MathHelper();
-      }
       if (helperClass == ParseCsvHelper.class) {
         return new ParseCsvHelper();
       }
