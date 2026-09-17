@@ -1,5 +1,6 @@
 package cbs.nova.dsl.transaction;
 
+import cbs.nova.dsl.model.SimpleContext;
 import cbs.nova.dsl.CompensationContext;
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.DslSaga;
@@ -8,7 +9,6 @@ import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.listener.ExecutionTraceCollector;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.helper.HelperInterceptor;
 import cbs.nova.dsl.model.MapInput;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +24,6 @@ public final class CompensationRichContext<T> implements CompensationContext<T> 
 
   private final Context<T> delegate;
   private final Throwable error;
-  private final ContextFactory contextFactory;
 
   @Override
   public @NonNull Throwable error() {
@@ -88,32 +87,29 @@ public final class CompensationRichContext<T> implements CompensationContext<T> 
 
   @Override
   public @NonNull Context<T> withTransactionRouting(@NonNull TransactionRouting routing) {
-    return new CompensationRichContext<>(delegate.withTransactionRouting(routing), error,
-            contextFactory);
+    return new CompensationRichContext<>(delegate.withTransactionRouting(routing), error);
   }
 
   @Override
   public @NonNull Context<T> withExecutionListener(@NonNull ExecutionListener listener) {
-    return new CompensationRichContext<>(delegate.withExecutionListener(listener), error,
-            contextFactory);
+    return new CompensationRichContext<>(delegate.withExecutionListener(listener), error);
   }
 
   @Override
   public @NonNull Context<T> withSaga(@Nullable DslSaga saga) {
-    return new CompensationRichContext<>(delegate.withSaga(saga), error, contextFactory);
+    return new CompensationRichContext<>(delegate.withSaga(saga), error);
   }
 
   @Override
   public @NonNull Context<T> withExecutionTraceCollector(
           @Nullable ExecutionTraceCollector executionTraceCollector) {
     return new CompensationRichContext<>(
-            delegate.withExecutionTraceCollector(executionTraceCollector), error, contextFactory);
+            delegate.withExecutionTraceCollector(executionTraceCollector), error);
   }
 
   @Override
   public @NonNull Context<T> withHelperInterceptor(@Nullable HelperInterceptor interceptor) {
-    return new CompensationRichContext<>(delegate.withHelperInterceptor(interceptor), error,
-            contextFactory);
+    return new CompensationRichContext<>(delegate.withHelperInterceptor(interceptor), error);
   }
 
   private void trace(@NonNull String entry) {
@@ -130,7 +126,8 @@ public final class CompensationRichContext<T> implements CompensationContext<T> 
   @Override
   public @NonNull Result<?> runHelper(@NonNull String name, @NonNull Map<String, Object> input) {
     Result<?> result = GlobalManager.globalManager().runHelper(name,
-            contextFactory.of(input, delegate.mode(), delegate.runId()));
+            SimpleContext.builder().body(input).mode(delegate.mode()).runId(delegate.runId())
+                    .build());
     trace("called helper: " + name);
     return result;
   }
@@ -138,7 +135,8 @@ public final class CompensationRichContext<T> implements CompensationContext<T> 
   @Override
   public @NonNull Result<?> runHelper(@NonNull String name, @NonNull MapInput input) {
     Result<?> result = GlobalManager.globalManager().runHelper(name,
-            contextFactory.of(input, delegate.mode(), delegate.runId()));
+            SimpleContext.builder().body(input).mode(delegate.mode()).runId(delegate.runId())
+                    .build());
     trace("called helper: " + name);
     return result;
   }

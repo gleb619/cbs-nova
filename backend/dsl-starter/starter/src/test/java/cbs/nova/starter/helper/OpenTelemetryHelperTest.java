@@ -1,10 +1,10 @@
 package cbs.nova.starter.helper;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.helper.model.OtelIn;
 import cbs.nova.starter.helper.model.OtelOut;
 import io.opentelemetry.api.trace.Span;
@@ -27,7 +27,6 @@ class OpenTelemetryHelperTest {
   @RegisterExtension
   static final OpenTelemetryExtension OTEL = OpenTelemetryExtension.create();
 
-  private final ContextFactory contextFactory = new ContextFactory();
   private OpenTelemetryHelper helper;
 
   @BeforeEach
@@ -269,7 +268,7 @@ class OpenTelemetryHelperTest {
   }
 
   private Result<OtelOut> execute(OtelIn input) {
-    return helper.execute(contextFactory.of(input, ExecutionMode.PREVIEW));
+    return helper.execute(SimpleContext.builder(input).mode(ExecutionMode.PREVIEW).build());
   }
 
   private static OtelIn OtelInSpan(String name) {

@@ -1,8 +1,8 @@
 package cbs.nova.dsl;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.model.ExplainReport;
 import cbs.nova.dsl.registry.DefaultHelperRegistry;
 import cbs.nova.dsl.runner.DefaultHelperRunner;
@@ -11,8 +11,7 @@ import org.junit.jupiter.api.Test;
 
 class DefaultHelperRunnerExplainTest {
 
-  private final ContextFactory contextFactory = new ContextFactory();
-  private final DefaultHelperRunner runner = new DefaultHelperRunner(contextFactory);
+  private final DefaultHelperRunner runner = new DefaultHelperRunner();
 
   @Test
   void explainModeInvokesFunctionExplainLogic() {
@@ -34,7 +33,8 @@ class DefaultHelperRunnerExplainTest {
             })
             .build());
 
-    var ctx = contextFactory.of("input", ExecutionMode.EXPLAIN, "run-explain-fn");
+    var ctx = SimpleContext.builder().body("input").mode(ExecutionMode.EXPLAIN)
+            .runId("run-explain-fn").build();
     var result = runner.runFunction("explainFn", ctx, registry);
 
     assertThat(result.isSuccess()).isTrue();
@@ -57,7 +57,8 @@ class DefaultHelperRunnerExplainTest {
             })
             .build());
 
-    var ctx = contextFactory.of("input", ExecutionMode.EXPLAIN, "run-explain-fallback-fn");
+    var ctx = SimpleContext.builder().body("input").mode(ExecutionMode.EXPLAIN)
+            .runId("run-explain-fallback-fn").build();
     var result = runner.runFunction("fallbackFn", ctx, registry);
 
     assertThat(result.isSuccess()).isTrue();
@@ -80,7 +81,8 @@ class DefaultHelperRunnerExplainTest {
                     .description("explain").mermaid("").build()))
             .build());
 
-    var ctx = contextFactory.of("input", ExecutionMode.RUN, "run-mode-fn");
+    var ctx = SimpleContext.builder().body("input").mode(ExecutionMode.RUN).runId("run-mode-fn")
+            .build();
     var result = runner.runFunction("runFn", ctx, registry);
 
     assertThat(result.isSuccess()).isTrue();
@@ -97,7 +99,8 @@ class DefaultHelperRunnerExplainTest {
             .preview(ctx -> Result.success("preview"))
             .build());
 
-    var ctx = contextFactory.of("input", ExecutionMode.PREVIEW, "preview-mode-fn");
+    var ctx = SimpleContext.builder().body("input").mode(ExecutionMode.PREVIEW)
+            .runId("preview-mode-fn").build();
     var result = runner.runFunction("previewFn", ctx, registry);
 
     assertThat(result.isSuccess()).isTrue();

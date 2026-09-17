@@ -5,7 +5,6 @@ import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.FunctionContext;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.exception.DslEntityNotFoundException;
 import cbs.nova.dsl.exception.DslExecutionException;
 import cbs.nova.dsl.function.FunctionRichContext;
@@ -17,8 +16,6 @@ import java.util.function.Function;
 
 @RequiredArgsConstructor
 public final class DefaultHelperRunner implements HelperRunner {
-
-  private final ContextFactory contextFactory;
 
   @Override
   @SuppressWarnings("unchecked")
@@ -60,7 +57,7 @@ public final class DefaultHelperRunner implements HelperRunner {
     listener.onFunctionStart(ctx.runId(), name, ctx.body());
     Result<?> result = null;
     try {
-      var richCtx = new FunctionRichContext<>(ctx, contextFactory);
+      var richCtx = new FunctionRichContext<>(ctx);
       if (ctx.mode() == ExecutionMode.EXPLAIN) {
         result = fn.get().effectiveExplain().apply(richCtx);
       } else {

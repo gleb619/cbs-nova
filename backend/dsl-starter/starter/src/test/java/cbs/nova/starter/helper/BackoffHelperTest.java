@@ -1,17 +1,16 @@
 package cbs.nova.starter.helper;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.helper.model.BackoffIn;
 import cbs.nova.starter.helper.model.BackoffOut;
 import org.junit.jupiter.api.Test;
 
 class BackoffHelperTest {
 
-  private final ContextFactory contextFactory = new ContextFactory();
   private final BackoffHelper helper = new BackoffHelper();
 
   @Test
@@ -57,13 +56,15 @@ class BackoffHelperTest {
   }
 
   private long delay(BackoffIn input) {
-    Result<BackoffOut> result = helper.execute(contextFactory.of(input, ExecutionMode.PREVIEW));
+    Result<BackoffOut> result = helper
+            .execute(SimpleContext.builder(input).mode(ExecutionMode.PREVIEW).build());
     assertThat(result.isSuccess()).isTrue();
     return result.value().delayMillis();
   }
 
   private Throwable failure(BackoffIn input) {
-    Result<BackoffOut> result = helper.execute(contextFactory.of(input, ExecutionMode.PREVIEW));
+    Result<BackoffOut> result = helper
+            .execute(SimpleContext.builder(input).mode(ExecutionMode.PREVIEW).build());
     assertThat(result.isSuccess()).isFalse();
     return result.cause();
   }

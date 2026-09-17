@@ -1,5 +1,6 @@
 package cbs.nova.starter.service;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static cbs.nova.starter.core.StarterConstants.SERVICE_SHUTDOWN_JOIN;
 
 import cbs.nova.dsl.Context;
@@ -7,7 +8,6 @@ import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.listener.ExecutionTraceCollector;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.history.DslRun;
 import cbs.nova.dsl.history.DslRunRepository;
 import cbs.nova.dsl.history.DslRunStatus;
@@ -60,7 +60,6 @@ import java.util.function.Supplier;
 @Slf4j
 public class TemporalDslProcessService {
 
-  private final ContextFactory contextFactory;
   private final DslRunRepository runRepository;
   private final ObjectMapper objectMapper;
   private final ThreadPoolTaskExecutor dslProcessExecutor;
@@ -78,7 +77,6 @@ public class TemporalDslProcessService {
   private @Nullable ExecutionStatusEventPublisher statusPublisher;
 
   public TemporalDslProcessService(
-          ContextFactory contextFactory,
           DslRunRepository runRepository,
           ObjectMapper objectMapper,
           ThreadPoolTaskExecutor dslProcessExecutor,
@@ -93,7 +91,6 @@ public class TemporalDslProcessService {
           OpenTelemetry openTelemetry,
           ObjectProvider<DomainEventPublisher> eventPublisherProvider,
           ObjectProvider<TransactionTemplate> transactionTemplateProvider) {
-    this.contextFactory = contextFactory;
     this.runRepository = runRepository;
     this.objectMapper = objectMapper;
     this.dslProcessExecutor = dslProcessExecutor;
@@ -111,12 +108,12 @@ public class TemporalDslProcessService {
   }
 
   public static TemporalDslProcessService withDefaults(
-          ContextFactory contextFactory, DslRunRepository runRepository, ObjectMapper objectMapper,
+          DslRunRepository runRepository, ObjectMapper objectMapper,
           ThreadPoolTaskExecutor dslProcessExecutor, ScheduledExecutorService healthcheckExecutor,
           Duration healthcheckInterval, Duration staleThreshold, boolean asyncDbSave,
           long maxOutputBytes, MeterRegistry meterRegistry,
           RunIdentityResolver runIdentityResolver) {
-    return new TemporalDslProcessService(contextFactory, runRepository, objectMapper,
+    return new TemporalDslProcessService(runRepository, objectMapper,
             dslProcessExecutor, healthcheckExecutor, healthcheckInterval, staleThreshold,
             asyncDbSave, maxOutputBytes, meterRegistry, runIdentityResolver,
             Optional.empty(), OpenTelemetry.noop(),
@@ -177,7 +174,7 @@ public class TemporalDslProcessService {
           @NonNull Map<String, Object> metadata,
           @Nullable String correlationId) {
     Object body = input != null ? input : Map.of();
-    String runId = contextFactory.generateRunId();
+    String runId = SimpleContext.generateRunId();
     var runIdScope = propagateRunId(runId);
     try {
       String inputJson = serialize(body);
@@ -417,7 +414,8 @@ public class TemporalDslProcessService {
     activeSpans.put(runId, span);
     try (Scope ignored = span.makeCurrent()) {
       ExecutionTraceCollector traceCollector = new ExecutionTraceCollector();
-      Context<?> ctx = contextFactory.of(body, metadata, ExecutionMode.RUN, runId)
+      Context<?> ctx = SimpleContext.builder().body(body).metadata(metadata).mode(ExecutionMode.RUN)
+              .runId(runId).build()
               .withExecutionTraceCollector(traceCollector);
       traceCollector.start();
       Result<?> result;

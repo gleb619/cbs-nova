@@ -1,12 +1,12 @@
 package cbs.nova.dsl.process;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.transaction.TransactionRouting;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,8 +15,6 @@ import org.junit.jupiter.api.Test;
 import java.util.concurrent.atomic.AtomicReference;
 
 class ProcessRichContextTest {
-
-  private final ContextFactory contextFactory = new ContextFactory();
 
   @BeforeEach
   void reset() {
@@ -29,8 +27,8 @@ class ProcessRichContextTest {
     gm.registerTransaction(
             Dsl.transaction("TestTx").execute(ctx -> Result.success("local")).build());
 
-    var ctx = contextFactory.of("body", ExecutionMode.RUN, "r1");
-    var rich = new ProcessRichContext<>(ctx, contextFactory);
+    var ctx = SimpleContext.builder().body("body").mode(ExecutionMode.RUN).runId("r1").build();
+    var rich = new ProcessRichContext<>(ctx);
 
     var result = rich.runTransaction("TestTx");
     assertThat(result.isSuccess()).isTrue();
@@ -50,9 +48,9 @@ class ProcessRichContextTest {
               return Result.success("invoked:" + name);
             });
 
-    var ctx = contextFactory.of("body", ExecutionMode.RUN, "r1")
+    var ctx = SimpleContext.builder().body("body").mode(ExecutionMode.RUN).runId("r1").build()
             .withTransactionRouting(TransactionRouting.TEMPORAL_ACTIVITY);
-    var rich = new ProcessRichContext<>(ctx, contextFactory);
+    var rich = new ProcessRichContext<>(ctx);
 
     var result = rich.runTransaction("TestTx");
     assertThat(result.isSuccess()).isTrue();
@@ -66,9 +64,9 @@ class ProcessRichContextTest {
     gm.registerTransaction(
             Dsl.transaction("TestTx").execute(ctx -> Result.success("fallback")).build());
 
-    var ctx = contextFactory.of("body", ExecutionMode.RUN, "r1")
+    var ctx = SimpleContext.builder().body("body").mode(ExecutionMode.RUN).runId("r1").build()
             .withTransactionRouting(TransactionRouting.TEMPORAL_ACTIVITY);
-    var rich = new ProcessRichContext<>(ctx, contextFactory);
+    var rich = new ProcessRichContext<>(ctx);
 
     var result = rich.runTransaction("TestTx");
     assertThat(result.isSuccess()).isTrue();
@@ -77,8 +75,8 @@ class ProcessRichContextTest {
 
   @Test
   void withTransactionRoutingReturnsProcessRichContextWithUpdatedDelegate() {
-    var ctx = contextFactory.of("body", ExecutionMode.RUN, "r1");
-    var rich = new ProcessRichContext<>(ctx, contextFactory);
+    var ctx = SimpleContext.builder().body("body").mode(ExecutionMode.RUN).runId("r1").build();
+    var rich = new ProcessRichContext<>(ctx);
     var updated = rich.withTransactionRouting(TransactionRouting.TEMPORAL_ACTIVITY);
 
     assertThat(updated).isInstanceOf(ProcessRichContext.class);

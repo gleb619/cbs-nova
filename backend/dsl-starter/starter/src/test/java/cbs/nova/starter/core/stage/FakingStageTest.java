@@ -1,12 +1,12 @@
 package cbs.nova.starter.core.stage;
 
+import cbs.nova.dsl.model.SimpleContext;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.fake.FakeConfig;
 import cbs.nova.dsl.fake.FakeEntry;
 import cbs.nova.starter.config.properties.CbsNovaFakesProperties;
@@ -17,10 +17,8 @@ import org.junit.jupiter.api.Test;
 
 class FakingStageTest {
 
-  private final ContextFactory contextFactory = new ContextFactory();
-
   private DslPipeContext newContext(String runId) {
-    Context<?> ctx = contextFactory.of("body", ExecutionMode.PREVIEW, runId);
+    Context<?> ctx = SimpleContext.builder("body").mode(ExecutionMode.PREVIEW).runId(runId).build();
     return DslPipeContext.of("Ping", ctx, ExecutionMode.PREVIEW, runId);
   }
 

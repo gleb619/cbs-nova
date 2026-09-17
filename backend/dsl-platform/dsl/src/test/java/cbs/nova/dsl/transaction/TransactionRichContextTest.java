@@ -1,5 +1,6 @@
 package cbs.nova.dsl.transaction;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.Context;
@@ -12,7 +13,6 @@ import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.listener.ExecutionTraceCollector;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.model.MapInput;
 import java.util.Map;
 import org.jspecify.annotations.NonNull;
@@ -23,14 +23,14 @@ import org.junit.jupiter.api.Test;
 class TransactionRichContextTest {
 
   private static final String RUN_ID = "tx-run-id";
-  private final ContextFactory contextFactory = new ContextFactory();
   private final ExecutionTraceCollector traceCollector = new ExecutionTraceCollector();
   private Context<String> delegate;
 
   @BeforeEach
   void setUp() {
     GlobalManager.globalManager().resetForTests();
-    delegate = contextFactory.of("payload", ExecutionMode.RUN, RUN_ID)
+    delegate = SimpleContext.<String>builder().body("payload").mode(ExecutionMode.RUN).runId(RUN_ID)
+            .build()
             .withExecutionTraceCollector(traceCollector);
     traceCollector.start();
   }
@@ -42,7 +42,7 @@ class TransactionRichContextTest {
   }
 
   private TransactionRichContext<String> newContext() {
-    return new TransactionRichContext<>(delegate, contextFactory);
+    return new TransactionRichContext<>(delegate);
   }
 
   @Test
@@ -83,7 +83,7 @@ class TransactionRichContextTest {
       }
     };
     var withListener = delegate.withExecutionListener(listener);
-    var rich = new TransactionRichContext<>(withListener, contextFactory);
+    var rich = new TransactionRichContext<>(withListener);
     assertThat(rich.executionListener()).isSameAs(listener);
   }
 
@@ -91,7 +91,7 @@ class TransactionRichContextTest {
   void delegatesSaga() {
     DslSaga saga = DslSaga.create();
     var withSaga = delegate.withSaga(saga);
-    var rich = new TransactionRichContext<>(withSaga, contextFactory);
+    var rich = new TransactionRichContext<>(withSaga);
     assertThat(rich.saga()).isSameAs(saga);
   }
 
@@ -210,8 +210,9 @@ class TransactionRichContextTest {
   void runHelperWithoutTraceCollectorDoesNotThrow() {
     GlobalManager.globalManager().registerHelper("noop",
             ctx -> Result.success(null));
-    var delegateNoTrace = contextFactory.of("payload", ExecutionMode.RUN, RUN_ID);
-    var rich = new TransactionRichContext<>(delegateNoTrace, contextFactory);
+    var delegateNoTrace = SimpleContext.builder().body("payload").mode(ExecutionMode.RUN)
+            .runId(RUN_ID).build();
+    var rich = new TransactionRichContext<>(delegateNoTrace);
 
     Result<?> result = rich.runHelper("noop");
 

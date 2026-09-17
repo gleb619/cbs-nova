@@ -1,11 +1,11 @@
 package cbs.nova.starter.core.stage;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.model.ExplainGraphReport;
 import cbs.nova.starter.core.pipe.DslPipeContext;
 import cbs.nova.starter.core.pipe.DslPipeStage;
@@ -21,10 +21,9 @@ class ExplainBudgetStageTest {
   private static final Encoding ENCODING = Encodings.newDefaultEncodingRegistry()
           .getEncoding(EncodingType.CL100K_BASE);
 
-  private final ContextFactory contextFactory = new ContextFactory();
-
   private DslPipeContext pipeContext() {
-    Context<?> ctx = contextFactory.of("body", ExecutionMode.EXPLAIN, "run-1");
+    Context<?> ctx = SimpleContext.builder("body").mode(ExecutionMode.EXPLAIN).runId("run-1")
+            .build();
     return DslPipeContext.of("Test", ctx, ExecutionMode.EXPLAIN, "run-1");
   }
 

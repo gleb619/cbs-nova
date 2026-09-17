@@ -1,11 +1,11 @@
 package cbs.nova.starter.core.stage;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.core.event.DslExecutionEvent;
 import cbs.nova.starter.core.event.DslExecutionEvent.DslRunCompletedEvent;
 import cbs.nova.starter.core.event.DslExecutionEvent.DslRunStartedEvent;
@@ -19,8 +19,6 @@ import org.junit.jupiter.api.Test;
 
 class DslExecutionEventStageTest {
 
-  private final ContextFactory contextFactory = new ContextFactory();
-
   private final List<DslExecutionEvent> captured = new ArrayList<>();
 
   private final DslExecutionEventBus eventBus;
@@ -33,7 +31,7 @@ class DslExecutionEventStageTest {
     this.stage = new DslExecutionEventStage(eventBus);
     this.pipeContext = DslPipeContext.of(
             "Ping",
-            contextFactory.of("body", ExecutionMode.RUN, "run-1"),
+            SimpleContext.builder("body").mode(ExecutionMode.RUN).runId("run-1").build(),
             ExecutionMode.RUN,
             "run-1");
   }

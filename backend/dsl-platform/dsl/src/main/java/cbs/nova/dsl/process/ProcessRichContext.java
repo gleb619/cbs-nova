@@ -1,5 +1,6 @@
 package cbs.nova.dsl.process;
 
+import cbs.nova.dsl.model.SimpleContext;
 import cbs.nova.dsl.BeanResolver;
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.DslSaga;
@@ -8,7 +9,6 @@ import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.listener.ExecutionTraceCollector;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.helper.HelperInterceptor;
 import cbs.nova.dsl.model.MapInput;
 import cbs.nova.dsl.transaction.TransactionRouting;
@@ -24,7 +24,6 @@ import java.util.Map;
 public final class ProcessRichContext<T> implements ProcessContext<T> {
 
   private final Context<T> delegate;
-  private final ContextFactory contextFactory;
 
   @Override
   public @NonNull T body() {
@@ -83,29 +82,29 @@ public final class ProcessRichContext<T> implements ProcessContext<T> {
 
   @Override
   public @NonNull Context<T> withTransactionRouting(@NonNull TransactionRouting routing) {
-    return new ProcessRichContext<>(delegate.withTransactionRouting(routing), contextFactory);
+    return new ProcessRichContext<>(delegate.withTransactionRouting(routing));
   }
 
   @Override
   public @NonNull Context<T> withExecutionListener(@NonNull ExecutionListener listener) {
-    return new ProcessRichContext<>(delegate.withExecutionListener(listener), contextFactory);
+    return new ProcessRichContext<>(delegate.withExecutionListener(listener));
   }
 
   @Override
   public @NonNull Context<T> withSaga(@Nullable DslSaga saga) {
-    return new ProcessRichContext<>(delegate.withSaga(saga), contextFactory);
+    return new ProcessRichContext<>(delegate.withSaga(saga));
   }
 
   @Override
   public @NonNull Context<T> withExecutionTraceCollector(
           @Nullable ExecutionTraceCollector executionTraceCollector) {
     return new ProcessRichContext<>(
-            delegate.withExecutionTraceCollector(executionTraceCollector), contextFactory);
+            delegate.withExecutionTraceCollector(executionTraceCollector));
   }
 
   @Override
   public @NonNull Context<T> withHelperInterceptor(@Nullable HelperInterceptor interceptor) {
-    return new ProcessRichContext<>(delegate.withHelperInterceptor(interceptor), contextFactory);
+    return new ProcessRichContext<>(delegate.withHelperInterceptor(interceptor));
   }
 
   private void trace(@NonNull String entry) {
@@ -122,7 +121,8 @@ public final class ProcessRichContext<T> implements ProcessContext<T> {
   @Override
   public @NonNull Result<?> runHelper(@NonNull String name, @NonNull Map<String, Object> input) {
     Result<?> result = GlobalManager.globalManager().runHelper(name,
-            contextFactory.of(input, delegate.metadata(), delegate.mode(), delegate.runId()));
+            SimpleContext.builder().body(input).metadata(delegate.metadata()).mode(delegate.mode())
+                    .runId(delegate.runId()).build());
     trace("called helper: " + name);
     return result;
   }
@@ -130,7 +130,8 @@ public final class ProcessRichContext<T> implements ProcessContext<T> {
   @Override
   public @NonNull Result<?> runHelper(@NonNull String name, @NonNull MapInput input) {
     Result<?> result = GlobalManager.globalManager().runHelper(name,
-            contextFactory.of(input, delegate.metadata(), delegate.mode(), delegate.runId()));
+            SimpleContext.builder().body(input).metadata(delegate.metadata()).mode(delegate.mode())
+                    .runId(delegate.runId()).build());
     trace("called helper: " + name);
     return result;
   }
@@ -146,7 +147,8 @@ public final class ProcessRichContext<T> implements ProcessContext<T> {
       return runHelper(name, mapInput);
     }
     Result<?> result = GlobalManager.globalManager().runHelper(name,
-            contextFactory.of(input, delegate.metadata(), delegate.mode(), delegate.runId()));
+            SimpleContext.builder().body(input).metadata(delegate.metadata()).mode(delegate.mode())
+                    .runId(delegate.runId()).build());
     trace("called helper: " + name);
     return result;
   }
@@ -189,9 +191,10 @@ public final class ProcessRichContext<T> implements ProcessContext<T> {
   }
 
   private @NonNull Result<?> invokeTransaction(@NonNull String name, @NonNull Object input) {
-    Context<Object> ctx = contextFactory.of(input, delegate.metadata(), delegate.mode(),
-            delegate.runId(), delegate.transactionRouting(), delegate.executionListener(),
-            delegate.saga())
+    Context<Object> ctx = SimpleContext.builder().body(input).metadata(delegate.metadata())
+            .mode(delegate.mode()).runId(delegate.runId())
+            .transactionRouting(delegate.transactionRouting())
+            .executionListener(delegate.executionListener()).saga(delegate.saga()).build()
             .withExecutionTraceCollector(delegate.executionTraceCollector())
             .withHelperInterceptor(delegate.helperInterceptor());
     if (delegate.transactionRouting() == TransactionRouting.TEMPORAL_ACTIVITY) {
@@ -225,6 +228,6 @@ public final class ProcessRichContext<T> implements ProcessContext<T> {
 
   @Override
   public @NonNull Context<T> withBeanResolver(@Nullable BeanResolver beanResolver) {
-    return new ProcessRichContext(delegate.withBeanResolver(beanResolver), contextFactory);
+    return new ProcessRichContext(delegate.withBeanResolver(beanResolver));
   }
 }

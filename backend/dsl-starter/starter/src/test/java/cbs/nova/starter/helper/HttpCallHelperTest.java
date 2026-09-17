@@ -1,5 +1,6 @@
 package cbs.nova.starter.helper;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalToJson;
@@ -13,7 +14,6 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.config.properties.CbsNovaLoggingProperties;
 import cbs.nova.starter.config.properties.CbsNovaLoggingProperties.Level;
 import cbs.nova.starter.config.properties.HttpCallProperties;
@@ -37,7 +37,6 @@ class HttpCallHelperTest {
 
   private WireMockServer wireMock;
   private HttpCallHelper helper;
-  private final ContextFactory contextFactory = new ContextFactory();
 
   @BeforeEach
   void setUp() {
@@ -63,7 +62,7 @@ class HttpCallHelperTest {
   }
 
   private Result<HttpCallOut> execute(HttpCallHelper helper, HttpCallIn input) {
-    var ctx = contextFactory.of(input, ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.builder(input).mode(ExecutionMode.PREVIEW).build();
     return helper.execute(ctx);
   }
 

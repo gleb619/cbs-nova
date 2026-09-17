@@ -1,5 +1,6 @@
 package cbs.nova.starter.core.pipe;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -14,7 +15,6 @@ import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.fake.FakeConfig;
 import cbs.nova.dsl.fake.FakeEntry;
 import cbs.nova.dsl.model.ExplainGraphReport;
@@ -46,7 +46,6 @@ class InterceptorThreadingTest {
     return new DryRunProperties(null, null).log().maxEventsPerRun();
   }
 
-  private final ContextFactory contextFactory = new ContextFactory();
   private final ThreadLocalDryRunLoggingContext dryRunLoggingContext = new ThreadLocalDryRunLoggingContext();
   private final DryRunLogBufferRegistry bufferRegistry = new DryRunLogBufferRegistry(
           Caffeine.newBuilder().build());
@@ -74,13 +73,14 @@ class InterceptorThreadingTest {
     runScopedFakeConfig.register("run-preview",
             FakeConfig.of(new FakeEntry("helper", "httpCall", "faked-http")));
 
-    PreviewDslPipe previewPipe = new PreviewDslPipe(recorder, contextFactory,
+    PreviewDslPipe previewPipe = new PreviewDslPipe(recorder,
             dryRunLoggingContext, bufferRegistry,
             defaultMaxEventsPerRun(), null, previewProperties,
             new CbsNovaFakesProperties(false, null), runScopedFakeConfig,
             new SimpleMeterRegistry(), null);
 
-    Context<?> ctx = contextFactory.of("payload", ExecutionMode.PREVIEW, "run-preview");
+    Context<?> ctx = SimpleContext.builder("payload").mode(ExecutionMode.PREVIEW)
+            .runId("run-preview").build();
     Result<PreviewReport> result = previewPipe.execute("httpCall", ctx);
 
     assertThat(result.isSuccess()).isTrue();
@@ -94,11 +94,12 @@ class InterceptorThreadingTest {
     runScopedFakeConfig.register("run-fake",
             FakeConfig.of(new FakeEntry("helper", "httpCall", "faked-http")));
 
-    var runPipe = new RunDslPipe(contextFactory, recorder,
+    var runPipe = new RunDslPipe(recorder,
             new CbsNovaFakesProperties(false, null), runScopedFakeConfig,
             new DslExecutionEventBus());
 
-    Context<?> ctx = contextFactory.of("payload", ExecutionMode.RUN, "run-fake");
+    Context<?> ctx = SimpleContext.builder("payload").mode(ExecutionMode.RUN).runId("run-fake")
+            .build();
     Result<Object> result = runPipe.execute("httpCall", ctx);
 
     assertThat(result.isSuccess()).isTrue();
@@ -113,11 +114,12 @@ class InterceptorThreadingTest {
     var runScopedFakeConfig = new RunScopedFakeConfig(Caffeine.newBuilder().build());
     var recorder = mock(ExternalCallRecorder.class);
 
-    var runPipe = new RunDslPipe(contextFactory, recorder,
+    var runPipe = new RunDslPipe(recorder,
             new CbsNovaFakesProperties(false, null), runScopedFakeConfig,
             new DslExecutionEventBus());
 
-    Context<?> ctx = contextFactory.of("payload", ExecutionMode.RUN, "run-nofake");
+    Context<?> ctx = SimpleContext.builder("payload").mode(ExecutionMode.RUN).runId("run-nofake")
+            .build();
     Result<Object> result = runPipe.execute("httpCall", ctx);
 
     assertThat(result.isSuccess()).isTrue();
@@ -140,21 +142,23 @@ class InterceptorThreadingTest {
     previewScoped.register("run-shared",
             FakeConfig.of(new FakeEntry("helper", "httpCall", "preview-fake")));
 
-    var previewPipe = new PreviewDslPipe(previewRec, contextFactory, dryRunLoggingContext,
+    var previewPipe = new PreviewDslPipe(previewRec, dryRunLoggingContext,
             bufferRegistry, defaultMaxEventsPerRun(), null,
             previewProperties, new CbsNovaFakesProperties(false, null), previewScoped,
             new SimpleMeterRegistry(), null);
-    var runPipe = new RunDslPipe(contextFactory, runRec,
+    var runPipe = new RunDslPipe(runRec,
             new CbsNovaFakesProperties(false, null), runScoped,
             new DslExecutionEventBus());
 
-    Context<?> previewCtx = contextFactory.of("payload", ExecutionMode.PREVIEW, "run-shared");
+    Context<?> previewCtx = SimpleContext.builder("payload").mode(ExecutionMode.PREVIEW)
+            .runId("run-shared").build();
     Result<PreviewReport> previewResult = previewPipe.execute("httpCall", previewCtx);
     assertThat(previewResult.value()).isNotNull();
     verify(previewRec).record(eq("helper"), eq("httpCall"), eq("execute"), eq("preview-fake"));
 
     // The Run pipe never sees previewScoped, so it must run the real helper.
-    Context<?> runCtx = contextFactory.of("payload", ExecutionMode.RUN, "run-shared");
+    Context<?> runCtx = SimpleContext.builder("payload").mode(ExecutionMode.RUN).runId("run-shared")
+            .build();
     Result<Object> runResult = runPipe.execute("httpCall", runCtx);
     assertThat(runResult.value()).isEqualTo("real-http-result");
     // No fake record(...) on the run recorder: scoped config is separate per pipe.
@@ -168,13 +172,14 @@ class InterceptorThreadingTest {
     runScopedFakeConfig.register("run-explain",
             FakeConfig.of(new FakeEntry("helper", "dbCall", "faked-db")));
 
-    var explainPipe = new ExplainDslPipe(recorder, contextFactory, dryRunLoggingContext,
+    var explainPipe = new ExplainDslPipe(recorder, dryRunLoggingContext,
             bufferRegistry, defaultMaxEventsPerRun(), previewProperties,
             new CbsNovaFakesProperties(false, null), runScopedFakeConfig,
             new SimpleMeterRegistry(), new ExplainDiagramRenderer(),
             new CbsNovaExplainProperties(4000, "explain/", 128, 256, 4096), null);
 
-    Context<?> ctx = contextFactory.of("payload", ExecutionMode.EXPLAIN, "run-explain");
+    Context<?> ctx = SimpleContext.builder("payload").mode(ExecutionMode.EXPLAIN)
+            .runId("run-explain").build();
     Result<ExplainGraphReport> result = explainPipe.execute("dbCall", ctx);
 
     assertThat(result.isSuccess()).isTrue();
@@ -197,11 +202,12 @@ class InterceptorThreadingTest {
     runScopedFakeConfig.register("run-process",
             FakeConfig.of(new FakeEntry("helper", "httpCall", "faked-http")));
 
-    var runPipe = new RunDslPipe(contextFactory, recorder,
+    var runPipe = new RunDslPipe(recorder,
             new CbsNovaFakesProperties(false, null), runScopedFakeConfig,
             new DslExecutionEventBus());
 
-    Context<?> ctx = contextFactory.of("payload", ExecutionMode.RUN, "run-process");
+    Context<?> ctx = SimpleContext.builder("payload").mode(ExecutionMode.RUN).runId("run-process")
+            .build();
     Result<Object> result = runPipe.execute("ProcessCallsHelper", ctx);
 
     assertThat(result.isSuccess()).isTrue();

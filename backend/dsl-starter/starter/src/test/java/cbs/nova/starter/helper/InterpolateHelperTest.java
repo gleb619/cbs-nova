@@ -1,10 +1,10 @@
 package cbs.nova.starter.helper;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.helper.model.InterpolateIn;
 import cbs.nova.starter.helper.model.InterpolateOut;
 import java.math.BigDecimal;
@@ -14,7 +14,6 @@ import org.junit.jupiter.api.Test;
 
 class InterpolateHelperTest {
 
-  private final ContextFactory contextFactory = new ContextFactory();
   private final InterpolateHelper helper = new InterpolateHelper();
 
   @Test
@@ -207,8 +206,9 @@ class InterpolateHelperTest {
 
   private Result<InterpolateOut> execute(
           String template, Map<String, Object> params, String onMissing) {
-    var ctx = contextFactory.of(
-            new InterpolateIn(template, params, onMissing), ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.<InterpolateIn>builder()
+            .body(new InterpolateIn(template, params, onMissing)).mode(ExecutionMode.PREVIEW)
+            .build();
     return helper.execute(ctx);
   }
 }

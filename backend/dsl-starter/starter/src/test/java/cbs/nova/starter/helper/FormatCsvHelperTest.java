@@ -1,10 +1,10 @@
 package cbs.nova.starter.helper;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.helper.model.CsvOptions;
 import cbs.nova.starter.helper.model.FormatCsvIn;
 import cbs.nova.starter.helper.model.FormatCsvOut;
@@ -13,7 +13,6 @@ import org.junit.jupiter.api.Test;
 
 class FormatCsvHelperTest {
 
-  private final ContextFactory contextFactory = new ContextFactory();
   private final FormatCsvHelper helper = new FormatCsvHelper();
 
   @Test
@@ -77,7 +76,8 @@ class FormatCsvHelperTest {
           List<List<String>> rows,
           List<String> headerRow,
           CsvOptions options) {
-    var ctx = contextFactory.of(new FormatCsvIn(rows, headerRow, options), ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.<FormatCsvIn>builder().body(new FormatCsvIn(rows, headerRow, options))
+            .mode(ExecutionMode.PREVIEW).build();
     return helper.execute(ctx);
   }
 }

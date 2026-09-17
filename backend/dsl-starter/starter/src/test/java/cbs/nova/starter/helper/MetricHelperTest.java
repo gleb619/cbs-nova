@@ -1,10 +1,10 @@
 package cbs.nova.starter.helper;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.helper.model.MetricIn;
 import cbs.nova.starter.helper.model.MetricOut;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -16,7 +16,6 @@ import org.junit.jupiter.api.Test;
 
 class MetricHelperTest {
 
-  private final ContextFactory contextFactory = new ContextFactory();
   private final MeterRegistry registry = new SimpleMeterRegistry();
   private final MetricHelper helper = new MetricHelper(registry);
 
@@ -78,7 +77,7 @@ class MetricHelperTest {
     MetricIn valid = new MetricIn("counter", "x", null, null, 1L, null);
 
     Result<MetricOut> result = noRegistryHelper.execute(
-            contextFactory.of(valid, ExecutionMode.PREVIEW));
+            SimpleContext.builder(valid).mode(ExecutionMode.PREVIEW).build());
 
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value().emitted()).isFalse();
@@ -90,7 +89,7 @@ class MetricHelperTest {
     MetricIn blankName = new MetricIn("counter", "  ", null, null, null, null);
 
     Result<MetricOut> result = noRegistryHelper.execute(
-            contextFactory.of(blankName, ExecutionMode.PREVIEW));
+            SimpleContext.builder(blankName).mode(ExecutionMode.PREVIEW).build());
 
     assertThat(result.isSuccess()).isFalse();
     assertThat(result.cause()).isInstanceOf(IllegalArgumentException.class);
@@ -155,6 +154,6 @@ class MetricHelperTest {
   }
 
   private Result<MetricOut> execute(MetricIn input) {
-    return helper.execute(contextFactory.of(input, ExecutionMode.PREVIEW));
+    return helper.execute(SimpleContext.builder(input).mode(ExecutionMode.PREVIEW).build());
   }
 }

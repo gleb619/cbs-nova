@@ -1,8 +1,8 @@
 package cbs.nova.dsl;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.registry.DefaultHelperRegistry;
 import cbs.nova.dsl.runner.DefaultHelperRunner;
 import org.jspecify.annotations.NonNull;
@@ -12,14 +12,12 @@ import java.util.List;
 
 class DefaultHelperRunnerPreviewTest {
 
-  private final ContextFactory contextFactory = new ContextFactory();
-
   @Test
   void previewModeInvokesPreviewHook() {
     var registry = new DefaultHelperRegistry();
     registry.registerHelper("mock", new MockHelper());
-    var runner = new DefaultHelperRunner(contextFactory);
-    var ctx = contextFactory.of("input", ExecutionMode.PREVIEW);
+    var runner = new DefaultHelperRunner();
+    var ctx = SimpleContext.builder().body("input").mode(ExecutionMode.PREVIEW).build();
     var result = runner.runHelper("mock", ctx, registry);
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value()).isEqualTo("PREVIEW_MOCK");
@@ -29,8 +27,8 @@ class DefaultHelperRunnerPreviewTest {
   void runModeInvokesExecuteHook() {
     var registry = new DefaultHelperRegistry();
     registry.registerHelper("mock", new MockHelper());
-    var runner = new DefaultHelperRunner(contextFactory);
-    var ctx = contextFactory.of("input", ExecutionMode.RUN);
+    var runner = new DefaultHelperRunner();
+    var ctx = SimpleContext.builder().body("input").mode(ExecutionMode.RUN).build();
     var result = runner.runHelper("mock", ctx, registry);
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value()).isEqualTo("REAL");
@@ -57,7 +55,7 @@ class DefaultHelperRunnerPreviewTest {
         return Result.success("ONLY_EXEC");
       }
     };
-    var ctx = contextFactory.of("x", ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.<String>builder().body("x").mode(ExecutionMode.PREVIEW).build();
     assertThat(plain.preview(ctx).value()).isEqualTo("ONLY_EXEC");
   }
 

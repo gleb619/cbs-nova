@@ -1,5 +1,6 @@
 package cbs.nova.starter;
 
+import cbs.nova.dsl.model.SimpleContext;
 import cbs.nova.starter.cache.PreviewResultCacheTestSupport;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -11,7 +12,6 @@ import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.ParameterDescriptor;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.service.PreviewResultCache;
 import cbs.nova.starter.config.properties.CbsNovaFakesProperties;
 import cbs.nova.starter.core.listener.DslExecutionEventBus;
@@ -51,7 +51,6 @@ class DevDslRuntimeCachingTest {
 
   private final RunIdKeyedExternalCallRecorder recorder = new RunIdKeyedExternalCallRecorder(
           dryRunLoggingContext, null);
-  private final ContextFactory contextFactory = new ContextFactory();
   private final DryRunLogBufferRegistry bufferRegistry = new DryRunLogBufferRegistry(
           Caffeine.newBuilder().build());
   private final DryRunLogbackAppender appender = new DryRunLogbackAppender(dryRunLoggingContext,
@@ -72,16 +71,16 @@ class DevDslRuntimeCachingTest {
 
     cache = PreviewResultCacheTestSupport.cache(60_000);
     CbsNovaPreviewProperties previewProperties = new CbsNovaPreviewProperties(null, null, null);
-    PreviewDslPipe previewPipe = new PreviewDslPipe(recorder, contextFactory,
+    PreviewDslPipe previewPipe = new PreviewDslPipe(recorder,
             dryRunLoggingContext, bufferRegistry, defaultMaxEventsPerRun(),
             cache, previewProperties, new CbsNovaFakesProperties(false, null),
             new RunScopedFakeConfig(Caffeine.newBuilder().build()), new SimpleMeterRegistry(),
             null);
-    RunDslPipe runPipe = new RunDslPipe(contextFactory, recorder,
+    RunDslPipe runPipe = new RunDslPipe(recorder,
             new CbsNovaFakesProperties(false, null),
             new RunScopedFakeConfig(Caffeine.newBuilder().build()),
             new DslExecutionEventBus());
-    ExplainDslPipe explainPipe = new ExplainDslPipe(recorder, contextFactory,
+    ExplainDslPipe explainPipe = new ExplainDslPipe(recorder,
             dryRunLoggingContext, bufferRegistry, defaultMaxEventsPerRun(),
             previewProperties, new CbsNovaFakesProperties(false, null),
             new RunScopedFakeConfig(Caffeine.newBuilder().build()),
@@ -115,7 +114,7 @@ class DevDslRuntimeCachingTest {
 
   @Test
   void secondPreviewWithSameInputReturnsCachedResult() {
-    var ctx = contextFactory.of("input", ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.builder("input").mode(ExecutionMode.PREVIEW).build();
 
     var first = runtime.preview("Ping", ctx);
     var second = runtime.preview("Ping", ctx);
@@ -131,7 +130,7 @@ class DevDslRuntimeCachingTest {
 
   @Test
   void changingDslDescriptorHashInvalidatesCache() {
-    var ctx = contextFactory.of("input", ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.builder("input").mode(ExecutionMode.PREVIEW).build();
 
     var first = runtime.preview("Ping", ctx);
     assertThat(first.value().output()).isEqualTo("pong-1");

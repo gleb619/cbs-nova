@@ -1,10 +1,10 @@
 package cbs.nova.starter.helper;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.helper.model.CsvOptions;
 import cbs.nova.starter.helper.model.FormatCsvIn;
 import cbs.nova.starter.helper.model.FormatCsvOut;
@@ -15,7 +15,6 @@ import org.junit.jupiter.api.Test;
 
 class ParseCsvHelperTest {
 
-  private final ContextFactory contextFactory = new ContextFactory();
   private final ParseCsvHelper helper = new ParseCsvHelper();
   private final FormatCsvHelper formatHelper = new FormatCsvHelper();
 
@@ -99,12 +98,14 @@ class ParseCsvHelperTest {
   }
 
   private Result<ParseCsvOut> execute(String payload, CsvOptions options) {
-    var ctx = contextFactory.of(new ParseCsvIn(payload, options), ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.<ParseCsvIn>builder().body(new ParseCsvIn(payload, options))
+            .mode(ExecutionMode.PREVIEW).build();
     return helper.execute(ctx);
   }
 
   private Result<FormatCsvOut> format(List<List<String>> rows, List<String> headerRow) {
-    var ctx = contextFactory.of(new FormatCsvIn(rows, headerRow, null), ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.<FormatCsvIn>builder().body(new FormatCsvIn(rows, headerRow, null))
+            .mode(ExecutionMode.PREVIEW).build();
     return formatHelper.execute(ctx);
   }
 }

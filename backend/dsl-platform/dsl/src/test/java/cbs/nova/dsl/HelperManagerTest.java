@@ -1,9 +1,9 @@
 package cbs.nova.dsl;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.function.FunctionDslObject;
 import cbs.nova.dsl.helper.HelperInterceptor;
 import cbs.nova.dsl.helper.NoopHelperInterceptor;
@@ -24,8 +24,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 class HelperManagerTest {
-
-  private final ContextFactory contextFactory = new ContextFactory();
 
   @Test
   void registerDelegatesToRegistry() {
@@ -57,7 +55,7 @@ class HelperManagerTest {
     var expected = Result.success("runner-helper-result");
     var runner = new RecordingHelperRunner(expected, Result.success("unused-fn"));
     var manager = new HelperManager(registry, runner);
-    var ctx = contextFactory.of("input", ExecutionMode.RUN, "run-1");
+    var ctx = SimpleContext.builder().body("input").mode(ExecutionMode.RUN).runId("run-1").build();
 
     var result = manager.executeHelper("greet", ctx);
 
@@ -74,7 +72,7 @@ class HelperManagerTest {
     var expected = Result.success("runner-function-result");
     var runner = new RecordingHelperRunner(Result.success("unused-helper"), expected);
     var manager = new HelperManager(registry, runner);
-    var ctx = contextFactory.of("input", ExecutionMode.RUN, "run-2");
+    var ctx = SimpleContext.builder().body("input").mode(ExecutionMode.RUN).runId("run-2").build();
 
     var result = manager.executeFunction("greetFn", ctx);
 
@@ -95,7 +93,8 @@ class HelperManagerTest {
       seen.set(name);
       return Optional.of(Result.success("faked"));
     };
-    var ctx = contextFactory.of("input", ExecutionMode.PREVIEW, "run-intercept-h")
+    var ctx = SimpleContext.builder().body("input").mode(ExecutionMode.PREVIEW)
+            .runId("run-intercept-h").build()
             .withHelperInterceptor(interceptor);
 
     var result = manager.executeHelper("greet", ctx);
@@ -112,7 +111,8 @@ class HelperManagerTest {
     var runner = new RecordingHelperRunner(expected, Result.success("unused-fn"));
     var manager = new HelperManager(registry, runner);
     HelperInterceptor interceptor = (name, ctx) -> Optional.empty();
-    var ctx = contextFactory.of("input", ExecutionMode.RUN, "run-intercept-h-fall")
+    var ctx = SimpleContext.builder().body("input").mode(ExecutionMode.RUN)
+            .runId("run-intercept-h-fall").build()
             .withHelperInterceptor(interceptor);
 
     var result = manager.executeHelper("greet", ctx);
@@ -131,7 +131,8 @@ class HelperManagerTest {
       seen.set(name);
       return Optional.of(Result.success("faked-fn"));
     };
-    var ctx = contextFactory.of("input", ExecutionMode.PREVIEW, "run-intercept-fn")
+    var ctx = SimpleContext.builder().body("input").mode(ExecutionMode.PREVIEW)
+            .runId("run-intercept-fn").build()
             .withHelperInterceptor(interceptor);
 
     var result = manager.executeFunction("greetFn", ctx);
@@ -150,7 +151,8 @@ class HelperManagerTest {
     var expected = Result.success("plain");
     var runner = new RecordingHelperRunner(expected, expected);
     var manager = new HelperManager(registry, runner);
-    var ctx = contextFactory.of("input", ExecutionMode.RUN, "run-plain");
+    var ctx = SimpleContext.builder().body("input").mode(ExecutionMode.RUN).runId("run-plain")
+            .build();
 
     assertThat(ctx.helperInterceptor()).isSameAs(NoopHelperInterceptor.INSTANCE);
     assertThat(manager.executeHelper("greet", ctx).value()).isEqualTo("plain");

@@ -1,12 +1,12 @@
 package cbs.nova.starter.logging;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.core.pipe.DslPipeContext;
 import cbs.nova.starter.core.pipe.DslPipeStage;
 import cbs.nova.starter.core.stage.DryRunLogStage;
@@ -26,7 +26,6 @@ import java.util.Map;
 
 class DryRunLogStageTest {
 
-  private final ContextFactory contextFactory = new ContextFactory();
   private final ThreadLocalDryRunLoggingContext context = new ThreadLocalDryRunLoggingContext();
   private final DryRunLogBufferRegistry registry = new DryRunLogBufferRegistry(
           Caffeine.newBuilder().build());
@@ -66,7 +65,8 @@ class DryRunLogStageTest {
   void bufferIsRemovedFromRegistryAfterSuccessfulRun() {
     String runId = "run-success";
     DryRunLogStage stage = new DryRunLogStage(context, registry, 100);
-    DslPipeContext ctx = DslPipeContext.of("test", contextFactory.of("in", ExecutionMode.PREVIEW),
+    DslPipeContext ctx = DslPipeContext.of("test",
+            SimpleContext.builder("in").mode(ExecutionMode.PREVIEW).build(),
             ExecutionMode.PREVIEW, runId);
 
     Result<?> result = stage.execute(ctx, next -> {
@@ -85,7 +85,8 @@ class DryRunLogStageTest {
   void bufferIsRemovedFromRegistryAfterException() {
     String runId = "run-exception";
     DryRunLogStage stage = new DryRunLogStage(context, registry, 100);
-    DslPipeContext ctx = DslPipeContext.of("test", contextFactory.of("in", ExecutionMode.PREVIEW),
+    DslPipeContext ctx = DslPipeContext.of("test",
+            SimpleContext.builder("in").mode(ExecutionMode.PREVIEW).build(),
             ExecutionMode.PREVIEW, runId);
 
     assertThatThrownBy(() -> stage.execute(ctx, next -> {
@@ -103,14 +104,16 @@ class DryRunLogStageTest {
     DryRunLogStage stage = new DryRunLogStage(context, registry, 100);
 
     DslPipeContext first = DslPipeContext.of("test",
-            contextFactory.of("in", ExecutionMode.PREVIEW), ExecutionMode.PREVIEW, runId);
+            SimpleContext.builder("in").mode(ExecutionMode.PREVIEW).build(), ExecutionMode.PREVIEW,
+            runId);
     stage.execute(first, next -> {
       slf4jLogger.info("first run");
       return Result.success("first");
     });
 
     DslPipeContext second = DslPipeContext.of("test",
-            contextFactory.of("in", ExecutionMode.PREVIEW), ExecutionMode.PREVIEW, runId);
+            SimpleContext.builder("in").mode(ExecutionMode.PREVIEW).build(), ExecutionMode.PREVIEW,
+            runId);
     stage.execute(second, next -> {
       slf4jLogger.info("second run");
       return Result.success("second");
@@ -128,7 +131,8 @@ class DryRunLogStageTest {
     DryRunLogStage stage = new DryRunLogStage(context, registry, 100);
 
     DslPipeContext first = DslPipeContext.of("test",
-            contextFactory.of("in", ExecutionMode.PREVIEW), ExecutionMode.PREVIEW, runId);
+            SimpleContext.builder("in").mode(ExecutionMode.PREVIEW).build(), ExecutionMode.PREVIEW,
+            runId);
     try {
       stage.execute(first, next -> {
         slf4jLogger.info("first run");
@@ -139,7 +143,8 @@ class DryRunLogStageTest {
     }
 
     DslPipeContext second = DslPipeContext.of("test",
-            contextFactory.of("in", ExecutionMode.PREVIEW), ExecutionMode.PREVIEW, runId);
+            SimpleContext.builder("in").mode(ExecutionMode.PREVIEW).build(), ExecutionMode.PREVIEW,
+            runId);
     stage.execute(second, next -> {
       slf4jLogger.info("second run");
       return Result.success("second");
@@ -155,7 +160,8 @@ class DryRunLogStageTest {
   void runModeSkipsBufferRegistration() {
     String runId = "run-mode";
     DryRunLogStage stage = new DryRunLogStage(context, registry, 100);
-    DslPipeContext ctx = DslPipeContext.of("test", contextFactory.of("in", ExecutionMode.RUN),
+    DslPipeContext ctx = DslPipeContext.of("test",
+            SimpleContext.builder("in").mode(ExecutionMode.RUN).build(),
             ExecutionMode.RUN, runId);
 
     Result<?> result = stage.execute(ctx, next -> {
@@ -172,7 +178,8 @@ class DryRunLogStageTest {
   void bufferEvictsAtConfiguredLimit() {
     String runId = "run-limit";
     DryRunLogStage stage = new DryRunLogStage(context, registry, 3);
-    DslPipeContext ctx = DslPipeContext.of("test", contextFactory.of("in", ExecutionMode.PREVIEW),
+    DslPipeContext ctx = DslPipeContext.of("test",
+            SimpleContext.builder("in").mode(ExecutionMode.PREVIEW).build(),
             ExecutionMode.PREVIEW, runId);
 
     stage.execute(ctx, next -> {

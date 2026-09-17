@@ -1,12 +1,12 @@
 package cbs.nova.starter.service;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.model.RetryPolicy;
 import ch.qos.logback.classic.Level;
@@ -24,7 +24,6 @@ import java.time.Duration;
 
 class TemporalTransactionInvokerTest {
 
-  private final ContextFactory contextFactory = new ContextFactory();
   private final TemporalTransactionInvoker invoker = new TemporalTransactionInvoker();
   private ListAppender<ILoggingEvent> listAppender;
   private Logger logger;
@@ -53,7 +52,7 @@ class TemporalTransactionInvokerTest {
             .build();
     GlobalManager.globalManager().registerTransaction(tx);
 
-    var ctx = contextFactory.of("input", ExecutionMode.RUN, "run-1");
+    var ctx = SimpleContext.builder("input").mode(ExecutionMode.RUN).runId("run-1").build();
     Result<?> result = invoker.invoke("FallbackTx", "input", ctx);
 
     assertThat(result.isSuccess()).isTrue();
@@ -65,7 +64,7 @@ class TemporalTransactionInvokerTest {
 
   @Test
   void fallbackWhenNeitherRegistered() {
-    var ctx = contextFactory.of("input", ExecutionMode.RUN, "run-1");
+    var ctx = SimpleContext.builder("input").mode(ExecutionMode.RUN).runId("run-1").build();
     Result<?> result = invoker.invoke("GhostTx", "input", ctx);
 
     assertThat(result.isSuccess()).isFalse();

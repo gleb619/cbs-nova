@@ -1,5 +1,6 @@
 package cbs.nova.dsl.transaction;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -8,7 +9,6 @@ import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.exception.DslExecutionException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,8 +17,6 @@ import java.util.ArrayList;
 import java.util.Map;
 
 class TemporalTransactionFailurePropagationTest {
-
-  private final ContextFactory contextFactory = new ContextFactory();
 
   @BeforeEach
   void reset() {
@@ -54,7 +52,8 @@ class TemporalTransactionFailurePropagationTest {
             })
             .build());
 
-    var baseCtx = contextFactory.of("payload", Map.of(), ExecutionMode.RUN, "run-1");
+    var baseCtx = SimpleContext.builder().body("payload").metadata(Map.of()).mode(ExecutionMode.RUN)
+            .runId("run-1").build();
     gm.registerTransactionCompensation("CompensatedTx", "run-1", baseCtx);
     gm.compensateTransaction("CompensatedTx", "run-1", new RuntimeException("boom"));
 

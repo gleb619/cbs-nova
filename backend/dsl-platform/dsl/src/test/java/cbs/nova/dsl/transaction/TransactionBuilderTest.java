@@ -1,5 +1,6 @@
 package cbs.nova.dsl.transaction;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -10,7 +11,6 @@ import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.Constants;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.explain.DescriptorMarkdown;
 import cbs.nova.dsl.explain.ExplainResourceProvider;
 import cbs.nova.dsl.model.ExplainReport;
@@ -133,9 +133,9 @@ class TransactionBuilderTest {
     var tx = Dsl.transaction("NoExplainTx")
             .execute(ctx -> Result.success("exec"))
             .build();
-    var contextFactory = new ContextFactory();
     var ctx = new TransactionRichContext<>(
-            contextFactory.of("body", ExecutionMode.EXPLAIN, "run-explain"), contextFactory);
+            SimpleContext.builder().body("body").mode(ExecutionMode.EXPLAIN).runId("run-explain")
+                    .build());
 
     var result = tx.effectiveExplain().apply(ctx);
 
@@ -165,9 +165,9 @@ class TransactionBuilderTest {
             .execute(ctx -> Result.success("exec"))
             .explainVia("builder-sample.md")
             .build();
-    var contextFactory = new ContextFactory();
     var ctx = new TransactionRichContext<>(
-            contextFactory.of("body", ExecutionMode.EXPLAIN, "run-doc"), contextFactory);
+            SimpleContext.builder().body("body").mode(ExecutionMode.EXPLAIN).runId("run-doc")
+                    .build());
 
     var result = tx.effectiveExplain().apply(ctx);
 
@@ -182,12 +182,10 @@ class TransactionBuilderTest {
             .execute(ctx -> Result.success("exec"))
             .explainVia("builder-sample.md")
             .build();
-    var contextFactory = new ContextFactory();
     var ctx = new TransactionRichContext<>(
-            contextFactory.of("body",
-                    Map.of(Constants.EXPLAIN_BUDGET_CHARS_KEY, 5),
-                    ExecutionMode.EXPLAIN, "run-doc-budget"),
-            contextFactory);
+            SimpleContext.builder().body("body")
+                    .metadata(Map.of(Constants.EXPLAIN_BUDGET_CHARS_KEY, 5))
+                    .mode(ExecutionMode.EXPLAIN).runId("run-doc-budget").build());
 
     var result = tx.effectiveExplain().apply(ctx);
 
@@ -202,9 +200,9 @@ class TransactionBuilderTest {
             .execute(ctx -> Result.success("exec"))
             .explainVia("missing.md")
             .build();
-    var contextFactory = new ContextFactory();
     var ctx = new TransactionRichContext<>(
-            contextFactory.of("body", ExecutionMode.EXPLAIN, "run-doc-missing"), contextFactory);
+            SimpleContext.builder().body("body").mode(ExecutionMode.EXPLAIN)
+                    .runId("run-doc-missing").build());
 
     var result = tx.effectiveExplain().apply(ctx);
 
@@ -317,10 +315,9 @@ class TransactionBuilderTest {
       var tx = Dsl.transaction("LookupTx")
               .execute(ctx -> Result.success("exec"))
               .build();
-      var contextFactory = new ContextFactory();
       var ctx = new TransactionRichContext<>(
-              contextFactory.of("body", ExecutionMode.EXPLAIN, "run-tx-lookup-name"),
-              contextFactory);
+              SimpleContext.builder().body("body").mode(ExecutionMode.EXPLAIN)
+                      .runId("run-tx-lookup-name").build());
 
       var result = tx.effectiveExplain().apply(ctx);
 
@@ -340,10 +337,9 @@ class TransactionBuilderTest {
       var tx = Dsl.transaction("BatchPayment")
               .execute(ctx -> Result.success("exec"))
               .build();
-      var contextFactory = new ContextFactory();
       var ctx = new TransactionRichContext<>(
-              contextFactory.of("body", ExecutionMode.EXPLAIN, "run-tx-lookup-file"),
-              contextFactory);
+              SimpleContext.builder().body("body").mode(ExecutionMode.EXPLAIN)
+                      .runId("run-tx-lookup-file").build());
 
       var result = tx.effectiveExplain().apply(ctx);
 
@@ -365,10 +361,9 @@ class TransactionBuilderTest {
       var tx = Dsl.transaction("PreferTx")
               .execute(ctx -> Result.success("exec"))
               .build();
-      var contextFactory = new ContextFactory();
       var ctx = new TransactionRichContext<>(
-              contextFactory.of("body", ExecutionMode.EXPLAIN, "run-tx-lookup-prefer"),
-              contextFactory);
+              SimpleContext.builder().body("body").mode(ExecutionMode.EXPLAIN)
+                      .runId("run-tx-lookup-prefer").build());
 
       var result = tx.effectiveExplain().apply(ctx);
 
@@ -383,10 +378,9 @@ class TransactionBuilderTest {
     var tx = Dsl.transaction("MissingTx")
             .execute(ctx -> Result.success("exec"))
             .build();
-    var contextFactory = new ContextFactory();
     var ctx = new TransactionRichContext<>(
-            contextFactory.of("body", ExecutionMode.EXPLAIN, "run-tx-fallback"),
-            contextFactory);
+            SimpleContext.builder().body("body").mode(ExecutionMode.EXPLAIN)
+                    .runId("run-tx-fallback").build());
 
     var result = tx.effectiveExplain().apply(ctx);
 

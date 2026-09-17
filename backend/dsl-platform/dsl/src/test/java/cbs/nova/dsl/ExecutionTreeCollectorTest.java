@@ -1,7 +1,7 @@
 package cbs.nova.dsl;
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.listener.ExecutionTreeCollector;
 import cbs.nova.dsl.registry.DefaultCompensationRegistry;
 import cbs.nova.dsl.registry.DefaultHelperRegistry;
@@ -16,7 +16,6 @@ import java.util.Map;
 
 class ExecutionTreeCollectorTest {
 
-  private final ContextFactory contextFactory = new ContextFactory();
   private final CompensationRegistry compensationRegistry = new DefaultCompensationRegistry();
 
   @Test
@@ -149,11 +148,12 @@ class ExecutionTreeCollectorTest {
   void transactionRunnerForwardsEventsToListener() {
     var collector = new ExecutionTreeCollector(ExecutionTreeCollector.DEFAULT_MAX_DEPTH);
     collector.start();
-    var ctx = contextFactory.of("in", ExecutionMode.PREVIEW, "rt").withExecutionListener(collector);
+    var ctx = SimpleContext.builder().body("in").mode(ExecutionMode.PREVIEW).runId("rt").build()
+            .withExecutionListener(collector);
     var tx = Dsl.transaction("T")
             .execute(c -> Result.success("done"))
             .build();
-    var runner = new DefaultTransactionRunner(contextFactory, compensationRegistry);
+    var runner = new DefaultTransactionRunner(compensationRegistry);
     runner.run(tx, ctx);
     collector.finish();
 
@@ -168,10 +168,11 @@ class ExecutionTreeCollectorTest {
   void helperRunnerForwardsEventsToListener() {
     var collector = new ExecutionTreeCollector(ExecutionTreeCollector.DEFAULT_MAX_DEPTH);
     collector.start();
-    var ctx = contextFactory.of("input", ExecutionMode.RUN, "rh").withExecutionListener(collector);
+    var ctx = SimpleContext.builder().body("input").mode(ExecutionMode.RUN).runId("rh").build()
+            .withExecutionListener(collector);
     var registry = new DefaultHelperRegistry();
     registry.registerHelper("echo", new EchoHelper());
-    var runner = new DefaultHelperRunner(contextFactory);
+    var runner = new DefaultHelperRunner();
     runner.runHelper("echo", ctx, registry);
     collector.finish();
 
@@ -186,12 +187,13 @@ class ExecutionTreeCollectorTest {
   void functionRunnerForwardsEventsToListener() {
     var collector = new ExecutionTreeCollector(ExecutionTreeCollector.DEFAULT_MAX_DEPTH);
     collector.start();
-    var ctx = contextFactory.of("input", ExecutionMode.RUN, "rf").withExecutionListener(collector);
+    var ctx = SimpleContext.builder().body("input").mode(ExecutionMode.RUN).runId("rf").build()
+            .withExecutionListener(collector);
     var registry = new DefaultHelperRegistry();
     registry.registerFunction(Dsl.function("fn")
             .execute(c -> Result.success("FN_OUT"))
             .build());
-    var runner = new DefaultHelperRunner(contextFactory);
+    var runner = new DefaultHelperRunner();
     runner.runFunction("fn", ctx, registry);
     collector.finish();
 

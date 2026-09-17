@@ -60,10 +60,6 @@ public class DslConfig implements SingletonSupport {
     return singleton(() -> new RetryPolicy(3, Duration.ofSeconds(1), 2.0));
   }
 
-  public @NonNull ContextFactory contextFactory() {
-    return singleton(ContextFactory::new);
-  }
-
   public @NonNull ModelRegistry modelRegistry() {
     return singleton(DefaultModelRegistry::discover);
   }
@@ -104,26 +100,23 @@ public class DslConfig implements SingletonSupport {
   }
 
   public @NonNull ProcessRunner processRunner(
-          @NonNull ContextFactory contextFactory,
           @NonNull CompensationRegistry compensationRegistry) {
     return singleton(() -> {
       var transactionExecutionRepository = transactionExecutionRepository().get();
       var temporalProcessLauncher = temporalProcessLauncher().get();
-      var compensationHandler = new ProcessCompensationHandler(contextFactory,
-              compensationRegistry);
-      return new DefaultProcessRunner(contextFactory, transactionExecutionRepository,
+      var compensationHandler = new ProcessCompensationHandler(compensationRegistry);
+      return new DefaultProcessRunner(transactionExecutionRepository,
               temporalProcessLauncher, compensationHandler);
     });
   }
 
   public @NonNull TransactionRunner transactionRunner(
-          @NonNull ContextFactory contextFactory,
           @NonNull CompensationRegistry compensationRegistry) {
-    return singleton(() -> new DefaultTransactionRunner(contextFactory, compensationRegistry));
+    return singleton(() -> new DefaultTransactionRunner(compensationRegistry));
   }
 
-  public @NonNull HelperRunner helperRunner(@NonNull ContextFactory contextFactory) {
-    return singleton(() -> new DefaultHelperRunner(contextFactory));
+  public @NonNull HelperRunner helperRunner() {
+    return singleton(DefaultHelperRunner::new);
   }
 
   public @NonNull Replaceable<JsonSchemaGenerator> jsonSchemaGenerator() {
@@ -148,17 +141,15 @@ public class DslConfig implements SingletonSupport {
   }
 
   public @NonNull GlobalManager globalManager() {
-    var contextFactory = contextFactory();
     var compensationRegistry = compensationRegistry();
     return new GlobalManager(
             new ProcessManager(new DefaultProcessRegistry(),
-                    processRunner(contextFactory, compensationRegistry)),
+                    processRunner(compensationRegistry)),
             new TransactionManager(new DefaultTransactionRegistry(),
-                    transactionRunner(contextFactory, compensationRegistry)),
+                    transactionRunner(compensationRegistry)),
             new HelperManager(new DefaultHelperRegistry(),
-                    helperRunner(contextFactory)),
+                    helperRunner()),
             generatedClassRegistry(),
-            new ProcessContextFactory(),
             compensationRegistry,
             explainResourceRegistry());
   }

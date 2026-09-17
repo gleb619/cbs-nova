@@ -1,5 +1,6 @@
 package cbs.nova.dsl.function;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -10,7 +11,6 @@ import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.Constants;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.explain.DescriptorMarkdown;
 import cbs.nova.dsl.explain.ExplainResourceProvider;
 import cbs.nova.dsl.model.ExplainReport;
@@ -104,9 +104,9 @@ class FunctionBuilderTest {
     var fn = Dsl.function("NoExplainFn")
             .execute(ctx -> Result.success("exec"))
             .build();
-    var contextFactory = new ContextFactory();
     var ctx = new FunctionRichContext<>(
-            contextFactory.of("body", ExecutionMode.EXPLAIN, "run-explain"), contextFactory);
+            SimpleContext.builder().body("body").mode(ExecutionMode.EXPLAIN).runId("run-explain")
+                    .build());
 
     var result = fn.effectiveExplain().apply(ctx);
 
@@ -135,9 +135,9 @@ class FunctionBuilderTest {
             .execute(ctx -> Result.success("exec"))
             .explainVia("builder-sample.md")
             .build();
-    var contextFactory = new ContextFactory();
     var ctx = new FunctionRichContext<>(
-            contextFactory.of("body", ExecutionMode.EXPLAIN, "run-doc"), contextFactory);
+            SimpleContext.builder().body("body").mode(ExecutionMode.EXPLAIN).runId("run-doc")
+                    .build());
 
     var result = fn.effectiveExplain().apply(ctx);
 
@@ -152,9 +152,9 @@ class FunctionBuilderTest {
             .execute(ctx -> Result.success("exec"))
             .explainVia("explain/builder-sample.md")
             .build();
-    var contextFactory = new ContextFactory();
     var ctx = new FunctionRichContext<>(
-            contextFactory.of("body", ExecutionMode.EXPLAIN, "run-doc-prefixed"), contextFactory);
+            SimpleContext.builder().body("body").mode(ExecutionMode.EXPLAIN)
+                    .runId("run-doc-prefixed").build());
 
     var result = fn.effectiveExplain().apply(ctx);
 
@@ -168,12 +168,10 @@ class FunctionBuilderTest {
             .execute(ctx -> Result.success("exec"))
             .explainVia("builder-sample.md")
             .build();
-    var contextFactory = new ContextFactory();
     var ctx = new FunctionRichContext<>(
-            contextFactory.of("body",
-                    Map.of(Constants.EXPLAIN_BUDGET_CHARS_KEY, 10),
-                    ExecutionMode.EXPLAIN, "run-doc-budget"),
-            contextFactory);
+            SimpleContext.builder().body("body")
+                    .metadata(Map.of(Constants.EXPLAIN_BUDGET_CHARS_KEY, 10))
+                    .mode(ExecutionMode.EXPLAIN).runId("run-doc-budget").build());
 
     var result = fn.effectiveExplain().apply(ctx);
 
@@ -188,9 +186,9 @@ class FunctionBuilderTest {
             .execute(ctx -> Result.success("exec"))
             .explainVia("does-not-exist.md")
             .build();
-    var contextFactory = new ContextFactory();
     var ctx = new FunctionRichContext<>(
-            contextFactory.of("body", ExecutionMode.EXPLAIN, "run-doc-missing"), contextFactory);
+            SimpleContext.builder().body("body").mode(ExecutionMode.EXPLAIN)
+                    .runId("run-doc-missing").build());
 
     var result = fn.effectiveExplain().apply(ctx);
 
@@ -208,9 +206,9 @@ class FunctionBuilderTest {
             .explain(ctx -> Result.success(ExplainReport.builder().name("DocFnCleared")
                     .description("code").mermaid("").build()))
             .build();
-    var contextFactory = new ContextFactory();
     var ctx = new FunctionRichContext<>(
-            contextFactory.of("body", ExecutionMode.EXPLAIN, "run-doc-cleared"), contextFactory);
+            SimpleContext.builder().body("body").mode(ExecutionMode.EXPLAIN)
+                    .runId("run-doc-cleared").build());
 
     var result = fn.effectiveExplain().apply(ctx);
 
@@ -322,10 +320,9 @@ class FunctionBuilderTest {
       var fn = Dsl.function("LookupFn")
               .execute(ctx -> Result.success("exec"))
               .build();
-      var contextFactory = new ContextFactory();
       var ctx = new FunctionRichContext<>(
-              contextFactory.of("body", ExecutionMode.EXPLAIN, "run-lookup-name"),
-              contextFactory);
+              SimpleContext.builder().body("body").mode(ExecutionMode.EXPLAIN)
+                      .runId("run-lookup-name").build());
 
       var result = fn.effectiveExplain().apply(ctx);
 
@@ -345,10 +342,9 @@ class FunctionBuilderTest {
       var fn = Dsl.function("BatchProcessing")
               .execute(ctx -> Result.success("exec"))
               .build();
-      var contextFactory = new ContextFactory();
       var ctx = new FunctionRichContext<>(
-              contextFactory.of("body", ExecutionMode.EXPLAIN, "run-lookup-file"),
-              contextFactory);
+              SimpleContext.builder().body("body").mode(ExecutionMode.EXPLAIN)
+                      .runId("run-lookup-file").build());
 
       var result = fn.effectiveExplain().apply(ctx);
 
@@ -370,10 +366,9 @@ class FunctionBuilderTest {
       var fn = Dsl.function("PreferFn")
               .execute(ctx -> Result.success("exec"))
               .build();
-      var contextFactory = new ContextFactory();
       var ctx = new FunctionRichContext<>(
-              contextFactory.of("body", ExecutionMode.EXPLAIN, "run-lookup-prefer"),
-              contextFactory);
+              SimpleContext.builder().body("body").mode(ExecutionMode.EXPLAIN)
+                      .runId("run-lookup-prefer").build());
 
       var result = fn.effectiveExplain().apply(ctx);
 
@@ -388,10 +383,9 @@ class FunctionBuilderTest {
     var fn = Dsl.function("MissingFn")
             .execute(ctx -> Result.success("exec"))
             .build();
-    var contextFactory = new ContextFactory();
     var ctx = new FunctionRichContext<>(
-            contextFactory.of("body", ExecutionMode.EXPLAIN, "run-fallback"),
-            contextFactory);
+            SimpleContext.builder().body("body").mode(ExecutionMode.EXPLAIN).runId("run-fallback")
+                    .build());
 
     var result = fn.effectiveExplain().apply(ctx);
 

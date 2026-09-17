@@ -1,10 +1,10 @@
 package cbs.nova.starter.helper;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.helper.model.XmlExtractIn;
 import cbs.nova.starter.helper.model.XmlExtractOut;
 import org.junit.jupiter.api.Test;
@@ -12,7 +12,6 @@ import org.xml.sax.SAXException;
 
 class XmlExtractHelperTest {
 
-  private final ContextFactory contextFactory = new ContextFactory();
   private final XmlExtractHelper helper = new XmlExtractHelper();
 
   @Test
@@ -89,7 +88,7 @@ class XmlExtractHelperTest {
   }
 
   private Result<XmlExtractOut> execute(XmlExtractIn input) {
-    var ctx = contextFactory.of(input, ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.builder(input).mode(ExecutionMode.PREVIEW).build();
     return helper.execute(ctx);
   }
 }

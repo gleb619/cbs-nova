@@ -1,5 +1,6 @@
 package cbs.nova.starter;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.Context;
@@ -9,7 +10,6 @@ import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.model.PreviewReport;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.utils.DefinitionLoader;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.helper.HelperInstanceResolver;
 import cbs.nova.dslexamples.v1.BatchModels.BatchIn;
@@ -58,22 +58,21 @@ class IntermediateDslExamplesTest {
 
   private final ThreadLocalDryRunLoggingContext dryRunLoggingContext = new ThreadLocalDryRunLoggingContext();
 
-  private final ContextFactory contextFactory = new ContextFactory();
   private final RunIdKeyedExternalCallRecorder recorder = new RunIdKeyedExternalCallRecorder(
           dryRunLoggingContext, null);
   private final DryRunLogBufferRegistry bufferRegistry = new DryRunLogBufferRegistry(
           Caffeine.newBuilder().build());
   private final CbsNovaPreviewProperties previewProperties = new CbsNovaPreviewProperties(null,
           null, null);
-  private final PreviewDslPipe previewPipe = new PreviewDslPipe(recorder, contextFactory,
+  private final PreviewDslPipe previewPipe = new PreviewDslPipe(recorder,
           dryRunLoggingContext, bufferRegistry, defaultMaxEventsPerRun(),
           null, previewProperties, new CbsNovaFakesProperties(false, null),
           new RunScopedFakeConfig(Caffeine.newBuilder().build()), new SimpleMeterRegistry(), null);
-  private final RunDslPipe runPipe = new RunDslPipe(contextFactory, recorder,
+  private final RunDslPipe runPipe = new RunDslPipe(recorder,
           new CbsNovaFakesProperties(false, null),
           new RunScopedFakeConfig(Caffeine.newBuilder().build()),
           new DslExecutionEventBus());
-  private final ExplainDslPipe explainPipe = new ExplainDslPipe(recorder, contextFactory,
+  private final ExplainDslPipe explainPipe = new ExplainDslPipe(recorder,
           dryRunLoggingContext, bufferRegistry, defaultMaxEventsPerRun(),
           previewProperties, new CbsNovaFakesProperties(false, null),
           new RunScopedFakeConfig(Caffeine.newBuilder().build()),
@@ -100,7 +99,7 @@ class IntermediateDslExamplesTest {
             new BatchItem("a", 10),
             new BatchItem("b", 20),
             new BatchItem("c", 12)));
-    Context<BatchIn> ctx = contextFactory.of(input, ExecutionMode.PREVIEW);
+    Context<BatchIn> ctx = SimpleContext.builder(input).mode(ExecutionMode.PREVIEW).build();
 
     Result<?> result = GlobalManager.globalManager().runProcess("BatchProcessing", ctx);
 
@@ -115,7 +114,7 @@ class IntermediateDslExamplesTest {
     var input = new InvoiceIn(List.of(
             new InvoiceLine("widget", 2.50, 4),
             new InvoiceLine("gadget", 10.00, 2)));
-    Context<InvoiceIn> ctx = contextFactory.of(input, ExecutionMode.PREVIEW);
+    Context<InvoiceIn> ctx = SimpleContext.builder(input).mode(ExecutionMode.PREVIEW).build();
 
     Result<?> result = GlobalManager.globalManager().runProcess("InvoiceGeneration", ctx);
 
@@ -131,7 +130,7 @@ class IntermediateDslExamplesTest {
   @Test
   void longWorkSimulationPreviewCompletesAllSteps() {
     var input = new LongWorkIn("task-42", 5);
-    Context<LongWorkIn> ctx = contextFactory.of(input, ExecutionMode.PREVIEW);
+    Context<LongWorkIn> ctx = SimpleContext.builder(input).mode(ExecutionMode.PREVIEW).build();
 
     Result<?> result = GlobalManager.globalManager().runTransaction("LongWorkSimulation", ctx);
 
@@ -145,7 +144,7 @@ class IntermediateDslExamplesTest {
   @Test
   void devDslRuntimePreviewReturnsSuccessReport() {
     var input = new BatchIn(List.of(new BatchItem("only", 7)));
-    Context<BatchIn> ctx = contextFactory.of(input, ExecutionMode.PREVIEW);
+    Context<BatchIn> ctx = SimpleContext.builder(input).mode(ExecutionMode.PREVIEW).build();
 
     Result<PreviewReport> reportResult = runtime.preview("BatchProcessing", ctx);
 

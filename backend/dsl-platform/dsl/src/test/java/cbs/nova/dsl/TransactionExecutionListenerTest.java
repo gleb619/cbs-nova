@@ -1,7 +1,7 @@
 package cbs.nova.dsl;
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.listener.ExecutionListener;
 import cbs.nova.dsl.registry.DefaultCompensationRegistry;
 import cbs.nova.dsl.runner.DefaultTransactionRunner;
@@ -14,8 +14,7 @@ import java.util.ArrayList;
 
 class TransactionExecutionListenerTest {
 
-  private final ContextFactory contextFactory = new ContextFactory();
-  private final TransactionRunner runner = new DefaultTransactionRunner(contextFactory,
+  private final TransactionRunner runner = new DefaultTransactionRunner(
           new DefaultCompensationRegistry());
 
   @Test
@@ -37,7 +36,7 @@ class TransactionExecutionListenerTest {
               @NonNull Throwable cause) {
       }
     };
-    var ctx = contextFactory.of("in", ExecutionMode.RUN, "run-listen")
+    var ctx = SimpleContext.builder().body("in").mode(ExecutionMode.RUN).runId("run-listen").build()
             .withExecutionListener(listener);
 
     runner.run(tx, ctx);

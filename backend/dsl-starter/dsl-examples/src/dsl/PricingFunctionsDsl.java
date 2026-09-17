@@ -1,5 +1,5 @@
+import cbs.nova.dsl.model.SimpleContext;
 import cbs.nova.dslexamples.PricingModels.*;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.helper.model.ArithmeticIn;
 import cbs.nova.starter.helper.model.ArithmeticOut;
 import java.util.List;
@@ -103,12 +103,12 @@ List<DslObject> define() {
 // via callFunction, typed helpers like `arithmetic` via callHelper — build a context carrying the
 // typed input body and go through GlobalManager directly.
 private static Result<?> callFunction(Context<?> ctx, String name, Object input) {
-  var callCtx = new ContextFactory().of(input, ctx.mode(), ctx.runId());
+  var callCtx = SimpleContext.builder().body(input).mode(ctx.mode()).runId(ctx.runId()).build();
   return GlobalManager.globalManager().runFunction(name, callCtx);
 }
 
 private static Result<?> callHelper(Context<?> ctx, String name, Object input) {
-  var callCtx = new ContextFactory().of(input, ctx.mode(), ctx.runId());
+  var callCtx = SimpleContext.builder().body(input).mode(ctx.mode()).runId(ctx.runId()).build();
   return GlobalManager.globalManager().runHelper(name, callCtx);
 }
 

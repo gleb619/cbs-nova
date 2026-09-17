@@ -1,9 +1,9 @@
 package cbs.nova.starter.core.stage;
 
+import cbs.nova.dsl.model.SimpleContext;
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.helper.HelperInterceptor;
 import cbs.nova.dsl.logging.DryRunLoggingContext;
 import cbs.nova.starter.core.pipe.DslPipeContext;
@@ -47,16 +47,15 @@ import java.util.concurrent.TimeoutException;
 @RequiredArgsConstructor
 public final class DispatchStage implements DslPipeStage {
 
-  private final ContextFactory contextFactory;
   private final HelperInterceptor helperInterceptor;
   private final Duration timeout;
   private final ExecutorService executor;
   private final MeterRegistry meterRegistry;
   private final DryRunLoggingContext dryRunLoggingContext;
 
-  public static DispatchStage inline(@NonNull ContextFactory contextFactory,
+  public static DispatchStage inline(
           @NonNull HelperInterceptor helperInterceptor) {
-    return new DispatchStage(contextFactory, helperInterceptor, null, null, null, null);
+    return new DispatchStage(helperInterceptor, null, null, null, null);
   }
 
   @Override
@@ -70,12 +69,9 @@ public final class DispatchStage implements DslPipeStage {
 
   private @NonNull Context<?> buildModeContext(@NonNull DslPipeContext context) {
     Context<?> original = context.dslContext();
-    Context<?> modeCtx = contextFactory.of(
-            original.body(),
-            original.metadata(),
-            context.mode(),
-            context.runId(),
-            original.transactionRouting());
+    Context<?> modeCtx = SimpleContext.builder().body(original.body()).metadata(original.metadata())
+            .mode(context.mode()).runId(context.runId())
+            .transactionRouting(original.transactionRouting()).build();
     modeCtx = modeCtx.withExecutionListener(original.executionListener());
     modeCtx = modeCtx.withSaga(original.saga());
     modeCtx = modeCtx.withExecutionTraceCollector(original.executionTraceCollector());

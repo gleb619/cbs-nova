@@ -25,7 +25,6 @@ import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.dsl.model.PreviewReport;
 import cbs.nova.starter.core.pipe.PreviewTimeoutException;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.jsonschema.JacksonJsonSchemaGenerator;
 import cbs.nova.starter.config.router.DslRuntimeRouterConfiguration;
 import cbs.nova.starter.config.properties.CbsNovaLoggingProperties;
@@ -69,7 +68,7 @@ class DslRuntimeResourceTest {
     DslRuntimeMapper mapper = Mappers.getMapper(DslRuntimeMapper.class);
     DslRuntimeService service = new DslRuntimeService(
             dslRuntime,
-            new ContextFactory(),
+
             new LoggingExecutionListener(loggingProperties),
             mapper);
     DslPayloadSizeValidator validator = new DslPayloadSizeValidator(

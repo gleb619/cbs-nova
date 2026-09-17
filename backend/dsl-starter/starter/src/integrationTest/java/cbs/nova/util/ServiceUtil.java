@@ -1,6 +1,5 @@
 package cbs.nova.util;
 
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.history.DslRunRepository;
 import cbs.nova.dsl.repository.InMemoryDslRunRepository;
 import cbs.nova.starter.service.RunIdentityResolver;
@@ -16,18 +15,16 @@ import tools.jackson.databind.ObjectMapper;
 
 public class ServiceUtil {
 
-  public static TemporalDslProcessService newService(ContextFactory contextFactory) {
+  public static TemporalDslProcessService newService() {
     return createService(
-            contextFactory, new InMemoryDslRunRepository(InMemoryDslRunRepository.NO_OP_EVICTION),
+            new InMemoryDslRunRepository(InMemoryDslRunRepository.NO_OP_EVICTION),
             new ObjectMapper());
   }
 
   public static TemporalDslProcessService createService(
-          ContextFactory contextFactory,
           DslRunRepository runRepository,
           ObjectMapper objectMapper) {
     return TemporalDslProcessService.withDefaults(
-            contextFactory,
             runRepository,
             objectMapper,
             sameThreadExecutor(),

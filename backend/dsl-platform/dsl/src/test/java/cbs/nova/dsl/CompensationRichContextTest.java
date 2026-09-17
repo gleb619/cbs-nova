@@ -1,8 +1,8 @@
 package cbs.nova.dsl;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.listener.ExecutionTraceCollector;
 import cbs.nova.dsl.transaction.CompensationRichContext;
 import org.junit.jupiter.api.AfterEach;
@@ -12,14 +12,14 @@ import org.junit.jupiter.api.Test;
 class CompensationRichContextTest {
 
   private static final String RUN_ID = "test-run-id";
-  private final ContextFactory contextFactory = new ContextFactory();
   private final ExecutionTraceCollector traceCollector = new ExecutionTraceCollector();
   private Context<String> delegate;
   private Throwable failure;
 
   @BeforeEach
   void setUp() {
-    delegate = contextFactory.of("payload", ExecutionMode.RUN, RUN_ID)
+    delegate = SimpleContext.<String>builder().body("payload").mode(ExecutionMode.RUN).runId(RUN_ID)
+            .build()
             .withExecutionTraceCollector(traceCollector);
     failure = new RuntimeException("execute failed");
     traceCollector.start();
@@ -31,7 +31,7 @@ class CompensationRichContextTest {
   }
 
   private CompensationRichContext<String> newContext() {
-    return new CompensationRichContext<>(delegate, failure, contextFactory);
+    return new CompensationRichContext<>(delegate, failure);
   }
 
   @Test

@@ -1,10 +1,10 @@
 package cbs.nova.starter.helper;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.helper.model.FileLatchIn;
 import cbs.nova.starter.helper.model.FileLatchOut;
 import org.junit.jupiter.api.Test;
@@ -16,7 +16,6 @@ import java.util.concurrent.TimeUnit;
 
 class FileLatchHelperTest {
 
-  private final ContextFactory contextFactory = new ContextFactory();
   private final FileLatchHelper helper = new FileLatchHelper();
   private final Path latchDir = Path.of(System.getProperty("java.io.tmpdir"),
           "cbs-nova-versioning-latch");
@@ -28,8 +27,9 @@ class FileLatchHelperTest {
     Path release = latchDir.resolve("release-" + runId);
     Files.writeString(release, "go");
 
-    var ctx = contextFactory.of(new FileLatchIn("lock-" + runId, "release-" + runId, "payload"),
-            ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.<FileLatchIn>builder()
+            .body(new FileLatchIn("lock-" + runId, "release-" + runId, "payload"))
+            .mode(ExecutionMode.PREVIEW).build();
     Result<FileLatchOut> result = helper.execute(ctx);
 
     assertThat(result.isSuccess()).isTrue();
@@ -46,8 +46,9 @@ class FileLatchHelperTest {
     Files.deleteIfExists(lock);
     Files.deleteIfExists(release);
 
-    var ctx = contextFactory.of(new FileLatchIn("lock-" + runId, "release-" + runId, "payload"),
-            ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.<FileLatchIn>builder()
+            .body(new FileLatchIn("lock-" + runId, "release-" + runId, "payload"))
+            .mode(ExecutionMode.PREVIEW).build();
 
     CompletableFuture<Result<FileLatchOut>> future = CompletableFuture
             .supplyAsync(() -> helper.execute(ctx));

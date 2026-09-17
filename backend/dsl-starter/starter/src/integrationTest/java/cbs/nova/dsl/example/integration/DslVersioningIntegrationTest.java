@@ -11,7 +11,6 @@ import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.GeneratedClassDescriptor;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.helper.HelperInstanceResolver;
 import cbs.nova.dsl.process.DslTemporalProcessRequest;
@@ -165,7 +164,7 @@ class DslVersioningIntegrationTest {
 
   @Test
   void inFlightWorkflowKeepsUsingOriginalDslVersionAfterReload() throws Exception {
-    var service = ServiceUtil.newService(new ContextFactory());
+    var service = ServiceUtil.newService();
 
     var firstRun = service.startProcess("VersionProbe", new VersionProbeIn("first"));
     assertThat(HelperInstanceResolverConfig.LATCH_ENTERED.await(10, TimeUnit.SECONDS))

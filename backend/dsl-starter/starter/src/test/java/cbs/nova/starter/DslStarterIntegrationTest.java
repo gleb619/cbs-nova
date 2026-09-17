@@ -7,7 +7,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.config.properties.CbsNovaFakesProperties;
 import cbs.nova.starter.core.listener.DslExecutionEventBus;
 import cbs.nova.starter.config.properties.CbsNovaPreviewProperties;
@@ -66,17 +65,16 @@ class DslStarterIntegrationTest {
 
     var dryRunLoggingContext = new ThreadLocalDryRunLoggingContext();
     var recorder = new RunIdKeyedExternalCallRecorder(dryRunLoggingContext, null);
-    var contextFactory = new ContextFactory();
     var bufferRegistry = new DryRunLogBufferRegistry(Caffeine.newBuilder().build());
     var previewProperties = new CbsNovaPreviewProperties(null, null, null);
-    var previewPipe = new PreviewDslPipe(recorder, contextFactory, dryRunLoggingContext,
+    var previewPipe = new PreviewDslPipe(recorder, dryRunLoggingContext,
             bufferRegistry, defaultMaxEventsPerRun(), null,
             previewProperties, new CbsNovaFakesProperties(false, null),
             new RunScopedFakeConfig(Caffeine.newBuilder().build()),
             new SimpleMeterRegistry(), null);
-    var runPipe = new RunDslPipe(contextFactory, recorder, new CbsNovaFakesProperties(false, null),
+    var runPipe = new RunDslPipe(recorder, new CbsNovaFakesProperties(false, null),
             new RunScopedFakeConfig(Caffeine.newBuilder().build()), new DslExecutionEventBus());
-    var explainPipe = new ExplainDslPipe(recorder, contextFactory, dryRunLoggingContext,
+    var explainPipe = new ExplainDslPipe(recorder, dryRunLoggingContext,
             bufferRegistry, defaultMaxEventsPerRun(), previewProperties,
             new CbsNovaFakesProperties(false, null),
             new RunScopedFakeConfig(Caffeine.newBuilder().build()),
@@ -87,9 +85,7 @@ class DslStarterIntegrationTest {
             CbsNovaLoggingProperties.Level.INFO,
             CbsNovaLoggingProperties.Level.INFO,
             false);
-    var service = new DslRuntimeService(
-            runtime,
-            contextFactory,
+    var service = new DslRuntimeService(runtime,
             new LoggingExecutionListener(loggingProperties),
             Mappers.getMapper(DslRuntimeMapper.class));
     var validator = new DslPayloadSizeValidator(new ObjectMapper(), new DslRunsProperties());

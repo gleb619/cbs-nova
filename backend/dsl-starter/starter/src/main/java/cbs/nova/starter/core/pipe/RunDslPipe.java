@@ -2,7 +2,6 @@ package cbs.nova.starter.core.pipe;
 
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.helper.HelperInterceptor;
 import cbs.nova.starter.config.properties.CbsNovaFakesProperties;
 import cbs.nova.starter.core.listener.DslExecutionEventBus;
@@ -18,7 +17,6 @@ import org.jspecify.annotations.NonNull;
 @RequiredArgsConstructor
 public final class RunDslPipe implements DslExecutionPipe<Object> {
 
-  private final ContextFactory contextFactory;
   private final ExternalCallRecorder recorder;
   private final CbsNovaFakesProperties fakesProperties;
   private final RunScopedFakeConfig runScopedFakeConfig;
@@ -33,7 +31,7 @@ public final class RunDslPipe implements DslExecutionPipe<Object> {
             .stage(new ExecutionTraceStage())
             .stage(new FakingStage(fakesProperties, runScopedFakeConfig))
             .stage(new ExternalCallRecordingStage(recorder))
-            .stage(DispatchStage.inline(contextFactory, fakeInterceptor))
+            .stage(DispatchStage.inline(fakeInterceptor))
             .build()
             .execute(name, ctx);
   }

@@ -1,8 +1,8 @@
 package cbs.nova.dsl;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.utils.DefinitionLoader;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -11,8 +11,6 @@ import java.net.URL;
 import java.net.URLClassLoader;
 
 class DefinitionLoaderTest {
-
-  private final ContextFactory contextFactory = new ContextFactory();
 
   @BeforeEach
   void reset() {
@@ -26,7 +24,7 @@ class DefinitionLoaderTest {
     new DefinitionLoader().load(gm);
 
     assertThat(gm.hasProcess("SpiLoadedProcess")).isTrue();
-    var ctx = contextFactory.of("test", ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.builder().body("test").mode(ExecutionMode.PREVIEW).build();
     var result = gm.runProcess("SpiLoadedProcess", ctx);
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value()).isEqualTo("spi-loaded");
@@ -58,7 +56,7 @@ class DefinitionLoaderTest {
     assertThat(load.processes()).containsExactly("SpiLoadedProcess");
 
     assertThat(gm.hasProcess("SpiLoadedProcess")).isTrue();
-    var ctx = contextFactory.of("test", ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.builder().body("test").mode(ExecutionMode.PREVIEW).build();
     var result = gm.runProcess("SpiLoadedProcess", ctx);
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value()).isEqualTo("spi-loaded");

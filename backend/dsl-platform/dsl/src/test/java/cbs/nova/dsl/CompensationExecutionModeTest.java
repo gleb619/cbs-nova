@@ -1,7 +1,7 @@
 package cbs.nova.dsl;
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.history.TransactionExecutionRepository;
 import cbs.nova.dsl.process.ProcessRunner;
 import cbs.nova.dsl.registry.DefaultCompensationRegistry;
@@ -14,14 +14,13 @@ import java.util.concurrent.atomic.AtomicReference;
 
 class CompensationExecutionModeTest {
 
-  private final ContextFactory contextFactory = new ContextFactory();
   private final TransactionExecutionRepository transactionExecutionRepository = new InMemoryTransactionExecutionRepository();
   private final DefaultCompensationRegistry compensationRegistry = new DefaultCompensationRegistry();
   private final ProcessCompensationHandler compensationHandler = new ProcessCompensationHandler(
-          contextFactory, compensationRegistry);
+          compensationRegistry);
 
-  private final ProcessRunner runner = new DefaultProcessRunner(contextFactory,
-          transactionExecutionRepository, null, compensationHandler);
+  private final ProcessRunner runner = new DefaultProcessRunner(transactionExecutionRepository,
+          null, compensationHandler);
 
   @Test
   void compensationBlockSeesCompensationMode() {
@@ -32,7 +31,7 @@ class CompensationExecutionModeTest {
             .execute(ctx -> Result.failure(new RuntimeException("fail")))
             .compensation((ctx, history) -> mode.set(ctx.mode()))
             .build();
-    var ctx = contextFactory.of("in", ExecutionMode.RUN, "run-mode");
+    var ctx = SimpleContext.builder().body("in").mode(ExecutionMode.RUN).runId("run-mode").build();
     runner.run(process, ctx);
     assertThat(mode.get()).isEqualTo(ExecutionMode.COMPENSATION);
   }

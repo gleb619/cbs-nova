@@ -1,10 +1,10 @@
 package cbs.nova.starter.service;
 
+import org.mockito.MockedStatic;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.model.SimpleContext;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.history.DslRunStatus;
 import cbs.nova.dsl.repository.InMemoryDslRunRepository;
 import cbs.nova.dsl.transaction.TransactionRouting;
@@ -55,65 +55,52 @@ class TemporalDslProcessServiceTracingTest {
 
     String runId = "run-trace-1";
     String processName = "missing-process";
-    ContextFactory contextFactory = Mockito.mock(ContextFactory.class);
-    Mockito.when(contextFactory.generateRunId()).thenReturn(runId);
-    Mockito.when(contextFactory.of(
-            Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any()))
-            .thenReturn(new SimpleContext<>(
-                    Map.of(), Map.of(), ExecutionMode.RUN,
-                    runId, TransactionRouting.LOCAL, null, null, null, null, null));
 
-    TemporalDslProcessService service = new TemporalDslProcessService(
-            contextFactory,
-            new InMemoryDslRunRepository(InMemoryDslRunRepository.NO_OP_EVICTION),
-            new ObjectMapper(),
-            synchronousExecutor(),
-            disabledScheduledExecutor(),
-            Duration.ofSeconds(30),
-            Duration.ofMinutes(5),
-            false,
-            Long.MAX_VALUE,
-            new SimpleMeterRegistry(),
-            nullResolver(),
-            Optional.empty(),
-            openTelemetry,
-            EmptyObjectProvider.of(DomainEventPublisher.class),
-            EmptyObjectProvider.of(TransactionTemplate.class));
+    try (MockedStatic<SimpleContext> simple = Mockito.mockStatic(SimpleContext.class,
+            Mockito.CALLS_REAL_METHODS)) {
+      simple.when(SimpleContext::generateRunId).thenReturn(runId);
+      TemporalDslProcessService service = new TemporalDslProcessService(
+              new InMemoryDslRunRepository(InMemoryDslRunRepository.NO_OP_EVICTION),
+              new ObjectMapper(),
+              synchronousExecutor(),
+              disabledScheduledExecutor(),
+              Duration.ofSeconds(30),
+              Duration.ofMinutes(5),
+              false,
+              Long.MAX_VALUE,
+              new SimpleMeterRegistry(),
+              nullResolver(),
+              Optional.empty(),
+              openTelemetry,
+              EmptyObjectProvider.of(DomainEventPublisher.class),
+              EmptyObjectProvider.of(TransactionTemplate.class));
 
-    service.startProcess(processName, Map.of(), Map.of()).result().join();
+      service.startProcess(processName, Map.of(), Map.of()).result().join();
 
-    assertThat(exporter.getFinishedSpanItems()).hasSize(1);
-    SpanData span = exporter.getFinishedSpanItems().get(0);
-    assertThat(span.getName()).isEqualTo("dsl.run." + processName);
-    assertThat(
-            span.getAttributes().get(AttributeKey.stringKey("runId")))
-            .isEqualTo(runId);
-    assertThat(span.getAttributes()
-            .get(AttributeKey.stringKey("processName")))
-            .isEqualTo(processName);
-    assertThat(span.getAttributes()
-            .get(AttributeKey.stringKey("executionMode")))
-            .isEqualTo(ExecutionMode.RUN.name());
-    assertThat(
-            span.getAttributes().get(AttributeKey.stringKey("status")))
-            .isEqualTo(DslRunStatus.FAILED.name());
-    assertThat(span.getStatus().getStatusCode())
-            .isEqualTo(StatusCode.ERROR);
+      assertThat(exporter.getFinishedSpanItems()).hasSize(1);
+      SpanData span = exporter.getFinishedSpanItems().get(0);
+      assertThat(span.getName()).isEqualTo("dsl.run." + processName);
+      assertThat(
+              span.getAttributes().get(AttributeKey.stringKey("runId")))
+              .isEqualTo(runId);
+      assertThat(span.getAttributes()
+              .get(AttributeKey.stringKey("processName")))
+              .isEqualTo(processName);
+      assertThat(span.getAttributes()
+              .get(AttributeKey.stringKey("executionMode")))
+              .isEqualTo(ExecutionMode.RUN.name());
+      assertThat(
+              span.getAttributes().get(AttributeKey.stringKey("status")))
+              .isEqualTo(DslRunStatus.FAILED.name());
+      assertThat(span.getStatus().getStatusCode())
+              .isEqualTo(StatusCode.ERROR);
+    }
   }
 
   @Test
   void disabledTracingUsesNoOpOpenTelemetry() {
-    ContextFactory contextFactory = Mockito.mock(ContextFactory.class);
-    Mockito.when(contextFactory.generateRunId()).thenReturn("run-trace-2");
-    Mockito.when(contextFactory.of(
-            Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any()))
-            .thenReturn(new SimpleContext<>(
-                    Map.of(), Map.of(), ExecutionMode.RUN,
-                    "run-trace-2", TransactionRouting.LOCAL, null, null,
-                    null, null, null));
-
     TemporalDslProcessService service = new TemporalDslProcessService(
-            contextFactory,
+
             new InMemoryDslRunRepository(InMemoryDslRunRepository.NO_OP_EVICTION),
             new ObjectMapper(),
             synchronousExecutor(),

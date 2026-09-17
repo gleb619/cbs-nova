@@ -1,12 +1,12 @@
 package cbs.nova.starter.helper;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static cbs.nova.dsl.config.Constants.EXPLAIN_BUDGET_CHARS_KEY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.helper.model.ArithmeticIn;
 import cbs.nova.starter.helper.model.ArithmeticOut;
 import java.math.BigDecimal;
@@ -16,12 +16,12 @@ import org.junit.jupiter.api.Test;
 
 class ArithmeticHelperTest {
 
-  private final ContextFactory contextFactory = new ContextFactory();
   private final ArithmeticHelper helper = new ArithmeticHelper();
 
   @Test
   void addsValues() {
-    var ctx = contextFactory.of(op(null, List.of(1.0, 2.0, 3.0)), ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.builder(op(null, List.of(1.0, 2.0, 3.0))).mode(ExecutionMode.PREVIEW)
+            .build();
     Result<ArithmeticOut> result = helper.execute(ctx);
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value().sum()).isEqualByComparingTo(BigDecimal.valueOf(6));
@@ -29,40 +29,45 @@ class ArithmeticHelperTest {
 
   @Test
   void subtractsValues() {
-    var ctx = contextFactory.of(op("SUBTRACT", List.of(10, 3, 2)), ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.builder(op("SUBTRACT", List.of(10, 3, 2))).mode(ExecutionMode.PREVIEW)
+            .build();
     assertThat(helper.execute(ctx).value().sum()).isEqualByComparingTo(BigDecimal.valueOf(5));
   }
 
   @Test
   void multipliesValues() {
-    var ctx = contextFactory.of(op("MULTIPLY", List.of(2, 3, 4)), ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.builder(op("MULTIPLY", List.of(2, 3, 4))).mode(ExecutionMode.PREVIEW)
+            .build();
     assertThat(helper.execute(ctx).value().sum()).isEqualByComparingTo(BigDecimal.valueOf(24));
   }
 
   @Test
   void dividesValues() {
-    var ctx = contextFactory.of(op("DIVIDE", List.of(100, 4, 5)), ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.builder(op("DIVIDE", List.of(100, 4, 5))).mode(ExecutionMode.PREVIEW)
+            .build();
     assertThat(helper.execute(ctx).value().sum()).isEqualByComparingTo(BigDecimal.valueOf(5));
   }
 
   @Test
   void computesMinAndMax() {
-    var min = helper.execute(contextFactory.of(op("MIN", List.of(3, 1, 2)), ExecutionMode.PREVIEW));
+    var min = helper.execute(
+            SimpleContext.builder(op("MIN", List.of(3, 1, 2))).mode(ExecutionMode.PREVIEW).build());
     assertThat(min.value().sum()).isEqualByComparingTo(BigDecimal.ONE);
 
-    var max = helper.execute(contextFactory.of(op("MAX", List.of(3, 1, 2)), ExecutionMode.PREVIEW));
+    var max = helper.execute(
+            SimpleContext.builder(op("MAX", List.of(3, 1, 2))).mode(ExecutionMode.PREVIEW).build());
     assertThat(max.value().sum()).isEqualByComparingTo(BigDecimal.valueOf(3));
   }
 
   @Test
   void returnsZeroForEmpty() {
-    var ctx = contextFactory.of(op(null, List.of()), ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.builder(op(null, List.of())).mode(ExecutionMode.PREVIEW).build();
     assertThat(helper.execute(ctx).value().sum()).isEqualByComparingTo(BigDecimal.ZERO);
   }
 
   @Test
   void returnsZeroForNullList() {
-    var ctx = contextFactory.of(op(null, null), ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.builder(op(null, null)).mode(ExecutionMode.PREVIEW).build();
     assertThat(helper.execute(ctx).value().sum()).isEqualByComparingTo(BigDecimal.ZERO);
   }
 
@@ -243,9 +248,9 @@ class ArithmeticHelperTest {
 
   @Test
   void explainPercentileDescribesInterpolationAndArgs() {
-    var ctx = contextFactory.of(
-            math("percentile", List.<Number>of(10, 20, 30), null, null, null, null, 95.0),
-            ExecutionMode.EXPLAIN);
+    var ctx = SimpleContext
+            .builder(math("percentile", List.<Number>of(10, 20, 30), null, null, null, null, 95.0))
+            .mode(ExecutionMode.EXPLAIN).build();
 
     var report = helper.explain(ctx);
 
@@ -259,12 +264,12 @@ class ArithmeticHelperTest {
 
   @Test
   void explainDiffersBetweenModes() {
-    var sumCtx = contextFactory.of(
-            math("sum", List.<Number>of(1, 2), null, null, null, null, null),
-            ExecutionMode.EXPLAIN);
-    var stddevCtx = contextFactory.of(
-            math("stddev", List.<Number>of(1, 2), null, null, null, null, null),
-            ExecutionMode.EXPLAIN);
+    var sumCtx = SimpleContext
+            .builder(math("sum", List.<Number>of(1, 2), null, null, null, null, null))
+            .mode(ExecutionMode.EXPLAIN).build();
+    var stddevCtx = SimpleContext
+            .builder(math("stddev", List.<Number>of(1, 2), null, null, null, null, null))
+            .mode(ExecutionMode.EXPLAIN).build();
 
     var sum = helper.explain(sumCtx);
     var stddev = helper.explain(stddevCtx);
@@ -278,10 +283,10 @@ class ArithmeticHelperTest {
 
   @Test
   void explainReflectsClampAndRoundArgs() {
-    var clampCtx = contextFactory.of(
-            math("clamp", null, 5, 0, 10, null, null), ExecutionMode.EXPLAIN);
-    var roundCtx = contextFactory.of(
-            math("round", null, 3.14159, null, null, 2, null), ExecutionMode.EXPLAIN);
+    var clampCtx = SimpleContext.builder(math("clamp", null, 5, 0, 10, null, null))
+            .mode(ExecutionMode.EXPLAIN).build();
+    var roundCtx = SimpleContext.builder(math("round", null, 3.14159, null, null, 2, null))
+            .mode(ExecutionMode.EXPLAIN).build();
 
     assertThat(helper.explain(clampCtx).description())
             .contains("min=0", "max=10");
@@ -291,8 +296,8 @@ class ArithmeticHelperTest {
 
   @Test
   void explainUnknownModeMentionsExpectedModes() {
-    var ctx = contextFactory.of(
-            math("frobnicate", null, null, null, null, null, null), ExecutionMode.EXPLAIN);
+    var ctx = SimpleContext.builder(math("frobnicate", null, null, null, null, null, null))
+            .mode(ExecutionMode.EXPLAIN).build();
 
     var report = helper.explain(ctx);
 
@@ -301,9 +306,9 @@ class ArithmeticHelperTest {
 
   @Test
   void explainDoesNotTruncateToBudget() {
-    var ctx = contextFactory.of(
-            math("percentile", List.<Number>of(1, 2, 3), null, null, null, null, 99.0),
-            ExecutionMode.EXPLAIN).withMetadata(EXPLAIN_BUDGET_CHARS_KEY, 50);
+    var ctx = SimpleContext
+            .builder(math("percentile", List.<Number>of(1, 2, 3), null, null, null, null, 99.0))
+            .mode(ExecutionMode.EXPLAIN).build().withMetadata(EXPLAIN_BUDGET_CHARS_KEY, 50);
 
     var report = helper.explain(ctx);
 
@@ -313,7 +318,7 @@ class ArithmeticHelperTest {
   }
 
   private Result<ArithmeticOut> execute(ArithmeticIn input) {
-    var ctx = contextFactory.of(input, ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.builder(input).mode(ExecutionMode.PREVIEW).build();
     return helper.execute(ctx);
   }
 

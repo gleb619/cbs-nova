@@ -1,10 +1,10 @@
 package cbs.nova.starter.helper;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.helper.model.CompressionIn;
 import cbs.nova.starter.helper.model.CompressionOut;
 import java.nio.charset.StandardCharsets;
@@ -14,7 +14,6 @@ import org.junit.jupiter.api.Test;
 
 class CompressionHelperTest {
 
-  private final ContextFactory contextFactory = new ContextFactory();
   private final CompressionHelper helper = new CompressionHelper();
 
   @Test
@@ -166,7 +165,7 @@ class CompressionHelperTest {
   }
 
   private Result<CompressionOut> execute(CompressionIn input) {
-    var ctx = contextFactory.of(input, ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.builder(input).mode(ExecutionMode.PREVIEW).build();
     return helper.execute(ctx);
   }
 }

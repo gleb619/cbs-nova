@@ -1,5 +1,6 @@
 package cbs.nova.dsl.example.integration;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.CallKind;
@@ -9,7 +10,6 @@ import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.model.PreviewReport;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.example.integration.PreviewDryRunTestConfig.PreviewSideEffectsHelper;
 import cbs.nova.dsl.example.integration.PreviewDryRunTestConfig.PreviewSideEffectsIn;
 import cbs.nova.dsl.example.integration.PreviewDryRunTestConfig.PreviewSideEffectsOut;
@@ -49,7 +49,6 @@ class PreviewDryRunIntegrationTest {
   private DslRuntime dslRuntime;
 
   @Autowired
-  private ContextFactory contextFactory;
 
   @Autowired
   private JdbcTemplate jdbcTemplate;
@@ -85,7 +84,7 @@ class PreviewDryRunIntegrationTest {
     var input = new PreviewSideEffectsIn(requestId, "preview-payload");
 
     Result<PreviewReport> result = dslRuntime.preview("PreviewSideEffects",
-            contextFactory.of(input, ExecutionMode.PREVIEW));
+            SimpleContext.builder().body(input).mode(ExecutionMode.PREVIEW).build());
 
     assertThat(result.isSuccess()).as("preview result cause: %s", result.cause()).isTrue();
     PreviewReport report = result.value();
@@ -130,7 +129,7 @@ class PreviewDryRunIntegrationTest {
     var input = new PreviewSideEffectsIn(requestId, "run-payload");
 
     Result<?> result = dslRuntime.run("PreviewSideEffects",
-            contextFactory.of(input, ExecutionMode.RUN));
+            SimpleContext.builder().body(input).mode(ExecutionMode.RUN).build());
 
     assertThat(result.isSuccess()).as("run result cause: %s", result.cause()).isTrue();
     assertThat(result.value()).isInstanceOf(PreviewSideEffectsOut.class);

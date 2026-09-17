@@ -1,10 +1,10 @@
 package cbs.nova.starter.helper;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.helper.model.PickIn;
 import cbs.nova.starter.helper.model.PickOut;
 import java.util.LinkedHashMap;
@@ -14,7 +14,6 @@ import org.junit.jupiter.api.Test;
 
 class PickHelperTest {
 
-  private final ContextFactory contextFactory = new ContextFactory();
   private final PickHelper helper = new PickHelper();
 
   // --- pick mode ---
@@ -108,7 +107,8 @@ class PickHelperTest {
   @Test
   void nullSourceFails() {
     Result<PickOut> result = helper.execute(
-            contextFactory.of(new PickIn(null, List.of("id"), "pick"), ExecutionMode.PREVIEW));
+            SimpleContext.<PickIn>builder().body(new PickIn(null, List.of("id"), "pick"))
+                    .mode(ExecutionMode.PREVIEW).build());
     assertThat(result.isSuccess()).isFalse();
     assertThat(result.cause()).hasMessage("pick.source is required");
   }
@@ -122,23 +122,25 @@ class PickHelperTest {
   @Test
   void nullKeysFail() {
     Result<PickOut> result = helper.execute(
-            contextFactory.of(new PickIn(sourceMap(), null, "pick"), ExecutionMode.PREVIEW));
+            SimpleContext.<PickIn>builder().body(new PickIn(sourceMap(), null, "pick"))
+                    .mode(ExecutionMode.PREVIEW).build());
     assertThat(result.isSuccess()).isFalse();
     assertThat(result.cause()).hasMessage("pick.keys must be non-empty");
   }
 
   @Test
   void emptyKeysListFails() {
-    Result<PickOut> result = helper.execute(contextFactory.of(
-            new PickIn(sourceMap(), List.of(), "pick"), ExecutionMode.PREVIEW));
+    Result<PickOut> result = helper.execute(SimpleContext.<PickIn>builder()
+            .body(new PickIn(sourceMap(), List.of(), "pick")).mode(ExecutionMode.PREVIEW).build());
     assertThat(result.isSuccess()).isFalse();
     assertThat(result.cause()).hasMessage("pick.keys must be non-empty");
   }
 
   @Test
   void unknownModeFails() {
-    Result<PickOut> result = helper.execute(contextFactory.of(
-            new PickIn(sourceMap(), List.of("id"), "rename"), ExecutionMode.PREVIEW));
+    Result<PickOut> result = helper.execute(
+            SimpleContext.<PickIn>builder().body(new PickIn(sourceMap(), List.of("id"), "rename"))
+                    .mode(ExecutionMode.PREVIEW).build());
     assertThat(result.isSuccess()).isFalse();
     assertThat(result.cause()).isInstanceOf(IllegalArgumentException.class);
   }
@@ -156,7 +158,7 @@ class PickHelperTest {
 
   private Map<String, Object> execute(PickIn input) {
     Result<PickOut> result = helper.execute(
-            contextFactory.of(input, ExecutionMode.PREVIEW));
+            SimpleContext.builder(input).mode(ExecutionMode.PREVIEW).build());
     assertThat(result.isSuccess()).isTrue();
     return result.value().result();
   }

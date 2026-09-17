@@ -1,5 +1,6 @@
 package cbs.nova.starter.core.pipe;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -9,7 +10,6 @@ import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.model.ExplainGraphReport;
 import cbs.nova.starter.config.properties.CbsNovaExplainProperties;
 import cbs.nova.starter.config.properties.CbsNovaFakesProperties;
@@ -34,7 +34,6 @@ class ExplainDslPipeTest {
     return new DryRunProperties(null, null).log().maxEventsPerRun();
   }
 
-  private final ContextFactory contextFactory = new ContextFactory();
   private final ThreadLocalDryRunLoggingContext dryRunLoggingContext = new ThreadLocalDryRunLoggingContext();
   private final DryRunLogBufferRegistry bufferRegistry = new DryRunLogBufferRegistry(
           Caffeine.newBuilder().build());
@@ -74,7 +73,8 @@ class ExplainDslPipeTest {
     ExplainDslPipe explainPipe = newPipe(recorder);
 
     Result<ExplainGraphReport> result = explainPipe.execute("ExplainProcess",
-            contextFactory.of("payload", ExecutionMode.EXPLAIN, "run-explain"));
+            SimpleContext.builder("payload").mode(ExecutionMode.EXPLAIN).runId("run-explain")
+                    .build());
 
     assertThat(result.isSuccess()).isTrue();
     ExplainGraphReport report = result.value();
@@ -100,7 +100,7 @@ class ExplainDslPipeTest {
     ExplainDslPipe explainPipe = newPipe(mock(ExternalCallRecorder.class));
 
     Result<ExplainGraphReport> result = explainPipe.execute("MissingProcess",
-            contextFactory.of("payload", ExecutionMode.EXPLAIN, "run-fail"));
+            SimpleContext.builder("payload").mode(ExecutionMode.EXPLAIN).runId("run-fail").build());
 
     assertThat(result.isSuccess()).isTrue();
     ExplainGraphReport report = result.value();
@@ -110,7 +110,7 @@ class ExplainDslPipeTest {
   }
 
   private ExplainDslPipe newPipe(ExternalCallRecorder recorder) {
-    return new ExplainDslPipe(recorder, contextFactory, dryRunLoggingContext, bufferRegistry,
+    return new ExplainDslPipe(recorder, dryRunLoggingContext, bufferRegistry,
             defaultMaxEventsPerRun(), previewProperties,
             new CbsNovaFakesProperties(false, null),
             new RunScopedFakeConfig(Caffeine.newBuilder().build()),

@@ -1,9 +1,9 @@
 package cbs.nova.dsl;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.exception.DslEntityNotFoundException;
 import cbs.nova.dsl.exception.DslExecutionException;
 import cbs.nova.dsl.transaction.TransactionDescriptor;
@@ -15,8 +15,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 class GlobalManagerTest {
-
-  private final ContextFactory contextFactory = new ContextFactory();
 
   @BeforeEach
   void reset() {
@@ -32,7 +30,7 @@ class GlobalManagerTest {
                     .output(String.class)
                     .execute(ctx -> Result.success("Hello, " + ctx.body()))
                     .build());
-    var ctx = contextFactory.of("World", ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.builder().body("World").mode(ExecutionMode.PREVIEW).build();
     var result = gm.runProcess("Greet", ctx);
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value()).isEqualTo("Hello, World");
@@ -41,7 +39,8 @@ class GlobalManagerTest {
   @Test
   void unknownProcessReturnsFailure() {
     var result = GlobalManager.globalManager()
-            .runProcess("Ghost", contextFactory.of("x", ExecutionMode.PREVIEW));
+            .runProcess("Ghost",
+                    SimpleContext.builder().body("x").mode(ExecutionMode.PREVIEW).build());
     assertThat(result.isSuccess()).isFalse();
   }
 
@@ -50,7 +49,7 @@ class GlobalManagerTest {
     var gm = GlobalManager.globalManager();
     gm.registerHelper("upper", ctx -> Result.success(ctx.body().toString().toUpperCase()));
     var result = gm.runHelper("upper",
-            contextFactory.of("hello", ExecutionMode.PREVIEW));
+            SimpleContext.builder().body("hello").mode(ExecutionMode.PREVIEW).build());
     assertThat(result.value()).isEqualTo("HELLO");
   }
 
@@ -61,7 +60,7 @@ class GlobalManagerTest {
             .execute(ctx -> Result.success("ok"))
             .build();
     gm.registerTransaction(tx);
-    var ctx = contextFactory.of("body", ExecutionMode.RUN, "run-1");
+    var ctx = SimpleContext.builder().body("body").mode(ExecutionMode.RUN).runId("run-1").build();
     var result = gm.runTransaction("TestTx", ctx);
     assertThat(result.isSuccess()).isTrue();
   }
@@ -69,7 +68,7 @@ class GlobalManagerTest {
   @Test
   void unknownTransactionReturnsFailure() {
     var result = GlobalManager.globalManager().runTransaction("Ghost",
-            contextFactory.of("x", ExecutionMode.PREVIEW));
+            SimpleContext.builder().body("x").mode(ExecutionMode.PREVIEW).build());
     assertThat(result.isSuccess()).isFalse();
   }
 
@@ -80,7 +79,7 @@ class GlobalManagerTest {
             .execute(ctx -> Result.success("fn-ok"))
             .build();
     gm.registerFunction(fn);
-    var ctx = contextFactory.of("body", ExecutionMode.RUN, "run-1");
+    var ctx = SimpleContext.builder().body("body").mode(ExecutionMode.RUN).runId("run-1").build();
     var result = gm.runFunction("TestFn", ctx);
     assertThat(result.value()).isEqualTo("fn-ok");
   }
@@ -88,7 +87,7 @@ class GlobalManagerTest {
   @Test
   void unknownFunctionReturnsFailure() {
     var result = GlobalManager.globalManager().runFunction("Ghost",
-            contextFactory.of("x", ExecutionMode.PREVIEW));
+            SimpleContext.builder().body("x").mode(ExecutionMode.PREVIEW).build());
     assertThat(result.isSuccess()).isFalse();
   }
 
@@ -142,7 +141,8 @@ class GlobalManagerTest {
             })
             .build();
     gm.registerTransaction(tx);
-    var baseCtx = contextFactory.of("payload", ExecutionMode.RUN, "run-comp");
+    var baseCtx = SimpleContext.builder().body("payload").mode(ExecutionMode.RUN).runId("run-comp")
+            .build();
     assertThat(gm.registerTransactionCompensation("CompTx", "run-comp", baseCtx)).isTrue();
     gm.compensateTransaction("CompTx", "run-comp", new RuntimeException("boom"));
     assertThat(order).containsExactly("compensated:payload");
@@ -161,7 +161,8 @@ class GlobalManagerTest {
             })
             .build();
     gm.registerTransaction(tx);
-    var ctx = contextFactory.of("direct-payload", ExecutionMode.COMPENSATION, "run-direct");
+    var ctx = SimpleContext.builder().body("direct-payload").mode(ExecutionMode.COMPENSATION)
+            .runId("run-direct").build();
     gm.compensateTransaction("DirectCompTx", ctx, new RuntimeException("boom"));
     assertThat(order).containsExactly("direct:direct-payload");
   }
@@ -357,7 +358,7 @@ class GlobalManagerTest {
             .execute(ctx -> Result.success("object-wins"))
             .build();
 
-    var ctx = contextFactory.of("in", ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.builder().body("in").mode(ExecutionMode.PREVIEW).build();
     assertThat(gm.runProcess(object, ctx).value()).isEqualTo("object-wins");
   }
 
@@ -374,13 +375,13 @@ class GlobalManagerTest {
             .execute(ctx -> Result.success("v99"))
             .build();
 
-    var ctx = contextFactory.of("in", ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.builder().body("in").mode(ExecutionMode.PREVIEW).build();
     assertThat(gm.runProcess(object, ctx).value()).isEqualTo("v99");
   }
 
   @Test
   void runProcessStringOverloadFailureParity() {
-    var ctx = contextFactory.of("in", ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.builder().body("in").mode(ExecutionMode.PREVIEW).build();
     var result = GlobalManager.globalManager().runProcess("Missing", ctx);
     assertThat(result.isSuccess()).isFalse();
     assertThat(result.cause()).isInstanceOf(DslEntityNotFoundException.class)
@@ -398,7 +399,7 @@ class GlobalManagerTest {
             .execute(ctx -> Result.success("object-wins"))
             .build();
 
-    var ctx = contextFactory.of("in", ExecutionMode.RUN, "run-1");
+    var ctx = SimpleContext.builder().body("in").mode(ExecutionMode.RUN).runId("run-1").build();
     assertThat(gm.runTransaction(object, ctx).value()).isEqualTo("object-wins");
   }
 
@@ -449,7 +450,8 @@ class GlobalManagerTest {
             .compensation((ctx, history) -> order.add("comp:" + ctx.body()))
             .build();
 
-    var ctx = contextFactory.of("direct-payload", ExecutionMode.COMPENSATION, "run-direct");
+    var ctx = SimpleContext.builder().body("direct-payload").mode(ExecutionMode.COMPENSATION)
+            .runId("run-direct").build();
     gm.compensateProcess(process, ctx, new RuntimeException("boom"));
     assertThat(order).containsExactly("comp:direct-payload");
   }

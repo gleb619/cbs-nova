@@ -1,5 +1,6 @@
 package cbs.nova.dsl.example.integration;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.config.HelperInstanceResolverConfig;
@@ -10,7 +11,6 @@ import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.GeneratedClassProvider;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.config.SingletonSupport;
 import cbs.nova.dsl.helper.HelperInstanceResolver;
@@ -195,7 +195,7 @@ class UnreliableApiDslIntegrationTest {
 
   @Test
   void resilientTransactionSucceedsAfterTemporalRetries() {
-    var service = ServiceUtil.newService(new ContextFactory());
+    var service = ServiceUtil.newService();
     String runId = "unreliable-success-" + System.currentTimeMillis();
     var apiCall = new UnreliableApiIn(runId, 3, false, null, null);
     var input = new UnreliableProcessIn("success", apiCall);
@@ -218,7 +218,7 @@ class UnreliableApiDslIntegrationTest {
     var input = new UnreliableProcessIn("compensated", apiCall);
     String markerId = "UnreliableApiCompensated-" + input.scenario();
 
-    Result<?> result = ServiceUtil.newService(new ContextFactory())
+    Result<?> result = ServiceUtil.newService()
             .runProcess("UnreliableApiCompensated", input).result().join();
 
     assertThat(result.isSuccess()).isFalse();
@@ -233,7 +233,7 @@ class UnreliableApiDslIntegrationTest {
     var apiCall = new UnreliableApiIn(runId, 5, false, null, null);
     var input = new UnreliableProcessIn("uncaught", apiCall);
 
-    Result<?> result = ServiceUtil.newService(new ContextFactory())
+    Result<?> result = ServiceUtil.newService()
             .runProcess("UnreliableApiUncaught", input).result().join();
 
     assertThat(result.isSuccess()).isFalse();
@@ -277,9 +277,9 @@ class UnreliableApiDslIntegrationTest {
       } else {
         in = (UnreliableApiIn) body;
       }
-      Context<UnreliableApiIn> adapted = new ContextFactory().of(
-              in, ctx.metadata(), ctx.mode(), ctx.runId(),
-              ctx.transactionRouting(), ctx.executionListener(), ctx.saga());
+      Context<UnreliableApiIn> adapted = SimpleContext.builder().body(in).metadata(ctx.metadata())
+              .mode(ctx.mode()).runId(ctx.runId()).transactionRouting(ctx.transactionRouting())
+              .executionListener(ctx.executionListener()).saga(ctx.saga()).build();
       return (Result<Object>) (Result<?>) delegate.execute(adapted);
     }
   }

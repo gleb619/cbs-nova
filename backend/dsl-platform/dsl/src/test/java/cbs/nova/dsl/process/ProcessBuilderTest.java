@@ -1,5 +1,6 @@
 package cbs.nova.dsl.process;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -10,7 +11,6 @@ import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.Constants;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.config.DslConstants;
 import cbs.nova.dsl.explain.ExplainResourceProvider;
 import cbs.nova.dsl.model.ExplainReport;
@@ -167,9 +167,9 @@ class ProcessBuilderTest {
     var process = Dsl.process("NoExplainProc")
             .execute(ctx -> Result.success("exec"))
             .build();
-    var contextFactory = new ContextFactory();
     var ctx = new ProcessRichContext<>(
-            contextFactory.of("body", ExecutionMode.EXPLAIN, "run-explain"), contextFactory);
+            SimpleContext.builder().body("body").mode(ExecutionMode.EXPLAIN).runId("run-explain")
+                    .build());
 
     var result = process.explainLogic().apply(ctx);
 
@@ -199,9 +199,9 @@ class ProcessBuilderTest {
             .execute(ctx -> Result.success("exec"))
             .explainVia("builder-sample.md")
             .build();
-    var contextFactory = new ContextFactory();
     var ctx = new ProcessRichContext<>(
-            contextFactory.of("body", ExecutionMode.EXPLAIN, "run-doc"), contextFactory);
+            SimpleContext.builder().body("body").mode(ExecutionMode.EXPLAIN).runId("run-doc")
+                    .build());
 
     var result = process.explainLogic().apply(ctx);
 
@@ -216,9 +216,9 @@ class ProcessBuilderTest {
             .execute(ctx -> Result.success("exec"))
             .explainVia("/explain/builder-sample.md")
             .build();
-    var contextFactory = new ContextFactory();
     var ctx = new ProcessRichContext<>(
-            contextFactory.of("body", ExecutionMode.EXPLAIN, "run-doc-prefixed"), contextFactory);
+            SimpleContext.builder().body("body").mode(ExecutionMode.EXPLAIN)
+                    .runId("run-doc-prefixed").build());
 
     var result = process.explainLogic().apply(ctx);
 
@@ -232,12 +232,10 @@ class ProcessBuilderTest {
             .execute(ctx -> Result.success("exec"))
             .explainVia("explain/builder-sample.md")
             .build();
-    var contextFactory = new ContextFactory();
     var ctx = new ProcessRichContext<>(
-            contextFactory.of("body",
-                    Map.of(Constants.EXPLAIN_BUDGET_CHARS_KEY, 8),
-                    ExecutionMode.EXPLAIN, "run-doc-budget"),
-            contextFactory);
+            SimpleContext.builder().body("body")
+                    .metadata(Map.of(Constants.EXPLAIN_BUDGET_CHARS_KEY, 8))
+                    .mode(ExecutionMode.EXPLAIN).runId("run-doc-budget").build());
 
     var result = process.explainLogic().apply(ctx);
 
@@ -252,9 +250,9 @@ class ProcessBuilderTest {
             .execute(ctx -> Result.success("exec"))
             .explainVia("missing.md")
             .build();
-    var contextFactory = new ContextFactory();
     var ctx = new ProcessRichContext<>(
-            contextFactory.of("body", ExecutionMode.EXPLAIN, "run-doc-missing"), contextFactory);
+            SimpleContext.builder().body("body").mode(ExecutionMode.EXPLAIN)
+                    .runId("run-doc-missing").build());
 
     var result = process.explainLogic().apply(ctx);
 
@@ -311,10 +309,9 @@ class ProcessBuilderTest {
       var process = Dsl.process("LookupProc")
               .execute(ctx -> Result.success("exec"))
               .build();
-      var contextFactory = new ContextFactory();
       var ctx = new ProcessRichContext<>(
-              contextFactory.of("body", ExecutionMode.EXPLAIN, "run-proc-lookup-name"),
-              contextFactory);
+              SimpleContext.builder().body("body").mode(ExecutionMode.EXPLAIN)
+                      .runId("run-proc-lookup-name").build());
 
       var result = process.explainLogic().apply(ctx);
 
@@ -334,10 +331,9 @@ class ProcessBuilderTest {
       var process = Dsl.process("OrderFlow")
               .execute(ctx -> Result.success("exec"))
               .build();
-      var contextFactory = new ContextFactory();
       var ctx = new ProcessRichContext<>(
-              contextFactory.of("body", ExecutionMode.EXPLAIN, "run-proc-lookup-file"),
-              contextFactory);
+              SimpleContext.builder().body("body").mode(ExecutionMode.EXPLAIN)
+                      .runId("run-proc-lookup-file").build());
 
       var result = process.explainLogic().apply(ctx);
 
@@ -359,10 +355,9 @@ class ProcessBuilderTest {
       var process = Dsl.process("PreferProc")
               .execute(ctx -> Result.success("exec"))
               .build();
-      var contextFactory = new ContextFactory();
       var ctx = new ProcessRichContext<>(
-              contextFactory.of("body", ExecutionMode.EXPLAIN, "run-proc-lookup-prefer"),
-              contextFactory);
+              SimpleContext.builder().body("body").mode(ExecutionMode.EXPLAIN)
+                      .runId("run-proc-lookup-prefer").build());
 
       var result = process.explainLogic().apply(ctx);
 
@@ -377,10 +372,9 @@ class ProcessBuilderTest {
     var process = Dsl.process("MissingProc")
             .execute(ctx -> Result.success("exec"))
             .build();
-    var contextFactory = new ContextFactory();
     var ctx = new ProcessRichContext<>(
-            contextFactory.of("body", ExecutionMode.EXPLAIN, "run-proc-fallback"),
-            contextFactory);
+            SimpleContext.builder().body("body").mode(ExecutionMode.EXPLAIN)
+                    .runId("run-proc-fallback").build());
 
     var result = process.explainLogic().apply(ctx);
 

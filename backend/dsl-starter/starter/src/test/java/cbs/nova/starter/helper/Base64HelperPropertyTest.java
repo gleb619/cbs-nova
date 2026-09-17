@@ -1,9 +1,9 @@
 package cbs.nova.starter.helper;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.ExecutionMode;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.helper.model.Base64In;
 import cbs.nova.starter.helper.model.Base64Out;
 import java.nio.charset.StandardCharsets;
@@ -11,19 +11,20 @@ import net.jqwik.api.*;
 import net.jqwik.api.constraints.StringLength;
 
 class Base64HelperPropertyTest {
-  private final ContextFactory contextFactory = new ContextFactory();
   private final Base64Helper helper = new Base64Helper();
 
   private String enc(String s, boolean u) {
     return helper
-            .execute(contextFactory.of(new Base64In(s, "encode", u), ExecutionMode.PREVIEW))
+            .execute(SimpleContext.<Base64In>builder().body(new Base64In(s, "encode", u))
+                    .mode(ExecutionMode.PREVIEW).build())
             .value()
             .result();
   }
 
   private String dec(String s, boolean u) {
     return helper
-            .execute(contextFactory.of(new Base64In(s, "decode", u), ExecutionMode.PREVIEW))
+            .execute(SimpleContext.<Base64In>builder().body(new Base64In(s, "decode", u))
+                    .mode(ExecutionMode.PREVIEW).build())
             .value()
             .result();
   }

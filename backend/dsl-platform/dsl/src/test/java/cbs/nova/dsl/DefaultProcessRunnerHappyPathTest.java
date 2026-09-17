@@ -1,7 +1,7 @@
 package cbs.nova.dsl;
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.exception.DslExecutionException;
 import cbs.nova.dsl.history.TransactionExecutionRepository;
 import cbs.nova.dsl.listener.ExecutionListener;
@@ -18,14 +18,13 @@ import org.junit.jupiter.api.Test;
 
 class DefaultProcessRunnerHappyPathTest {
 
-  private final ContextFactory contextFactory = new ContextFactory();
   private final TransactionExecutionRepository transactionExecutionRepository = new InMemoryTransactionExecutionRepository();
   private final DefaultCompensationRegistry compensationRegistry = new DefaultCompensationRegistry();
   private final ProcessCompensationHandler compensationHandler = new ProcessCompensationHandler(
-          contextFactory, compensationRegistry);
+          compensationRegistry);
 
-  private final ProcessRunner runner = new DefaultProcessRunner(contextFactory,
-          transactionExecutionRepository, null, compensationHandler);
+  private final ProcessRunner runner = new DefaultProcessRunner(transactionExecutionRepository,
+          null, compensationHandler);
 
   @Test
   void runModeExecutesLogicAndReturnsItsResult() {
@@ -34,7 +33,8 @@ class DefaultProcessRunnerHappyPathTest {
             .output(String.class)
             .execute(ctx -> Result.success("ran"))
             .build();
-    var ctx = contextFactory.of("input", ExecutionMode.RUN, "run-happy");
+    var ctx = SimpleContext.builder().body("input").mode(ExecutionMode.RUN).runId("run-happy")
+            .build();
 
     var result = runner.run(process, ctx);
 
@@ -72,7 +72,8 @@ class DefaultProcessRunnerHappyPathTest {
             .output(String.class)
             .execute(ctx -> Result.success("ok"))
             .build();
-    var ctx = contextFactory.of("input-body", ExecutionMode.RUN, "run-lifecycle")
+    var ctx = SimpleContext.builder().body("input-body").mode(ExecutionMode.RUN)
+            .runId("run-lifecycle").build()
             .withExecutionListener(listener);
 
     runner.run(process, ctx);
@@ -114,7 +115,8 @@ class DefaultProcessRunnerHappyPathTest {
             // No compensation — ensure lifecycle events still fire even though compensation is
             // skipped
             .build();
-    var ctx = contextFactory.of("input", ExecutionMode.RUN, "run-fail-no-comp")
+    var ctx = SimpleContext.builder().body("input").mode(ExecutionMode.RUN)
+            .runId("run-fail-no-comp").build()
             .withExecutionListener(listener);
 
     var result = runner.run(process, ctx);
@@ -134,7 +136,8 @@ class DefaultProcessRunnerHappyPathTest {
               throw new IllegalArgumentException("boom-arg");
             })
             .build();
-    var ctx = contextFactory.of("input", ExecutionMode.RUN, "run-throw");
+    var ctx = SimpleContext.builder().body("input").mode(ExecutionMode.RUN).runId("run-throw")
+            .build();
 
     var result = runner.run(process, ctx);
 
@@ -152,7 +155,8 @@ class DefaultProcessRunnerHappyPathTest {
             .output(String.class)
             .execute(ctx -> Result.success("silent"))
             .build();
-    var ctx = contextFactory.of("input", ExecutionMode.RUN, "run-no-listener");
+    var ctx = SimpleContext.builder().body("input").mode(ExecutionMode.RUN).runId("run-no-listener")
+            .build();
 
     var result = runner.run(process, ctx);
 
@@ -171,7 +175,8 @@ class DefaultProcessRunnerHappyPathTest {
               return Result.success("value-from-execute");
             })
             .build();
-    var ctx = contextFactory.of("body", ExecutionMode.RUN, "run-prop");
+    var ctx = SimpleContext.builder().body("body").mode(ExecutionMode.RUN).runId("run-prop")
+            .build();
 
     var result = runner.run(process, ctx);
 
@@ -213,7 +218,8 @@ class DefaultProcessRunnerHappyPathTest {
               return Result.success(null);
             })
             .build();
-    var ctx = contextFactory.of("body", ExecutionMode.RUN, "run-order")
+    var ctx = SimpleContext.builder().body("body").mode(ExecutionMode.RUN).runId("run-order")
+            .build()
             .withExecutionListener(listener);
 
     runner.run(process, ctx);
@@ -230,7 +236,8 @@ class DefaultProcessRunnerHappyPathTest {
               throw new RuntimeException("cause-message");
             })
             .build();
-    var ctx = contextFactory.of("body", ExecutionMode.RUN, "run-cause");
+    var ctx = SimpleContext.builder().body("body").mode(ExecutionMode.RUN).runId("run-cause")
+            .build();
 
     var result = runner.run(process, ctx);
 

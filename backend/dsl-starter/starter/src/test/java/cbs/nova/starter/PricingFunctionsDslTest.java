@@ -1,5 +1,6 @@
 package cbs.nova.starter;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.data.Offset.offset;
 
@@ -8,7 +9,6 @@ import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.helper.HelperInstanceResolver;
 import cbs.nova.dslexamples.v1.PricingModels.CheckoutReceipt;
@@ -43,8 +43,6 @@ import java.util.List;
  */
 class PricingFunctionsDslTest {
 
-  private final ContextFactory contextFactory = new ContextFactory();
-
   @BeforeEach
   void loadCompactDsls() {
     GlobalManager.globalManager().resetForTests();
@@ -66,7 +64,8 @@ class PricingFunctionsDslTest {
             new OrderLine("cable", 3, 0.75)));
 
     Result<?> processResult = GlobalManager.globalManager()
-            .runProcess("CheckoutProcess", contextFactory.of(input, ExecutionMode.PREVIEW));
+            .runProcess("CheckoutProcess",
+                    SimpleContext.builder(input).mode(ExecutionMode.PREVIEW).build());
 
     assertThat(processResult.isSuccess()).as("cause: %s", processResult.cause()).isTrue();
     CheckoutReceipt receipt = (CheckoutReceipt) processResult.value();
@@ -78,7 +77,8 @@ class PricingFunctionsDslTest {
     assertThat(receipt.total()).isCloseTo(39.14, offset(0.001));
 
     Result<?> transactionResult = GlobalManager.globalManager()
-            .runTransaction("QuoteTransaction", contextFactory.of(input, ExecutionMode.PREVIEW));
+            .runTransaction("QuoteTransaction",
+                    SimpleContext.builder(input).mode(ExecutionMode.PREVIEW).build());
 
     assertThat(transactionResult.isSuccess()).as("cause: %s", transactionResult.cause()).isTrue();
     QuoteOut quote = (QuoteOut) transactionResult.value();

@@ -23,7 +23,6 @@ import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.dsl.model.PreviewReport;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.Constants;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.exception.DslException;
 import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dslexamples.v1.BatchModels.BatchIn;
@@ -59,7 +58,7 @@ class DslRuntimeServiceTest {
             false);
     service = new DslRuntimeService(
             dslRuntime,
-            new ContextFactory(),
+
             new LoggingExecutionListener(loggingProps),
             mapper);
   }

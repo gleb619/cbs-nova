@@ -9,9 +9,9 @@ import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.ExplainReport;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.model.PreviewReport;
+import cbs.nova.dsl.model.SimpleContext;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.DefinitionLoader;
-import cbs.nova.dsl.config.ContextFactory;
 import java.math.BigDecimal;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -27,9 +27,6 @@ class DslRuntimeModesTest {
 
   @Autowired
   private DslRuntime dslRuntime;
-
-  @Autowired
-  private ContextFactory contextFactory;
 
   @BeforeAll
   void setUp() {
@@ -47,7 +44,7 @@ class DslRuntimeModesTest {
   void previewAcceptsValidOrder() {
     var input = new OrderIn("C-123", new BigDecimal("100.00"), "P-1");
     Result<PreviewReport> result = dslRuntime.preview("OrderProcess",
-        contextFactory.of(input, ExecutionMode.PREVIEW));
+        SimpleContext.builder(input).mode(ExecutionMode.PREVIEW).build());
 
     assertThat(result.isSuccess()).as("preview result cause: %s", result.cause()).isTrue();
     PreviewReport report = result.value();
@@ -62,7 +59,7 @@ class DslRuntimeModesTest {
   void previewRejectsInvalidOrder() {
     var input = new OrderIn("", BigDecimal.ZERO, "P-1");
     Result<PreviewReport> result = dslRuntime.preview("OrderProcess",
-        contextFactory.of(input, ExecutionMode.PREVIEW));
+        SimpleContext.builder(input).mode(ExecutionMode.PREVIEW).build());
 
     assertThat(result.isSuccess()).as("preview result cause: %s", result.cause()).isTrue();
     PreviewReport report = result.value();
@@ -76,7 +73,7 @@ class DslRuntimeModesTest {
   void explainReturnsReport() {
     var input = new OrderIn("C-123", new BigDecimal("100.00"), "P-1");
     ExplainReport report = dslRuntime.explain("OrderProcess",
-        contextFactory.of(input, ExecutionMode.EXPLAIN));
+        SimpleContext.builder(input).mode(ExecutionMode.EXPLAIN).build());
 
     assertThat(report).isNotNull();
     assertThat(report.description()).containsIgnoringCase("order");
@@ -87,7 +84,7 @@ class DslRuntimeModesTest {
   void runInvokesProcess() {
     var input = new OrderIn("C-123", new BigDecimal("100.00"), "P-1");
     Result<?> result = dslRuntime.run("OrderProcess",
-        contextFactory.of(input, ExecutionMode.RUN));
+        SimpleContext.builder(input).mode(ExecutionMode.RUN).build());
 
     assertThat(result.isSuccess()).as("run result cause: %s", result.cause()).isTrue();
     OrderOut out = result.as(OrderOut.class);

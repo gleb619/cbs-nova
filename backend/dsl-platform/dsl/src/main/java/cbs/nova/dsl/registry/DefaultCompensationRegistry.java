@@ -1,7 +1,6 @@
 package cbs.nova.dsl.registry;
 
 import cbs.nova.dsl.Context;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.transaction.CompensationRegistry;
 import cbs.nova.dsl.transaction.CompensationRichContext;
 import cbs.nova.dsl.transaction.TransactionDslObject;
@@ -34,8 +33,7 @@ public final class DefaultCompensationRegistry implements CompensationRegistry {
   public void compensate(
           @NonNull String transactionName,
           @NonNull String runId,
-          @NonNull Throwable error,
-          @NonNull ContextFactory contextFactory) {
+          @NonNull Throwable error) {
     var deque = entries.get(key(runId));
     if (deque == null) {
       return;
@@ -48,7 +46,7 @@ public final class DefaultCompensationRegistry implements CompensationRegistry {
       }
       if (entry.markFired()) {
         iterator.remove();
-        entry.run(error, contextFactory);
+        entry.run(error);
         return;
       }
     }
@@ -57,8 +55,7 @@ public final class DefaultCompensationRegistry implements CompensationRegistry {
   @Override
   public void compensateAll(
           @NonNull String runId,
-          @NonNull Throwable error,
-          @NonNull ContextFactory contextFactory) {
+          @NonNull Throwable error) {
     var deque = entries.remove(key(runId));
     if (deque == null) {
       return;
@@ -67,7 +64,7 @@ public final class DefaultCompensationRegistry implements CompensationRegistry {
     while (iterator.hasNext()) {
       var entry = iterator.next();
       if (entry.markFired()) {
-        entry.run(error, contextFactory);
+        entry.run(error);
       }
     }
   }
@@ -119,8 +116,8 @@ public final class DefaultCompensationRegistry implements CompensationRegistry {
       return fired.get();
     }
 
-    void run(Throwable error, ContextFactory contextFactory) {
-      var compCtx = new CompensationRichContext<>(baseCtx, error, contextFactory);
+    void run(Throwable error) {
+      var compCtx = new CompensationRichContext<>(baseCtx, error);
       transaction.compensationLogic().apply(compCtx);
     }
   }

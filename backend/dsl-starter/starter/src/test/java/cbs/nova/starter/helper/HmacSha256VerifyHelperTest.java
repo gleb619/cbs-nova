@@ -1,10 +1,10 @@
 package cbs.nova.starter.helper;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.helper.model.HmacSha256SignIn;
 import cbs.nova.starter.helper.model.HmacSha256VerifyIn;
 import cbs.nova.starter.helper.model.HmacSha256VerifyOut;
@@ -12,7 +12,6 @@ import org.junit.jupiter.api.Test;
 
 class HmacSha256VerifyHelperTest {
 
-  private final ContextFactory contextFactory = new ContextFactory();
   private final HmacSha256SignHelper signHelper = new HmacSha256SignHelper();
   private final HmacSha256VerifyHelper verifyHelper = new HmacSha256VerifyHelper();
 
@@ -122,13 +121,13 @@ class HmacSha256VerifyHelperTest {
   // Verify uses MessageDigest.isEqual on decoded raw bytes to perform constant-time comparison,
   // avoiding timing attacks and normalizing differences such as hex case or Base64 padding.
   private String sign(String message, String secret, String encoding) {
-    var signCtx = contextFactory.of(new HmacSha256SignIn(
-            message, secret, encoding), ExecutionMode.PREVIEW);
+    var signCtx = SimpleContext.<HmacSha256SignIn>builder().body(new HmacSha256SignIn(
+            message, secret, encoding)).mode(ExecutionMode.PREVIEW).build();
     return signHelper.execute(signCtx).value().signature();
   }
 
   private Result<HmacSha256VerifyOut> verify(HmacSha256VerifyIn input) {
-    var ctx = contextFactory.of(input, ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.builder(input).mode(ExecutionMode.PREVIEW).build();
     return verifyHelper.execute(ctx);
   }
 }

@@ -1,10 +1,10 @@
 package cbs.nova.starter.helper;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.helper.model.QueryStringIn;
 import cbs.nova.starter.helper.model.QueryStringOut;
 import java.util.LinkedHashMap;
@@ -13,7 +13,6 @@ import org.junit.jupiter.api.Test;
 
 class QueryStringHelperTest {
 
-  private final ContextFactory contextFactory = new ContextFactory();
   private final QueryStringHelper helper = new QueryStringHelper();
 
   @Test
@@ -146,7 +145,7 @@ class QueryStringHelperTest {
   }
 
   private Result<QueryStringOut> execute(QueryStringIn input) {
-    var ctx = contextFactory.of(input, ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.builder(input).mode(ExecutionMode.PREVIEW).build();
     return helper.execute(ctx);
   }
 }

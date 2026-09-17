@@ -1,5 +1,6 @@
 package cbs.nova.starter;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.Dsl;
@@ -10,7 +11,6 @@ import cbs.nova.dsl.PreviewErrorCode;
 import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.dsl.model.PreviewReport;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.config.properties.CbsNovaFakesProperties;
 import cbs.nova.starter.core.listener.DslExecutionEventBus;
 import cbs.nova.starter.config.properties.CbsNovaPreviewProperties;
@@ -48,7 +48,6 @@ class DevDslRuntimeErrorHandlingTest {
 
   private final RunIdKeyedExternalCallRecorder recorder = new RunIdKeyedExternalCallRecorder(
           dryRunLoggingContext, null);
-  private final ContextFactory contextFactory = new ContextFactory();
   private final DryRunLogBufferRegistry bufferRegistry = new DryRunLogBufferRegistry(
           Caffeine.newBuilder().build());
   private final DryRunLogbackAppender appender = new DryRunLogbackAppender(dryRunLoggingContext,
@@ -56,15 +55,15 @@ class DevDslRuntimeErrorHandlingTest {
   private Appender<ILoggingEvent> originalDryRunAppender;
   private final CbsNovaPreviewProperties previewProperties = new CbsNovaPreviewProperties(null,
           null, null);
-  private final PreviewDslPipe previewPipe = new PreviewDslPipe(recorder, contextFactory,
+  private final PreviewDslPipe previewPipe = new PreviewDslPipe(recorder,
           dryRunLoggingContext, bufferRegistry, defaultMaxEventsPerRun(),
           null, previewProperties, new CbsNovaFakesProperties(false, null),
           new RunScopedFakeConfig(Caffeine.newBuilder().build()), new SimpleMeterRegistry(), null);
-  private final RunDslPipe runPipe = new RunDslPipe(contextFactory, recorder,
+  private final RunDslPipe runPipe = new RunDslPipe(recorder,
           new CbsNovaFakesProperties(false, null),
           new RunScopedFakeConfig(Caffeine.newBuilder().build()),
           new DslExecutionEventBus());
-  private final ExplainDslPipe explainPipe = new ExplainDslPipe(recorder, contextFactory,
+  private final ExplainDslPipe explainPipe = new ExplainDslPipe(recorder,
           dryRunLoggingContext, bufferRegistry, defaultMaxEventsPerRun(),
           previewProperties, new CbsNovaFakesProperties(false, null),
           new RunScopedFakeConfig(Caffeine.newBuilder().build()),
@@ -106,7 +105,7 @@ class DevDslRuntimeErrorHandlingTest {
 
   @Test
   void previewPopulatesHelperNotFoundWhenReferencingMissingHelper() {
-    var ctx = contextFactory.of("input", ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.builder("input").mode(ExecutionMode.PREVIEW).build();
     Result<PreviewReport> result = runtime.preview("CallMissing", ctx);
 
     assertThat(result.isSuccess()).isTrue();
@@ -131,7 +130,7 @@ class DevDslRuntimeErrorHandlingTest {
             .registerProcess(Dsl.process("Ping")
                     .execute(ctx -> Result.success("pong")).build());
 
-    var ctx = contextFactory.of("input", ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.builder("input").mode(ExecutionMode.PREVIEW).build();
     Result<PreviewReport> result = runtime.preview("Ping", ctx);
 
     assertThat(result.isSuccess()).isTrue();
@@ -145,7 +144,7 @@ class DevDslRuntimeErrorHandlingTest {
   void explainReturnsErroredReportWhenPipeFails() {
     GlobalManager.globalManager().resetForTests();
 
-    var ctx = contextFactory.of("input", ExecutionMode.EXPLAIN);
+    var ctx = SimpleContext.builder("input").mode(ExecutionMode.EXPLAIN).build();
     ExplainReport report = runtime.explain("Ghost", ctx);
 
     assertThat(report).isNotNull();

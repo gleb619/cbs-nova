@@ -1,10 +1,10 @@
 package cbs.nova.starter.helper;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.helper.model.UrlEncodeIn;
 import cbs.nova.starter.helper.model.UrlEncodeOut;
 import java.net.URLDecoder;
@@ -13,7 +13,6 @@ import org.junit.jupiter.api.Test;
 
 class UrlEncodeHelperTest {
 
-  private final ContextFactory contextFactory = new ContextFactory();
   private final UrlEncodeHelper helper = new UrlEncodeHelper();
 
   @Test
@@ -89,7 +88,7 @@ class UrlEncodeHelperTest {
   }
 
   private Result<UrlEncodeOut> execute(UrlEncodeIn input) {
-    var ctx = contextFactory.of(input, ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.builder(input).mode(ExecutionMode.PREVIEW).build();
     return helper.execute(ctx);
   }
 }

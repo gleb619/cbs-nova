@@ -1,5 +1,6 @@
 package cbs.nova.starter.core.stage;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -19,7 +20,6 @@ import cbs.nova.dsl.PreviewErrorCode;
 import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.Constants;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.core.pipe.DslPipeContext;
 import cbs.nova.starter.core.pipe.DslPipeStage;
 import cbs.nova.starter.core.pipe.ExplainGraphAccumulators;
@@ -31,8 +31,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class ExplainReportStageTest {
-
-  private final ContextFactory contextFactory = new ContextFactory();
 
   @BeforeEach
   void setUp() {
@@ -273,7 +271,7 @@ class ExplainReportStageTest {
   @Test
   void missingAccumulatorFailsFast() {
     DslPipeContext pipeContext = DslPipeContext.of("Ping",
-            contextFactory.of("body", ExecutionMode.PREVIEW, "run-1"),
+            SimpleContext.builder("body").mode(ExecutionMode.PREVIEW).runId("run-1").build(),
             ExecutionMode.PREVIEW, "run-1");
     DslPipeStage.Next next = c -> Result.success("downstream");
 
@@ -300,7 +298,7 @@ class ExplainReportStageTest {
   }
 
   private DslPipeContext pipeContext(String name, ExecutionMode mode) {
-    Context<?> ctx = contextFactory.of("body", mode, "run-1")
+    Context<?> ctx = SimpleContext.builder("body").mode(mode).runId("run-1").build()
             .withMetadata(Constants.EXPLAIN_GRAPH_ACCUMULATOR_KEY,
                     new ExplainGraphAccumulator());
     return DslPipeContext.of(name, ctx, mode, "run-1");

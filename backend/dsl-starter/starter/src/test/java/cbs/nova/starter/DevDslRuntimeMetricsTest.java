@@ -1,5 +1,6 @@
 package cbs.nova.starter;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.CallKind;
@@ -8,7 +9,6 @@ import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.model.PreviewReport;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.config.properties.CbsNovaFakesProperties;
 import cbs.nova.starter.core.listener.DslExecutionEventBus;
 import cbs.nova.starter.config.properties.CbsNovaPreviewProperties;
@@ -44,7 +44,6 @@ class DevDslRuntimeMetricsTest {
 
   private final RunIdKeyedExternalCallRecorder recorder = new RunIdKeyedExternalCallRecorder(
           dryRunLoggingContext, null);
-  private final ContextFactory contextFactory = new ContextFactory();
   private final DryRunLogBufferRegistry bufferRegistry = new DryRunLogBufferRegistry(
           Caffeine.newBuilder().build());
   private final DryRunLogbackAppender appender = new DryRunLogbackAppender(dryRunLoggingContext,
@@ -52,15 +51,15 @@ class DevDslRuntimeMetricsTest {
   private Appender<ILoggingEvent> originalDryRunAppender;
   private final CbsNovaPreviewProperties previewProperties = new CbsNovaPreviewProperties(null,
           null, null);
-  private final PreviewDslPipe previewPipe = new PreviewDslPipe(recorder, contextFactory,
+  private final PreviewDslPipe previewPipe = new PreviewDslPipe(recorder,
           dryRunLoggingContext, bufferRegistry, defaultMaxEventsPerRun(),
           null, previewProperties, new CbsNovaFakesProperties(false, null),
           new RunScopedFakeConfig(Caffeine.newBuilder().build()), new SimpleMeterRegistry(), null);
-  private final RunDslPipe runPipe = new RunDslPipe(contextFactory, recorder,
+  private final RunDslPipe runPipe = new RunDslPipe(recorder,
           new CbsNovaFakesProperties(false, null),
           new RunScopedFakeConfig(Caffeine.newBuilder().build()),
           new DslExecutionEventBus());
-  private final ExplainDslPipe explainPipe = new ExplainDslPipe(recorder, contextFactory,
+  private final ExplainDslPipe explainPipe = new ExplainDslPipe(recorder,
           dryRunLoggingContext, bufferRegistry, defaultMaxEventsPerRun(),
           previewProperties, new CbsNovaFakesProperties(false, null),
           new RunScopedFakeConfig(Caffeine.newBuilder().build()),
@@ -101,7 +100,7 @@ class DevDslRuntimeMetricsTest {
 
   @Test
   void previewReportContainsMetrics() {
-    var ctx = contextFactory.of("input", ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.builder("input").mode(ExecutionMode.PREVIEW).build();
     var result = runtime.preview("Ping", ctx);
     assertThat(result.isSuccess()).isTrue();
     PreviewReport report = result.value();
@@ -121,7 +120,7 @@ class DevDslRuntimeMetricsTest {
             .registerProcess(Dsl.process("Outer")
                     .execute(ctx -> ctx.runTransaction("InnerTx", ctx.body())).build());
 
-    var ctx = contextFactory.of("in", ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.builder("in").mode(ExecutionMode.PREVIEW).build();
     var result = runtime.preview("Outer", ctx);
     assertThat(result.isSuccess()).isTrue();
     var metrics = result.value().metrics();
@@ -132,7 +131,7 @@ class DevDslRuntimeMetricsTest {
 
   @Test
   void runModeMetricsAreNull() {
-    var ctx = contextFactory.of("input", ExecutionMode.RUN);
+    var ctx = SimpleContext.builder("input").mode(ExecutionMode.RUN).build();
     var result = runtime.run("Ping", ctx);
     assertThat(result.isSuccess()).isTrue();
   }

@@ -1,5 +1,6 @@
 package cbs.nova.starter.core.stage;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.CallKind;
@@ -11,7 +12,6 @@ import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.dsl.PreviewMetricsSnapshot;
 import cbs.nova.dsl.model.PreviewReport;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.core.pipe.DslPipeContext;
 import cbs.nova.starter.core.pipe.DslPipeStage;
 import cbs.nova.starter.core.recorder.ExternalCall;
@@ -20,8 +20,6 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 class PreviewReportStageTest {
-
-  private final ContextFactory contextFactory = new ContextFactory();
 
   @Test
   void successPathPopulatesOutputAndHasEmptyErrors() {
@@ -158,7 +156,8 @@ class PreviewReportStageTest {
   }
 
   private DslPipeContext pipeContext() {
-    Context<?> ctx = contextFactory.of("body", ExecutionMode.PREVIEW, "run-1");
+    Context<?> ctx = SimpleContext.builder("body").mode(ExecutionMode.PREVIEW).runId("run-1")
+            .build();
     return DslPipeContext.of("Ping", ctx, ExecutionMode.PREVIEW, "run-1");
   }
 }

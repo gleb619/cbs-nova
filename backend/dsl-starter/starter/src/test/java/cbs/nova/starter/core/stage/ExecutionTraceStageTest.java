@@ -1,5 +1,6 @@
 package cbs.nova.starter.core.stage;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -8,7 +9,6 @@ import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.listener.ExecutionTraceCollector;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.Constants;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.model.ExplainGraphAccumulator;
 import cbs.nova.starter.core.pipe.DslPipeContext;
 import cbs.nova.starter.core.pipe.DslPipeStage;
@@ -18,11 +18,10 @@ import org.junit.jupiter.api.Test;
 
 class ExecutionTraceStageTest {
 
-  private final ContextFactory contextFactory = new ContextFactory();
-
   @Test
   void proceedReceivesWrappedContextWithFreshExecutionTraceCollector() {
-    Context<?> originalDsl = contextFactory.of("body", ExecutionMode.PREVIEW, "run-1");
+    Context<?> originalDsl = SimpleContext.builder("body").mode(ExecutionMode.PREVIEW)
+            .runId("run-1").build();
     DslPipeContext pipeContext = DslPipeContext.of(
             "Ping", originalDsl, ExecutionMode.PREVIEW, "run-1");
 
@@ -45,7 +44,8 @@ class ExecutionTraceStageTest {
 
   @Test
   void executionTraceAttributeIsSetFromCollectorSnapshot() {
-    Context<?> originalDsl = contextFactory.of("body", ExecutionMode.PREVIEW, "run-1");
+    Context<?> originalDsl = SimpleContext.builder("body").mode(ExecutionMode.PREVIEW)
+            .runId("run-1").build();
     DslPipeContext pipeContext = DslPipeContext.of(
             "Ping", originalDsl, ExecutionMode.PREVIEW, "run-1");
 
@@ -66,7 +66,8 @@ class ExecutionTraceStageTest {
 
   @Test
   void executionTraceAttributeIsSetEvenWhenProceedThrows() {
-    Context<?> originalDsl = contextFactory.of("body", ExecutionMode.PREVIEW, "run-1");
+    Context<?> originalDsl = SimpleContext.builder("body").mode(ExecutionMode.PREVIEW)
+            .runId("run-1").build();
     DslPipeContext pipeContext = DslPipeContext.of(
             "Ping", originalDsl, ExecutionMode.PREVIEW, "run-1");
 
@@ -87,7 +88,8 @@ class ExecutionTraceStageTest {
   @Test
   void executionTraceGoesToAccumulatorWhenPresent() {
     ExplainGraphAccumulator accumulator = new ExplainGraphAccumulator();
-    Context<?> originalDsl = contextFactory.of("body", ExecutionMode.EXPLAIN, "run-1")
+    Context<?> originalDsl = SimpleContext.builder("body").mode(ExecutionMode.EXPLAIN)
+            .runId("run-1").build()
             .withMetadata(Constants.EXPLAIN_GRAPH_ACCUMULATOR_KEY, accumulator);
     DslPipeContext pipeContext = DslPipeContext.of(
             "Ping", originalDsl, ExecutionMode.EXPLAIN, "run-1");
@@ -105,7 +107,8 @@ class ExecutionTraceStageTest {
 
   @Test
   void collectorStartEnablesAddAndStopClearsEntries() {
-    Context<?> originalDsl = contextFactory.of("body", ExecutionMode.PREVIEW, "run-1");
+    Context<?> originalDsl = SimpleContext.builder("body").mode(ExecutionMode.PREVIEW)
+            .runId("run-1").build();
     DslPipeContext pipeContext = DslPipeContext.of(
             "Ping", originalDsl, ExecutionMode.PREVIEW, "run-1");
 

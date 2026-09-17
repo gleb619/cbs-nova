@@ -13,7 +13,6 @@ import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.model.SimpleContext;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.history.DslRun;
 import cbs.nova.dsl.history.DslRunStatus;
 import cbs.nova.dsl.repository.InMemoryDslRunRepository;
@@ -70,7 +69,7 @@ class DomainEventLifecycleIntegrationTest {
     publisher = mock(DomainEventPublisher.class);
 
     service = new TemporalDslProcessService(
-            mockContextFactory(),
+
             runRepository,
             new ObjectMapper(),
             sameThreadExecutor(),
@@ -195,19 +194,6 @@ class DomainEventLifecycleIntegrationTest {
     assertThat(cancelled.aggregateType()).isEqualTo("run");
     assertThat(cancelled.aggregateId()).isEqualTo("run-cancel-test");
     assertThat(cancelled.schemaVersion()).isEqualTo(1);
-  }
-
-  private static ContextFactory mockContextFactory() {
-    ContextFactory contextFactory = mock(ContextFactory.class);
-    Mockito.when(contextFactory.generateRunId())
-            .thenAnswer(invocation -> "run-" + UUID.randomUUID().toString()
-                    .substring(0, 8));
-    SimpleContext<Object> ctx = new SimpleContext<>(
-            Map.of(), Map.of(), ExecutionMode.RUN,
-            "run-x", TransactionRouting.LOCAL, null, null, null, null, null);
-    Mockito.when(contextFactory.of(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any()))
-            .thenReturn(ctx);
-    return contextFactory;
   }
 
   private static ObjectProvider<DomainEventPublisher> ofPublisher(DomainEventPublisher publisher) {
