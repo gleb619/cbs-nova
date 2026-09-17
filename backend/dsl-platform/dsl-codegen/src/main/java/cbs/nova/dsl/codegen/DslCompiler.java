@@ -1,26 +1,9 @@
 package cbs.nova.dsl.codegen;
 
-import cbs.nova.dsl.codegen.generator.ExplainResourceGenerator;
-import cbs.nova.dsl.codegen.generator.GeneratedClassProviderGenerator;
-import cbs.nova.dsl.codegen.generator.ModelRegistryGenerator;
-import cbs.nova.dsl.codegen.generator.ProcessCodeGenerator;
-import cbs.nova.dsl.codegen.generator.TransactionCodeGenerator;
-import cbs.nova.dsl.codegen.model.CodegenNaming;
 import cbs.nova.dsl.codegen.model.DslCompilerOptions;
-import cbs.nova.dsl.codegen.preprocessor.DslPreprocessor;
 import cbs.nova.dsl.codegen.task.CompileContext;
 import cbs.nova.dsl.codegen.task.CompileTask;
-import cbs.nova.dsl.codegen.task.DescribeDslObjectsTask;
-import cbs.nova.dsl.codegen.task.GenerateCodeTask;
-import cbs.nova.dsl.codegen.task.LoadSourcesTask;
-import cbs.nova.dsl.codegen.task.PreprocessSourcesTask;
 import cbs.nova.dsl.codegen.task.StepTiming;
-import cbs.nova.dsl.codegen.task.ValidateDescriptorsTask;
-import cbs.nova.dsl.codegen.task.WriteOutputTask;
-import cbs.nova.dsl.codegen.util.CodeWriter;
-import cbs.nova.dsl.codegen.util.SourcePackageResolver;
-import cbs.nova.dsl.config.DescriptorFactory;
-import cbs.nova.dsl.registry.HelperRegistry;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -39,19 +22,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public final class DslCompiler {
 
-  private final ModelRegistryGenerator modelRegistryGenerator;
-  private final DslSourceCompiler dslSourceCompiler;
-  private final ProcessCodeGenerator processCodeGenerator;
-  private final TransactionCodeGenerator transactionCodeGenerator;
-  private final GeneratedClassProviderGenerator generatedClassProviderGenerator;
-  private final CodeWriter codeWriter;
-  private final DescriptorFactory descriptorFactory;
-  private final SemanticValidator semanticValidator;
-  private final HelperRegistry helperRegistry;
-  private final CodegenNaming codegenNaming;
-  private final DslPreprocessor dslPreprocessor;
-  private final SourcePackageResolver sourcePackageResolver;
-  private final ExplainResourceGenerator explainResourceGenerator;
+  private final CompileConfig config;
+  private final String defaultBasePackage;
 
   public static void main(String[] args) throws IOException {
     if (args.length < 1) {
@@ -74,16 +46,7 @@ public final class DslCompiler {
 
   private void compileInternal(@NonNull DslCompilerOptions options) throws IOException {
     var context = new AtomicReference<>(CompileContext.create(options));
-    // TODO: move to a config class instead
-    List<CompileTask> tasks = List.of(
-            new LoadSourcesTask(dslSourceCompiler),
-            new PreprocessSourcesTask(dslPreprocessor, codegenNaming, sourcePackageResolver),
-            new DescribeDslObjectsTask(descriptorFactory),
-            new ValidateDescriptorsTask(semanticValidator, helperRegistry),
-            new GenerateCodeTask(processCodeGenerator, transactionCodeGenerator,
-                    generatedClassProviderGenerator, modelRegistryGenerator,
-                    explainResourceGenerator),
-            new WriteOutputTask(codeWriter));
+    List<CompileTask> tasks = config.compileTasks(defaultBasePackage);
 
     var timings = new ArrayList<StepTiming>();
     for (var task : tasks) {

@@ -20,6 +20,14 @@ import cbs.nova.dsl.config.DescriptorFactory;
 import cbs.nova.dsl.config.SingletonSupport;
 import cbs.nova.dsl.registry.DefaultHelperRegistry;
 import cbs.nova.dsl.registry.HelperRegistry;
+import cbs.nova.dsl.codegen.task.CompileTask;
+import cbs.nova.dsl.codegen.task.DescribeDslObjectsTask;
+import cbs.nova.dsl.codegen.task.GenerateCodeTask;
+import cbs.nova.dsl.codegen.task.LoadSourcesTask;
+import cbs.nova.dsl.codegen.task.PreprocessSourcesTask;
+import cbs.nova.dsl.codegen.task.ValidateDescriptorsTask;
+import cbs.nova.dsl.codegen.task.WriteOutputTask;
+import java.util.List;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
@@ -139,11 +147,11 @@ public final class CompileConfig implements SingletonSupport {
     return singleton(ModelPreprocessor::new);
   }
 
-  public @NonNull DslCompiler dslCompiler() {
-    return dslCompiler(DEFAULT_GENERATED_BASE_PACKAGE);
+  public @NonNull List<CompileTask> compileTasks() {
+    return compileTasks(DEFAULT_GENERATED_BASE_PACKAGE);
   }
 
-  public @NonNull DslCompiler dslCompiler(@NonNull String defaultBasePackage) {
+  public @NonNull List<CompileTask> compileTasks(@NonNull String defaultBasePackage) {
     return singleton(() -> {
       var codegenNaming = codegenNaming(defaultBasePackage);
       var packageNameResolver = new DslPackageNameResolver(codegenNaming);
@@ -157,22 +165,29 @@ public final class CompileConfig implements SingletonSupport {
               sourcePackageResolver);
       var dslSourceCompiler = new DslSourceCompiler(sourceCompiler);
 
-      return new DslCompiler(
-              new ModelRegistryGenerator(codeWriter(), codegenNaming, modelTypeExtractor(),
-                      sourcePackageResolver),
-              dslSourceCompiler,
-              new ProcessCodeGenerator(packageNameResolver),
-              new TransactionCodeGenerator(packageNameResolver),
-              new GeneratedClassProviderGenerator(executeAstJsonExtractor(), packageNameResolver),
-              codeWriter(),
-              descriptorFactory(),
-              semanticValidator(),
-              helperRegistry(),
-              codegenNaming,
-              dslPreprocessor(),
-              sourcePackageResolver,
-              explainResourceGenerator());
+      return List.of(
+              new LoadSourcesTask(dslSourceCompiler),
+              new PreprocessSourcesTask(dslPreprocessor(), codegenNaming, sourcePackageResolver),
+              new DescribeDslObjectsTask(descriptorFactory()),
+              new ValidateDescriptorsTask(semanticValidator(), helperRegistry()),
+              new GenerateCodeTask(
+                      new ProcessCodeGenerator(packageNameResolver),
+                      new TransactionCodeGenerator(packageNameResolver),
+                      new GeneratedClassProviderGenerator(executeAstJsonExtractor(),
+                              packageNameResolver),
+                      new ModelRegistryGenerator(codeWriter(), codegenNaming, modelTypeExtractor(),
+                              sourcePackageResolver),
+                      explainResourceGenerator()),
+              new WriteOutputTask(codeWriter()));
     });
+  }
+
+  public @NonNull DslCompiler dslCompiler() {
+    return dslCompiler(DEFAULT_GENERATED_BASE_PACKAGE);
+  }
+
+  public @NonNull DslCompiler dslCompiler(@NonNull String defaultBasePackage) {
+    return singleton(() -> new DslCompiler(this, defaultBasePackage));
   }
 
   /* ============= */
