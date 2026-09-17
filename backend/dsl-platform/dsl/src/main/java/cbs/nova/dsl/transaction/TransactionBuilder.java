@@ -9,14 +9,12 @@ import cbs.nova.dsl.ParameterDescriptor;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.explain.ExplainResourceExplainer;
 import cbs.nova.dsl.model.ExplainReport;
-import cbs.nova.dsl.model.ExplainReports;
 import cbs.nova.dsl.model.MapInput;
 import cbs.nova.dsl.model.MapOutput;
 import cbs.nova.dsl.model.ObjectBuilder;
 import cbs.nova.dsl.model.RetryPolicy;
 import cbs.nova.dsl.registry.DefaultParameterRegistry;
 import cbs.nova.dsl.registry.ParameterRegistry;
-import cbs.nova.dsl.explain.ExplainBudget;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
@@ -178,14 +176,10 @@ public final class TransactionBuilder<I, O> implements ObjectBuilder<Transaction
                     heartbeatTimeout, null);
   }
 
-  // TODO: it's forbidden to `truncateTo`, without traverse a whole graph
-  @Deprecated(forRemoval = true)
   private @NonNull Function<TransactionContext<?>, Result<ExplainReport>> defaultExplain() {
     return ctx -> Result.success(
-            ExplainReports.truncateTo(
-                    ExplainReport.of(name,
-                            GlobalManager.globalManager().resolveExplainContent(name)),
-                    ExplainBudget.of(ctx)));
+            ExplainReport.of(name,
+                    GlobalManager.globalManager().resolveExplainContent(name)));
   }
 
   @SuppressWarnings("unchecked")

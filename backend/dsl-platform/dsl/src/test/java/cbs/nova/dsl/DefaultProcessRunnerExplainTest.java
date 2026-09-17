@@ -84,25 +84,6 @@ class DefaultProcessRunnerExplainTest {
   }
 
   @Test
-  void explainModeFallbackReportRespectsMetadataBudget() {
-    var process = Dsl.process("BudgetP")
-            .input(String.class)
-            .output(String.class)
-            .execute(ctx -> Result.success("ok"))
-            .build();
-    var ctx = contextFactory.of("input",
-            Map.of(Constants.EXPLAIN_BUDGET_CHARS_KEY, 20),
-            ExecutionMode.EXPLAIN, "run-explain-budget");
-
-    var result = runner.run(process, ctx);
-
-    assertThat(result.isSuccess()).isTrue();
-    var report = (ExplainReport) result.value();
-    assertThat(report.mermaid()).hasSizeLessThanOrEqualTo(20);
-    assertThat(report.description()).isEmpty();
-  }
-
-  @Test
   void previewModeBypassesTemporalLauncher() {
     DslConfig.dslConfig().temporalProcessLauncher().replace(new TemporalProcessLauncher() {
       @Override

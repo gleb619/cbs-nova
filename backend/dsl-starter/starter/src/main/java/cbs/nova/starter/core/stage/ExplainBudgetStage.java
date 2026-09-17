@@ -2,8 +2,6 @@ package cbs.nova.starter.core.stage;
 
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.model.ExplainGraphReport;
-import cbs.nova.dsl.model.ExplainReport;
-import cbs.nova.dsl.model.ExplainReports;
 import cbs.nova.starter.core.pipe.DslPipeContext;
 import cbs.nova.starter.core.pipe.DslPipeStage;
 import com.knuddels.jtokkit.Encodings;
@@ -31,7 +29,7 @@ public final class ExplainBudgetStage implements DslPipeStage {
   private final int mermaidMaxTokens;
 
   @Override
-  @SuppressWarnings({"unchecked", "deprecation"})
+  @SuppressWarnings("unchecked")
   public @NonNull Result<?> execute(@NonNull DslPipeContext context, @NonNull Next next) {
     Result<?> result = next.proceed(context);
     if (!result.isSuccess()) {
@@ -42,16 +40,16 @@ public final class ExplainBudgetStage implements DslPipeStage {
       return result;
     }
     ExplainGraphReport clamped = clampReport(report, new HashSet<>());
-    var bounded = ExplainReports.truncateTo(
-            new ExplainReport(
-                    clamped.name(),
-                    clamped.description(),
-                    clamped.mermaidDiagram() != null ? clamped.mermaidDiagram() : "",
-                    List.of()),
-            budgetChars);
+    String mermaid = clamped.mermaidDiagram() != null ? clamped.mermaidDiagram() : "";
+    int budget = Math.max(budgetChars, 0);
+    int descriptionLimit = Math.min(clamped.description().length(), budget);
+    String truncatedDescription = clamped.description().substring(0, descriptionLimit);
+    int remainingBudget = Math.max(budget - truncatedDescription.length(), 0);
+    int mermaidLimit = Math.min(mermaid.length(), remainingBudget);
+    String truncatedMermaid = mermaid.substring(0, mermaidLimit);
     var truncated = new ExplainGraphReport(
             clamped.name(),
-            bounded.description(),
+            truncatedDescription,
             clamped.executionTrace(),
             clamped.externalCalls(),
             clamped.callCounts(),
@@ -63,7 +61,7 @@ public final class ExplainBudgetStage implements DslPipeStage {
             clamped.metrics(),
             clamped.errors(),
             clamped.children(),
-            bounded.mermaid());
+            truncatedMermaid);
     return Result.success(truncated);
   }
 

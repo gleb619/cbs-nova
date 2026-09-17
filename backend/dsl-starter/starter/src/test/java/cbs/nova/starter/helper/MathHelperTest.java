@@ -260,15 +260,15 @@ class MathHelperTest {
   }
 
   @Test
-  void explainTruncatesToBudget() {
+  void explainDoesNotTruncateToBudget() {
     var ctx = contextFactory.of(
             new MathIn("percentile", List.<Number>of(1, 2, 3), null, null, null, null, 99.0),
             ExecutionMode.EXPLAIN).withMetadata(EXPLAIN_BUDGET_CHARS_KEY, 50);
 
     var report = helper.explain(ctx);
 
-    assertThat(report.description().length()).isLessThanOrEqualTo(50);
-    assertThat(report.description().length() + report.mermaid().length())
-            .isLessThanOrEqualTo(50);
+    assertThat(report.description()).contains("percentile");
+    assertThat(report.mermaid()).isNotEmpty();
+    assertThat(report.description().length() + report.mermaid().length()).isGreaterThan(50);
   }
 }

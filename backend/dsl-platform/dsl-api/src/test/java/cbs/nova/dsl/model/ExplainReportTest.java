@@ -42,48 +42,6 @@ class ExplainReportTest {
   }
 
   @Test
-  void truncateToLeavesShortReportUnchanged() {
-    var report = ExplainReport.builder().name("n").description("abc").mermaid("def").build();
-    assertThat(ExplainReports.truncateTo(report, 10)).isSameAs(report);
-  }
-
-  @Test
-  void truncateToTruncatesDescriptionFirstThenDiagram() {
-    var report = ExplainReport.builder().name("n").description("description")
-            .mermaid("mermaidDiagram").build();
-    var truncated = ExplainReports.truncateTo(report, 15);
-    assertThat(truncated.description()).isEqualTo("description");
-    assertThat(truncated.mermaid()).isEqualTo("merm");
-  }
-
-  @Test
-  void truncateToEmptyDiagramWhenBudgetExhaustedByDescription() {
-    var report = ExplainReport.builder().name("n").description("description")
-            .mermaid("mermaidDiagram").build();
-    var truncated = ExplainReports.truncateTo(report, 11);
-    assertThat(truncated.description()).isEqualTo("description");
-    assertThat(truncated.mermaid()).isEmpty();
-  }
-
-  @Test
-  void truncateToHandlesNegativeBudget() {
-    var report = ExplainReport.builder().name("n").description("description")
-            .mermaid("mermaidDiagram").build();
-    var truncated = ExplainReports.truncateTo(report, -1);
-    assertThat(truncated.description()).isEmpty();
-    assertThat(truncated.mermaid()).isEmpty();
-  }
-
-  @Test
-  void truncateToHandlesZeroBudget() {
-    var report = ExplainReport.builder().name("n").description("description")
-            .mermaid("mermaidDiagram").build();
-    var truncated = ExplainReports.truncateTo(report, 0);
-    assertThat(truncated.description()).isEmpty();
-    assertThat(truncated.mermaid()).isEmpty();
-  }
-
-  @Test
   void noArgChildrenDefaultsToEmpty() {
     var report = ExplainReport.builder().name("n").description("desc").mermaid("").build();
     assertThat(report.children()).isEmpty();

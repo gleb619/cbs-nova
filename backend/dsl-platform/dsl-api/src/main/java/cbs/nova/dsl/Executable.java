@@ -2,9 +2,7 @@ package cbs.nova.dsl;
 
 import static cbs.nova.dsl.config.Constants.EMPTY_MARKDOWN;
 
-import cbs.nova.dsl.explain.ExplainBudget;
 import cbs.nova.dsl.model.ExplainReport;
-import cbs.nova.dsl.model.ExplainReports;
 import org.jspecify.annotations.NonNull;
 
 @FunctionalInterface
@@ -45,25 +43,17 @@ public interface Executable<IN, OUT>
 
   @Override
   default @NonNull ExplainReport explain(@NonNull Context<IN> ctx) {
-    return defaultReport(this, ctx);
-  }
-
-  // TODO: it's forbidden to `truncateTo`, without traverse a whole graph
-  @Deprecated(forRemoval = true)
-  private static @NonNull ExplainReport defaultReport(
-          @NonNull Executable<?, ?> executable, @NonNull Context<?> ctx) {
-    var descriptor = executable.describe();
-    var markdown = executable.description();
-    var fallbackName = executable.getClass().getSimpleName();
+    var descriptor = describe();
+    var markdown = description();
+    var fallbackName = getClass().getSimpleName();
     var name = descriptor.name() != null
             ? descriptor.name()
             : (fallbackName.isEmpty() ? "executable" : fallbackName);
-    var report = ExplainReport.builder()
+    return ExplainReport.builder()
             .name(name)
             .description(
                     EMPTY_MARKDOWN.equals(markdown) ? derivedDescription(descriptor) : markdown)
             .build();
-    return ExplainReports.truncateTo(report, ExplainBudget.of(ctx));
   }
 
   private static @NonNull String derivedDescription(@NonNull ExecutableDescriptor descriptor) {

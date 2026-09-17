@@ -3,10 +3,8 @@ package cbs.nova.starter.helper;
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.model.ExplainReport;
-import cbs.nova.dsl.model.ExplainReports;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.annotation.Helper;
-import cbs.nova.dsl.explain.ExplainBudget;
 import cbs.nova.starter.helper.model.MathIn;
 import cbs.nova.starter.helper.model.MathOut;
 import java.math.BigDecimal;
@@ -56,8 +54,7 @@ public class MathHelper implements Executable<MathIn, MathOut> {
     String mode = (input.mode() == null) ? "unknown" : input.mode().toLowerCase(Locale.ROOT);
     String description = MathModeExplanation.describe(mode, input);
     String mermaid = MathModeExplanation.diagram(mode);
-    return ExplainReports.truncateTo(
-            new ExplainReport("math", description, mermaid, List.of()), ExplainBudget.of(ctx));
+    return new ExplainReport("math", description, mermaid, List.of());
   }
 
   private static @NonNull Result<MathOut> sum(List<Number> numbers) {

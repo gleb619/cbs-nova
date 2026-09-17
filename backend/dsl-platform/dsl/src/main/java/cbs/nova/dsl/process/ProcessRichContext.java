@@ -1,5 +1,6 @@
 package cbs.nova.dsl.process;
 
+import cbs.nova.dsl.BeanResolver;
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.DslSaga;
 import cbs.nova.dsl.listener.ExecutionListener;
@@ -218,5 +219,15 @@ public final class ProcessRichContext<T> implements ProcessContext<T> {
   @Override
   public void log(@NonNull String message) {
     log.info("[DSL:{}][runId:{}] {}", delegate.mode(), delegate.runId(), message);
+  }
+
+  @Override
+  public @NonNull BeanResolver beanResolver() {
+    return delegate.beanResolver();
+  }
+
+  @Override
+  public @NonNull Context<T> withBeanResolver(@Nullable BeanResolver beanResolver) {
+    return new ProcessRichContext(delegate.withBeanResolver(beanResolver), contextFactory);
   }
 }

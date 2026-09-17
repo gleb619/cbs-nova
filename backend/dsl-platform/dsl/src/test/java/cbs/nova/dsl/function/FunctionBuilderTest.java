@@ -163,7 +163,7 @@ class FunctionBuilderTest {
   }
 
   @Test
-  void explainViaTruncatesMarkdownToMetadataBudget() {
+  void explainViaLoadsFullMarkdownRegardlessOfMetadataBudget() {
     var fn = Dsl.function("DocFnBudget")
             .execute(ctx -> Result.success("exec"))
             .explainVia("builder-sample.md")
@@ -177,8 +177,9 @@ class FunctionBuilderTest {
 
     var result = fn.effectiveExplain().apply(ctx);
 
-    assertThat(result.value().mermaid()).hasSizeLessThanOrEqualTo(10);
-
+    assertThat(result.value().mermaid())
+            .contains("# Builder Sample")
+            .hasSizeGreaterThan(10);
   }
 
   @Test

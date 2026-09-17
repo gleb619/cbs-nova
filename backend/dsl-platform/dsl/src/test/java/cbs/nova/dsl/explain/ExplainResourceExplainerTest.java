@@ -57,13 +57,15 @@ class ExplainResourceExplainerTest {
   }
 
   @Test
-  void truncatesMarkdownToMetadataBudget() {
+  void loadsFullMarkdownRegardlessOfMetadataBudget() {
     var explain = ExplainResourceExplainer.viaResource("DocSample", "builder-sample.md");
     var bounded = explainContext(Map.of(Constants.EXPLAIN_BUDGET_CHARS_KEY, 10));
 
     var result = explain.apply(bounded);
 
-    assertThat(result.value().mermaid()).hasSizeLessThanOrEqualTo(10);
+    assertThat(result.value().mermaid())
+            .contains("# Builder Sample")
+            .hasSizeGreaterThan(10);
   }
 
   @Test
