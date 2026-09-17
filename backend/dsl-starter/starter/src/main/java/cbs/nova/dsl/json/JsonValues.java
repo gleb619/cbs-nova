@@ -7,7 +7,6 @@ import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
-//TODO: move `JsonValues` to `backend/dsl-starter/starter/src/main/java/cbs/nova/dsl/json`
 @Deprecated
 public final class JsonValues {
 

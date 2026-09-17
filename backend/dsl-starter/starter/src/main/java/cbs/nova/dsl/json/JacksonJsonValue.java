@@ -14,7 +14,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-//TODO: move `JacksonJsonValue` to `backend/dsl-starter/starter/src/main/java/cbs/nova/dsl/json`
 @Deprecated
 public final class JacksonJsonValue implements JsonValue {
 
