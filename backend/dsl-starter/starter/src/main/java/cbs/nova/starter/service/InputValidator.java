@@ -1,11 +1,9 @@
 package cbs.nova.starter.service;
 
 import cbs.nova.dsl.DslDescriptor;
-import cbs.nova.dsl.DslObject;
-import cbs.nova.dsl.ExecutableDescriptor;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.jsonschema.JsonSchemaGenerator;
-import cbs.nova.dsl.model.ObjectDescriptor;
+import cbs.nova.dsl.model.Descriptors;
 import cbs.nova.dsl.ParameterDescriptor;
 import cbs.nova.starter.config.properties.InputValidationProperties;
 import cbs.nova.starter.model.ValidationError;
@@ -20,7 +18,7 @@ import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.json.JsonMapper;
-import cbs.nova.starter.json.DslDescriptorMixIn;
+import cbs.nova.starter.json.DslDescriptorMapper;
 
 /**
  * Resolves the target construct, generates/caches its input JSON schema, and validates the request
@@ -39,7 +37,7 @@ public class InputValidator {
   private final InputValidationProperties properties;
   private final Cache<String, Map<String, Object>> schemaCache;
 
-  private final JsonMapper descriptorMapper = DslDescriptorMixIn.mapper();
+  private final JsonMapper descriptorMapper = DslDescriptorMapper.mapper();
 
   public List<ValidationError> validate(String constructName, Object body) {
     if (!properties.enabled()) {
@@ -60,47 +58,9 @@ public class InputValidator {
     GlobalManager gm = GlobalManager.globalManager();
     return gm.describeProcess(name)
             .or(() -> gm.describeTransaction(name))
-            .or(() -> gm.describeHelper(name).map(this::toDescriptor));
-  }
-
-  // TODO: no, we need another way, via misc-codegen new method
-  @Deprecated(forRemoval = true)
-  private DslDescriptor toDescriptor(ExecutableDescriptor helper) {
-    var objectDescriptor = new ObjectDescriptor() {
-      @Override
-      public String name() {
-        return helper.name() != null ? helper.name() : "";
-      }
-
-      @Override
-      public DslObject.DslType type() {
-        return DslObject.DslType.FUNCTION;
-      }
-
-      @Override
-      public String description() {
-        return helper.description();
-      }
-
-      @Override
-      public Class<?> inputType() {
-        return helper.inputType();
-      }
-
-      @Override
-      public Class<?> outputType() {
-        return helper.outputType();
-      }
-    };
-    return DslDescriptor.builder()
-            .objectDescriptor(objectDescriptor)
-            .hasSideEffects(helper.hasSideEffects())
-            .parameters(helper.parameters())
-            .taskQueue(null)
-            .version(null)
-            .startToCloseTimeout(null)
-            .heartbeatTimeout(null)
-            .build();
+            .or(() -> gm.describeHelper(name)
+                    .map(helper -> Descriptors.from(
+                            helper.name() != null ? helper.name() : "", helper)));
   }
 
   private @NonNull String cacheKey(String constructName, DslDescriptor descriptor) {

@@ -2,7 +2,7 @@ package cbs.nova.starter.service;
 
 import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.GlobalManager;
-import cbs.nova.starter.json.DslDescriptorMixIn;
+import cbs.nova.starter.json.DslDescriptorMapper;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
@@ -25,7 +25,7 @@ final class RunDefinitionHash {
 
   private static final Logger log = LoggerFactory.getLogger(RunDefinitionHash.class);
 
-  private static final JsonMapper JSON_MAPPER = DslDescriptorMixIn.mapper();
+  private static final JsonMapper JSON_MAPPER = DslDescriptorMapper.mapper();
 
   private RunDefinitionHash() {
   }

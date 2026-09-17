@@ -1,5 +1,4 @@
 package cbs.nova.starter.service;
-import cbs.nova.dsl.model.ObjectDescriptor;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -15,6 +14,8 @@ import cbs.nova.dsl.DslErrorCode;
 import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.DslRuntime;
 import cbs.nova.dsl.ExecutionMode;
+import cbs.nova.dsl.ExecutableDescriptor;
+import cbs.nova.dsl.model.Descriptors;
 import cbs.nova.dsl.model.ExplainReport;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.PreviewErrorCode;
@@ -307,8 +308,6 @@ class DslRuntimeServiceTest {
   }
 
   @Test
-  // TODO: change inline descriptor creation
-  @Deprecated(forRemoval = true)
   void previewCoercesMapBodyIntoTypedInputRecord() {
     // Register a synthetic process directly so GlobalManager lookup resolves its inputType
     // without dragging in helper-instance resolution.
@@ -326,40 +325,9 @@ class DslRuntimeServiceTest {
               .previewLogic(ctx -> Result.success("ok"))
               .explainLogic(
                       ctx -> Result.success(new ExplainReport("Synthetic", "test", "", List.of())))
-              .descriptor(DslDescriptor.builder()
-                      .objectDescriptor(new ObjectDescriptor() {
-                        @Override
-                        public String name() {
-                          return "Synthetic";
-                        }
-
-                        @Override
-                        public DslObject.DslType type() {
-                          return DslObject.DslType.PROCESS;
-                        }
-
-                        @Override
-                        public String description() {
-                          return null;
-                        }
-
-                        @Override
-                        public Class<?> inputType() {
-                          return null;
-                        }
-
-                        @Override
-                        public Class<?> outputType() {
-                          return null;
-                        }
-                      })
-                      .hasSideEffects(false)
-                      .parameters(List.of())
-                      .taskQueue("default")
-                      .version("v1")
-                      .startToCloseTimeout(Duration.ZERO)
-                      .heartbeatTimeout(Duration.ZERO)
-                      .build())
+              .descriptor(Descriptors.from("Synthetic",
+                      new ExecutableDescriptor(
+                              "Synthetic", null, null, null, false, null, List.of())))
               .build();
       GlobalManager.globalManager().registerProcess(process);
 
@@ -387,8 +355,6 @@ class DslRuntimeServiceTest {
   }
 
   @Test
-  // TODO: change inline descriptor creation
-  @Deprecated(forRemoval = true)
   void previewLeavesNonMapBodyUntouched() {
     GlobalManager.globalManager().resetForTests();
     try {
@@ -404,40 +370,9 @@ class DslRuntimeServiceTest {
               .previewLogic(ctx -> Result.success("ok"))
               .explainLogic(
                       ctx -> Result.success(new ExplainReport("Synthetic", "test", "", List.of())))
-              .descriptor(DslDescriptor.builder()
-                      .objectDescriptor(new ObjectDescriptor() {
-                        @Override
-                        public String name() {
-                          return "Synthetic";
-                        }
-
-                        @Override
-                        public DslObject.DslType type() {
-                          return DslObject.DslType.PROCESS;
-                        }
-
-                        @Override
-                        public String description() {
-                          return null;
-                        }
-
-                        @Override
-                        public Class<?> inputType() {
-                          return null;
-                        }
-
-                        @Override
-                        public Class<?> outputType() {
-                          return null;
-                        }
-                      })
-                      .hasSideEffects(false)
-                      .parameters(List.of())
-                      .taskQueue("default")
-                      .version("v1")
-                      .startToCloseTimeout(Duration.ZERO)
-                      .heartbeatTimeout(Duration.ZERO)
-                      .build())
+              .descriptor(Descriptors.from("Synthetic",
+                      new ExecutableDescriptor(
+                              "Synthetic", null, null, null, false, null, List.of())))
               .build();
       GlobalManager.globalManager().registerProcess(process);
 
