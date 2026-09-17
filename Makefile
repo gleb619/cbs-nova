@@ -219,7 +219,7 @@ kanban-clean: kanban-install ## Remove all Done tasks from the kanban table
 kanban-test: kanban-install ## Run sandbox tests on kanban.test.md
 	@set -e; \
 	TMP=$$(mktemp /tmp/kanban-test.XXXXXX.md); \
-	cp kanban.test.md "$$TMP"; \
+	cp docs/kanban.test.md "$$TMP"; \
 	echo "==> list"; node $(KANBAN_SCRIPT) list "$$TMP"; \
 	echo "==> next (current)"; node $(KANBAN_SCRIPT) next "$$TMP"; \
 	echo "==> status T2 Done"; node $(KANBAN_SCRIPT) status --id T2 --status Done "$$TMP"; \
