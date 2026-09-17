@@ -7,7 +7,7 @@ import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.JsonValue;
 import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.helper.HelperInterceptor;
-import cbs.nova.dsl.json.JsonValues;
+import cbs.nova.dsl.json.AvajeJsonValue;
 import cbs.nova.dsl.listener.ExecutionListener;
 import cbs.nova.dsl.listener.ExecutionTraceCollector;
 import cbs.nova.dsl.transaction.TransactionRouting;
@@ -96,12 +96,32 @@ public final class SimpleContext<T> implements Context<T> {
 
   @Override
   public @NonNull JsonValue json() {
-    return JsonValues.of(body, DslConfig.dslConfig().jsonMapper());
+    return toJsonValue(body);
   }
 
   @Override
   public @NonNull JsonValue json(@Nullable Object value) {
-    return JsonValues.of(value, DslConfig.dslConfig().jsonMapper());
+    return toJsonValue(value);
+  }
+
+  private static @NonNull JsonValue toJsonValue(@Nullable Object value) {
+    if (value == null) {
+      return AvajeJsonValue.missing();
+    }
+    if (value instanceof JsonValue jsonValue) {
+      return jsonValue;
+    }
+    if (value instanceof String string) {
+      if (string.isBlank()) {
+        return AvajeJsonValue.missing();
+      }
+      try {
+        return AvajeJsonValue.parse(string);
+      } catch (Exception e) {
+        throw new IllegalArgumentException("Invalid JSON: " + e.getMessage(), e);
+      }
+    }
+    return AvajeJsonValue.of(value);
   }
 
   @Override

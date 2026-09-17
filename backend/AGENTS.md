@@ -123,9 +123,10 @@ Prefer `codegraph_*` over grep.
   then generated factory, else `IllegalStateException`). No reflection fallback. `@SpringHelper` forces
   `componentModel=LAZY`, `creationStrategy=STANDARD`; registered as singleton Spring bean via
   `SpringHelperBeanDefinitionRegistrar`.
-- **Expression evaluator**: default `cbs.nova.dsl.utils.MvelExpressionEvaluator` (MVEL). `DslConfig.expressionEvaluator()`
-  returns `Replaceable<ExpressionEvaluator>` for swaps. Starter's `DslAutoConfiguration` publishes
-  `ExpressionEvaluator` via `@ConditionalOnMissingBean` and replaces via
+- **Expression evaluator**: no default in dsl core; `DslConfig.expressionEvaluator()` returns
+  `Replaceable<ExpressionEvaluator>` (unset until replaced). The MVEL implementation
+  `cbs.nova.dsl.utils.MvelExpressionEvaluator` lives in dsl-starter; starter's `DslAutoConfiguration` publishes
+  it via `@ConditionalOnMissingBean` and replaces via
   `DslConfig.dslConfig().expressionEvaluator().replace(...)`; user-defined bean wins. See `docs/architecture-backend.md`.
 - **Explain support**: `ExplainSupport<IN, OUT>` (dsl-api) produces `ExplainReport` (name, markdown, mermaid)
   via single-arg `explain(ctx)`; the budget is carried by context metadata under

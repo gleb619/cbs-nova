@@ -11,8 +11,6 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-// TODO: Move `MvelExpressionEvaluator` to
-// `./backend/dsl-starter/starter/src/main/java/cbs/nova/dsl/utils/` with tests
 @Deprecated
 public final class MvelExpressionEvaluator implements ExpressionEvaluator {
 
