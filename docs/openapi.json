@@ -125,6 +125,20 @@
         },
         "type": "object"
       },
+      "CreateScheduleResponse": {
+        "properties": {
+          "cron": {
+            "type": "string"
+          },
+          "definition": {
+            "type": "string"
+          },
+          "scheduleId": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "DefinitionBundle": {
         "properties": {
           "definitions": {
@@ -280,17 +294,17 @@
             "type": "string"
           },
           "context": {
-            "type": "object",
-            "additionalProperties": {}
+            "additionalProperties": {},
+            "type": "object"
           },
           "correlationId": {
             "type": "string"
           },
           "diagnostics": {
-            "type": "array",
             "items": {
               "$ref": "#/components/schemas/CompileDiagnostic"
-            }
+            },
+            "type": "array"
           },
           "entityName": {
             "type": "string"
@@ -815,6 +829,31 @@
           }
         },
         "type": "object"
+      },
+      "WebhookDeliveryInfo": {
+        "properties": {
+          "definitionPattern": {
+            "type": "string"
+          },
+          "lastAttempts": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "lastDeliveredAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "lastError": {
+            "type": "string"
+          },
+          "lastStatus": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "type": "object"
       }
     }
   },
@@ -1166,6 +1205,44 @@
         "summary": "Run a definition's test cases through the preview pipeline",
         "tags": [
           "DSL Testing"
+        ]
+      }
+    },
+    "/api/dsl/diagnostics": {
+      "get": {
+        "operationId": "listCompileDiagnostics",
+        "parameters": [
+          {
+            "description": "Optional exact definition context filter",
+            "in": "query",
+            "name": "definition"
+          },
+          {
+            "description": "Maximum number of diagnostics to return",
+            "in": "query",
+            "name": "limit"
+          },
+          {
+            "description": "Number of matching diagnostics to skip before returning results",
+            "in": "query",
+            "name": "offset"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageResponse"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "List persisted compile diagnostics, newest first",
+        "tags": [
+          "DSL Admin"
         ]
       }
     },
@@ -2206,6 +2283,189 @@
         ]
       }
     },
+    "/api/dsl/schedules": {
+      "get": {
+        "operationId": "listSchedules",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageResponse"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "List Temporal schedules for published DSL definitions",
+        "tags": [
+          "DSL Schedules"
+        ]
+      },
+      "post": {
+        "operationId": "createSchedule",
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateScheduleResponse"
+                }
+              }
+            },
+            "description": "Schedule created"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Definition not published"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Schedule already exists"
+          }
+        },
+        "summary": "Create a Temporal schedule that starts a DSL definition workflow",
+        "tags": [
+          "DSL Schedules"
+        ]
+      }
+    },
+    "/api/dsl/schedules/{definition}": {
+      "delete": {
+        "operationId": "deleteSchedule",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Schedule deleted"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid definition name"
+          }
+        },
+        "summary": "Delete the Temporal schedule for a DSL definition",
+        "tags": [
+          "DSL Schedules"
+        ]
+      }
+    },
+    "/api/dsl/schedules/{definition}/pause": {
+      "post": {
+        "operationId": "pauseSchedule",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Schedule paused"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid definition name"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Schedule not found"
+          }
+        },
+        "summary": "Pause the Temporal schedule for a DSL definition",
+        "tags": [
+          "DSL Schedules"
+        ]
+      }
+    },
+    "/api/dsl/schedules/{definition}/resume": {
+      "post": {
+        "operationId": "resumeSchedule",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Schedule resumed"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid definition name"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Schedule not found"
+          }
+        },
+        "summary": "Resume the Temporal schedule for a DSL definition",
+        "tags": [
+          "DSL Schedules"
+        ]
+      }
+    },
     "/api/dsl/schemas/{name}": {
       "get": {
         "operationId": "getConstructSchema",
@@ -2280,6 +2540,44 @@
         "summary": "Get DSL transaction detail",
         "tags": [
           "DSL Introspection"
+        ]
+      }
+    },
+    "/api/dsl/webhooks/deliveries": {
+      "get": {
+        "operationId": "listWebhookDeliveryRows",
+        "parameters": [
+          {
+            "description": "Optional exact subscription id filter (definition pattern)",
+            "in": "query",
+            "name": "subscriptionId"
+          },
+          {
+            "description": "Maximum number of deliveries to return",
+            "in": "query",
+            "name": "limit"
+          },
+          {
+            "description": "Number of matching deliveries to skip before returning results",
+            "in": "query",
+            "name": "offset"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageResponse"
+                }
+              }
+            },
+            "description": "Paged append-only delivery log, newest first"
+          }
+        },
+        "summary": "List persisted webhook delivery outcomes",
+        "tags": [
+          "Webhooks"
         ]
       }
     },
@@ -2584,6 +2882,30 @@
           "DSL Executions"
         ]
       }
+    },
+    "/api/webhooks/deliveries": {
+      "get": {
+        "operationId": "listWebhookDeliveries",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/WebhookDeliveryInfo"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Last delivery outcome per configured subscription"
+          }
+        },
+        "summary": "List last webhook delivery outcomes",
+        "tags": [
+          "Webhooks"
+        ]
+      }
     }
   },
   "servers": [
@@ -2596,6 +2918,10 @@
     {
       "description": "Execution status Server-Sent Events",
       "name": "DSL Executions"
+    },
+    {
+      "description": "Run-completion webhook diagnostics",
+      "name": "Webhooks"
     },
     {
       "description": "Inspect DSL execution runs",

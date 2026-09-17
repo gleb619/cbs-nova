@@ -15,6 +15,7 @@ import cbs.nova.starter.helper.UnreliableApiHelper;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import java.net.http.HttpClient;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -46,7 +47,8 @@ public class SpringHelperConfiguration {
   }
 
   @HelperBean("httpCall")
-  public HttpCallHelper httpCallHelper(ObjectProvider<HttpClient> httpClientProvider,
+  public HttpCallHelper httpCallHelper(
+          @Qualifier("httpClient") ObjectProvider<HttpClient> httpClientProvider,
           ObjectProvider<CbsNovaLoggingProperties> loggingPropertiesProvider,
           HttpCallProperties httpCallProperties) {
     HttpClient httpClient = httpClientProvider.getIfAvailable(HttpClient::newHttpClient);

@@ -13,10 +13,8 @@ import cbs.nova.starter.service.DslScheduleService;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.function.ServerRequest;
 import org.springframework.web.servlet.function.ServerResponse;
 import tools.jackson.core.JacksonException;
@@ -30,12 +28,12 @@ import java.util.Map;
 
 /**
  * Functional handler for DSL schedule CRUD. Registered as a {@code RouterFunction} bean by
- * {@link DslScheduleRouterConfiguration}.
+ * {@link DslScheduleRouterConfiguration}, which also declares this handler as a {@code @Bean} so it
+ * is created in the auto-configuration phase — a {@code @ConditionalOnBean} here would be evaluated
+ * during component scanning, before the {@link ScheduleClient} auto-config bean exists.
  */
 @Slf4j
-@Component
 @AllArgsConstructor
-@ConditionalOnBean(ScheduleClient.class)
 public class DslScheduleHandler {
 
   static final String ACTION_SCHEDULE_CREATE = "SCHEDULE_CREATE";

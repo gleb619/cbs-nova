@@ -1,8 +1,11 @@
 package cbs.nova.starter.config.router;
 
+import cbs.nova.starter.config.DslScheduleConfiguration;
 import cbs.nova.starter.controller.DslScheduleHandler;
 import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.starter.model.PageResponse;
+import cbs.nova.starter.service.DslAuditService;
+import cbs.nova.starter.service.DslScheduleService;
 import io.swagger.v3.oas.annotations.Operation;
 
 import io.swagger.v3.oas.annotations.media.Content;
@@ -11,24 +14,34 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import java.util.Map;
 import org.springdoc.core.annotations.RouterOperation;
 import org.springdoc.core.annotations.RouterOperations;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.servlet.function.RouterFunction;
 import org.springframework.web.servlet.function.RouterFunctions;
 import org.springframework.web.servlet.function.ServerResponse;
 
 import io.temporal.client.schedules.ScheduleClient;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Registers the DSL schedule CRUD routes under {@code /api/dsl/schedules}. The whole router is
  * conditional on a {@link io.temporal.client.schedules.ScheduleClient} bean, so the routes vanish
  * when Temporal is not configured.
  */
-@Configuration
+@AutoConfiguration
+@AutoConfigureAfter(DslScheduleConfiguration.class)
 @ConditionalOnBean(ScheduleClient.class)
 public class DslScheduleRouterConfiguration {
+
+  @Bean
+  DslScheduleHandler dslScheduleHandler(DslScheduleService service, ObjectMapper objectMapper,
+          ObjectProvider<DslAuditService> auditServiceProvider) {
+    return new DslScheduleHandler(service, objectMapper, auditServiceProvider);
+  }
 
   @Bean
   @RouterOperations({

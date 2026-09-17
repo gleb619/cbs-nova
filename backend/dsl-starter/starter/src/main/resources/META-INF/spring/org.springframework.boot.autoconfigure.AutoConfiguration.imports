@@ -1,1 +1,4 @@
 cbs.nova.starter.config.DslRootAutoConfiguration
+cbs.nova.starter.config.DslScheduleConfiguration
+cbs.nova.starter.config.router.DslDiagnosticsRouterConfiguration
+cbs.nova.starter.config.router.DslScheduleRouterConfiguration

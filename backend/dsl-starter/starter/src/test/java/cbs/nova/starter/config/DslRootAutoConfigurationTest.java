@@ -22,22 +22,31 @@ import java.util.Arrays;
 import java.util.Set;
 
 /**
- * Verifies the starter advertises exactly one auto-configuration — the root — that aggregates the
- * rest via {@link Import}. {@link DslRunRepositoryConfiguration} is imported by the root but
- * carries no {@code @Configuration} stereotype, so its {@code @ConditionalOnBean(DataSource)} beans
- * are only evaluated in the auto-configuration phase, after {@code DataSourceAutoConfiguration},
- * and never via component scanning.
+ * Verifies the starter's auto-configuration split: the root auto-configuration aggregates the bulk
+ * of the nested {@link Import} configs, while the {@code @ConditionalOnBean}-gated configs
+ * ({@link DslScheduleConfiguration}, {@code DslDiagnosticsRouterConfiguration},
+ * {@code DslScheduleRouterConfiguration}) are first-class auto-configurations listed in
+ * {@code META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports} so their
+ * conditions are evaluated in the auto-configuration phase, after the beans they require are
+ * registered. {@link DslRunRepositoryConfiguration} is imported by the root but carries no
+ * {@code @Configuration} stereotype, so its {@code @ConditionalOnBean(DataSource)} beans are only
+ * evaluated in the auto-configuration phase, after {@code DataSourceAutoConfiguration}, and never
+ * via component scanning.
  */
 class DslRootAutoConfigurationTest {
 
   @Test
-  void importsFileAdvertisesExactlyOneAutoConfiguration() throws IOException {
+  void importsFileAdvertisesAutoConfigurations() throws IOException {
     var imports = ClassLoader.getSystemResourceAsStream(
             "META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports");
     assertThat(imports).as("auto-configuration imports file must exist").isNotNull();
     try (var reader = new BufferedReader(new InputStreamReader(imports, StandardCharsets.UTF_8))) {
       assertThat(reader.lines().map(String::trim).filter(line -> !line.isEmpty()))
-              .containsExactly(DslRootAutoConfiguration.class.getName());
+              .containsExactly(
+                      DslRootAutoConfiguration.class.getName(),
+                      DslScheduleConfiguration.class.getName(),
+                      "cbs.nova.starter.config.router.DslDiagnosticsRouterConfiguration",
+                      "cbs.nova.starter.config.router.DslScheduleRouterConfiguration");
     }
   }
 
@@ -60,7 +69,6 @@ class DslRootAutoConfigurationTest {
             MessagingCallCaptureConfiguration.class,
             PreviewMetricsConfiguration.class,
             DslRouterConfiguration.class,
-            DslScheduleConfiguration.class,
             WebhookConfiguration.class,
             DslErrorHandlingConfiguration.class,
             SpringHelperConfiguration.class,

@@ -19,11 +19,9 @@ import org.springframework.context.annotation.Import;
     DslReloadRouterConfiguration.class,
     DslDraftRouterConfiguration.class,
     DslFileRouterConfiguration.class,
-    DslDiagnosticsRouterConfiguration.class,
     DslDefinitionTestRouterConfiguration.class,
     ApiKeyAdminRouterConfiguration.class,
-    DslEventRouterConfiguration.class,
-    DslScheduleRouterConfiguration.class
+    DslEventRouterConfiguration.class
 })
 public class DslRouterConfiguration {
 }
