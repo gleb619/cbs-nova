@@ -9,11 +9,11 @@ import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.model.PreviewReport;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
-import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.config.properties.CbsNovaFakesProperties;
 import cbs.nova.starter.core.listener.DslExecutionEventBus;
 import cbs.nova.starter.config.properties.CbsNovaPreviewProperties;
 import cbs.nova.starter.config.properties.CbsNovaExplainProperties;
+import cbs.nova.starter.config.properties.DryRunProperties;
 import cbs.nova.starter.core.event.DslExecutionEvent.DslExternalCallEvent;
 import cbs.nova.starter.core.pipe.ExplainDslPipe;
 import cbs.nova.starter.core.pipe.PreviewDslPipe;
@@ -38,6 +38,11 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 
 class DevDslRuntimeTest {
+
+  private static int defaultMaxEventsPerRun() {
+    return new DryRunProperties(null, null).log().maxEventsPerRun();
+  }
+
   private final ThreadLocalDryRunLoggingContext dryRunLoggingContext = new ThreadLocalDryRunLoggingContext();
 
   private final RunIdKeyedExternalCallRecorder recorder = new RunIdKeyedExternalCallRecorder(
@@ -51,7 +56,7 @@ class DevDslRuntimeTest {
   private final CbsNovaPreviewProperties previewProperties = new CbsNovaPreviewProperties(null,
           null, null);
   private final PreviewDslPipe previewPipe = new PreviewDslPipe(recorder, contextFactory,
-          dryRunLoggingContext, bufferRegistry, StarterConstants.DEFAULT_MAX_EVENTS_PER_RUN,
+          dryRunLoggingContext, bufferRegistry, defaultMaxEventsPerRun(),
           null, previewProperties, new CbsNovaFakesProperties(false, null),
           new RunScopedFakeConfig(Caffeine.newBuilder().build()), new SimpleMeterRegistry(), null);
   private final RunDslPipe runPipe = new RunDslPipe(contextFactory, recorder,
@@ -59,7 +64,7 @@ class DevDslRuntimeTest {
           new RunScopedFakeConfig(Caffeine.newBuilder().build()),
           new DslExecutionEventBus());
   private final ExplainDslPipe explainPipe = new ExplainDslPipe(recorder, contextFactory,
-          dryRunLoggingContext, bufferRegistry, StarterConstants.DEFAULT_MAX_EVENTS_PER_RUN,
+          dryRunLoggingContext, bufferRegistry, defaultMaxEventsPerRun(),
           previewProperties, new CbsNovaFakesProperties(false, null),
           new RunScopedFakeConfig(Caffeine.newBuilder().build()),
           new SimpleMeterRegistry(), new ExplainDiagramRenderer(),

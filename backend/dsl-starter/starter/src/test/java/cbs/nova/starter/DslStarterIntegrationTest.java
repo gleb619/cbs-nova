@@ -8,7 +8,6 @@ import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
-import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.config.properties.CbsNovaFakesProperties;
 import cbs.nova.starter.core.listener.DslExecutionEventBus;
 import cbs.nova.starter.config.properties.CbsNovaPreviewProperties;
@@ -33,6 +32,7 @@ import cbs.nova.starter.service.InputValidator;
 import cbs.nova.dsl.jsonschema.JacksonJsonSchemaGenerator;
 import cbs.nova.starter.config.properties.InputValidationProperties;
 import cbs.nova.starter.config.properties.CbsNovaExplainProperties;
+import cbs.nova.starter.config.properties.DryRunProperties;
 import tools.jackson.databind.ObjectMapper;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.AfterEach;
@@ -46,6 +46,10 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import com.github.benmanes.caffeine.cache.Caffeine;
 
 class DslStarterIntegrationTest {
+
+  private static int defaultMaxEventsPerRun() {
+    return new DryRunProperties(null, null).log().maxEventsPerRun();
+  }
 
   private MockMvc mockMvc;
 
@@ -66,14 +70,14 @@ class DslStarterIntegrationTest {
     var bufferRegistry = new DryRunLogBufferRegistry(Caffeine.newBuilder().build());
     var previewProperties = new CbsNovaPreviewProperties(null, null, null);
     var previewPipe = new PreviewDslPipe(recorder, contextFactory, dryRunLoggingContext,
-            bufferRegistry, StarterConstants.DEFAULT_MAX_EVENTS_PER_RUN, null,
+            bufferRegistry, defaultMaxEventsPerRun(), null,
             previewProperties, new CbsNovaFakesProperties(false, null),
             new RunScopedFakeConfig(Caffeine.newBuilder().build()),
             new SimpleMeterRegistry(), null);
     var runPipe = new RunDslPipe(contextFactory, recorder, new CbsNovaFakesProperties(false, null),
             new RunScopedFakeConfig(Caffeine.newBuilder().build()), new DslExecutionEventBus());
     var explainPipe = new ExplainDslPipe(recorder, contextFactory, dryRunLoggingContext,
-            bufferRegistry, StarterConstants.DEFAULT_MAX_EVENTS_PER_RUN, previewProperties,
+            bufferRegistry, defaultMaxEventsPerRun(), previewProperties,
             new CbsNovaFakesProperties(false, null),
             new RunScopedFakeConfig(Caffeine.newBuilder().build()),
             new SimpleMeterRegistry(), new ExplainDiagramRenderer(),

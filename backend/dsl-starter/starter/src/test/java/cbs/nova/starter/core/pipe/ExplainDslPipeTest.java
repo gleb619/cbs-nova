@@ -14,7 +14,7 @@ import cbs.nova.dsl.model.ExplainGraphReport;
 import cbs.nova.starter.config.properties.CbsNovaExplainProperties;
 import cbs.nova.starter.config.properties.CbsNovaFakesProperties;
 import cbs.nova.starter.config.properties.CbsNovaPreviewProperties;
-import cbs.nova.starter.core.StarterConstants;
+import cbs.nova.starter.config.properties.DryRunProperties;
 import cbs.nova.starter.core.recorder.ExternalCall;
 import cbs.nova.starter.core.recorder.ExternalCallRecorder;
 import cbs.nova.starter.logging.DryRunLogBufferRegistry;
@@ -29,6 +29,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class ExplainDslPipeTest {
+
+  private static int defaultMaxEventsPerRun() {
+    return new DryRunProperties(null, null).log().maxEventsPerRun();
+  }
 
   private final ContextFactory contextFactory = new ContextFactory();
   private final ThreadLocalDryRunLoggingContext dryRunLoggingContext = new ThreadLocalDryRunLoggingContext();
@@ -107,7 +111,7 @@ class ExplainDslPipeTest {
 
   private ExplainDslPipe newPipe(ExternalCallRecorder recorder) {
     return new ExplainDslPipe(recorder, contextFactory, dryRunLoggingContext, bufferRegistry,
-            StarterConstants.DEFAULT_MAX_EVENTS_PER_RUN, previewProperties,
+            defaultMaxEventsPerRun(), previewProperties,
             new CbsNovaFakesProperties(false, null),
             new RunScopedFakeConfig(Caffeine.newBuilder().build()),
             new SimpleMeterRegistry(), new ExplainDiagramRenderer(),

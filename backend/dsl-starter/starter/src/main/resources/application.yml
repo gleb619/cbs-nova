@@ -151,3 +151,29 @@ csb:
       timeouts:
         connect-millis: 5000
         read-millis: 60000
+
+# cbs.nova.dry-run.* — log capture for preview/explain runs.
+cbs:
+  nova:
+    dry-run:
+      # How the current run id is propagated to the logback appender:
+      #   mdc       — via the org.slf4j.MDC key used by MdcDryRunLoggingContext (default)
+      #   threadlocal — via ThreadLocalDryRunLoggingContext
+      context:
+        type: mdc
+      log:
+        # Maximum log events retained per preview/explain run. Once the bound is reached the
+        # oldest events are evicted; this cap prevents an unbounded buffer if a run logs heavily.
+        max-events-per-run: 1000
+
+# cbs.nova.tracing.* — OpenTelemetry identity and OTLP export.
+cbs:
+  nova:
+    tracing:
+      # service.name attached to every exported span.
+      service-name: cbs-nova
+      otlp:
+        # OTLP HTTP trace endpoint (e.g. http://localhost:4318/v1/traces). Leave blank to fall
+        # back to the OTEL_EXPORTER_OTLP_ENDPOINT environment variable; if neither is set,
+        # tracing is disabled and a noop OpenTelemetry instance is used.
+        endpoint:

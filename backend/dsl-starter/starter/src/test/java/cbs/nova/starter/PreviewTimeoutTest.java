@@ -11,10 +11,10 @@ import cbs.nova.dsl.PreviewErrorCode;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.model.ExplainReport;
-import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.config.properties.CbsNovaFakesProperties;
 import cbs.nova.starter.config.properties.CbsNovaPreviewProperties;
 import cbs.nova.starter.config.properties.CbsNovaExplainProperties;
+import cbs.nova.starter.config.properties.DryRunProperties;
 import cbs.nova.starter.core.pipe.ExplainDslPipe;
 import cbs.nova.starter.core.pipe.PreviewDslPipe;
 import cbs.nova.starter.core.pipe.RunScopedFakeConfig;
@@ -35,6 +35,10 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
 
 class PreviewTimeoutTest {
+
+  private static int defaultMaxEventsPerRun() {
+    return new DryRunProperties(null, null).log().maxEventsPerRun();
+  }
 
   private final ThreadLocalDryRunLoggingContext dryRunLoggingContext = new ThreadLocalDryRunLoggingContext();
   private final RunIdKeyedExternalCallRecorder recorder = new RunIdKeyedExternalCallRecorder(
@@ -132,7 +136,7 @@ class PreviewTimeoutTest {
     PreviewResultCache cache = PreviewResultCacheTestSupport.cache(60_000);
     CbsNovaPreviewProperties properties = timeoutProperties(100);
     PreviewDslPipe pipe = new PreviewDslPipe(recorder, contextFactory, dryRunLoggingContext,
-            bufferRegistry, StarterConstants.DEFAULT_MAX_EVENTS_PER_RUN, cache,
+            bufferRegistry, defaultMaxEventsPerRun(), cache,
             properties, new CbsNovaFakesProperties(false, null),
             new RunScopedFakeConfig(Caffeine.newBuilder().build()),
             meterRegistry, dispatchExecutor);
@@ -167,7 +171,7 @@ class PreviewTimeoutTest {
   private PreviewDslPipe previewPipe(CbsNovaPreviewProperties properties,
           ExecutorService executor) {
     return new PreviewDslPipe(recorder, contextFactory, dryRunLoggingContext, bufferRegistry,
-            StarterConstants.DEFAULT_MAX_EVENTS_PER_RUN, null, properties,
+            defaultMaxEventsPerRun(), null, properties,
             new CbsNovaFakesProperties(false, null),
             new RunScopedFakeConfig(Caffeine.newBuilder().build()), meterRegistry,
             executor);
@@ -176,7 +180,7 @@ class PreviewTimeoutTest {
   private ExplainDslPipe explainPipe(CbsNovaPreviewProperties properties,
           ExecutorService executor) {
     return new ExplainDslPipe(recorder, contextFactory, dryRunLoggingContext, bufferRegistry,
-            StarterConstants.DEFAULT_MAX_EVENTS_PER_RUN, properties,
+            defaultMaxEventsPerRun(), properties,
             new CbsNovaFakesProperties(false, null),
             new RunScopedFakeConfig(Caffeine.newBuilder().build()), meterRegistry,
             new ExplainDiagramRenderer(), new CbsNovaExplainProperties(4000, "explain/", 128, 256,

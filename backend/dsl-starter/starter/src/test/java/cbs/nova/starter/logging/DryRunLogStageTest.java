@@ -167,4 +167,29 @@ class DryRunLogStageTest {
     assertThat(registry.get(runId)).isNull();
     assertThat(context.currentRunId()).isNull();
   }
+
+  @Test
+  void bufferEvictsAtConfiguredLimit() {
+    String runId = "run-limit";
+    DryRunLogStage stage = new DryRunLogStage(context, registry, 3);
+    DslPipeContext ctx = DslPipeContext.of("test", contextFactory.of("in", ExecutionMode.PREVIEW),
+            ExecutionMode.PREVIEW, runId);
+
+    stage.execute(ctx, next -> {
+      slf4jLogger.info("first");
+      slf4jLogger.info("second");
+      slf4jLogger.info("third");
+      slf4jLogger.info("fourth");
+      slf4jLogger.info("fifth");
+      return Result.success("done");
+    });
+
+    @SuppressWarnings("unchecked")
+    List<Map<String, Object>> logs = ctx.getAttribute("dryRunLogs", List.class);
+    assertThat(logs).hasSize(3);
+    assertThat(logs.get(0).get("message")).isEqualTo("third");
+    assertThat(logs.get(1).get("message")).isEqualTo("fourth");
+    assertThat(logs.get(2).get("message")).isEqualTo("fifth");
+  }
+
 }

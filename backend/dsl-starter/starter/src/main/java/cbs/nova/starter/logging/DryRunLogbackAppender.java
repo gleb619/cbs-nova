@@ -8,8 +8,6 @@ import org.jspecify.annotations.NonNull;
 
 public class DryRunLogbackAppender extends AppenderBase<ILoggingEvent> {
 
-  // TODO: replace hardcode with app.yml settings
-
   @Getter
   private final DryRunLoggingContext dryRunLoggingContext;
 

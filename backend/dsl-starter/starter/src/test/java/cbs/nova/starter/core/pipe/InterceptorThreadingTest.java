@@ -19,10 +19,10 @@ import cbs.nova.dsl.fake.FakeConfig;
 import cbs.nova.dsl.fake.FakeEntry;
 import cbs.nova.dsl.model.ExplainGraphReport;
 import cbs.nova.dsl.model.PreviewReport;
-import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.config.properties.CbsNovaFakesProperties;
 import cbs.nova.starter.config.properties.CbsNovaPreviewProperties;
 import cbs.nova.starter.config.properties.CbsNovaExplainProperties;
+import cbs.nova.starter.config.properties.DryRunProperties;
 import cbs.nova.starter.core.listener.DslExecutionEventBus;
 import cbs.nova.starter.core.recorder.ExternalCallRecorder;
 import cbs.nova.starter.logging.DryRunLogBufferRegistry;
@@ -41,6 +41,10 @@ import org.junit.jupiter.api.Test;
  * helpers, and that real (RUN) pipes without configured fakes do not see cross-run state.
  */
 class InterceptorThreadingTest {
+
+  private static int defaultMaxEventsPerRun() {
+    return new DryRunProperties(null, null).log().maxEventsPerRun();
+  }
 
   private final ContextFactory contextFactory = new ContextFactory();
   private final ThreadLocalDryRunLoggingContext dryRunLoggingContext = new ThreadLocalDryRunLoggingContext();
@@ -72,7 +76,7 @@ class InterceptorThreadingTest {
 
     PreviewDslPipe previewPipe = new PreviewDslPipe(recorder, contextFactory,
             dryRunLoggingContext, bufferRegistry,
-            StarterConstants.DEFAULT_MAX_EVENTS_PER_RUN, null, previewProperties,
+            defaultMaxEventsPerRun(), null, previewProperties,
             new CbsNovaFakesProperties(false, null), runScopedFakeConfig,
             new SimpleMeterRegistry(), null);
 
@@ -137,7 +141,7 @@ class InterceptorThreadingTest {
             FakeConfig.of(new FakeEntry("helper", "httpCall", "preview-fake")));
 
     var previewPipe = new PreviewDslPipe(previewRec, contextFactory, dryRunLoggingContext,
-            bufferRegistry, StarterConstants.DEFAULT_MAX_EVENTS_PER_RUN, null,
+            bufferRegistry, defaultMaxEventsPerRun(), null,
             previewProperties, new CbsNovaFakesProperties(false, null), previewScoped,
             new SimpleMeterRegistry(), null);
     var runPipe = new RunDslPipe(contextFactory, runRec,
@@ -165,7 +169,7 @@ class InterceptorThreadingTest {
             FakeConfig.of(new FakeEntry("helper", "dbCall", "faked-db")));
 
     var explainPipe = new ExplainDslPipe(recorder, contextFactory, dryRunLoggingContext,
-            bufferRegistry, StarterConstants.DEFAULT_MAX_EVENTS_PER_RUN, previewProperties,
+            bufferRegistry, defaultMaxEventsPerRun(), previewProperties,
             new CbsNovaFakesProperties(false, null), runScopedFakeConfig,
             new SimpleMeterRegistry(), new ExplainDiagramRenderer(),
             new CbsNovaExplainProperties(4000, "explain/", 128, 256, 4096), null);

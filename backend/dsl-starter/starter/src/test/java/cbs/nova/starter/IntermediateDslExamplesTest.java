@@ -27,6 +27,7 @@ import cbs.nova.starter.config.properties.CbsNovaPreviewProperties;
 import cbs.nova.starter.config.properties.CbsNovaLoggingProperties;
 import cbs.nova.starter.config.properties.CbsNovaLoggingProperties.Level;
 import cbs.nova.starter.config.properties.CbsNovaExplainProperties;
+import cbs.nova.starter.config.properties.DryRunProperties;
 import cbs.nova.starter.core.pipe.ExplainDslPipe;
 import cbs.nova.starter.core.pipe.PreviewDslPipe;
 import cbs.nova.starter.core.pipe.RunDslPipe;
@@ -50,6 +51,11 @@ import java.net.http.HttpClient;
 import java.util.List;
 
 class IntermediateDslExamplesTest {
+
+  private static int defaultMaxEventsPerRun() {
+    return new DryRunProperties(null, null).log().maxEventsPerRun();
+  }
+
   private final ThreadLocalDryRunLoggingContext dryRunLoggingContext = new ThreadLocalDryRunLoggingContext();
 
   private final ContextFactory contextFactory = new ContextFactory();
@@ -60,7 +66,7 @@ class IntermediateDslExamplesTest {
   private final CbsNovaPreviewProperties previewProperties = new CbsNovaPreviewProperties(null,
           null, null);
   private final PreviewDslPipe previewPipe = new PreviewDslPipe(recorder, contextFactory,
-          dryRunLoggingContext, bufferRegistry, StarterConstants.DEFAULT_MAX_EVENTS_PER_RUN,
+          dryRunLoggingContext, bufferRegistry, defaultMaxEventsPerRun(),
           null, previewProperties, new CbsNovaFakesProperties(false, null),
           new RunScopedFakeConfig(Caffeine.newBuilder().build()), new SimpleMeterRegistry(), null);
   private final RunDslPipe runPipe = new RunDslPipe(contextFactory, recorder,
@@ -68,7 +74,7 @@ class IntermediateDslExamplesTest {
           new RunScopedFakeConfig(Caffeine.newBuilder().build()),
           new DslExecutionEventBus());
   private final ExplainDslPipe explainPipe = new ExplainDslPipe(recorder, contextFactory,
-          dryRunLoggingContext, bufferRegistry, StarterConstants.DEFAULT_MAX_EVENTS_PER_RUN,
+          dryRunLoggingContext, bufferRegistry, defaultMaxEventsPerRun(),
           previewProperties, new CbsNovaFakesProperties(false, null),
           new RunScopedFakeConfig(Caffeine.newBuilder().build()),
           new SimpleMeterRegistry(), new ExplainDiagramRenderer(),

@@ -137,7 +137,6 @@ public class StarterConstants {
   public static final int BUNDLE_FORMAT_VERSION = 1;
   public static final int DEFAULT_LIMIT = 50;
   public static final long DEFAULT_MAX_BYTES = 1024L * 1024L;
-  public static final int DEFAULT_MAX_EVENTS_PER_RUN = 1000;
   public static final int DEFAULT_MAX_HUNKS = 200;
 
   // Default webhook / execution tuning
@@ -266,9 +265,6 @@ public class StarterConstants {
   public static final String JSON_POINTER_ROOT = "$";
 
   // OpenTelemetry service identity + env (TracingConfiguration)
-
-  public static final String OTEL_SERVICE_NAME = "cbs-nova";
-  public static final String OTEL_EXPORTER_OTLP_ENDPOINT = "OTEL_EXPORTER_OTLP_ENDPOINT";
 
   // Run-scoped fake config cache tunables (RunScopedFakeConfig)
 
