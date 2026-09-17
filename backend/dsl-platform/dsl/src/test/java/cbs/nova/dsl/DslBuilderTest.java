@@ -1,9 +1,9 @@
 package cbs.nova.dsl;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.config.RetryPolicyFactory;
 import cbs.nova.dsl.model.MapInput;
 import cbs.nova.dsl.model.MapOutput;
@@ -12,7 +12,6 @@ import org.junit.jupiter.api.Test;
 
 class DslBuilderTest {
 
-  private final ContextFactory contextFactory = new ContextFactory();
   private final RetryPolicyFactory retryPolicyFactory = new RetryPolicyFactory();
 
   @Test
@@ -81,7 +80,7 @@ class DslBuilderTest {
     gm.registerProcess(proc);
 
     var result = gm.runProcess("GreetProc",
-            contextFactory.of("in", ExecutionMode.PREVIEW));
+            SimpleContext.builder().body("in").mode(ExecutionMode.PREVIEW).build());
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value()).isEqualTo("hello");
   }
@@ -158,7 +157,8 @@ class DslBuilderTest {
     gm.registerProcess(proc);
 
     var result = gm.runProcess("ParamProcess",
-            contextFactory.of(MapInput.of("name", "world"), ExecutionMode.PREVIEW));
+            SimpleContext.builder().body(MapInput.of("name", "world")).mode(ExecutionMode.PREVIEW)
+                    .build());
 
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value()).isEqualTo("hello world");
@@ -177,7 +177,8 @@ class DslBuilderTest {
     gm.registerProcess(proc);
 
     var result = gm.runProcess("ParamProcess",
-            contextFactory.of(MapInput.of("name", "ignored"), ExecutionMode.PREVIEW));
+            SimpleContext.builder().body(MapInput.of("name", "ignored")).mode(ExecutionMode.PREVIEW)
+                    .build());
 
     assertThat(result.isSuccess()).isTrue();
     MapInput value = result.as(MapInput.class);
@@ -197,7 +198,8 @@ class DslBuilderTest {
     gm.registerTransaction(tx);
 
     var result = gm.runTransaction("ParamTx",
-            contextFactory.of(MapInput.of("name", "world"), ExecutionMode.PREVIEW));
+            SimpleContext.builder().body(MapInput.of("name", "world")).mode(ExecutionMode.PREVIEW)
+                    .build());
 
     assertThat(result.isSuccess()).isTrue();
     MapOutput value = result.as(MapOutput.class);
@@ -217,7 +219,7 @@ class DslBuilderTest {
     gm.registerProcess(proc);
 
     var result = gm.runProcess("TypedBodyProc",
-            contextFactory.of("world", ExecutionMode.PREVIEW));
+            SimpleContext.builder().body("world").mode(ExecutionMode.PREVIEW).build());
 
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value()).isEqualTo("got WORLD");

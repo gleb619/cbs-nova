@@ -22,20 +22,40 @@ import org.jspecify.annotations.Nullable;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.UUID;
 
-@Builder
+@Builder(builderMethodName = "lombokBuilder")
 @RequiredArgsConstructor
 public final class SimpleContext<T> implements Context<T> {
 
+  public static <T> SimpleContextBuilder<T> builder() {
+    return SimpleContext.<T>lombokBuilder();
+  }
+
+  public static <T> SimpleContextBuilder<T> builder(T body) {
+    return SimpleContext.<T>lombokBuilder().body(body);
+  }
+
+  public static @NonNull String generateRunId() {
+    return "run-" + UUID.randomUUID();
+  }
+
   private final Object body;
-  private final Map<String, Object> metadata;
+  @Builder.Default
+  private final Map<String, Object> metadata = Map.of();
   private final ExecutionMode mode;
-  private final String runId;
-  private final TransactionRouting transactionRouting;
-  private final ExecutionListener executionListener;
-  private final DslSaga saga;
-  private final ExecutionTraceCollector executionTraceCollector;
-  private final HelperInterceptor helperInterceptor;
+  @Builder.Default
+  private final String runId = generateRunId();
+  @Builder.Default
+  private final TransactionRouting transactionRouting = TransactionRouting.LOCAL;
+  @Builder.Default
+  private final ExecutionListener executionListener = NoopExecutionListener.INSTANCE;
+  @Builder.Default
+  private final DslSaga saga = NoopSaga.INSTANCE;
+  @Builder.Default
+  private final ExecutionTraceCollector executionTraceCollector = NoopExecutionTraceCollector.INSTANCE;
+  @Builder.Default
+  private final HelperInterceptor helperInterceptor = NoopHelperInterceptor.INSTANCE;
   private final BeanResolver beanResolver;
 
   @Override

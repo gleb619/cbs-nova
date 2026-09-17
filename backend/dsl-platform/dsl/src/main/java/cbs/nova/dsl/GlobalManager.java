@@ -1,8 +1,8 @@
 package cbs.nova.dsl;
 
+import cbs.nova.dsl.model.SimpleContext;
 import cbs.nova.dsl.config.Constants;
 import cbs.nova.dsl.config.DslConfig;
-import cbs.nova.dsl.config.ProcessContextFactory;
 import cbs.nova.dsl.exception.DslEntityNotFoundException;
 import cbs.nova.dsl.exception.DslExecutionException;
 import cbs.nova.dsl.explain.ExplainResource;
@@ -42,7 +42,6 @@ public final class GlobalManager {
   private final TransactionManager transactionManager;
   private final HelperManager helperManager;
   private final GeneratedClassRegistry generatedClassRegistry;
-  private final ProcessContextFactory processContextFactory;
   private final CompensationRegistry compensationRegistry;
   private final ExplainResourceRegistry explainResourceRegistry;
 
@@ -93,7 +92,7 @@ public final class GlobalManager {
           @NonNull Map<String, Object> metadata,
           @NonNull ExecutionMode mode,
           @NonNull String runId) {
-    return processContextFactory.create(body, metadata, mode, runId);
+    return SimpleContext.builder().body(body).metadata(metadata).mode(mode).runId(runId).build();
   }
 
   @Deprecated(forRemoval = true)
@@ -103,14 +102,14 @@ public final class GlobalManager {
           @NonNull ExecutionMode mode,
           @NonNull String runId,
           @NonNull TransactionRouting transactionRouting) {
-    return processContextFactory.create(body, metadata, mode, runId, transactionRouting);
+    return SimpleContext.builder().body(body).metadata(metadata).mode(mode).runId(runId)
+            .transactionRouting(transactionRouting).build();
   }
 
   public @NonNull CompensationRichContext<?> createCompensationContext(
           @NonNull Context<?> ctx,
           @NonNull Throwable error) {
-    var config = DslConfig.dslConfig();
-    return new CompensationRichContext<>(ctx, error, config.contextFactory());
+    return new CompensationRichContext<>(ctx, error);
   }
 
   public @NonNull Result<?> runProcess(
@@ -148,11 +147,16 @@ public final class GlobalManager {
           @NonNull TransactionDslObject tx,
           @NonNull Object input,
           @NonNull Context<?> parentCtx) {
-    Context<Object> ctx = DslConfig.dslConfig().contextFactory()
-            .of(input, parentCtx.metadata(), parentCtx.mode(), parentCtx.runId(),
-                    parentCtx.transactionRouting(), parentCtx.executionListener(),
-                    parentCtx.saga())
-            .withHelperInterceptor(parentCtx.helperInterceptor());
+    Context<Object> ctx = SimpleContext.builder()
+            .body(input)
+            .metadata(parentCtx.metadata())
+            .mode(parentCtx.mode())
+            .runId(parentCtx.runId())
+            .transactionRouting(parentCtx.transactionRouting())
+            .executionListener(parentCtx.executionListener())
+            .saga(parentCtx.saga())
+            .helperInterceptor(parentCtx.helperInterceptor())
+            .build();
     return runTransaction(tx, ctx);
   }
 
@@ -317,7 +321,7 @@ public final class GlobalManager {
   public void compensateTransaction(@NonNull String name, @NonNull String runId,
           @NonNull Throwable error) {
     var config = DslConfig.dslConfig();
-    compensationRegistry.compensate(name, runId, error, config.contextFactory());
+    compensationRegistry.compensate(name, runId, error);
   }
 
   public void compensateTransaction(

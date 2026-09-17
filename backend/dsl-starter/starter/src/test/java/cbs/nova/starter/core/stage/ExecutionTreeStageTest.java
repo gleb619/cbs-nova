@@ -1,5 +1,6 @@
 package cbs.nova.starter.core.stage;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -10,7 +11,6 @@ import cbs.nova.dsl.listener.ExecutionListener;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.Constants;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.model.ExplainGraphAccumulator;
 import cbs.nova.starter.core.pipe.DslPipeContext;
 import cbs.nova.starter.core.pipe.DslPipeStage;
@@ -19,11 +19,10 @@ import org.junit.jupiter.api.Test;
 
 class ExecutionTreeStageTest {
 
-  private final ContextFactory contextFactory = new ContextFactory();
-
   @Test
   void runModePassesThroughOriginalContextUnchanged() {
-    Context<?> originalDsl = contextFactory.of("body", ExecutionMode.RUN, "run-1");
+    Context<?> originalDsl = SimpleContext.builder("body").mode(ExecutionMode.RUN).runId("run-1")
+            .build();
     DslPipeContext pipeContext = DslPipeContext.of(
             "Ping", originalDsl, ExecutionMode.RUN, "run-1");
 
@@ -33,7 +32,7 @@ class ExecutionTreeStageTest {
       return Result.success("downstream");
     };
 
-    Result<?> result = new ExecutionTreeStage(contextFactory, 32).execute(pipeContext, next);
+    Result<?> result = new ExecutionTreeStage(32).execute(pipeContext, next);
 
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value()).isEqualTo("downstream");
@@ -43,7 +42,8 @@ class ExecutionTreeStageTest {
 
   @Test
   void previewModeSetsAstTreeAttributeFromCollectorTree() {
-    Context<?> originalDsl = contextFactory.of("body", ExecutionMode.PREVIEW, "run-1");
+    Context<?> originalDsl = SimpleContext.builder("body").mode(ExecutionMode.PREVIEW)
+            .runId("run-1").build();
     DslPipeContext pipeContext = DslPipeContext.of(
             "Ping", originalDsl, ExecutionMode.PREVIEW, "run-1");
 
@@ -57,7 +57,7 @@ class ExecutionTreeStageTest {
       return Result.success("downstream");
     };
 
-    new ExecutionTreeStage(contextFactory, 32).execute(pipeContext, next);
+    new ExecutionTreeStage(32).execute(pipeContext, next);
 
     CallNode tree = pipeContext.getAttribute("astTree", CallNode.class);
     assertThat(tree).isNotNull();
@@ -70,20 +70,22 @@ class ExecutionTreeStageTest {
 
   @Test
   void previewModeSetsAstTreeAttributeToNullWhenCollectorTreeEmpty() {
-    Context<?> originalDsl = contextFactory.of("body", ExecutionMode.PREVIEW, "run-1");
+    Context<?> originalDsl = SimpleContext.builder("body").mode(ExecutionMode.PREVIEW)
+            .runId("run-1").build();
     DslPipeContext pipeContext = DslPipeContext.of(
             "Ping", originalDsl, ExecutionMode.PREVIEW, "run-1");
 
     DslPipeStage.Next next = c -> Result.success("downstream");
 
-    new ExecutionTreeStage(contextFactory, 32).execute(pipeContext, next);
+    new ExecutionTreeStage(32).execute(pipeContext, next);
 
     assertThat(pipeContext.getAttribute("astTree", CallNode.class)).isNull();
   }
 
   @Test
   void previewModeProceedsWithWrappedContext() {
-    Context<?> originalDsl = contextFactory.of("body", ExecutionMode.PREVIEW, "run-1");
+    Context<?> originalDsl = SimpleContext.builder("body").mode(ExecutionMode.PREVIEW)
+            .runId("run-1").build();
     DslPipeContext pipeContext = DslPipeContext.of(
             "Ping", originalDsl, ExecutionMode.PREVIEW, "run-1");
 
@@ -93,7 +95,7 @@ class ExecutionTreeStageTest {
       return Result.success("downstream");
     };
 
-    new ExecutionTreeStage(contextFactory, 32).execute(pipeContext, next);
+    new ExecutionTreeStage(32).execute(pipeContext, next);
 
     DslPipeContext wrapped = captured.get();
     assertThat(wrapped).isNotSameAs(pipeContext);
@@ -105,7 +107,8 @@ class ExecutionTreeStageTest {
 
   @Test
   void astTreeAttributeIsSetEvenWhenProceedThrows() {
-    Context<?> originalDsl = contextFactory.of("body", ExecutionMode.PREVIEW, "run-1");
+    Context<?> originalDsl = SimpleContext.builder("body").mode(ExecutionMode.PREVIEW)
+            .runId("run-1").build();
     DslPipeContext pipeContext = DslPipeContext.of(
             "Ping", originalDsl, ExecutionMode.PREVIEW, "run-1");
 
@@ -113,7 +116,7 @@ class ExecutionTreeStageTest {
       throw new IllegalStateException("downstream boom");
     };
 
-    assertThatThrownBy(() -> new ExecutionTreeStage(contextFactory, 32).execute(pipeContext, next))
+    assertThatThrownBy(() -> new ExecutionTreeStage(32).execute(pipeContext, next))
             .isInstanceOf(IllegalStateException.class)
             .hasMessage("downstream boom");
 
@@ -123,7 +126,8 @@ class ExecutionTreeStageTest {
   @Test
   void explainModeBuildsTreeIntoAccumulatorWhenPresent() {
     ExplainGraphAccumulator accumulator = new ExplainGraphAccumulator();
-    Context<?> originalDsl = contextFactory.of("body", ExecutionMode.EXPLAIN, "run-1")
+    Context<?> originalDsl = SimpleContext.builder("body").mode(ExecutionMode.EXPLAIN)
+            .runId("run-1").build()
             .withMetadata(Constants.EXPLAIN_GRAPH_ACCUMULATOR_KEY, accumulator);
     DslPipeContext pipeContext = DslPipeContext.of(
             "Ping", originalDsl, ExecutionMode.EXPLAIN, "run-1");
@@ -135,7 +139,7 @@ class ExecutionTreeStageTest {
       return Result.success("downstream");
     };
 
-    new ExecutionTreeStage(contextFactory, 32).execute(pipeContext, next);
+    new ExecutionTreeStage(32).execute(pipeContext, next);
 
     assertThat(accumulator.astTree()).isNotNull();
     assertThat(accumulator.astTree().name()).isEqualTo("Ping");
@@ -144,13 +148,14 @@ class ExecutionTreeStageTest {
 
   @Test
   void explainModeAlsoBuildsTree() {
-    Context<?> originalDsl = contextFactory.of("body", ExecutionMode.EXPLAIN, "run-1");
+    Context<?> originalDsl = SimpleContext.builder("body").mode(ExecutionMode.EXPLAIN)
+            .runId("run-1").build();
     DslPipeContext pipeContext = DslPipeContext.of(
             "Ping", originalDsl, ExecutionMode.EXPLAIN, "run-1");
 
     DslPipeStage.Next next = c -> Result.success("downstream");
 
-    new ExecutionTreeStage(contextFactory, 32).execute(pipeContext, next);
+    new ExecutionTreeStage(32).execute(pipeContext, next);
 
     pipeContext.getAttribute("astTree", CallNode.class);
   }

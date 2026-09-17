@@ -1,5 +1,6 @@
 package cbs.nova.dsl.transaction;
 
+import cbs.nova.dsl.model.SimpleContext;
 import cbs.nova.dsl.BeanResolver;
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.DslSaga;
@@ -8,7 +9,6 @@ import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.listener.ExecutionTraceCollector;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.helper.HelperInterceptor;
 import cbs.nova.dsl.model.MapInput;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +21,6 @@ import java.util.Map;
 public final class TransactionRichContext<T> implements TransactionContext<T> {
 
   private final Context<T> delegate;
-  private final ContextFactory contextFactory;
 
   @Override
   public @NonNull T body() {
@@ -80,30 +79,29 @@ public final class TransactionRichContext<T> implements TransactionContext<T> {
 
   @Override
   public @NonNull Context<T> withTransactionRouting(@NonNull TransactionRouting routing) {
-    return new TransactionRichContext<>(delegate.withTransactionRouting(routing), contextFactory);
+    return new TransactionRichContext<>(delegate.withTransactionRouting(routing));
   }
 
   @Override
   public @NonNull Context<T> withExecutionListener(@NonNull ExecutionListener listener) {
-    return new TransactionRichContext<>(delegate.withExecutionListener(listener), contextFactory);
+    return new TransactionRichContext<>(delegate.withExecutionListener(listener));
   }
 
   @Override
   public @NonNull Context<T> withSaga(@Nullable DslSaga saga) {
-    return new TransactionRichContext<>(delegate.withSaga(saga), contextFactory);
+    return new TransactionRichContext<>(delegate.withSaga(saga));
   }
 
   @Override
   public @NonNull Context<T> withExecutionTraceCollector(
           @Nullable ExecutionTraceCollector executionTraceCollector) {
     return new TransactionRichContext<>(
-            delegate.withExecutionTraceCollector(executionTraceCollector), contextFactory);
+            delegate.withExecutionTraceCollector(executionTraceCollector));
   }
 
   @Override
   public @NonNull Context<T> withHelperInterceptor(@Nullable HelperInterceptor interceptor) {
-    return new TransactionRichContext<>(delegate.withHelperInterceptor(interceptor),
-            contextFactory);
+    return new TransactionRichContext<>(delegate.withHelperInterceptor(interceptor));
   }
 
   private void trace(@NonNull String entry) {
@@ -120,7 +118,8 @@ public final class TransactionRichContext<T> implements TransactionContext<T> {
   @Override
   public @NonNull Result<?> runHelper(@NonNull String name, @NonNull Map<String, Object> input) {
     Result<?> result = GlobalManager.globalManager().runHelper(name,
-            contextFactory.of(input, delegate.mode(), delegate.runId()));
+            SimpleContext.builder().body(input).mode(delegate.mode()).runId(delegate.runId())
+                    .build());
     trace("called helper: " + name);
     return result;
   }
@@ -128,7 +127,8 @@ public final class TransactionRichContext<T> implements TransactionContext<T> {
   @Override
   public @NonNull Result<?> runHelper(@NonNull String name, @NonNull MapInput input) {
     Result<?> result = GlobalManager.globalManager().runHelper(name,
-            contextFactory.of(input, delegate.mode(), delegate.runId()));
+            SimpleContext.builder().body(input).mode(delegate.mode()).runId(delegate.runId())
+                    .build());
     trace("called helper: " + name);
     return result;
   }
@@ -140,6 +140,6 @@ public final class TransactionRichContext<T> implements TransactionContext<T> {
 
   @Override
   public @NonNull Context<T> withBeanResolver(@Nullable BeanResolver beanResolver) {
-    return new TransactionRichContext(delegate.withBeanResolver(beanResolver), contextFactory);
+    return new TransactionRichContext(delegate.withBeanResolver(beanResolver));
   }
 }

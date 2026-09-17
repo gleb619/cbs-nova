@@ -1,23 +1,22 @@
 package cbs.nova.starter.helper;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.helper.model.ConditionalFailIn;
 import cbs.nova.starter.helper.model.ConditionalFailOut;
 import org.junit.jupiter.api.Test;
 
 class ConditionalFailingHelperTest {
 
-  private final ContextFactory contextFactory = new ContextFactory();
   private final ConditionalFailingHelper helper = new ConditionalFailingHelper();
 
   @Test
   void returnsSuccessWhenNotFailing() {
-    var ctx = contextFactory.of(new ConditionalFailIn(false, null),
-            ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.<ConditionalFailIn>builder().body(new ConditionalFailIn(false, null))
+            .mode(ExecutionMode.PREVIEW).build();
     Result<ConditionalFailOut> result = helper.execute(ctx);
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value().status()).isEqualTo("ok");
@@ -25,8 +24,8 @@ class ConditionalFailingHelperTest {
 
   @Test
   void returnsFailureWhenShouldFail() {
-    var ctx = contextFactory.of(new ConditionalFailIn(true, "test failure"),
-            ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.<ConditionalFailIn>builder()
+            .body(new ConditionalFailIn(true, "test failure")).mode(ExecutionMode.PREVIEW).build();
     Result<ConditionalFailOut> result = helper.execute(ctx);
     assertThat(result.isSuccess()).isFalse();
     assertThat(result.cause().getMessage()).isEqualTo("test failure");
@@ -34,8 +33,8 @@ class ConditionalFailingHelperTest {
 
   @Test
   void usesDefaultReasonWhenNullReason() {
-    var ctx = contextFactory.of(new ConditionalFailIn(true, null),
-            ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.<ConditionalFailIn>builder().body(new ConditionalFailIn(true, null))
+            .mode(ExecutionMode.PREVIEW).build();
     Result<ConditionalFailOut> result = helper.execute(ctx);
     assertThat(result.isSuccess()).isFalse();
     assertThat(result.cause().getMessage()).isNotBlank();

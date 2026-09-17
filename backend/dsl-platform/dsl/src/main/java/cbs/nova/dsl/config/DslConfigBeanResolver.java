@@ -36,9 +36,6 @@ final class DslConfigBeanResolver implements BeanResolver {
     if (type == JsonSchemaGenerator.class) {
       return config.jsonSchemaGenerator().get();
     }
-    if (type == ContextFactory.class) {
-      return config.contextFactory();
-    }
     throw new IllegalStateException("No bean of type " + type.getName() + " is available");
   }
 }

@@ -1,16 +1,14 @@
 package cbs.nova.starter.core.pipe;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import org.junit.jupiter.api.Test;
 
 class DslExecutionPipelineTest {
-
-  private final ContextFactory contextFactory = new ContextFactory();
 
   @Test
   void pipelineExecutesStagesInOrder() {
@@ -31,7 +29,7 @@ class DslExecutionPipelineTest {
             })
             .build();
 
-    Context<?> ctx = contextFactory.of("in", ExecutionMode.RUN);
+    Context<?> ctx = SimpleContext.builder("in").mode(ExecutionMode.RUN).build();
     Result<String> result = pipe.execute("Test", ctx);
 
     assertThat(order.toString()).isEqualTo("ABC");

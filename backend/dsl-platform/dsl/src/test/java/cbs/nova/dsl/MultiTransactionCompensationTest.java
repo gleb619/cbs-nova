@@ -1,7 +1,7 @@
 package cbs.nova.dsl;
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.history.TransactionExecutionRepository;
 import cbs.nova.dsl.process.ProcessRunner;
 import cbs.nova.dsl.registry.DefaultCompensationRegistry;
@@ -17,13 +17,12 @@ import java.util.ArrayList;
 
 class MultiTransactionCompensationTest {
 
-  private final ContextFactory contextFactory = new ContextFactory();
   private final TransactionExecutionRepository transactionExecutionRepository = new InMemoryTransactionExecutionRepository();
   private final CompensationRegistry compensationRegistry = new DefaultCompensationRegistry();
   private final ProcessCompensationHandler compensationHandler = new ProcessCompensationHandler(
-          contextFactory, compensationRegistry);
-  private final ProcessRunner runner = new DefaultProcessRunner(contextFactory,
-          transactionExecutionRepository, null, compensationHandler);
+          compensationRegistry);
+  private final ProcessRunner runner = new DefaultProcessRunner(transactionExecutionRepository,
+          null, compensationHandler);
 
   @Test
   void compensationsRunInReverseOrderAfterFailure() {
@@ -59,7 +58,7 @@ class MultiTransactionCompensationTest {
             })
             .build();
 
-    var ctx = contextFactory.of("in", ExecutionMode.RUN, "run-lifo");
+    var ctx = SimpleContext.builder().body("in").mode(ExecutionMode.RUN).runId("run-lifo").build();
     runner.run(process, ctx);
 
     assertThat(order).containsExactly("T2-compensated", "T1-compensated");
@@ -101,7 +100,8 @@ class MultiTransactionCompensationTest {
             .build();
 
     var saga = DslSaga.create();
-    var ctx = contextFactory.of("in", ExecutionMode.RUN, "run-saga-lifo").withSaga(saga);
+    var ctx = SimpleContext.builder().body("in").mode(ExecutionMode.RUN).runId("run-saga-lifo")
+            .build().withSaga(saga);
     runner.run(process, ctx);
 
     assertThat(order).containsExactly("SagaT2-compensated", "SagaT1-compensated");

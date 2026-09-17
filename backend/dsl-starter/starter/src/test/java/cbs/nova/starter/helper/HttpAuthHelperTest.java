@@ -1,10 +1,10 @@
 package cbs.nova.starter.helper;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.helper.model.HttpAuthIn;
 import cbs.nova.starter.helper.model.HttpAuthOut;
 import java.util.Map;
@@ -12,7 +12,6 @@ import org.junit.jupiter.api.Test;
 
 class HttpAuthHelperTest {
 
-  private final ContextFactory contextFactory = new ContextFactory();
   private final HttpAuthHelper helper = new HttpAuthHelper();
 
   // --- bearer ---------------------------------------------------------------
@@ -204,7 +203,7 @@ class HttpAuthHelperTest {
   }
 
   private Result<HttpAuthOut> execute(HttpAuthIn input) {
-    var ctx = contextFactory.of(input, ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.builder(input).mode(ExecutionMode.PREVIEW).build();
     return helper.execute(ctx);
   }
 }

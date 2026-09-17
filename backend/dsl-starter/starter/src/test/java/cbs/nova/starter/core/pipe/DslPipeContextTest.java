@@ -1,21 +1,21 @@
 package cbs.nova.starter.core.pipe;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.ExecutionMode;
-import cbs.nova.dsl.config.ContextFactory;
 import org.junit.jupiter.api.Test;
 
 class DslPipeContextTest {
 
-  private final ContextFactory contextFactory = new ContextFactory();
-
   @Test
   void of_createsContextWithFreshAttributesMap() {
-    DslPipeContext first = DslPipeContext.of("ping", contextFactory.of("in", ExecutionMode.RUN),
+    DslPipeContext first = DslPipeContext.of("ping",
+            SimpleContext.builder("in").mode(ExecutionMode.RUN).build(),
             ExecutionMode.RUN, "run-1");
-    DslPipeContext second = DslPipeContext.of("ping", contextFactory.of("in", ExecutionMode.RUN),
+    DslPipeContext second = DslPipeContext.of("ping",
+            SimpleContext.builder("in").mode(ExecutionMode.RUN).build(),
             ExecutionMode.RUN, "run-1");
 
     first.setAttribute("key", "value");
@@ -28,7 +28,7 @@ class DslPipeContextTest {
   void builder_omittingAttributes_stillProvidesUsableMap() {
     DslPipeContext built = DslPipeContext.builder()
             .name("ping")
-            .dslContext(contextFactory.of("in", ExecutionMode.RUN))
+            .dslContext(SimpleContext.builder("in").mode(ExecutionMode.RUN).build())
             .mode(ExecutionMode.RUN)
             .runId("run-1")
             .build();
@@ -40,11 +40,13 @@ class DslPipeContextTest {
 
   @Test
   void withDslContext_sharesAttributesMap() {
-    DslPipeContext original = DslPipeContext.of("ping", contextFactory.of("in", ExecutionMode.RUN),
+    DslPipeContext original = DslPipeContext.of("ping",
+            SimpleContext.builder("in").mode(ExecutionMode.RUN).build(),
             ExecutionMode.RUN, "run-1");
     original.setAttribute("key", "original");
 
-    DslPipeContext copy = original.withDslContext(contextFactory.of("in", ExecutionMode.PREVIEW));
+    DslPipeContext copy = original
+            .withDslContext(SimpleContext.builder("in").mode(ExecutionMode.PREVIEW).build());
 
     assertThat(copy).isNotSameAs(original);
     assertThat(copy.dslContext()).isNotSameAs(original.dslContext());
@@ -63,7 +65,8 @@ class DslPipeContextTest {
 
   @Test
   void setAttribute_nullRemovesKey() {
-    DslPipeContext context = DslPipeContext.of("ping", contextFactory.of("in", ExecutionMode.RUN),
+    DslPipeContext context = DslPipeContext.of("ping",
+            SimpleContext.builder("in").mode(ExecutionMode.RUN).build(),
             ExecutionMode.RUN, "run-1");
 
     context.setAttribute("key", "value");
@@ -75,7 +78,8 @@ class DslPipeContextTest {
 
   @Test
   void getAttribute_typed_returnsNullWhenTypeDoesNotMatch() {
-    DslPipeContext context = DslPipeContext.of("ping", contextFactory.of("in", ExecutionMode.RUN),
+    DslPipeContext context = DslPipeContext.of("ping",
+            SimpleContext.builder("in").mode(ExecutionMode.RUN).build(),
             ExecutionMode.RUN, "run-1");
     context.setAttribute("key", "a-string");
 

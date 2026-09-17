@@ -1,11 +1,11 @@
 package cbs.nova.dsl.runner;
 
+import cbs.nova.dsl.model.SimpleContext;
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.DslSaga;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.exception.DslExecutionException;
 import cbs.nova.dsl.transaction.CompensationRegistry;
 import cbs.nova.dsl.transaction.TransactionDslObject;
@@ -22,7 +22,6 @@ import java.util.Map;
 @RequiredArgsConstructor
 public final class DefaultTransactionRunner implements TransactionRunner {
 
-  private final ContextFactory contextFactory;
   private final CompensationRegistry compensationRegistry;
 
   @Override
@@ -33,7 +32,7 @@ public final class DefaultTransactionRunner implements TransactionRunner {
     listener.onTransactionStart(ctx.runId(), transaction.name(), ctx.body());
     Result<?> result = null;
     try {
-      var richCtx = new TransactionRichContext<>(ctx, contextFactory);
+      var richCtx = new TransactionRichContext<>(ctx);
       if (ctx.mode() == ExecutionMode.EXPLAIN) {
         result = transaction.effectiveExplain().apply(richCtx);
       } else if (ctx.mode() == ExecutionMode.PREVIEW) {
@@ -66,9 +65,10 @@ public final class DefaultTransactionRunner implements TransactionRunner {
     if (!saga.isNoop()) {
       saga.addCompensation(() -> {
         Object compensationBody = ctx.body();
-        var compCtxBase = contextFactory.of(compensationBody, Map.of(),
-                ExecutionMode.COMPENSATION, ctx.runId(), ctx.transactionRouting(),
-                ctx.executionListener(), ctx.saga())
+        var compCtxBase = SimpleContext.builder().body(compensationBody).metadata(Map.of())
+                .mode(ExecutionMode.COMPENSATION).runId(ctx.runId())
+                .transactionRouting(ctx.transactionRouting())
+                .executionListener(ctx.executionListener()).saga(ctx.saga()).build()
                 .withExecutionTraceCollector(ctx.executionTraceCollector());
         var compCtx = GlobalManager.globalManager().createCompensationContext(compCtxBase,
                 new RuntimeException("compensation triggered"));

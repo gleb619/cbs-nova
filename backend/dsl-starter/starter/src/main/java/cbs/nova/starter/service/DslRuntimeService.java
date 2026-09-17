@@ -1,5 +1,6 @@
 package cbs.nova.starter.service;
 
+import cbs.nova.dsl.model.SimpleContext;
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.DslRuntime;
 import cbs.nova.dsl.ExecutionMode;
@@ -7,7 +8,6 @@ import cbs.nova.dsl.model.ExplainReport;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.model.PreviewReport;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.exception.DslException;
 import cbs.nova.starter.converter.DslRuntimeMapper;
@@ -42,7 +42,6 @@ import java.util.function.Supplier;
 public class DslRuntimeService {
 
   private final DslRuntime dslRuntime;
-  private final ContextFactory contextFactory;
   private final LoggingExecutionListener loggingListener;
   private final DslRuntimeMapper mapper;
 
@@ -114,7 +113,7 @@ public class DslRuntimeService {
   }
 
   private String resolveRunId(@Nullable String requestId) {
-    return requestId != null && !requestId.isBlank() ? requestId : contextFactory.generateRunId();
+    return requestId != null && !requestId.isBlank() ? requestId : SimpleContext.generateRunId();
   }
 
   private Context<?> toContext(String name, DslRequest request, ExecutionMode mode, String runId) {
@@ -130,7 +129,8 @@ public class DslRuntimeService {
       metadata.put(StarterConstants.CORRELATION_ID_METADATA_KEY, correlationId);
     }
     Object body = coerceBody(name, runId, request.body());
-    Context<?> ctx = contextFactory.of(body, metadata, mode, runId);
+    Context<?> ctx = SimpleContext.builder().body(body).metadata(metadata).mode(mode).runId(runId)
+            .build();
     return ctx.withExecutionListener(loggingListener);
   }
 

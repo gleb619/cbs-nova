@@ -1,11 +1,11 @@
 package cbs.nova.starter.preview;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.transaction.TransactionInvoker;
 import cbs.nova.starter.core.recorder.ExternalCall;
 import cbs.nova.starter.core.recorder.ExternalCallRecorder;
@@ -21,8 +21,6 @@ import java.util.Map;
 
 class TemporalActivityCallCaptureInterceptorTest {
   private final ThreadLocalDryRunLoggingContext dryRunLoggingContext = new ThreadLocalDryRunLoggingContext();
-
-  private final ContextFactory contextFactory = new ContextFactory();
 
   private RunIdKeyedExternalCallRecorder recorder;
   private List<ExternalCall> recorded;
@@ -46,7 +44,8 @@ class TemporalActivityCallCaptureInterceptorTest {
   @Test
   void recordsActivityCallBeforeDelegating() {
     var input = Map.of("key", "value");
-    Context<?> ctx = contextFactory.of(input, ExecutionMode.PREVIEW, "run-123");
+    Context<?> ctx = SimpleContext.builder(input).mode(ExecutionMode.PREVIEW).runId("run-123")
+            .build();
 
     recorder.startRun("run-123");
     Result<?> result = interceptor.invoke("MyTx", input, ctx);
@@ -69,7 +68,8 @@ class TemporalActivityCallCaptureInterceptorTest {
 
   @Test
   void delegatesWhenNoMockIsConfigured() {
-    Context<?> ctx = contextFactory.of("body", ExecutionMode.PREVIEW, "run-000");
+    Context<?> ctx = SimpleContext.builder("body").mode(ExecutionMode.PREVIEW).runId("run-000")
+            .build();
 
     recorder.startRun("run-000");
     Result<?> result = interceptor.invoke("MyTx", "body", ctx);

@@ -1,5 +1,6 @@
 package cbs.nova.starter.core.stage;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -13,7 +14,6 @@ import cbs.nova.dsl.Context;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.model.PreviewReport;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.model.PreviewModels.PreviewCacheKey;
 import cbs.nova.starter.service.PreviewResultCache;
 import cbs.nova.starter.core.pipe.DslPipeContext;
@@ -25,8 +25,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 class PreviewCacheStageTest {
-
-  private final ContextFactory contextFactory = new ContextFactory();
 
   @Test
   void cacheHitShortCircuitsAndReturnsCachedReportWithoutCallingNext() {
@@ -145,7 +143,8 @@ class PreviewCacheStageTest {
   }
 
   private DslPipeContext newPipeContext() {
-    Context<Object> ctx = contextFactory.of("body", ExecutionMode.PREVIEW, "run-1");
+    Context<Object> ctx = SimpleContext.builder().body("body").mode(ExecutionMode.PREVIEW)
+            .runId("run-1").build();
     return DslPipeContext.of("Ping", ctx, ExecutionMode.PREVIEW, "run-1");
   }
 

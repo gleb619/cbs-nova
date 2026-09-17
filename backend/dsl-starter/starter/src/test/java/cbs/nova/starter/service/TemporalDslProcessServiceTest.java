@@ -1,5 +1,8 @@
 package cbs.nova.starter.service;
 
+import java.util.concurrent.atomic.AtomicReference;
+import cbs.nova.dsl.process.ProcessDslObject;
+import cbs.nova.dsl.Context;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.ExecutionMode;
@@ -7,7 +10,6 @@ import cbs.nova.dsl.Result;
 import cbs.nova.dsl.model.SimpleContext;
 import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.GlobalManager;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.exception.DslEntityNotFoundException;
 import cbs.nova.dsl.history.DslRun;
 import cbs.nova.dsl.history.DslRunRepository;
@@ -52,56 +54,57 @@ class TemporalDslProcessServiceTest {
     MDC.clear();
   }
 
-  private static ContextFactory mockContextFactoryWith(String runId,
-          SimpleContext<Object> ctx) {
-    ContextFactory contextFactory = Mockito.mock(ContextFactory.class);
-    Mockito.when(contextFactory.generateRunId()).thenReturn(runId);
-    Mockito.doReturn(ctx).when(contextFactory)
-            .of(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
-    return contextFactory;
+  private static MockedStatic<SimpleContext> mockGenerateRunId(String runId) {
+    MockedStatic<SimpleContext> mocked = Mockito.mockStatic(SimpleContext.class,
+            Mockito.CALLS_REAL_METHODS);
+    mocked.when(SimpleContext::generateRunId).thenReturn(runId);
+    return mocked;
   }
 
-  private static TemporalDslProcessService newService(ContextFactory contextFactory) {
+  private static ProcessDslObject captureProcess(String processName,
+          AtomicReference<Context<?>> ref) {
+    return Dsl.process(processName).execute(ctx -> {
+      ref.set(ctx);
+      return Result.success("ok");
+    }).build();
+  }
+
+  private static TemporalDslProcessService newService() {
     return createService(
-            contextFactory, new InMemoryDslRunRepository(InMemoryDslRunRepository.NO_OP_EVICTION),
+            new InMemoryDslRunRepository(InMemoryDslRunRepository.NO_OP_EVICTION),
             new ObjectMapper());
   }
 
   public static TemporalDslProcessService createService(
-          ContextFactory contextFactory,
           DslRunRepository runRepository,
           ObjectMapper objectMapper) {
-    return createService(contextFactory, runRepository, objectMapper, Long.MAX_VALUE);
+    return createService(runRepository, objectMapper, Long.MAX_VALUE);
   }
 
   public static TemporalDslProcessService createService(
-          ContextFactory contextFactory,
           DslRunRepository runRepository,
           ObjectMapper objectMapper,
           long maxOutputBytes) {
-    return createService(contextFactory, runRepository, objectMapper, maxOutputBytes,
+    return createService(runRepository, objectMapper, maxOutputBytes,
             new SimpleMeterRegistry(), nullResolver());
   }
 
   public static TemporalDslProcessService createService(
-          ContextFactory contextFactory,
           DslRunRepository runRepository,
           ObjectMapper objectMapper,
           long maxOutputBytes,
           SimpleMeterRegistry meterRegistry) {
-    return createService(contextFactory, runRepository, objectMapper, maxOutputBytes,
+    return createService(runRepository, objectMapper, maxOutputBytes,
             meterRegistry, nullResolver());
   }
 
   public static TemporalDslProcessService createService(
-          ContextFactory contextFactory,
           DslRunRepository runRepository,
           ObjectMapper objectMapper,
           long maxOutputBytes,
           SimpleMeterRegistry meterRegistry,
           RunIdentityResolver runIdentityResolver) {
     return TemporalDslProcessService.withDefaults(
-            contextFactory,
             runRepository,
             objectMapper,
             sameThreadExecutor(),
@@ -141,7 +144,7 @@ class TemporalDslProcessServiceTest {
     InMemoryDslRunRepository repo = new InMemoryDslRunRepository(
             InMemoryDslRunRepository.NO_OP_EVICTION);
     TemporalDslProcessService service = createService(
-            new ContextFactory(), repo, new ObjectMapper(),
+            repo, new ObjectMapper(),
             Long.MAX_VALUE, new SimpleMeterRegistry(), fixedResolver("alice"));
 
     Result<?> result = service.runProcess("Ok", "in").result().join();
@@ -160,7 +163,7 @@ class TemporalDslProcessServiceTest {
 
     InMemoryDslRunRepository repo = new InMemoryDslRunRepository(
             InMemoryDslRunRepository.NO_OP_EVICTION);
-    TemporalDslProcessService service = createService(new ContextFactory(), repo,
+    TemporalDslProcessService service = createService(repo,
             new ObjectMapper());
 
     Result<?> result = service.runProcess("Hashed", "in").result().join();
@@ -178,7 +181,7 @@ class TemporalDslProcessServiceTest {
 
     InMemoryDslRunRepository repo = new InMemoryDslRunRepository(
             InMemoryDslRunRepository.NO_OP_EVICTION);
-    TemporalDslProcessService service = createService(new ContextFactory(), repo,
+    TemporalDslProcessService service = createService(repo,
             new ObjectMapper());
 
     service.runProcess("Stable", "first").result().join();
@@ -198,7 +201,7 @@ class TemporalDslProcessServiceTest {
 
     InMemoryDslRunRepository repo = new InMemoryDslRunRepository(
             InMemoryDslRunRepository.NO_OP_EVICTION);
-    TemporalDslProcessService service = createService(new ContextFactory(), repo,
+    TemporalDslProcessService service = createService(repo,
             new ObjectMapper());
 
     Result<?> result = service.runProcess(missing, "in").result().join();
@@ -213,56 +216,50 @@ class TemporalDslProcessServiceTest {
 
   @Test
   void runProcessSingleArgDefaultsMetadataToEmptyMap() {
-    SimpleContext<Object> stubCtx = new SimpleContext<>("payload", Map.of(), ExecutionMode.RUN,
-            "run-id-1", TransactionRouting.LOCAL, null, null, null, null, null);
-    ContextFactory contextFactory = mockContextFactoryWith("run-id-1", stubCtx);
+    GlobalManager.globalManager().resetForTests();
+    AtomicReference<Context<?>> captured = new AtomicReference<>();
+    String name = unique();
+    GlobalManager.globalManager().registerProcess(captureProcess(name, captured));
 
-    newService(contextFactory).runProcess(unique(), "payload");
+    newService().runProcess(name, "payload");
 
-    Mockito.verify(contextFactory).of(
-            Mockito.eq("payload"),
-            Mockito.eq(Map.of()),
-            Mockito.eq(ExecutionMode.RUN),
-            Mockito.eq("run-id-1"));
+    assertThat(captured.get()).isNotNull();
+    assertThat(captured.get().body()).isEqualTo("payload");
+    assertThat(captured.get().metadata()).isEmpty();
   }
 
   @Test
   void startProcessThreeArgCoercesNullInputToEmptyMap() {
-    SimpleContext<Object> stubCtx = new SimpleContext<>(Map.of(), Map.of("k", "v"),
-            ExecutionMode.RUN, "run-id-2", TransactionRouting.LOCAL, null, null, null, null, null);
-    ContextFactory contextFactory = mockContextFactoryWith("run-id-2", stubCtx);
+    GlobalManager.globalManager().resetForTests();
+    AtomicReference<Context<?>> captured = new AtomicReference<>();
+    String name = unique();
+    GlobalManager.globalManager().registerProcess(captureProcess(name, captured));
 
-    newService(contextFactory).startProcess(unique(), null, Map.of("k", "v"));
+    newService().startProcess(name, null, Map.of("k", "v"));
 
-    ArgumentCaptor<Object> bodyCaptor = ArgumentCaptor.forClass(Object.class);
-    Mockito.verify(contextFactory).of(
-            bodyCaptor.capture(),
-            Mockito.eq(Map.of("k", "v")),
-            Mockito.eq(ExecutionMode.RUN),
-            Mockito.eq("run-id-2"));
-    assertThat(bodyCaptor.getValue()).isEqualTo(Map.of());
+    assertThat(captured.get()).isNotNull();
+    assertThat(captured.get().body()).isEqualTo(Map.of());
+    assertThat(captured.get().metadata()).containsEntry("k", "v");
   }
 
   @Test
-  void startProcessUsesRunIdGeneratedByContextFactory() {
-    SimpleContext<Object> stubCtx = new SimpleContext<>("payload", Map.of(), ExecutionMode.RUN,
-            "run-id-3", TransactionRouting.LOCAL, null, null, null, null, null);
-    ContextFactory contextFactory = mockContextFactoryWith("run-id-3", stubCtx);
+  void startProcessUsesRunIdGeneratedBySimpleContext() {
+    GlobalManager.globalManager().resetForTests();
+    AtomicReference<Context<?>> captured = new AtomicReference<>();
+    String name = unique();
+    GlobalManager.globalManager().registerProcess(captureProcess(name, captured));
 
-    newService(contextFactory).startProcess(unique(), "payload", Map.of());
+    newService().startProcess(name, "payload", Map.of());
 
-    Mockito.verify(contextFactory).generateRunId();
-    Mockito.verify(contextFactory).of(
-            Mockito.any(),
-            Mockito.any(),
-            Mockito.eq(ExecutionMode.RUN),
-            Mockito.eq("run-id-3"));
+    assertThat(captured.get()).isNotNull();
+    assertThat(captured.get().runId()).startsWith("run-");
+    assertThat(captured.get().mode()).isEqualTo(ExecutionMode.RUN);
   }
 
   @Test
   void startProcessReachesGlobalManagerWithCorrectProcessName() {
     String missing = "missing-" + UUID.randomUUID();
-    TemporalDslProcessService service = createService(new ContextFactory(),
+    TemporalDslProcessService service = createService(
             new InMemoryDslRunRepository(InMemoryDslRunRepository.NO_OP_EVICTION),
             new ObjectMapper());
 
@@ -276,28 +273,24 @@ class TemporalDslProcessServiceTest {
   }
 
   @Test
-  void startContextCarriesNonEmptyInputThroughToContextFactory() {
+  void startContextCarriesNonEmptyInputAndMetadata() {
+    GlobalManager.globalManager().resetForTests();
     Map<String, Object> input = Map.of("a", 1, "b", "two");
-    SimpleContext<Object> stubCtx = new SimpleContext<>(input, Map.of(), ExecutionMode.RUN,
-            "run-id-4", TransactionRouting.LOCAL, null, null, null, null, null);
-    ContextFactory contextFactory = mockContextFactoryWith("run-id-4", stubCtx);
+    AtomicReference<Context<?>> captured = new AtomicReference<>();
+    String name = unique();
+    GlobalManager.globalManager().registerProcess(captureProcess(name, captured));
 
-    newService(contextFactory).startProcess(unique(), input, Map.of("meta", "data"));
+    newService().startProcess(name, input, Map.of("meta", "data"));
 
-    Mockito.verify(contextFactory).of(
-            Mockito.eq(input),
-            Mockito.eq(Map.of("meta", "data")),
-            Mockito.eq(ExecutionMode.RUN),
-            Mockito.eq("run-id-4"));
+    assertThat(captured.get()).isNotNull();
+    assertThat(captured.get().body()).isEqualTo(input);
+    assertThat(captured.get().metadata()).containsEntry("meta", "data");
   }
 
   @Test
   void startProcessPropagatesRunIdToMdcAndSentry() {
-    SimpleContext<Object> stubCtx = new SimpleContext<>("payload", Map.of(), ExecutionMode.RUN,
-            "run-id-5", TransactionRouting.LOCAL, null, null, null, null, null);
-    ContextFactory contextFactory = mockContextFactoryWith("run-id-5", stubCtx);
-
-    try (MockedStatic<Sentry> sentry = Mockito.mockStatic(Sentry.class);
+    try (MockedStatic<SimpleContext> simple = mockGenerateRunId("run-id-5");
+            MockedStatic<Sentry> sentry = Mockito.mockStatic(Sentry.class);
             MockedStatic<Baggage> baggage = Mockito.mockStatic(Baggage.class)) {
       Baggage current = Mockito.mock(Baggage.class);
       BaggageBuilder builder = Mockito.mock(BaggageBuilder.class);
@@ -310,7 +303,7 @@ class TemporalDslProcessServiceTest {
       });
 
       TemporalDslProcessService service = createService(
-              contextFactory, new InMemoryDslRunRepository(InMemoryDslRunRepository.NO_OP_EVICTION),
+              new InMemoryDslRunRepository(InMemoryDslRunRepository.NO_OP_EVICTION),
               new ObjectMapper());
       service.startProcess(unique(), "payload", Map.of());
 
@@ -327,12 +320,9 @@ class TemporalDslProcessServiceTest {
       InMemoryDslRunRepository repo = new InMemoryDslRunRepository(
               InMemoryDslRunRepository.NO_OP_EVICTION);
       longAgoClock fixedClock = new longAgoClock();
-
-      ContextFactory contextFactory = Mockito.mock(ContextFactory.class);
-      Mockito.when(contextFactory.generateRunId()).thenReturn("run-stale-1");
       SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
-      TemporalDslProcessService service = TemporalDslProcessService.withDefaults(
-              contextFactory, repo, new ObjectMapper(),
+      TemporalDslProcessService service = TemporalDslProcessService.withDefaults(repo,
+              new ObjectMapper(),
               exec, scheduler, Duration.ofMillis(1), Duration.ofMillis(100), false,
               Long.MAX_VALUE, meterRegistry, nullResolver());
       service.setClock(fixedClock);
@@ -396,9 +386,8 @@ class TemporalDslProcessServiceTest {
               InMemoryDslRunRepository.NO_OP_EVICTION);
       longAgoClock fixedClock = new longAgoClock();
 
-      ContextFactory contextFactory = Mockito.mock(ContextFactory.class);
-      TemporalDslProcessService service = TemporalDslProcessService.withDefaults(
-              contextFactory, repo, new ObjectMapper(),
+      TemporalDslProcessService service = TemporalDslProcessService.withDefaults(repo,
+              new ObjectMapper(),
               exec, scheduler, Duration.ofMillis(1), Duration.ofMillis(100), false,
               Long.MAX_VALUE, new SimpleMeterRegistry(), nullResolver());
       service.setClock(fixedClock);
@@ -440,9 +429,8 @@ class TemporalDslProcessServiceTest {
     InMemoryDslRunRepository repo = new InMemoryDslRunRepository(
             InMemoryDslRunRepository.NO_OP_EVICTION);
     try {
-      ContextFactory contextFactory = Mockito.mock(ContextFactory.class);
-      TemporalDslProcessService service = TemporalDslProcessService.withDefaults(
-              contextFactory, repo, new ObjectMapper(),
+      TemporalDslProcessService service = TemporalDslProcessService.withDefaults(repo,
+              new ObjectMapper(),
               exec, scheduler, Duration.ofMillis(1), Duration.ofMillis(100), false,
               Long.MAX_VALUE, new SimpleMeterRegistry(), nullResolver());
 
@@ -462,6 +450,7 @@ class TemporalDslProcessServiceTest {
   }
 
   @Test
+
   void clockOverrideIsPublishedAcrossConcurrentReaders() throws Exception {
     Clock[] clocks = new Clock[]{
         Clock.fixed(Instant.parse("2030-01-01T00:00:00Z"), ZoneOffset.UTC),
@@ -474,15 +463,8 @@ class TemporalDslProcessServiceTest {
     AtomicInteger runIdSeq = new AtomicInteger();
     ExecutorService pool = Executors
             .newFixedThreadPool(readers + writers);
-    ContextFactory contextFactory = Mockito.mock(ContextFactory.class);
-    Mockito.when(contextFactory.generateRunId())
-            .thenAnswer(inv -> "run-" + runIdSeq.incrementAndGet());
-    Mockito.when(contextFactory.of(
-            Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any()))
-            .thenReturn(new SimpleContext<>("payload", Map.of(), ExecutionMode.RUN,
-                    "ignored", TransactionRouting.LOCAL, null, null, null, null, null));
+
     TemporalDslProcessService service = TemporalDslProcessService.withDefaults(
-            contextFactory,
             new InMemoryDslRunRepository(InMemoryDslRunRepository.NO_OP_EVICTION),
             new ObjectMapper(),
             sameThreadExecutor(),
@@ -599,8 +581,7 @@ class TemporalDslProcessServiceTest {
     InMemoryDslRunRepository repo = new InMemoryDslRunRepository(
             InMemoryDslRunRepository.NO_OP_EVICTION);
     // Serialized output is the JSON string "aaa..." -> 100 chars + 2 quotes = 102 bytes.
-    TemporalDslProcessService service = createService(
-            new ContextFactory(), repo, new ObjectMapper(), 101L);
+    TemporalDslProcessService service = createService(repo, new ObjectMapper(), 101L);
 
     Result<?> result = service.runProcess("Echo", "irrelevant").result().join();
 
@@ -621,8 +602,7 @@ class TemporalDslProcessServiceTest {
 
     InMemoryDslRunRepository repo = new InMemoryDslRunRepository(
             InMemoryDslRunRepository.NO_OP_EVICTION);
-    TemporalDslProcessService service = createService(
-            new ContextFactory(), repo, new ObjectMapper(), 102L);
+    TemporalDslProcessService service = createService(repo, new ObjectMapper(), 102L);
 
     Result<?> result = service.runProcess("Echo", "irrelevant").result().join();
 
@@ -643,8 +623,7 @@ class TemporalDslProcessServiceTest {
 
     InMemoryDslRunRepository repo = new InMemoryDslRunRepository(
             InMemoryDslRunRepository.NO_OP_EVICTION);
-    TemporalDslProcessService service = createService(
-            new ContextFactory(), repo, new ObjectMapper(), 0L);
+    TemporalDslProcessService service = createService(repo, new ObjectMapper(), 0L);
 
     Result<?> result = service.runProcess("Echo", "irrelevant").result().join();
 
@@ -665,8 +644,7 @@ class TemporalDslProcessServiceTest {
 
     InMemoryDslRunRepository repo = new InMemoryDslRunRepository(
             InMemoryDslRunRepository.NO_OP_EVICTION);
-    TemporalDslProcessService service = createService(
-            new ContextFactory(), repo, new ObjectMapper(), Long.MAX_VALUE);
+    TemporalDslProcessService service = createService(repo, new ObjectMapper(), Long.MAX_VALUE);
 
     Result<?> result = service.runProcess("Echo", "irrelevant").result().join();
 
@@ -685,7 +663,6 @@ class TemporalDslProcessServiceTest {
 
     SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
     TemporalDslProcessService service = createService(
-            new ContextFactory(),
             new InMemoryDslRunRepository(InMemoryDslRunRepository.NO_OP_EVICTION),
             new ObjectMapper(),
             Long.MAX_VALUE, meterRegistry, nullResolver());
@@ -709,7 +686,6 @@ class TemporalDslProcessServiceTest {
   void failedRunBucketsUnknownProcessNameAndIncrementsFailedCount() {
     SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
     TemporalDslProcessService service = createService(
-            new ContextFactory(),
             new InMemoryDslRunRepository(InMemoryDslRunRepository.NO_OP_EVICTION),
             new ObjectMapper(),
             Long.MAX_VALUE, meterRegistry, nullResolver());
@@ -743,8 +719,7 @@ class TemporalDslProcessServiceTest {
 
     InMemoryDslRunRepository repo = new InMemoryDslRunRepository(
             InMemoryDslRunRepository.NO_OP_EVICTION);
-    TemporalDslProcessService service = createService(
-            new ContextFactory(), repo, new ObjectMapper());
+    TemporalDslProcessService service = createService(repo, new ObjectMapper());
 
     Result<?> result = service.runProcess("UseEcho", "payload").result().join();
 
@@ -767,8 +742,7 @@ class TemporalDslProcessServiceTest {
 
     InMemoryDslRunRepository repo = new InMemoryDslRunRepository(
             InMemoryDslRunRepository.NO_OP_EVICTION);
-    TemporalDslProcessService service = createService(
-            new ContextFactory(), repo, new ObjectMapper());
+    TemporalDslProcessService service = createService(repo, new ObjectMapper());
 
     Result<?> result = service.runProcess("UseTx", "payload").result().join();
 
@@ -786,8 +760,7 @@ class TemporalDslProcessServiceTest {
 
     InMemoryDslRunRepository repo = new InMemoryDslRunRepository(
             InMemoryDslRunRepository.NO_OP_EVICTION);
-    TemporalDslProcessService service = createService(
-            new ContextFactory(), repo, new ObjectMapper());
+    TemporalDslProcessService service = createService(repo, new ObjectMapper());
 
     service.runProcess("Quiet", "payload").result().join();
 
@@ -804,7 +777,6 @@ class TemporalDslProcessServiceTest {
 
     SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
     TemporalDslProcessService service = createService(
-            new ContextFactory(),
             new InMemoryDslRunRepository(InMemoryDslRunRepository.NO_OP_EVICTION),
             new ObjectMapper(),
             Long.MAX_VALUE, meterRegistry, nullResolver());
@@ -848,8 +820,7 @@ class TemporalDslProcessServiceTest {
 
     InMemoryDslRunRepository repo = new InMemoryDslRunRepository(
             InMemoryDslRunRepository.NO_OP_EVICTION);
-    TemporalDslProcessService service = createService(
-            new ContextFactory(), repo, new ObjectMapper(),
+    TemporalDslProcessService service = createService(repo, new ObjectMapper(),
             Long.MAX_VALUE, new SimpleMeterRegistry(), nullResolver());
 
     Result<?> result = service.runProcess("Ok", "in", "corr-abc").result().join();
@@ -867,8 +838,7 @@ class TemporalDslProcessServiceTest {
 
     InMemoryDslRunRepository repo = new InMemoryDslRunRepository(
             InMemoryDslRunRepository.NO_OP_EVICTION);
-    TemporalDslProcessService service = createService(
-            new ContextFactory(), repo, new ObjectMapper(),
+    TemporalDslProcessService service = createService(repo, new ObjectMapper(),
             Long.MAX_VALUE, new SimpleMeterRegistry(), nullResolver());
 
     Result<?> result = service.runProcess("Ok", "in").result().join();

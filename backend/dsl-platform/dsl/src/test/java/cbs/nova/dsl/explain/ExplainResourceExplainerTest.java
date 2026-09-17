@@ -1,20 +1,18 @@
 package cbs.nova.dsl.explain;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.BeanResolver;
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.config.Constants;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.config.DslConfig;
 import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 class ExplainResourceExplainerTest {
-
-  private final ContextFactory contextFactory = new ContextFactory();
 
   @AfterEach
   void resetResolverOverride() {
@@ -93,7 +91,8 @@ class ExplainResourceExplainerTest {
       }
       throw new IllegalStateException("Unexpected bean type: " + type);
     };
-    var ctx = contextFactory.of("body", ExecutionMode.EXPLAIN, "run-local")
+    var ctx = SimpleContext.builder().body("body").mode(ExecutionMode.EXPLAIN).runId("run-local")
+            .build()
             .withBeanResolver(resolver);
 
     var result = explain.apply(ctx);
@@ -103,7 +102,9 @@ class ExplainResourceExplainerTest {
 
   private Context<?> explainContext(Map<String, Object> metadata) {
     return metadata.isEmpty()
-            ? contextFactory.of("body", ExecutionMode.EXPLAIN, "run-doc")
-            : contextFactory.of("body", metadata, ExecutionMode.EXPLAIN, "run-doc");
+            ? SimpleContext.builder().body("body").mode(ExecutionMode.EXPLAIN).runId("run-doc")
+                    .build()
+            : SimpleContext.builder().body("body").metadata(metadata).mode(ExecutionMode.EXPLAIN)
+                    .runId("run-doc").build();
   }
 }

@@ -1,10 +1,10 @@
 package cbs.nova.starter.helper;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.helper.model.FormatDateIn;
 import cbs.nova.starter.helper.model.FormatDateOut;
 import cbs.nova.starter.helper.model.ParseDateIn;
@@ -14,7 +14,6 @@ import org.junit.jupiter.api.Test;
 
 class ParseDateHelperTest {
 
-  private final ContextFactory contextFactory = new ContextFactory();
   private final FormatDateHelper formatDate = new FormatDateHelper();
   private final ParseDateHelper parseDate = new ParseDateHelper();
 
@@ -60,15 +59,17 @@ class ParseDateHelperTest {
   }
 
   private String format(FormatDateIn input) {
-    return formatDate.execute(contextFactory.of(input, ExecutionMode.PREVIEW)).value().formatted();
+    return formatDate.execute(SimpleContext.builder(input).mode(ExecutionMode.PREVIEW).build())
+            .value().formatted();
   }
 
   private String parse(ParseDateIn input) {
-    return parseDate.execute(contextFactory.of(input, ExecutionMode.PREVIEW)).value().iso();
+    return parseDate.execute(SimpleContext.builder(input).mode(ExecutionMode.PREVIEW).build())
+            .value().iso();
   }
 
   private Result<ParseDateOut> execute(ParseDateIn input) {
-    var ctx = contextFactory.of(input, ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.builder(input).mode(ExecutionMode.PREVIEW).build();
     return parseDate.execute(ctx);
   }
 }

@@ -1,5 +1,6 @@
 package cbs.nova.starter.core.stage;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.Context;
@@ -8,7 +9,6 @@ import cbs.nova.dsl.ExecutableDescriptor;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.model.PreviewModels.PreviewCacheKey;
 import java.util.List;
 import java.util.Map;
@@ -18,7 +18,6 @@ import org.junit.jupiter.api.Test;
 
 class PreviewCacheKeyBuilderTest {
 
-  private final ContextFactory contextFactory = new ContextFactory();
   private final PreviewCacheKeyBuilder builder = new PreviewCacheKeyBuilder();
 
   @BeforeEach
@@ -33,7 +32,8 @@ class PreviewCacheKeyBuilderTest {
 
   @Test
   void sameNameAndBodyProduceEqualKeys() {
-    Context<?> ctx = contextFactory.of("payload", ExecutionMode.PREVIEW, "run-1");
+    Context<?> ctx = SimpleContext.builder("payload").mode(ExecutionMode.PREVIEW).runId("run-1")
+            .build();
     String name = "unregistered-name-" + System.nanoTime();
 
     PreviewCacheKey first = builder.build(name, ctx);
@@ -48,8 +48,10 @@ class PreviewCacheKeyBuilderTest {
   @Test
   void differentBodiesProduceDifferentInputHashes() {
     String name = "unregistered-name-" + System.nanoTime();
-    Context<?> ctxA = contextFactory.of("alpha", ExecutionMode.PREVIEW, "run-a");
-    Context<?> ctxB = contextFactory.of("beta", ExecutionMode.PREVIEW, "run-b");
+    Context<?> ctxA = SimpleContext.builder("alpha").mode(ExecutionMode.PREVIEW).runId("run-a")
+            .build();
+    Context<?> ctxB = SimpleContext.builder("beta").mode(ExecutionMode.PREVIEW).runId("run-b")
+            .build();
 
     PreviewCacheKey keyA = builder.build(name, ctxA);
     PreviewCacheKey keyB = builder.build(name, ctxB);
@@ -61,7 +63,8 @@ class PreviewCacheKeyBuilderTest {
   @Test
   void nameFlowsThroughUnchanged() {
     String name = "DistinctProcessName-" + System.nanoTime();
-    Context<?> ctx = contextFactory.of("payload", ExecutionMode.PREVIEW, "run-1");
+    Context<?> ctx = SimpleContext.builder("payload").mode(ExecutionMode.PREVIEW).runId("run-1")
+            .build();
 
     PreviewCacheKey key = builder.build(name, ctx);
 
@@ -71,8 +74,10 @@ class PreviewCacheKeyBuilderTest {
   @Test
   void nullBodyStillHashesDeterministically() {
     String name = "unregistered-name-" + System.nanoTime();
-    Context<Object> nullCtxA = contextFactory.of(null, ExecutionMode.PREVIEW, "run-a");
-    Context<Object> nullCtxB = contextFactory.of(null, ExecutionMode.PREVIEW, "run-b");
+    Context<Object> nullCtxA = SimpleContext.builder(null).mode(ExecutionMode.PREVIEW)
+            .runId("run-a").build();
+    Context<Object> nullCtxB = SimpleContext.builder(null).mode(ExecutionMode.PREVIEW)
+            .runId("run-b").build();
 
     PreviewCacheKey first = builder.build(name, nullCtxA);
     PreviewCacheKey second = builder.build(name, nullCtxB);
@@ -86,8 +91,10 @@ class PreviewCacheKeyBuilderTest {
     String name = "unregistered-name-" + System.nanoTime();
     Map<String, Object> bodyA = Map.of("k", "v", "n", 42);
     Map<String, Object> bodyB = Map.of("k", "v", "n", 42);
-    Context<?> ctxA = contextFactory.of(bodyA, ExecutionMode.PREVIEW, "run-a");
-    Context<?> ctxB = contextFactory.of(bodyB, ExecutionMode.PREVIEW, "run-b");
+    Context<?> ctxA = SimpleContext.builder(bodyA).mode(ExecutionMode.PREVIEW).runId("run-a")
+            .build();
+    Context<?> ctxB = SimpleContext.builder(bodyB).mode(ExecutionMode.PREVIEW).runId("run-b")
+            .build();
 
     assertThat(bodyA).isNotSameAs(bodyB);
 
@@ -100,7 +107,8 @@ class PreviewCacheKeyBuilderTest {
 
   @Test
   void differentNamesProduceDifferentKeysForSameBody() {
-    Context<?> ctx = contextFactory.of("shared", ExecutionMode.PREVIEW, "run-1");
+    Context<?> ctx = SimpleContext.builder("shared").mode(ExecutionMode.PREVIEW).runId("run-1")
+            .build();
     String nameA = "name-a-" + System.nanoTime();
     String nameB = "name-b-" + System.nanoTime();
 
@@ -117,7 +125,8 @@ class PreviewCacheKeyBuilderTest {
     String helperName = "echo-helper-" + System.nanoTime();
     GlobalManager.globalManager().registerHelper(helperName, new EchoHelper());
 
-    Context<?> ctx = contextFactory.of("payload", ExecutionMode.PREVIEW, "run-1");
+    Context<?> ctx = SimpleContext.builder("payload").mode(ExecutionMode.PREVIEW).runId("run-1")
+            .build();
     PreviewCacheKey registered = builder.build(helperName, ctx);
 
     String orphanName = "orphan-" + System.nanoTime();
@@ -133,7 +142,8 @@ class PreviewCacheKeyBuilderTest {
     String helperName = "determinism-helper-" + System.nanoTime();
     GlobalManager.globalManager().registerHelper(helperName, new EchoHelper());
 
-    Context<?> ctx = contextFactory.of("payload", ExecutionMode.PREVIEW, "run-1");
+    Context<?> ctx = SimpleContext.builder("payload").mode(ExecutionMode.PREVIEW).runId("run-1")
+            .build();
     PreviewCacheKeyBuilder otherBuilder = new PreviewCacheKeyBuilder();
 
     PreviewCacheKey first = builder.build(helperName, ctx);
@@ -146,7 +156,8 @@ class PreviewCacheKeyBuilderTest {
   @Test
   void inputHashIsSha256HexLowercase64Chars() {
     String name = "unregistered-name-" + System.nanoTime();
-    Context<?> ctx = contextFactory.of("payload", ExecutionMode.PREVIEW, "run-1");
+    Context<?> ctx = SimpleContext.builder("payload").mode(ExecutionMode.PREVIEW).runId("run-1")
+            .build();
 
     PreviewCacheKey key = builder.build(name, ctx);
 

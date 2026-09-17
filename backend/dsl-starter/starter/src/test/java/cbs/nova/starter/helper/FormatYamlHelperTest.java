@@ -1,10 +1,10 @@
 package cbs.nova.starter.helper;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.helper.model.FormatYamlIn;
 import cbs.nova.starter.helper.model.FormatYamlOut;
 import cbs.nova.starter.helper.model.ParseYamlIn;
@@ -16,7 +16,6 @@ import org.junit.jupiter.api.Test;
 
 class FormatYamlHelperTest {
 
-  private final ContextFactory contextFactory = new ContextFactory();
   private final FormatYamlHelper helper = new FormatYamlHelper();
   private final ParseYamlHelper parseHelper = new ParseYamlHelper();
 
@@ -45,7 +44,8 @@ class FormatYamlHelperTest {
     Result<FormatYamlOut> formatted = execute(root);
     assertThat(formatted.isSuccess()).isTrue();
 
-    var ctx = contextFactory.of(new ParseYamlIn(formatted.value().yaml()), ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.<ParseYamlIn>builder().body(new ParseYamlIn(formatted.value().yaml()))
+            .mode(ExecutionMode.PREVIEW).build();
     Result<ParseYamlOut> parsed = parseHelper.execute(ctx);
     assertThat(parsed.isSuccess()).isTrue();
     assertThat(parsed.value().data()).isEqualTo(root);
@@ -101,7 +101,8 @@ class FormatYamlHelperTest {
   }
 
   private Result<FormatYamlOut> execute(Object data) {
-    var ctx = contextFactory.of(new FormatYamlIn(data), ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.<FormatYamlIn>builder().body(new FormatYamlIn(data))
+            .mode(ExecutionMode.PREVIEW).build();
     return helper.execute(ctx);
   }
 }

@@ -1,17 +1,16 @@
 package cbs.nova.starter.helper;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.helper.model.JsonPatchIn;
 import cbs.nova.starter.helper.model.JsonPatchOut;
 import org.junit.jupiter.api.Test;
 
 class JsonPatchHelperTest {
 
-  private final ContextFactory contextFactory = new ContextFactory();
   private final JsonPatchHelper helper = new JsonPatchHelper();
 
   @Test
@@ -132,7 +131,7 @@ class JsonPatchHelperTest {
   }
 
   private Result<JsonPatchOut> execute(JsonPatchIn input) {
-    var ctx = contextFactory.of(input, ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.builder(input).mode(ExecutionMode.PREVIEW).build();
     return helper.execute(ctx);
   }
 }

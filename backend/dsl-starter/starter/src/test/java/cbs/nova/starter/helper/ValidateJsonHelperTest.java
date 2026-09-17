@@ -1,10 +1,10 @@
 package cbs.nova.starter.helper;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.helper.model.ValidateJsonIn;
 import cbs.nova.starter.helper.model.ValidateJsonOut;
 import cbs.nova.starter.model.ValidationError;
@@ -13,7 +13,6 @@ import org.junit.jupiter.api.Test;
 
 class ValidateJsonHelperTest {
 
-  private final ContextFactory contextFactory = new ContextFactory();
   private final ValidateJsonHelper helper = new ValidateJsonHelper();
 
   @Test
@@ -89,7 +88,7 @@ class ValidateJsonHelperTest {
   }
 
   private Result<ValidateJsonOut> execute(ValidateJsonIn input) {
-    var ctx = contextFactory.of(input, ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.builder(input).mode(ExecutionMode.PREVIEW).build();
     return helper.execute(ctx);
   }
 }

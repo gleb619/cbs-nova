@@ -1,8 +1,8 @@
 package cbs.nova.dsl;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.exception.DslEntityNotFoundException;
 import cbs.nova.dsl.exception.DslExecutionException;
 import cbs.nova.dsl.registry.DefaultHelperRegistry;
@@ -12,13 +12,13 @@ import org.junit.jupiter.api.Test;
 
 class DefaultHelperRunnerUnknownNameTest {
 
-  private final ContextFactory contextFactory = new ContextFactory();
-  private final DefaultHelperRunner runner = new DefaultHelperRunner(contextFactory);
+  private final DefaultHelperRunner runner = new DefaultHelperRunner();
 
   @Test
   void runHelperWithUnregisteredNameReturnsEntityNotFoundFailure() {
     var registry = new DefaultHelperRegistry();
-    var ctx = contextFactory.of("input", ExecutionMode.RUN, "run-missing-helper");
+    var ctx = SimpleContext.builder().body("input").mode(ExecutionMode.RUN)
+            .runId("run-missing-helper").build();
 
     var result = runner.runHelper("ghost", ctx, registry);
 
@@ -33,7 +33,8 @@ class DefaultHelperRunnerUnknownNameTest {
   @Test
   void runFunctionWithUnregisteredNameReturnsEntityNotFoundFailure() {
     var registry = new DefaultHelperRegistry();
-    var ctx = contextFactory.of("input", ExecutionMode.RUN, "run-missing-function");
+    var ctx = SimpleContext.builder().body("input").mode(ExecutionMode.RUN)
+            .runId("run-missing-function").build();
 
     var result = runner.runFunction("ghost", ctx, registry);
 
@@ -49,7 +50,8 @@ class DefaultHelperRunnerUnknownNameTest {
   void runHelperWrapsExecuteExceptionAsDslExecutionExceptionWithContextRunId() {
     var registry = new DefaultHelperRegistry();
     registry.registerHelper("boom", new ThrowingHelper());
-    var ctx = contextFactory.of("input", ExecutionMode.RUN, "run-throwing-helper");
+    var ctx = SimpleContext.builder().body("input").mode(ExecutionMode.RUN)
+            .runId("run-throwing-helper").build();
 
     var result = runner.runHelper("boom", ctx, registry);
 
@@ -71,7 +73,8 @@ class DefaultHelperRunnerUnknownNameTest {
                       throw new IllegalStateException("fn-kaboom");
                     })
                     .build());
-    var ctx = contextFactory.of("input", ExecutionMode.RUN, "run-throwing-function");
+    var ctx = SimpleContext.builder().body("input").mode(ExecutionMode.RUN)
+            .runId("run-throwing-function").build();
 
     var result = runner.runFunction("boomFn", ctx, registry);
 

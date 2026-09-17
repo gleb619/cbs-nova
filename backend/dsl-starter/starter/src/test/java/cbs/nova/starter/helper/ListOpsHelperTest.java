@@ -1,10 +1,10 @@
 package cbs.nova.starter.helper;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.helper.model.ListOpsIn;
 import cbs.nova.starter.helper.model.ListOpsOut;
 import java.util.LinkedHashMap;
@@ -14,7 +14,6 @@ import org.junit.jupiter.api.Test;
 
 class ListOpsHelperTest {
 
-  private final ContextFactory contextFactory = new ContextFactory();
   private final ListOpsHelper helper = new ListOpsHelper();
 
   @Test
@@ -229,7 +228,7 @@ class ListOpsHelperTest {
   }
 
   private Result<ListOpsOut> execute(ListOpsIn input) {
-    var ctx = contextFactory.of(input, ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.builder(input).mode(ExecutionMode.PREVIEW).build();
     return helper.execute(ctx);
   }
 }

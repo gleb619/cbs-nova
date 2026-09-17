@@ -1,8 +1,8 @@
 package cbs.nova.dsl;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.exception.DslEntityNotFoundException;
 import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.process.ProcessManager;
@@ -17,8 +17,6 @@ import java.util.Optional;
 
 class ProcessManagerTest {
 
-  private final ContextFactory contextFactory = new ContextFactory();
-
   @Test
   void executeDispatchesRegisteredProcessToRunner() {
     var process = process("RegisteredProcess");
@@ -26,7 +24,7 @@ class ProcessManagerTest {
     var expected = Result.success("runner-result");
     var runner = new RecordingProcessRunner(expected);
     var manager = new ProcessManager(registry, runner);
-    var ctx = contextFactory.of("input", ExecutionMode.RUN, "run-1");
+    var ctx = SimpleContext.builder().body("input").mode(ExecutionMode.RUN).runId("run-1").build();
 
     var result = manager.execute("RegisteredProcess", ctx);
 
@@ -40,7 +38,7 @@ class ProcessManagerTest {
     var registry = new StubProcessRegistry();
     var runner = new RecordingProcessRunner(Result.success("unused"));
     var manager = new ProcessManager(registry, runner);
-    var ctx = contextFactory.of("input", ExecutionMode.RUN, "run-2");
+    var ctx = SimpleContext.builder().body("input").mode(ExecutionMode.RUN).runId("run-2").build();
 
     var result = manager.execute("MissingProcess", ctx);
 

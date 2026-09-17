@@ -1,5 +1,6 @@
 package cbs.nova.dsl.function;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.Context;
@@ -10,7 +11,6 @@ import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.listener.ExecutionTraceCollector;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.model.MapInput;
 import cbs.nova.dsl.transaction.TransactionExecution;
 import cbs.nova.dsl.transaction.TransactionRouting;
@@ -23,14 +23,14 @@ import org.junit.jupiter.api.Test;
 class FunctionRichContextTest {
 
   private static final String RUN_ID = "fn-run-id";
-  private final ContextFactory contextFactory = new ContextFactory();
   private final ExecutionTraceCollector traceCollector = new ExecutionTraceCollector();
   private Context<String> delegate;
 
   @BeforeEach
   void setUp() {
     GlobalManager.globalManager().resetForTests();
-    delegate = contextFactory.of("payload", ExecutionMode.RUN, RUN_ID)
+    delegate = SimpleContext.<String>builder().body("payload").mode(ExecutionMode.RUN).runId(RUN_ID)
+            .build()
             .withExecutionTraceCollector(traceCollector);
     traceCollector.start();
   }
@@ -42,7 +42,7 @@ class FunctionRichContextTest {
   }
 
   private FunctionRichContext<String> newContext() {
-    return new FunctionRichContext<>(delegate, contextFactory);
+    return new FunctionRichContext<>(delegate);
   }
 
   @Test
@@ -83,7 +83,7 @@ class FunctionRichContextTest {
       }
     };
     var withListener = delegate.withExecutionListener(listener);
-    var rich = new FunctionRichContext<>(withListener, contextFactory);
+    var rich = new FunctionRichContext<>(withListener);
     assertThat(rich.executionListener()).isSameAs(listener);
   }
 
@@ -209,8 +209,9 @@ class FunctionRichContextTest {
   void runHelperWithoutTraceCollectorDoesNotThrow() {
     GlobalManager.globalManager().registerHelper("noop",
             ctx -> Result.success(null));
-    var delegateNoTrace = contextFactory.of("payload", ExecutionMode.RUN, RUN_ID);
-    var rich = new FunctionRichContext<>(delegateNoTrace, contextFactory);
+    var delegateNoTrace = SimpleContext.builder().body("payload").mode(ExecutionMode.RUN)
+            .runId(RUN_ID).build();
+    var rich = new FunctionRichContext<>(delegateNoTrace);
 
     Result<?> result = rich.runHelper("noop");
 

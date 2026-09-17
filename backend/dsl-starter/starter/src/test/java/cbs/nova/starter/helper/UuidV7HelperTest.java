@@ -1,10 +1,10 @@
 package cbs.nova.starter.helper;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.helper.model.UuidV7In;
 import cbs.nova.starter.helper.model.UuidV7Out;
 import java.util.ArrayList;
@@ -23,13 +23,13 @@ class UuidV7HelperTest {
   private static final Pattern UUID_V7 = Pattern.compile(
           "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$");
 
-  private final ContextFactory contextFactory = new ContextFactory();
   private final UuidV7Helper helper = new UuidV7Helper();
 
   @Test
   void producesValidV7Format() {
     for (int i = 0; i < 100; i++) {
-      var ctx = contextFactory.of(new UuidV7In(null), ExecutionMode.PREVIEW);
+      var ctx = SimpleContext.<UuidV7In>builder().body(new UuidV7In(null))
+              .mode(ExecutionMode.PREVIEW).build();
       Result<UuidV7Out> result = helper.execute(ctx);
       assertThat(result.isSuccess()).isTrue();
       assertThat(result.value().uuid()).matches(UUID_V7);
@@ -40,7 +40,8 @@ class UuidV7HelperTest {
   void sequentialCallsAreStrictlyIncreasing() {
     String previous = null;
     for (int i = 0; i < 10_000; i++) {
-      var ctx = contextFactory.of(new UuidV7In(null), ExecutionMode.PREVIEW);
+      var ctx = SimpleContext.<UuidV7In>builder().body(new UuidV7In(null))
+              .mode(ExecutionMode.PREVIEW).build();
       UuidV7Out out = helper.execute(ctx).value();
       if (previous != null) {
         assertThat(out.uuid()).isGreaterThan(previous);
@@ -60,7 +61,8 @@ class UuidV7HelperTest {
     String namespace = "payments/v1";
     String expectedTail = null;
     for (int i = 0; i < 10; i++) {
-      var ctx = contextFactory.of(new UuidV7In(namespace), ExecutionMode.PREVIEW);
+      var ctx = SimpleContext.<UuidV7In>builder().body(new UuidV7In(namespace))
+              .mode(ExecutionMode.PREVIEW).build();
       String uuid = helper.execute(ctx).value().uuid();
       assertThat(uuid).matches(UUID_V7);
       String tail = uuid.substring(uuid.lastIndexOf('-') + 1);
@@ -71,7 +73,8 @@ class UuidV7HelperTest {
       }
     }
 
-    var otherCtx = contextFactory.of(new UuidV7In("orders/v1"), ExecutionMode.PREVIEW);
+    var otherCtx = SimpleContext.<UuidV7In>builder().body(new UuidV7In("orders/v1"))
+            .mode(ExecutionMode.PREVIEW).build();
     String otherTail = helper.execute(otherCtx).value().uuid();
     otherTail = otherTail.substring(otherTail.lastIndexOf('-') + 1);
     assertThat(otherTail).isNotEqualTo(expectedTail);
@@ -88,7 +91,8 @@ class UuidV7HelperTest {
       for (int t = 0; t < threads; t++) {
         futures.add(executor.submit(() -> {
           for (int i = 0; i < callsPerThread; i++) {
-            var ctx = contextFactory.of(new UuidV7In(null), ExecutionMode.PREVIEW);
+            var ctx = SimpleContext.<UuidV7In>builder().body(new UuidV7In(null))
+                    .mode(ExecutionMode.PREVIEW).build();
             String uuid = helper.execute(ctx).value().uuid();
             if (!uuid.matches(UUID_V7.pattern())) {
               throw new AssertionError("Invalid UUID: " + uuid);

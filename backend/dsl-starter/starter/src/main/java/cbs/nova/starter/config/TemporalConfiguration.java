@@ -3,7 +3,6 @@ package cbs.nova.starter.config;
 import cbs.nova.dsl.DslObject.DslType;
 import cbs.nova.dsl.GeneratedClassDescriptor;
 import cbs.nova.dsl.GlobalManager;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.history.DslRunRepository;
 import cbs.nova.dsl.logging.DryRunLoggingContext;
 import cbs.nova.dsl.process.TemporalProcessLauncher;
@@ -193,12 +192,6 @@ public class TemporalConfiguration {
 
   @Bean
   @ConditionalOnMissingBean
-  ContextFactory contextFactory() {
-    return new ContextFactory();
-  }
-
-  @Bean
-  @ConditionalOnMissingBean
   RunScopedFakeConfig runScopedFakeConfig() {
     return new RunScopedFakeConfig(Caffeine.newBuilder()
             .expireAfterAccess(StarterConstants.RUN_SCOPED_FAKE_TTL)
@@ -217,7 +210,6 @@ public class TemporalConfiguration {
   @ConditionalOnMissingBean
   PreviewDslPipe previewDslPipe(
           ExternalCallRecorder externalCallRecorder,
-          ContextFactory contextFactory,
           DryRunLoggingContext dryRunLoggingContext,
           DryRunLogBufferRegistry bufferRegistry,
           DryRunProperties dryRunProperties,
@@ -227,7 +219,7 @@ public class TemporalConfiguration {
           RunScopedFakeConfig runScopedFakeConfig,
           MeterRegistry meterRegistry,
           @Qualifier("cbsNovaPreviewDispatchExecutor") ExecutorService dispatchExecutor) {
-    return new PreviewDslPipe(externalCallRecorder, contextFactory, dryRunLoggingContext,
+    return new PreviewDslPipe(externalCallRecorder, dryRunLoggingContext,
             bufferRegistry, dryRunProperties.log().maxEventsPerRun(), previewResultCache,
             previewProperties, fakesProperties, runScopedFakeConfig, meterRegistry,
             dispatchExecutor);
@@ -236,12 +228,11 @@ public class TemporalConfiguration {
   @Bean
   @ConditionalOnMissingBean
   RunDslPipe runDslPipe(
-          ContextFactory contextFactory,
           ExternalCallRecorder externalCallRecorder,
           CbsNovaFakesProperties fakesProperties,
           RunScopedFakeConfig runScopedFakeConfig,
           DslExecutionEventBus dslExecutionEventBus) {
-    return new RunDslPipe(contextFactory, externalCallRecorder, fakesProperties,
+    return new RunDslPipe(externalCallRecorder, fakesProperties,
             runScopedFakeConfig, dslExecutionEventBus);
   }
 
@@ -249,7 +240,6 @@ public class TemporalConfiguration {
   @ConditionalOnMissingBean
   ExplainDslPipe explainDslPipe(
           ExternalCallRecorder externalCallRecorder,
-          ContextFactory contextFactory,
           DryRunLoggingContext dryRunLoggingContext,
           DryRunLogBufferRegistry bufferRegistry,
           DryRunProperties dryRunProperties,
@@ -260,7 +250,7 @@ public class TemporalConfiguration {
           ExplainDiagramRenderer diagramRenderer,
           CbsNovaExplainProperties explainProperties,
           @Qualifier("cbsNovaPreviewDispatchExecutor") ExecutorService dispatchExecutor) {
-    return new ExplainDslPipe(externalCallRecorder, contextFactory, dryRunLoggingContext,
+    return new ExplainDslPipe(externalCallRecorder, dryRunLoggingContext,
             bufferRegistry, dryRunProperties.log().maxEventsPerRun(), previewProperties,
             fakesProperties, runScopedFakeConfig, meterRegistry, diagramRenderer,
             explainProperties, dispatchExecutor);
@@ -344,7 +334,6 @@ public class TemporalConfiguration {
 
   @Bean(destroyMethod = "shutdownHealthcheck")
   TemporalDslProcessService temporalDslProcessService(
-          ContextFactory contextFactory,
           DslRunRepository runRepository,
           JsonMapper jsonMapper,
           @Qualifier("cbsNovaDslProcessExecutor") ThreadPoolTaskExecutor dslProcessExecutor,
@@ -359,7 +348,7 @@ public class TemporalConfiguration {
           Optional<WebhookDispatcher> webhookDispatcher,
           ObjectProvider<DomainEventPublisher> eventPublisherProvider,
           ObjectProvider<TransactionTemplate> transactionTemplateProvider) {
-    TemporalDslProcessService service = new TemporalDslProcessService(contextFactory, runRepository,
+    TemporalDslProcessService service = new TemporalDslProcessService(runRepository,
             JsonMapper.builder().build(),
             dslProcessExecutor, healthcheckExecutor,
             healthcheckInterval, staleThreshold, asyncDbSave,

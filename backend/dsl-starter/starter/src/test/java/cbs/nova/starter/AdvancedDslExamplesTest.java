@@ -1,5 +1,6 @@
 package cbs.nova.starter;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.Context;
@@ -7,7 +8,6 @@ import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.utils.DefinitionLoader;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.helper.HelperInstanceResolver;
 import cbs.nova.dslexamples.v1.ExceptionProbeModels.ExceptionProbeIn;
@@ -29,8 +29,6 @@ import java.net.http.HttpClient;
 
 class AdvancedDslExamplesTest {
 
-  private final ContextFactory contextFactory = new ContextFactory();
-
   @BeforeEach
   void loadCompactDsls() {
     GlobalManager.globalManager().resetForTests();
@@ -47,7 +45,7 @@ class AdvancedDslExamplesTest {
   @Test
   void orderSagaPreviewCompletesSuccessfully() {
     var input = new OrderSagaIn("order1", 2);
-    Context<OrderSagaIn> ctx = contextFactory.of(input, ExecutionMode.PREVIEW);
+    Context<OrderSagaIn> ctx = SimpleContext.builder(input).mode(ExecutionMode.PREVIEW).build();
 
     Result<?> result = GlobalManager.globalManager().runProcess("OrderSaga", ctx);
 
@@ -58,7 +56,8 @@ class AdvancedDslExamplesTest {
   @Test
   void exceptionProbePreviewSucceedsWhenHelperSucceeds() {
     var input = new ExceptionProbeIn(false, null);
-    Context<ExceptionProbeIn> ctx = contextFactory.of(input, ExecutionMode.PREVIEW);
+    Context<ExceptionProbeIn> ctx = SimpleContext.builder(input).mode(ExecutionMode.PREVIEW)
+            .build();
 
     Result<?> result = GlobalManager.globalManager().runProcess("ExceptionProbe", ctx);
 
@@ -70,7 +69,8 @@ class AdvancedDslExamplesTest {
   @Test
   void exceptionProbePreviewFailsWhenHelperFails() {
     var input = new ExceptionProbeIn(true, "test fail");
-    Context<ExceptionProbeIn> ctx = contextFactory.of(input, ExecutionMode.PREVIEW);
+    Context<ExceptionProbeIn> ctx = SimpleContext.builder(input).mode(ExecutionMode.PREVIEW)
+            .build();
 
     Result<?> result = GlobalManager.globalManager().runProcess("ExceptionProbe", ctx);
 
@@ -80,8 +80,8 @@ class AdvancedDslExamplesTest {
   @Test
   void nestedCompensationPreviewFailsAtStep3() {
     var input = new NestedCompensationIn("job1");
-    Context<NestedCompensationIn> ctx = contextFactory.of(input,
-            ExecutionMode.PREVIEW);
+    Context<NestedCompensationIn> ctx = SimpleContext.builder(input).mode(ExecutionMode.PREVIEW)
+            .build();
 
     Result<?> result = GlobalManager.globalManager().runProcess("NestedCompensation", ctx);
 

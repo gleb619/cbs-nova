@@ -1,7 +1,7 @@
 package cbs.nova.dsl;
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.exception.DslException;
 import cbs.nova.dsl.exception.DslExecutionException;
 import cbs.nova.dsl.model.ExplainReport;
@@ -18,10 +18,9 @@ import org.junit.jupiter.api.Test;
 
 class DefaultTransactionRunnerTest {
 
-  private final ContextFactory contextFactory = new ContextFactory();
   private final CompensationRegistry compensationRegistry = new DefaultCompensationRegistry();
 
-  private final DefaultTransactionRunner runner = new DefaultTransactionRunner(contextFactory,
+  private final DefaultTransactionRunner runner = new DefaultTransactionRunner(
           compensationRegistry);
 
   private TransactionDslObject tx(String name) {
@@ -30,7 +29,7 @@ class DefaultTransactionRunnerTest {
 
   @Test
   void runModeExecutesLogicAndReturnsSuccess() {
-    var ctx = contextFactory.of("in", ExecutionMode.RUN, "r1");
+    var ctx = SimpleContext.builder().body("in").mode(ExecutionMode.RUN).runId("r1").build();
     var result = runner.run(tx("T"), ctx);
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value()).isEqualTo("ok-T");
@@ -45,7 +44,7 @@ class DefaultTransactionRunnerTest {
               return Result.success("ok-T");
             })
             .build();
-    var ctx = contextFactory.of("in", ExecutionMode.EXPLAIN, "r2");
+    var ctx = SimpleContext.builder().body("in").mode(ExecutionMode.EXPLAIN).runId("r2").build();
     var result = runner.run(tx, ctx);
     assertThat(executeCalled.get()).isFalse();
     assertThat(result.isSuccess()).isTrue();
@@ -58,7 +57,7 @@ class DefaultTransactionRunnerTest {
 
   @Test
   void previewModeExecutesLogic() {
-    var ctx = contextFactory.of("in", ExecutionMode.PREVIEW, "r3");
+    var ctx = SimpleContext.builder().body("in").mode(ExecutionMode.PREVIEW).runId("r3").build();
     var result = runner.run(tx("T"), ctx);
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value()).isEqualTo("ok-T");
@@ -71,7 +70,7 @@ class DefaultTransactionRunnerTest {
               throw new RuntimeException("burst");
             })
             .build();
-    var ctx = contextFactory.of("in", ExecutionMode.RUN, "r4");
+    var ctx = SimpleContext.builder().body("in").mode(ExecutionMode.RUN).runId("r4").build();
     var result = runner.run(tx, ctx);
     assertThat(result.isSuccess()).isFalse();
     assertThat(result.cause()).isInstanceOf(DslExecutionException.class);
@@ -85,7 +84,7 @@ class DefaultTransactionRunnerTest {
               throw new RuntimeException("err");
             })
             .build();
-    var ctx = contextFactory.of("in", ExecutionMode.RUN, "my-run");
+    var ctx = SimpleContext.builder().body("in").mode(ExecutionMode.RUN).runId("my-run").build();
     var result = runner.run(tx, ctx);
     assertThat(result.cause()).isInstanceOf(DslExecutionException.class);
     assertThat(((DslException) result.cause()).runId()).isEqualTo("my-run");
@@ -107,7 +106,7 @@ class DefaultTransactionRunnerTest {
                       .description("explain-result").mermaid("").build());
             })
             .build();
-    var ctx = contextFactory.of("in", ExecutionMode.EXPLAIN, "r5");
+    var ctx = SimpleContext.builder().body("in").mode(ExecutionMode.EXPLAIN).runId("r5").build();
     var result = runner.run(tx, ctx);
     assertThat(explainCalled.get()).isTrue();
     assertThat(executeCalled.get()).isFalse();
@@ -126,7 +125,7 @@ class DefaultTransactionRunnerTest {
             })
             .preview(ctx -> Result.success("preview-result"))
             .build();
-    var ctx = contextFactory.of("in", ExecutionMode.EXPLAIN, "r5");
+    var ctx = SimpleContext.builder().body("in").mode(ExecutionMode.EXPLAIN).runId("r5").build();
     var result = runner.run(tx, ctx);
     assertThat(executeCalled.get()).isFalse();
     assertThat(result.isSuccess()).isTrue();
@@ -143,7 +142,7 @@ class DefaultTransactionRunnerTest {
             .execute(ctx -> Result.success("execute-result"))
             .preview(ctx -> Result.success("preview-result"))
             .build();
-    var ctx = contextFactory.of("in", ExecutionMode.PREVIEW, "r6");
+    var ctx = SimpleContext.builder().body("in").mode(ExecutionMode.PREVIEW).runId("r6").build();
     var result = runner.run(tx, ctx);
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value()).isEqualTo("preview-result");
@@ -160,13 +159,13 @@ class DefaultTransactionRunnerTest {
               return Result.success(null);
             })
             .build();
-    var ctx = contextFactory.of("in", ExecutionMode.RUN, "r-reg");
+    var ctx = SimpleContext.builder().body("in").mode(ExecutionMode.RUN).runId("r-reg").build();
 
     var result = runner.run(tx, ctx);
 
     assertThat(result.isSuccess()).isTrue();
     assertThat(compensationRegistry.hasCompensation("r-reg")).isTrue();
-    compensationRegistry.compensateAll("r-reg", new RuntimeException("boom"), contextFactory);
+    compensationRegistry.compensateAll("r-reg", new RuntimeException("boom"));
     assertThat(order).containsExactly("compensated:in");
   }
 
@@ -182,7 +181,8 @@ class DefaultTransactionRunnerTest {
             })
             .build();
     var saga = DslSaga.create();
-    var ctx = contextFactory.of("in", ExecutionMode.RUN, "r-saga").withSaga(saga);
+    var ctx = SimpleContext.builder().body("in").mode(ExecutionMode.RUN).runId("r-saga").build()
+            .withSaga(saga);
 
     var result = runner.run(tx, ctx);
 
@@ -198,7 +198,7 @@ class DefaultTransactionRunnerTest {
             .input(String.class)
             .execute(ctx -> Result.success("ok"))
             .build();
-    var ctx = contextFactory.of("in", ExecutionMode.RUN, "r-no-comp");
+    var ctx = SimpleContext.builder().body("in").mode(ExecutionMode.RUN).runId("r-no-comp").build();
 
     var result = runner.run(tx, ctx);
 
@@ -213,7 +213,7 @@ class DefaultTransactionRunnerTest {
     var tx = Dsl.transaction("BoomTx")
             .execute(ctx -> Result.failure(new RuntimeException("boom")))
             .build();
-    var ctx = contextFactory.of("in", ExecutionMode.RUN, "run-fail")
+    var ctx = SimpleContext.builder().body("in").mode(ExecutionMode.RUN).runId("run-fail").build()
             .withExecutionListener(listener);
 
     var result = runner.run(tx, ctx);
@@ -232,7 +232,8 @@ class DefaultTransactionRunnerTest {
     var tx = Dsl.transaction("CompTx")
             .execute(ctx -> Result.success("ok"))
             .build();
-    var ctx = contextFactory.of("in", ExecutionMode.COMPENSATION, "run-comp")
+    var ctx = SimpleContext.builder().body("in").mode(ExecutionMode.COMPENSATION).runId("run-comp")
+            .build()
             .withExecutionListener(listener);
 
     var result = runner.run(tx, ctx);

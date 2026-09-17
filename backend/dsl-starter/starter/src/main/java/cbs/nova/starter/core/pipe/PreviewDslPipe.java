@@ -2,7 +2,6 @@ package cbs.nova.starter.core.pipe;
 
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.helper.HelperInterceptor;
 import cbs.nova.dsl.logging.DryRunLoggingContext;
 import cbs.nova.dsl.model.PreviewReport;
@@ -31,7 +30,6 @@ import java.util.concurrent.ExecutorService;
 public final class PreviewDslPipe implements DslExecutionPipe<PreviewReport> {
 
   private final ExternalCallRecorder recorder;
-  private final ContextFactory contextFactory;
   private final DryRunLoggingContext dryRunLoggingContext;
   private final DryRunLogBufferRegistry bufferRegistry;
   private final int maxEventsPerRun;
@@ -50,13 +48,13 @@ public final class PreviewDslPipe implements DslExecutionPipe<PreviewReport> {
             .stage(new PreviewCacheStage(cache))
             .stage(new PreviewReportStage())
             .stage(new MetricsStage(meterRegistry))
-            .stage(new ExecutionTreeStage(contextFactory,
+            .stage(new ExecutionTreeStage(
                     previewProperties.callTree().maxDepth()))
             .stage(new DryRunLogStage(dryRunLoggingContext, bufferRegistry, maxEventsPerRun))
             .stage(new ExecutionTraceStage())
             .stage(new FakingStage(fakesProperties, runScopedFakeConfig))
             .stage(new ExternalCallRecordingStage(recorder))
-            .stage(new DispatchStage(contextFactory, fakeInterceptor,
+            .stage(new DispatchStage(fakeInterceptor,
                     Duration.ofMillis(previewProperties.execution().timeoutMs()), executor,
                     meterRegistry, dryRunLoggingContext))
             .build()

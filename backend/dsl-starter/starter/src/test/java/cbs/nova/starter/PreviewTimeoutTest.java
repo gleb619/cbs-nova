@@ -1,5 +1,6 @@
 package cbs.nova.starter;
 
+import cbs.nova.dsl.model.SimpleContext;
 import cbs.nova.starter.cache.PreviewResultCacheTestSupport;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -9,7 +10,6 @@ import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.PreviewErrorCode;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.model.ExplainReport;
 import cbs.nova.starter.config.properties.CbsNovaFakesProperties;
 import cbs.nova.starter.config.properties.CbsNovaPreviewProperties;
@@ -43,7 +43,6 @@ class PreviewTimeoutTest {
   private final ThreadLocalDryRunLoggingContext dryRunLoggingContext = new ThreadLocalDryRunLoggingContext();
   private final RunIdKeyedExternalCallRecorder recorder = new RunIdKeyedExternalCallRecorder(
           dryRunLoggingContext, null);
-  private final ContextFactory contextFactory = new ContextFactory();
   private final DryRunLogBufferRegistry bufferRegistry = new DryRunLogBufferRegistry(
           Caffeine.newBuilder().build());
   private final SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
@@ -89,7 +88,8 @@ class PreviewTimeoutTest {
     PreviewDslPipe pipe = previewPipe(timeoutProperties(200), dispatchExecutor);
 
     long start = System.currentTimeMillis();
-    var result = pipe.execute("Fast", contextFactory.of("in", ExecutionMode.PREVIEW));
+    var result = pipe.execute("Fast",
+            SimpleContext.builder("in").mode(ExecutionMode.PREVIEW).build());
     long elapsed = System.currentTimeMillis() - start;
 
     assertThat(result.isSuccess()).isTrue();
@@ -103,7 +103,8 @@ class PreviewTimeoutTest {
     PreviewDslPipe pipe = previewPipe(timeoutProperties(100), dispatchExecutor);
 
     long start = System.currentTimeMillis();
-    var result = pipe.execute("Slow", contextFactory.of("in", ExecutionMode.PREVIEW));
+    var result = pipe.execute("Slow",
+            SimpleContext.builder("in").mode(ExecutionMode.PREVIEW).build());
     long elapsed = System.currentTimeMillis() - start;
 
     assertThat(result.isSuccess()).isTrue();
@@ -122,7 +123,8 @@ class PreviewTimeoutTest {
     PreviewDslPipe pipe = previewPipe(properties, dispatchExecutor);
 
     long start = System.currentTimeMillis();
-    var result = pipe.execute("Slow", contextFactory.of("in", ExecutionMode.PREVIEW));
+    var result = pipe.execute("Slow",
+            SimpleContext.builder("in").mode(ExecutionMode.PREVIEW).build());
     long elapsed = System.currentTimeMillis() - start;
 
     assertThat(result.isSuccess()).isTrue();
@@ -135,14 +137,14 @@ class PreviewTimeoutTest {
   void timedOutPreviewIsNotStoredInCache() {
     PreviewResultCache cache = PreviewResultCacheTestSupport.cache(60_000);
     CbsNovaPreviewProperties properties = timeoutProperties(100);
-    PreviewDslPipe pipe = new PreviewDslPipe(recorder, contextFactory, dryRunLoggingContext,
+    PreviewDslPipe pipe = new PreviewDslPipe(recorder, dryRunLoggingContext,
             bufferRegistry, defaultMaxEventsPerRun(), cache,
             properties, new CbsNovaFakesProperties(false, null),
             new RunScopedFakeConfig(Caffeine.newBuilder().build()),
             meterRegistry, dispatchExecutor);
 
-    pipe.execute("Slow", contextFactory.of("in", ExecutionMode.PREVIEW));
-    pipe.execute("Slow", contextFactory.of("in", ExecutionMode.PREVIEW));
+    pipe.execute("Slow", SimpleContext.builder("in").mode(ExecutionMode.PREVIEW).build());
+    pipe.execute("Slow", SimpleContext.builder("in").mode(ExecutionMode.PREVIEW).build());
 
     assertThat(cache.getStats().get("hits")).isEqualTo(0L);
     assertThat(cache.getStats().get("misses")).isEqualTo(2L);
@@ -153,7 +155,8 @@ class PreviewTimeoutTest {
     ExplainDslPipe pipe = explainPipe(timeoutProperties(100), dispatchExecutor);
 
     long start = System.currentTimeMillis();
-    var result = pipe.execute("Slow", contextFactory.of("in", ExecutionMode.EXPLAIN));
+    var result = pipe.execute("Slow",
+            SimpleContext.builder("in").mode(ExecutionMode.EXPLAIN).build());
     long elapsed = System.currentTimeMillis() - start;
 
     assertThat(result.isSuccess()).isTrue();
@@ -170,7 +173,7 @@ class PreviewTimeoutTest {
 
   private PreviewDslPipe previewPipe(CbsNovaPreviewProperties properties,
           ExecutorService executor) {
-    return new PreviewDslPipe(recorder, contextFactory, dryRunLoggingContext, bufferRegistry,
+    return new PreviewDslPipe(recorder, dryRunLoggingContext, bufferRegistry,
             defaultMaxEventsPerRun(), null, properties,
             new CbsNovaFakesProperties(false, null),
             new RunScopedFakeConfig(Caffeine.newBuilder().build()), meterRegistry,
@@ -179,7 +182,7 @@ class PreviewTimeoutTest {
 
   private ExplainDslPipe explainPipe(CbsNovaPreviewProperties properties,
           ExecutorService executor) {
-    return new ExplainDslPipe(recorder, contextFactory, dryRunLoggingContext, bufferRegistry,
+    return new ExplainDslPipe(recorder, dryRunLoggingContext, bufferRegistry,
             defaultMaxEventsPerRun(), properties,
             new CbsNovaFakesProperties(false, null),
             new RunScopedFakeConfig(Caffeine.newBuilder().build()), meterRegistry,

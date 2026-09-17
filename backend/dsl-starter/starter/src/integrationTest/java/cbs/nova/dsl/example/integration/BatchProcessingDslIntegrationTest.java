@@ -6,7 +6,6 @@ import cbs.nova.dsl.utils.DefinitionLoader;
 import cbs.nova.dsl.GeneratedClassProvider;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dslexamples.v1.BatchModels.BatchIn;
 import cbs.nova.dslexamples.v1.BatchModels.BatchItem;
@@ -132,7 +131,7 @@ class BatchProcessingDslIntegrationTest {
 
   @Test
   void runsBatchProcessingDslThroughServiceApi() {
-    var service = ServiceUtil.newService(new ContextFactory());
+    var service = ServiceUtil.newService();
 
     var input = new BatchIn(
             List.of(

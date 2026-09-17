@@ -1,9 +1,9 @@
 package cbs.nova.starter.helper;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.ExecutionMode;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.core.StarterConstants;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import java.time.Duration;
@@ -13,21 +13,20 @@ import java.util.Map;
 
 class CompensationTrackerHelperTest {
 
-  private final ContextFactory contextFactory = new ContextFactory();
   private final CompensationTrackerHelper helper = defaultHelper();
 
   @Test
   void recordsMarker() {
-    var ctx = contextFactory.of(
-            Map.<String, Object>of("markerId", "m1"), ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.builder(Map.<String, Object>of("markerId", "m1"))
+            .mode(ExecutionMode.PREVIEW).build();
     assertThat(helper.execute(ctx).isSuccess()).isTrue();
     assertThat(helper.wasCompensated("m1")).isTrue();
   }
 
   @Test
   void recordsMarkerOnlyOnce() {
-    var ctx = contextFactory.of(
-            Map.<String, Object>of("markerId", "m1"), ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.builder(Map.<String, Object>of("markerId", "m1"))
+            .mode(ExecutionMode.PREVIEW).build();
     helper.execute(ctx);
     helper.execute(ctx);
     assertThat(helper.markers()).hasSize(1);
@@ -35,15 +34,15 @@ class CompensationTrackerHelperTest {
 
   @Test
   void ignoresMissingMarker() {
-    var ctx = contextFactory.of(Map.<String, Object>of(), ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.builder(Map.<String, Object>of()).mode(ExecutionMode.PREVIEW).build();
     assertThat(helper.execute(ctx).isSuccess()).isTrue();
     assertThat(helper.wasCompensated("anything")).isFalse();
   }
 
   @Test
   void resetClearsMarkers() {
-    helper.execute(contextFactory.of(
-            Map.<String, Object>of("markerId", "m1"), ExecutionMode.PREVIEW));
+    helper.execute(SimpleContext.builder(Map.<String, Object>of("markerId", "m1"))
+            .mode(ExecutionMode.PREVIEW).build());
     helper.reset();
     assertThat(helper.wasCompensated("m1")).isFalse();
   }
@@ -51,8 +50,8 @@ class CompensationTrackerHelperTest {
   @Test
   void markersExpireAfterTtl() throws InterruptedException {
     CompensationTrackerHelper shortLived = helperWithTtl(Duration.ofMillis(30), 100);
-    shortLived.execute(contextFactory.of(
-            Map.<String, Object>of("markerId", "m1"), ExecutionMode.PREVIEW));
+    shortLived.execute(SimpleContext.builder(Map.<String, Object>of("markerId", "m1"))
+            .mode(ExecutionMode.PREVIEW).build());
     assertThat(shortLived.wasCompensated("m1")).isTrue();
 
     Thread.sleep(80);
@@ -64,12 +63,12 @@ class CompensationTrackerHelperTest {
   @Test
   void maxSizeEvictsLeastRecentlyWritten() {
     CompensationTrackerHelper bounded = helperWithTtl(Duration.ofMinutes(1), 2);
-    bounded.execute(contextFactory.of(
-            Map.<String, Object>of("markerId", "a"), ExecutionMode.PREVIEW));
-    bounded.execute(contextFactory.of(
-            Map.<String, Object>of("markerId", "b"), ExecutionMode.PREVIEW));
-    bounded.execute(contextFactory.of(
-            Map.<String, Object>of("markerId", "c"), ExecutionMode.PREVIEW));
+    bounded.execute(SimpleContext.builder(Map.<String, Object>of("markerId", "a"))
+            .mode(ExecutionMode.PREVIEW).build());
+    bounded.execute(SimpleContext.builder(Map.<String, Object>of("markerId", "b"))
+            .mode(ExecutionMode.PREVIEW).build());
+    bounded.execute(SimpleContext.builder(Map.<String, Object>of("markerId", "c"))
+            .mode(ExecutionMode.PREVIEW).build());
 
     // W-TinyLFU eviction choice among low-frequency entries isn't guaranteed insertion-order
     // LRU at this scale; assert the bound holds and the most recent write always survives.

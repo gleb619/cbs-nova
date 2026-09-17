@@ -3,7 +3,6 @@ package cbs.nova.dsl.runner;
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.exception.DslExecutionException;
 import cbs.nova.dsl.history.TransactionExecutionRepository;
 import cbs.nova.dsl.listener.ChainedExecutionListener;
@@ -18,7 +17,6 @@ import org.jspecify.annotations.NonNull;
 @RequiredArgsConstructor
 public final class DefaultProcessRunner implements ProcessRunner {
 
-  private final ContextFactory contextFactory;
   private final TransactionExecutionRepository transactionExecutionRepository;
   private final TemporalProcessLauncher temporalProcessLauncher;
   private final ProcessCompensationHandler compensationHandler;
@@ -70,7 +68,7 @@ public final class DefaultProcessRunner implements ProcessRunner {
 
   private ExecutionOutcome runDirectly(ProcessDslObject process, Context<?> listeningCtx) {
     var listener = listeningCtx.executionListener();
-    var richCtx = new ProcessRichContext<>(listeningCtx, contextFactory);
+    var richCtx = new ProcessRichContext<>(listeningCtx);
     listener.onProcessStart(listeningCtx.runId(), process.name(), listeningCtx.body());
     Result<?> result = null;
     try {

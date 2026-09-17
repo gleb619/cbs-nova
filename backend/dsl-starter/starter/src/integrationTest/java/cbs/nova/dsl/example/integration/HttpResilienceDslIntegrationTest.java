@@ -9,7 +9,6 @@ import cbs.nova.dsl.utils.DefinitionLoader;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.config.HelperInstanceResolverConfig;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.config.SingletonSupport;
 import cbs.nova.dsl.helper.HelperInstanceResolver;
@@ -241,7 +240,7 @@ class HttpResilienceDslIntegrationTest {
             .whenScenarioStateIs("failed-twice")
             .willReturn(aResponse().withStatus(200).withBody("ok")));
 
-    var service = ServiceUtil.newService(new ContextFactory());
+    var service = ServiceUtil.newService();
     String runId = "http-resilience-success-" + System.currentTimeMillis();
     var input = new HttpResilienceProcessIn(runId,
             HttpCallIn.get(baseUrl() + "/probe"));
@@ -267,7 +266,7 @@ class HttpResilienceDslIntegrationTest {
             HttpCallIn.get(baseUrl() + "/probe"));
     String markerId = "HttpResilienceCompensated-" + input.scenario();
 
-    Result<?> result = ServiceUtil.newService(new ContextFactory())
+    Result<?> result = ServiceUtil.newService()
             .runProcess("HttpResilienceCompensated", input).result().join();
 
     assertThat(result.isSuccess()).isFalse();
@@ -285,7 +284,7 @@ class HttpResilienceDslIntegrationTest {
     var input = new HttpResilienceProcessIn(runId,
             HttpCallIn.get(baseUrl() + "/probe"));
 
-    Result<?> result = ServiceUtil.newService(new ContextFactory())
+    Result<?> result = ServiceUtil.newService()
             .runProcess("HttpResilienceUncaught", input).result().join();
 
     assertThat(result.isSuccess()).isFalse();
@@ -304,7 +303,7 @@ class HttpResilienceDslIntegrationTest {
     var input = new HttpResilienceProcessIn(runId,
             new HttpCallIn(baseUrl() + "/slow", "GET", null, null, 200L, null, null));
 
-    Result<?> result = ServiceUtil.newService(new ContextFactory())
+    Result<?> result = ServiceUtil.newService()
             .runProcess("HttpResilienceUncaught", input).result().join();
 
     assertThat(result.isSuccess()).isFalse();

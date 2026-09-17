@@ -1,7 +1,6 @@
 package cbs.nova.dsl.transaction;
 
 import cbs.nova.dsl.Context;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.transaction.TransactionDslObject;
 import org.jspecify.annotations.NonNull;
 
@@ -16,13 +15,11 @@ public interface CompensationRegistry {
   void compensate(
           @NonNull String transactionName,
           @NonNull String runId,
-          @NonNull Throwable error,
-          @NonNull ContextFactory contextFactory);
+          @NonNull Throwable error);
 
   void compensateAll(
           @NonNull String runId,
-          @NonNull Throwable error,
-          @NonNull ContextFactory contextFactory);
+          @NonNull Throwable error);
 
   boolean hasCompensation(@NonNull String runId);
 

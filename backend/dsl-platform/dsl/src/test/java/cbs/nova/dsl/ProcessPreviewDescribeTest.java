@@ -1,7 +1,7 @@
 package cbs.nova.dsl;
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.explain.DescriptorMarkdown;
 import cbs.nova.dsl.history.TransactionExecutionRepository;
 import cbs.nova.dsl.registry.DefaultCompensationRegistry;
@@ -15,11 +15,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 class ProcessPreviewDescribeTest {
 
-  private final ContextFactory contextFactory = new ContextFactory();
   private final TransactionExecutionRepository transactionExecutionRepository = new InMemoryTransactionExecutionRepository();
   private final DefaultCompensationRegistry compensationRegistry = new DefaultCompensationRegistry();
   private final ProcessCompensationHandler compensationHandler = new ProcessCompensationHandler(
-          contextFactory, compensationRegistry);
+          compensationRegistry);
 
   @Test
   void processWithPreviewReturnsMockInPreviewMode() {
@@ -34,9 +33,9 @@ class ProcessPreviewDescribeTest {
             .preview(ctx -> Result.success("PREVIEW_MOCK"))
             .build();
 
-    var runner = new DefaultProcessRunner(contextFactory,
-            transactionExecutionRepository, null, compensationHandler);
-    var ctx = contextFactory.of("input", ExecutionMode.PREVIEW);
+    var runner = new DefaultProcessRunner(transactionExecutionRepository, null,
+            compensationHandler);
+    var ctx = SimpleContext.builder().body("input").mode(ExecutionMode.PREVIEW).build();
     var result = runner.run(process, ctx);
 
     assertThat(result.isSuccess()).isTrue();
@@ -52,9 +51,9 @@ class ProcessPreviewDescribeTest {
             .execute(ctx -> Result.success("EXEC"))
             .build();
 
-    var runner = new DefaultProcessRunner(contextFactory,
-            transactionExecutionRepository, null, compensationHandler);
-    var ctx = contextFactory.of("input", ExecutionMode.PREVIEW);
+    var runner = new DefaultProcessRunner(transactionExecutionRepository, null,
+            compensationHandler);
+    var ctx = SimpleContext.builder().body("input").mode(ExecutionMode.PREVIEW).build();
     var result = runner.run(process, ctx);
 
     assertThat(result.isSuccess()).isTrue();

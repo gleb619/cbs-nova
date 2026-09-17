@@ -1,10 +1,10 @@
 package cbs.nova.starter.helper;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.helper.model.UnreliableApiFailurePattern;
 import cbs.nova.starter.helper.model.UnreliableApiIn;
@@ -14,8 +14,6 @@ import java.time.Duration;
 import org.junit.jupiter.api.Test;
 
 class UnreliableApiHelperTest {
-
-  private final ContextFactory contextFactory = new ContextFactory();
 
   @Test
   void consecutivePatternFailsConfiguredNumberOfTimesThenSucceeds() {
@@ -86,10 +84,10 @@ class UnreliableApiHelperTest {
 
   private Result<UnreliableApiOut> run(UnreliableApiHelper helper, String id, int failCount,
           boolean jitter, UnreliableApiFailurePattern pattern) {
-    var ctx = contextFactory.of(
-            new UnreliableApiIn(id, failCount, jitter, null,
-                    pattern == null ? null : pattern.name()),
-            ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.<UnreliableApiIn>builder()
+            .body(new UnreliableApiIn(id, failCount, jitter, null,
+                    pattern == null ? null : pattern.name()))
+            .mode(ExecutionMode.PREVIEW).build();
     return helper.execute(ctx);
   }
 }

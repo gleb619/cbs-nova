@@ -1,9 +1,9 @@
 package cbs.nova.starter.helper;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.ExecutionMode;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.helper.model.UuidV7In;
 import cbs.nova.starter.helper.model.UuidV7Out;
 import net.jqwik.api.Assume;
@@ -12,12 +12,12 @@ import net.jqwik.api.Property;
 import net.jqwik.api.constraints.StringLength;
 
 class UuidV7HelperPropertyTest {
-  private final ContextFactory contextFactory = new ContextFactory();
   private final UuidV7Helper helper = new UuidV7Helper();
 
   private String generate(String namespace) {
     return helper
-            .execute(contextFactory.of(new UuidV7In(namespace), ExecutionMode.PREVIEW))
+            .execute(SimpleContext.<UuidV7In>builder().body(new UuidV7In(namespace))
+                    .mode(ExecutionMode.PREVIEW).build())
             .value()
             .uuid();
   }

@@ -1,8 +1,8 @@
 package cbs.nova.dsl;
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.config.Constants;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.history.TransactionExecutionRepository;
 import cbs.nova.dsl.model.ExplainReport;
@@ -18,14 +18,13 @@ import org.junit.jupiter.api.Test;
 
 class DefaultProcessRunnerExplainTest {
 
-  private final ContextFactory contextFactory = new ContextFactory();
   private final TransactionExecutionRepository transactionExecutionRepository = new InMemoryTransactionExecutionRepository();
   private final DefaultCompensationRegistry compensationRegistry = new DefaultCompensationRegistry();
   private final ProcessCompensationHandler compensationHandler = new ProcessCompensationHandler(
-          contextFactory, compensationRegistry);
+          compensationRegistry);
 
-  private final ProcessRunner runner = new DefaultProcessRunner(contextFactory,
-          transactionExecutionRepository, null, compensationHandler);
+  private final ProcessRunner runner = new DefaultProcessRunner(transactionExecutionRepository,
+          null, compensationHandler);
 
   @Test
   void explainModeReturnsDescriptorReportWithoutRunningExecuteWhenExplainNotSet() {
@@ -41,7 +40,8 @@ class DefaultProcessRunnerExplainTest {
               throw new AssertionError("preview logic should not run in explain mode");
             })
             .build();
-    var ctx = contextFactory.of("input", ExecutionMode.EXPLAIN, "run-explain");
+    var ctx = SimpleContext.builder().body("input").mode(ExecutionMode.EXPLAIN).runId("run-explain")
+            .build();
 
     var result = runner.run(process, ctx);
 
@@ -72,7 +72,8 @@ class DefaultProcessRunnerExplainTest {
                       ExplainReport.builder().name("P").description("explain").mermaid("").build());
             })
             .build();
-    var ctx = contextFactory.of("input", ExecutionMode.EXPLAIN, "run-explain-logic");
+    var ctx = SimpleContext.builder().body("input").mode(ExecutionMode.EXPLAIN)
+            .runId("run-explain-logic").build();
 
     var result = runner.run(process, ctx);
 
@@ -107,7 +108,8 @@ class DefaultProcessRunnerExplainTest {
             .output(String.class)
             .execute(ctx -> Result.success("preview-direct"))
             .build();
-    var ctx = contextFactory.of("input", ExecutionMode.PREVIEW, "run-preview-direct");
+    var ctx = SimpleContext.builder().body("input").mode(ExecutionMode.PREVIEW)
+            .runId("run-preview-direct").build();
 
     var result = runner.run(process, ctx);
 

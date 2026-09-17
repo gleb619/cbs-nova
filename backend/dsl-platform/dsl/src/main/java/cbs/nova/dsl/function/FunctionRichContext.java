@@ -1,5 +1,6 @@
 package cbs.nova.dsl.function;
 
+import cbs.nova.dsl.model.SimpleContext;
 import cbs.nova.dsl.BeanResolver;
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.listener.ExecutionListener;
@@ -8,7 +9,6 @@ import cbs.nova.dsl.listener.ExecutionTraceCollector;
 import cbs.nova.dsl.FunctionContext;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.helper.HelperInterceptor;
 import cbs.nova.dsl.model.MapInput;
 import cbs.nova.dsl.transaction.TransactionRouting;
@@ -22,7 +22,6 @@ import java.util.Map;
 public final class FunctionRichContext<T> implements FunctionContext<T> {
 
   private final Context<T> delegate;
-  private final ContextFactory contextFactory;
 
   @Override
   public @NonNull T body() {
@@ -76,24 +75,24 @@ public final class FunctionRichContext<T> implements FunctionContext<T> {
 
   @Override
   public @NonNull Context<T> withTransactionRouting(@NonNull TransactionRouting routing) {
-    return new FunctionRichContext<>(delegate.withTransactionRouting(routing), contextFactory);
+    return new FunctionRichContext<>(delegate.withTransactionRouting(routing));
   }
 
   @Override
   public @NonNull Context<T> withExecutionListener(@NonNull ExecutionListener listener) {
-    return new FunctionRichContext<>(delegate.withExecutionListener(listener), contextFactory);
+    return new FunctionRichContext<>(delegate.withExecutionListener(listener));
   }
 
   @Override
   public @NonNull Context<T> withExecutionTraceCollector(
           @Nullable ExecutionTraceCollector executionTraceCollector) {
     return new FunctionRichContext<>(
-            delegate.withExecutionTraceCollector(executionTraceCollector), contextFactory);
+            delegate.withExecutionTraceCollector(executionTraceCollector));
   }
 
   @Override
   public @NonNull Context<T> withHelperInterceptor(@Nullable HelperInterceptor interceptor) {
-    return new FunctionRichContext<>(delegate.withHelperInterceptor(interceptor), contextFactory);
+    return new FunctionRichContext<>(delegate.withHelperInterceptor(interceptor));
   }
 
   private void trace(@NonNull String entry) {
@@ -110,7 +109,8 @@ public final class FunctionRichContext<T> implements FunctionContext<T> {
   @Override
   public @NonNull Result<?> runHelper(@NonNull String name, @NonNull Map<String, Object> input) {
     Result<?> result = GlobalManager.globalManager().runHelper(name,
-            contextFactory.of(input, delegate.mode(), delegate.runId()));
+            SimpleContext.builder().body(input).mode(delegate.mode()).runId(delegate.runId())
+                    .build());
     trace("called helper: " + name);
     return result;
   }
@@ -118,7 +118,8 @@ public final class FunctionRichContext<T> implements FunctionContext<T> {
   @Override
   public @NonNull Result<?> runHelper(@NonNull String name, @NonNull MapInput input) {
     Result<?> result = GlobalManager.globalManager().runHelper(name,
-            contextFactory.of(input, delegate.mode(), delegate.runId()));
+            SimpleContext.builder().body(input).mode(delegate.mode()).runId(delegate.runId())
+                    .build());
     trace("called helper: " + name);
     return result;
   }
@@ -130,6 +131,6 @@ public final class FunctionRichContext<T> implements FunctionContext<T> {
 
   @Override
   public @NonNull Context<T> withBeanResolver(@Nullable BeanResolver beanResolver) {
-    return new FunctionRichContext(delegate.withBeanResolver(beanResolver), contextFactory);
+    return new FunctionRichContext(delegate.withBeanResolver(beanResolver));
   }
 }

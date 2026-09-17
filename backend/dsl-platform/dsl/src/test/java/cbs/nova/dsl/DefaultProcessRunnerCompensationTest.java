@@ -1,7 +1,7 @@
 package cbs.nova.dsl;
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.exception.DslCompensationException;
 import cbs.nova.dsl.history.TransactionExecutionRepository;
 import cbs.nova.dsl.process.ProcessRunner;
@@ -16,14 +16,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 class DefaultProcessRunnerCompensationTest {
 
-  private final ContextFactory contextFactory = new ContextFactory();
   private final TransactionExecutionRepository transactionExecutionRepository = new InMemoryTransactionExecutionRepository();
   private final DefaultCompensationRegistry compensationRegistry = new DefaultCompensationRegistry();
   private final ProcessCompensationHandler compensationHandler = new ProcessCompensationHandler(
-          contextFactory, compensationRegistry);
+          compensationRegistry);
 
-  private final ProcessRunner runner = new DefaultProcessRunner(contextFactory,
-          transactionExecutionRepository, null, compensationHandler);
+  private final ProcessRunner runner = new DefaultProcessRunner(transactionExecutionRepository,
+          null, compensationHandler);
 
   @Test
   void compensationRunsOnExecuteFailure() {
@@ -34,7 +33,7 @@ class DefaultProcessRunnerCompensationTest {
             .execute(ctx -> Result.failure(new RuntimeException("execute failed")))
             .compensation((ctx, history) -> compensated.set(true))
             .build();
-    var ctx = contextFactory.of("input", ExecutionMode.RUN, "run-1");
+    var ctx = SimpleContext.builder().body("input").mode(ExecutionMode.RUN).runId("run-1").build();
     var result = runner.run(process, ctx);
     assertThat(compensated.get()).isTrue();
     assertThat(result.isSuccess()).isFalse();
@@ -51,7 +50,7 @@ class DefaultProcessRunnerCompensationTest {
               throw new RuntimeException("compensation also failed");
             })
             .build();
-    var ctx = contextFactory.of("input", ExecutionMode.RUN, "run-2");
+    var ctx = SimpleContext.builder().body("input").mode(ExecutionMode.RUN).runId("run-2").build();
     var result = runner.run(process, ctx);
     assertThat(result.isSuccess()).isFalse();
     assertThat(result.cause()).isInstanceOf(DslCompensationException.class);
@@ -67,7 +66,7 @@ class DefaultProcessRunnerCompensationTest {
             .execute(ctx -> Result.success("ok"))
             .compensation((ctx, history) -> compensated.set(true))
             .build();
-    var ctx = contextFactory.of("input", ExecutionMode.RUN, "run-3");
+    var ctx = SimpleContext.builder().body("input").mode(ExecutionMode.RUN).runId("run-3").build();
     var result = runner.run(process, ctx);
     assertThat(result.isSuccess()).isTrue();
     assertThat(compensated.get()).isFalse();

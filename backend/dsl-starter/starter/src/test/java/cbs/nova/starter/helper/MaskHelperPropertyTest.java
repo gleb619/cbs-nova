@@ -1,9 +1,9 @@
 package cbs.nova.starter.helper;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.ExecutionMode;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.helper.model.MaskIn;
 import net.jqwik.api.Arbitraries;
 import net.jqwik.api.Arbitrary;
@@ -15,7 +15,6 @@ import net.jqwik.api.constraints.StringLength;
 
 class MaskHelperPropertyTest {
 
-  private final ContextFactory contextFactory = new ContextFactory();
   private final MaskHelper helper = new MaskHelper();
 
   /**
@@ -98,7 +97,7 @@ class MaskHelperPropertyTest {
   }
 
   private String mask(MaskIn input) {
-    var ctx = contextFactory.of(input, ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.builder(input).mode(ExecutionMode.PREVIEW).build();
     return helper.execute(ctx).value().result();
   }
 }

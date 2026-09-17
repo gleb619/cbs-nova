@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.utils.DefinitionLoader;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dslexamples.v1.BatchModels.BatchIn;
 import cbs.nova.dslexamples.v1.BatchModels.BatchItem;
 import cbs.nova.dslexamples.v1.BatchModels.BatchOut;
@@ -57,7 +56,7 @@ class DslExamplesEndToEndTest extends BaseContainers {
   void generatedDslWorkflowExecutesThroughTemporal() {
     var input = new BatchIn(List.of(new BatchItem("a", 1), new BatchItem("b", 2)));
 
-    var service = ServiceUtil.newService(new ContextFactory());
+    var service = ServiceUtil.newService();
     Result<?> result = service.runProcess("BatchProcessing", input).result().join();
 
     assertThat(result.isSuccess()).as("result cause: %s", result.cause()).isTrue();

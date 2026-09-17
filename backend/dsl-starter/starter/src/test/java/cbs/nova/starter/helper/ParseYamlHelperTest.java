@@ -1,10 +1,10 @@
 package cbs.nova.starter.helper;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.helper.model.ParseYamlIn;
 import cbs.nova.starter.helper.model.ParseYamlOut;
 import java.util.List;
@@ -14,7 +14,6 @@ import org.junit.jupiter.api.Test;
 
 class ParseYamlHelperTest {
 
-  private final ContextFactory contextFactory = new ContextFactory();
   private final ParseYamlHelper helper = new ParseYamlHelper();
 
   @Test
@@ -175,7 +174,8 @@ class ParseYamlHelperTest {
   }
 
   private Result<ParseYamlOut> execute(String payload) {
-    var ctx = contextFactory.of(new ParseYamlIn(payload), ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.<ParseYamlIn>builder().body(new ParseYamlIn(payload))
+            .mode(ExecutionMode.PREVIEW).build();
     return helper.execute(ctx);
   }
 }

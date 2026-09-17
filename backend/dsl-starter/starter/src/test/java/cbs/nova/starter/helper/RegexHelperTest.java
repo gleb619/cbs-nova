@@ -1,10 +1,10 @@
 package cbs.nova.starter.helper;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.helper.model.RegexIn;
 import cbs.nova.starter.helper.model.RegexOut;
 import java.util.List;
@@ -12,7 +12,6 @@ import org.junit.jupiter.api.Test;
 
 class RegexHelperTest {
 
-  private final ContextFactory contextFactory = new ContextFactory();
   private final RegexHelper helper = new RegexHelper();
 
   @Test
@@ -137,7 +136,7 @@ class RegexHelperTest {
   }
 
   private Result<RegexOut> execute(RegexIn input) {
-    var ctx = contextFactory.of(input, ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.builder(input).mode(ExecutionMode.PREVIEW).build();
     return helper.execute(ctx);
   }
 }

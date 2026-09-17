@@ -1,11 +1,11 @@
 package cbs.nova.dsl.runner;
 
+import cbs.nova.dsl.model.SimpleContext;
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.DslSaga;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.exception.DslCompensationException;
 import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.transaction.CompensationRegistry;
@@ -19,7 +19,6 @@ import java.util.Map;
 @RequiredArgsConstructor
 public final class ProcessCompensationHandler {
 
-  private final ContextFactory contextFactory;
   private final CompensationRegistry compensationRegistry;
 
   Result<?> compensateIfNeeded(
@@ -56,7 +55,7 @@ public final class ProcessCompensationHandler {
       if (!saga.isNoop() && saga.hasCompensations()) {
         saga.compensate();
       } else if (compensationRegistry.hasCompensation(ctx.runId())) {
-        compensationRegistry.compensateAll(ctx.runId(), compensationError, contextFactory);
+        compensationRegistry.compensateAll(ctx.runId(), compensationError);
       } else {
         compensateTransactions(history, compensationError);
         compensateProcessHandler(process, ctx, compensationError, history);
@@ -81,7 +80,8 @@ public final class ProcessCompensationHandler {
           List<TransactionExecution> history, Throwable compensationError) {
     for (TransactionExecution exec : history) {
       var input = exec.input() != null ? exec.input() : Map.of();
-      var txCtx = contextFactory.of(input, ExecutionMode.COMPENSATION, exec.runId());
+      var txCtx = SimpleContext.builder().body(input).mode(ExecutionMode.COMPENSATION)
+              .runId(exec.runId()).build();
       GlobalManager.globalManager().compensateTransaction(exec.transactionName(), txCtx,
               compensationError);
     }
@@ -95,7 +95,8 @@ public final class ProcessCompensationHandler {
     if (process.compensationLogic() == null) {
       return;
     }
-    var compCtxBase = contextFactory.of(ctx.body(), ExecutionMode.COMPENSATION, ctx.runId());
+    var compCtxBase = SimpleContext.builder().body(ctx.body()).mode(ExecutionMode.COMPENSATION)
+            .runId(ctx.runId()).build();
     var compCtx = GlobalManager.globalManager().createCompensationContext(compCtxBase,
             compensationError);
     process.compensationLogic().accept(compCtx, history);

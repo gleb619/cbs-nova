@@ -1,10 +1,10 @@
 package cbs.nova.starter.helper;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.helper.model.FilterRecordsIn;
 import cbs.nova.starter.helper.model.FilterRecordsOut;
 import org.junit.jupiter.api.Test;
@@ -14,7 +14,6 @@ import java.util.Map;
 
 class FilterRecordsHelperTest {
 
-  private final ContextFactory contextFactory = new ContextFactory();
   private final FilterRecordsHelper helper = new FilterRecordsHelper();
 
   @Test
@@ -23,8 +22,9 @@ class FilterRecordsHelperTest {
             Map.<String, Object>of("status", "active", "name", "a"),
             Map.<String, Object>of("status", "inactive", "name", "b"),
             Map.<String, Object>of("status", "active", "name", "c"));
-    var ctx = contextFactory.of(new FilterRecordsIn(records, "status", "active"),
-            ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.<FilterRecordsIn>builder()
+            .body(new FilterRecordsIn(records, "status", "active")).mode(ExecutionMode.PREVIEW)
+            .build();
     Result<FilterRecordsOut> result = helper.execute(ctx);
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value().matched()).hasSize(2);
@@ -32,8 +32,8 @@ class FilterRecordsHelperTest {
 
   @Test
   void returnsEmptyForNullRecords() {
-    var ctx = contextFactory.of(new FilterRecordsIn(null, "field", "val"),
-            ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.<FilterRecordsIn>builder()
+            .body(new FilterRecordsIn(null, "field", "val")).mode(ExecutionMode.PREVIEW).build();
     assertThat(helper.execute(ctx).value().matched()).isEmpty();
   }
 }

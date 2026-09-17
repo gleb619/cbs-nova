@@ -1,17 +1,16 @@
 package cbs.nova.starter.helper;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.helper.model.DateMathIn;
 import cbs.nova.starter.helper.model.DateMathOut;
 import org.junit.jupiter.api.Test;
 
 class DateMathHelperTest {
 
-  private final ContextFactory contextFactory = new ContextFactory();
   private final DateMathHelper helper = new DateMathHelper();
 
   // ---- add -----------------------------------------------------------------
@@ -210,6 +209,6 @@ class DateMathHelperTest {
   private Result<DateMathOut> run(
           String op, String date, String end, Long amount, String unit, String zone) {
     DateMathIn input = new DateMathIn(op, date, end, amount, unit, zone);
-    return helper.execute(contextFactory.of(input, ExecutionMode.PREVIEW));
+    return helper.execute(SimpleContext.builder(input).mode(ExecutionMode.PREVIEW).build());
   }
 }

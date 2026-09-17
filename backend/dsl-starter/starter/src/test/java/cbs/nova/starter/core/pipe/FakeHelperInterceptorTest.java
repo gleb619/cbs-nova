@@ -1,5 +1,6 @@
 package cbs.nova.starter.core.pipe;
 
+import cbs.nova.dsl.model.SimpleContext;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.eq;
@@ -10,7 +11,6 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.fake.FakeConfig;
 import cbs.nova.dsl.fake.FakeEntry;
 import cbs.nova.starter.core.recorder.ExternalCallRecorder;
@@ -19,8 +19,6 @@ import org.junit.jupiter.api.Test;
 import java.util.Optional;
 
 class FakeHelperInterceptorTest {
-
-  private final ContextFactory contextFactory = new ContextFactory();
 
   @Test
   void shortCircuitsConfiguredHelperWithResponse() {
@@ -31,7 +29,8 @@ class FakeHelperInterceptorTest {
     var recorder = mock(ExternalCallRecorder.class);
     var interceptor = new FakeHelperInterceptor(registry, recorder);
 
-    Context<?> ctx = contextFactory.of("body", ExecutionMode.PREVIEW, "run-1");
+    Context<?> ctx = SimpleContext.builder("body").mode(ExecutionMode.PREVIEW).runId("run-1")
+            .build();
     Optional<Result<?>> result = interceptor.intercept("httpCall", ctx);
 
     assertThat(result).isPresent();
@@ -46,7 +45,8 @@ class FakeHelperInterceptorTest {
     var recorder = mock(ExternalCallRecorder.class);
     var interceptor = new FakeHelperInterceptor(registry, recorder);
 
-    Context<?> ctx = contextFactory.of("body", ExecutionMode.PREVIEW, "run-missing");
+    Context<?> ctx = SimpleContext.builder("body").mode(ExecutionMode.PREVIEW).runId("run-missing")
+            .build();
     Optional<Result<?>> result = interceptor.intercept("httpCall", ctx);
 
     assertThat(result).isEmpty();
@@ -61,7 +61,8 @@ class FakeHelperInterceptorTest {
     var recorder = mock(ExternalCallRecorder.class);
     var interceptor = new FakeHelperInterceptor(registry, recorder);
 
-    Context<?> ctx = contextFactory.of("body", ExecutionMode.PREVIEW, "run-2");
+    Context<?> ctx = SimpleContext.builder("body").mode(ExecutionMode.PREVIEW).runId("run-2")
+            .build();
     Optional<Result<?>> result = interceptor.intercept("otherHelper", ctx);
 
     assertThat(result).isEmpty();
@@ -77,7 +78,8 @@ class FakeHelperInterceptorTest {
     var recorder = mock(ExternalCallRecorder.class);
     var interceptor = new FakeHelperInterceptor(registry, recorder);
 
-    Context<?> ctx = contextFactory.of("body", ExecutionMode.PREVIEW, "run-3");
+    Context<?> ctx = SimpleContext.builder("body").mode(ExecutionMode.PREVIEW).runId("run-3")
+            .build();
     Optional<Result<?>> result = interceptor.intercept("myFn", ctx);
 
     assertThat(result).isPresent();

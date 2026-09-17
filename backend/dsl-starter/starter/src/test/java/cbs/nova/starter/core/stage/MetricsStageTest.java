@@ -1,5 +1,6 @@
 package cbs.nova.starter.core.stage;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -10,7 +11,6 @@ import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.PreviewMetricsSnapshot;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.Constants;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.model.ExplainGraphAccumulator;
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.core.pipe.DslPipeContext;
@@ -28,14 +28,12 @@ import org.junit.jupiter.api.Test;
 
 class MetricsStageTest {
 
-  private final ContextFactory contextFactory = new ContextFactory();
-
   @Test
   void runModeSkipsCollectionAndPassesThroughUntouched() {
     MeterRegistry registry = new SimpleMeterRegistry();
     DslPipeContext pipeContext = DslPipeContext.of(
             "Ping",
-            contextFactory.of("body", ExecutionMode.RUN, "run-1"),
+            SimpleContext.builder("body").mode(ExecutionMode.RUN).runId("run-1").build(),
             ExecutionMode.RUN,
             "run-1");
     DslPipeStage.Next next = c -> Result.success("downstream");
@@ -54,7 +52,7 @@ class MetricsStageTest {
     MeterRegistry registry = new SimpleMeterRegistry();
     DslPipeContext pipeContext = DslPipeContext.of(
             "Ping",
-            contextFactory.of("body", ExecutionMode.PREVIEW, "run-1"),
+            SimpleContext.builder("body").mode(ExecutionMode.PREVIEW).runId("run-1").build(),
             ExecutionMode.PREVIEW,
             "run-1");
     CallNode root = CallNode.node("root", CallKind.PROCESS, null, "out", true,
@@ -96,7 +94,7 @@ class MetricsStageTest {
     MeterRegistry registry = new SimpleMeterRegistry();
     DslPipeContext pipeContext = DslPipeContext.of(
             "Ping",
-            contextFactory.of("body", ExecutionMode.PREVIEW, "run-1"),
+            SimpleContext.builder("body").mode(ExecutionMode.PREVIEW).runId("run-1").build(),
             ExecutionMode.PREVIEW,
             "run-1");
     List<ExternalCall> calls = List.of(
@@ -129,7 +127,7 @@ class MetricsStageTest {
     MeterRegistry registry = new SimpleMeterRegistry();
     DslPipeContext pipeContext = DslPipeContext.of(
             "Ping",
-            contextFactory.of("body", ExecutionMode.PREVIEW, "run-1"),
+            SimpleContext.builder("body").mode(ExecutionMode.PREVIEW).runId("run-1").build(),
             ExecutionMode.PREVIEW,
             "run-1");
     pipeContext.setAttribute("astTree",
@@ -160,7 +158,7 @@ class MetricsStageTest {
     MeterRegistry registry = new SimpleMeterRegistry();
     DslPipeContext pipeContext = DslPipeContext.of(
             "Ping",
-            contextFactory.of("body", ExecutionMode.PREVIEW, "run-1"),
+            SimpleContext.builder("body").mode(ExecutionMode.PREVIEW).runId("run-1").build(),
             ExecutionMode.PREVIEW,
             "run-1");
 
@@ -183,7 +181,8 @@ class MetricsStageTest {
   void explainModeReadsAstTreeAndExternalCallsFromAccumulatorAndWritesMetricsBack() {
     MeterRegistry registry = new SimpleMeterRegistry();
     ExplainGraphAccumulator accumulator = new ExplainGraphAccumulator();
-    Context<?> originalDsl = contextFactory.of("body", ExecutionMode.EXPLAIN, "run-1")
+    Context<?> originalDsl = SimpleContext.builder("body").mode(ExecutionMode.EXPLAIN)
+            .runId("run-1").build()
             .withMetadata(Constants.EXPLAIN_GRAPH_ACCUMULATOR_KEY, accumulator);
     DslPipeContext pipeContext = DslPipeContext.of(
             "Ping", originalDsl, ExecutionMode.EXPLAIN, "run-1");
@@ -208,7 +207,7 @@ class MetricsStageTest {
     MeterRegistry registry = new SimpleMeterRegistry();
     DslPipeContext pipeContext = DslPipeContext.of(
             "Ping",
-            contextFactory.of("body", ExecutionMode.EXPLAIN, "run-1"),
+            SimpleContext.builder("body").mode(ExecutionMode.EXPLAIN).runId("run-1").build(),
             ExecutionMode.EXPLAIN,
             "run-1");
     pipeContext.setAttribute("astTree",

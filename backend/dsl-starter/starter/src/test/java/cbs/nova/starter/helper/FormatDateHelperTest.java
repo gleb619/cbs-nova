@@ -1,17 +1,16 @@
 package cbs.nova.starter.helper;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.helper.model.FormatDateIn;
 import cbs.nova.starter.helper.model.FormatDateOut;
 import org.junit.jupiter.api.Test;
 
 class FormatDateHelperTest {
 
-  private final ContextFactory contextFactory = new ContextFactory();
   private final FormatDateHelper helper = new FormatDateHelper();
 
   @Test
@@ -81,7 +80,7 @@ class FormatDateHelperTest {
   }
 
   private Result<FormatDateOut> execute(FormatDateIn input) {
-    var ctx = contextFactory.of(input, ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.builder(input).mode(ExecutionMode.PREVIEW).build();
     return helper.execute(ctx);
   }
 }

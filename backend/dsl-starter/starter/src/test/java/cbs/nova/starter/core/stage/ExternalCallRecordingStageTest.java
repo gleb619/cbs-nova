@@ -1,5 +1,6 @@
 package cbs.nova.starter.core.stage;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.inOrder;
@@ -11,7 +12,6 @@ import cbs.nova.dsl.Context;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.Constants;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.model.ExplainGraphAccumulator;
 import cbs.nova.starter.core.pipe.DslPipeContext;
 import cbs.nova.starter.core.pipe.DslPipeStage;
@@ -23,8 +23,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
 
 class ExternalCallRecordingStageTest {
-
-  private final ContextFactory contextFactory = new ContextFactory();
 
   @Test
   void startRunCalledBeforeProceedAndFinishRunAfter() {
@@ -121,7 +119,8 @@ class ExternalCallRecordingStageTest {
   void recordedCallsGoToAccumulatorWhenPresent() {
     ExternalCallRecorder recorder = mock(ExternalCallRecorder.class);
     ExplainGraphAccumulator accumulator = new ExplainGraphAccumulator();
-    Context<?> ctx = contextFactory.of("body", ExecutionMode.EXPLAIN, "run-6")
+    Context<?> ctx = SimpleContext.builder("body").mode(ExecutionMode.EXPLAIN).runId("run-6")
+            .build()
             .withMetadata(Constants.EXPLAIN_GRAPH_ACCUMULATOR_KEY, accumulator);
     DslPipeContext pipeContext = DslPipeContext.of("Ping", ctx, ExecutionMode.EXPLAIN, "run-6");
     List<ExternalCall> recorded = List.of(
@@ -139,7 +138,7 @@ class ExternalCallRecordingStageTest {
   }
 
   private DslPipeContext newPipeContext(String runId) {
-    Context<?> ctx = contextFactory.of("body", ExecutionMode.PREVIEW, runId);
+    Context<?> ctx = SimpleContext.builder("body").mode(ExecutionMode.PREVIEW).runId(runId).build();
     return DslPipeContext.of("Ping", ctx, ExecutionMode.PREVIEW, runId);
   }
 }

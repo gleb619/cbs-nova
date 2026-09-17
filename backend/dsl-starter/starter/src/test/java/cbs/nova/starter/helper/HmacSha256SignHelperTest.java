@@ -1,10 +1,10 @@
 package cbs.nova.starter.helper;
 
+import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.starter.helper.model.HmacSha256SignIn;
 import cbs.nova.starter.helper.model.HmacSha256SignOut;
 import java.util.Base64;
@@ -15,7 +15,6 @@ class HmacSha256SignHelperTest {
 
   private static final String QUICK_BROWN_FOX_VECTOR_HEX = "f7bc83f430538424b13298e6aa6fb143ef4d59a14946175997479dbc2d1a3cd8";
 
-  private final ContextFactory contextFactory = new ContextFactory();
   private final HmacSha256SignHelper helper = new HmacSha256SignHelper();
 
   @Test
@@ -87,7 +86,7 @@ class HmacSha256SignHelperTest {
   }
 
   private Result<HmacSha256SignOut> execute(HmacSha256SignIn input) {
-    var ctx = contextFactory.of(input, ExecutionMode.PREVIEW);
+    var ctx = SimpleContext.builder(input).mode(ExecutionMode.PREVIEW).build();
     return helper.execute(ctx);
   }
 }
