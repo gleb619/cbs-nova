@@ -537,6 +537,40 @@ milliseconds. Signed/negative durations are rejected in phase 1. Overflow past
 
 ---
 
+## Number formatting
+
+### Format a numeric amount for display
+
+`formatNumber` takes `(input, pattern, locale)` where `input` is a `Number` or numeric string
+(scientific notation works), `pattern` is either a preset alias or a raw
+`java.text.DecimalFormat` pattern, and `locale` is an optional BCP-47 tag defaulting to
+`Locale.ROOT`.
+
+Supported preset aliases (case-sensitive):
+
+- `INTEGER` — grouping separator, no fraction digits
+- `DECIMAL` — grouping separator + two fraction digits
+- `PERCENT` — multiplied by 100 and suffixed with `%`
+- `CURRENCY` — locale-specific currency symbol + two fraction digits
+
+Custom patterns are parsed with `DecimalFormat(pattern, DecimalFormatSymbols(locale))`. Rounding
+is always `RoundingMode.HALF_UP`. Invalid patterns, invalid locales, `NaN` / `Infinity` and other
+non-numeric input surface as a failed `Result` rather than throwing.
+
+```java
+FormatNumberOut amount = ctx.runHelper("formatNumber",
+        new FormatNumberIn(orderTotal, "CURRENCY", "en-US"))
+        .as(FormatNumberOut.class);
+// amount.formatted() == "$1,234.50"
+```
+
+```java
+FormatNumberOut compact = ctx.runHelper("formatNumber",
+        new FormatNumberIn(1234567.891, "DECIMAL", "de-DE"))
+        .as(FormatNumberOut.class);
+// compact.formatted() == "1.234.567,89"
+```
+
 ## HTTP integration
 
 `httpCall` (`HttpCallIn(url, method, headers, body, queryParams, timeoutMillis)`) is the one
