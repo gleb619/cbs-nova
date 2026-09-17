@@ -10,32 +10,28 @@ import cbs.nova.dsl.utils.ExpressionEvaluator;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 
+import java.util.Map;
+import java.util.function.Function;
+
 @RequiredArgsConstructor
 final class DslConfigBeanResolver implements BeanResolver {
+
+  private static final Map<Class<?>, Function<DslConfig, Object>> ACCESSORS = Map.of(
+          ExplainResourceResolver.class, config -> config.explainResourceResolver().get(),
+          ExpressionEvaluator.class, config -> config.expressionEvaluator().get(),
+          TemporalProcessLauncher.class, config -> config.temporalProcessLauncher().get(),
+          TransactionInvoker.class, config -> config.transactionInvoker().get(),
+          HelperInstanceResolver.class, config -> config.helperInstanceResolver().get(),
+          JsonSchemaGenerator.class, config -> config.jsonSchemaGenerator().get());
 
   private final DslConfig config;
 
   @Override
-  // TODO: add some reflection with cache for `DslConfig` for a better support
   public @NonNull Object resolve(@NonNull Class<?> type) {
-    if (type == ExplainResourceResolver.class) {
-      return config.explainResourceResolver().get();
+    Function<DslConfig, Object> accessor = ACCESSORS.get(type);
+    if (accessor == null) {
+      throw new IllegalStateException("No bean of type " + type.getName() + " is available");
     }
-    if (type == ExpressionEvaluator.class) {
-      return config.expressionEvaluator().get();
-    }
-    if (type == TemporalProcessLauncher.class) {
-      return config.temporalProcessLauncher().get();
-    }
-    if (type == TransactionInvoker.class) {
-      return config.transactionInvoker().get();
-    }
-    if (type == HelperInstanceResolver.class) {
-      return config.helperInstanceResolver().get();
-    }
-    if (type == JsonSchemaGenerator.class) {
-      return config.jsonSchemaGenerator().get();
-    }
-    throw new IllegalStateException("No bean of type " + type.getName() + " is available");
+    return accessor.apply(config);
   }
 }
