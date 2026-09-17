@@ -268,7 +268,7 @@ Traced from `DslScheduleService.create(...)`:
 4. `ScheduleSpec` is built with `setCronExpressions(List.of(cron))` and `setTimeZoneName(timezone)`.
 5. `SchedulePolicy` is fixed:
    - `Overlap = SCHEDULE_OVERLAP_POLICY_SKIP` — if the previous fire is still running, the new fire is skipped (no parallel runs).
-   - `CatchupWindow = Duration.ofMinutes(1)` — fires missed during downtime are caught up only within 1 minute of the missed time.
+   - `CatchupWindow = Duration.ofMinutes(1)` by default (configurable via `cbs.nova.schedule.catchup-window`) — fires missed during downtime are caught up only within the window of the missed time.
 6. `scheduleClient.createSchedule(scheduleId, schedule, ScheduleOptions.newBuilder().build())`; existing id → `409 ScheduleConflictException`.
 
 When the schedule fires, Temporal starts the workflow on the descriptor's task queue. That workflow executes through the same generated dispatch path as a manual run, calling `TemporalDslProcessService.startProcess(...)`, which generates a fresh `runId` via `contextFactory.generateRunId()` and writes one `dsl_runs` row per fire. Because there is no HTTP request and no Spring Security context on the Temporal worker thread, `RunIdentityResolver.resolve()` returns `null` — so **`triggered_by` is `NULL` on every scheduled run**. The Temporal Workflow id (`<scheduleId>-<scheduled-time>`) is visible in Temporal UI as the way to trace a fire back to its schedule; the `dsl_runs.run_id` is a fresh UUID per fire.
@@ -303,7 +303,7 @@ The schedule surface sits under `/api/*`, so:
 - **No update / modify endpoint.** The cron and timezone are immutable after creation; changing the schedule requires delete + recreate. The service does not call `updateSchedule(...)`.
 - **Schedule id derived only from definition.** Re-creating a schedule for the same definition always collides on `sched-<definition>` (caught as `409 ScheduleConflictException`). There is no way to have two coexisting schedules for the same definition.
 - **`triggered_by` is `NULL` for scheduled runs.** Confirmed by tracing: `RunIdentityResolver.resolve()` cannot read a Spring Security context or a request attribute from a Temporal worker thread, so it returns `null`. Operators querying `SELECT … FROM dsl_runs WHERE triggered_by IS NULL` will see scheduled runs; joining back to the originating schedule requires the Temporal Workflow id (`<scheduleId>-<scheduled-time>`) from Temporal UI.
-- **Catchup window is fixed at 1 minute** (`SchedulePolicy.catchupWindow = Duration.ofMinutes(1)`). A Temporal outage longer than 1 minute silently drops the missed fires — they do not backfill when Temporal recovers.
+- **Catchup window defaults to 1 minute, and is configurable** (`SchedulePolicy.catchupWindow`, externalized by T546 as `cbs.nova.schedule.catchup-window`, default `Duration.ofMinutes(1)`). A Temporal outage longer than the configured window silently drops the missed fires — they do not backfill when Temporal recovers.
 - **Audit is best-effort.** `DslScheduleHandler.audit(...)` swallows the absence of a `DslAuditService` bean (no DataSource). A schedule create/delete against an unaudited deployment will succeed but leave no `dsl_audit` row.
 - **`DslTemporalProcessRequest.runId` payload field is `"scheduled"`.** This is a payload marker carried into the workflow body, not the `dsl_runs.run_id` (which is freshly generated per fire by `contextFactory.generateRunId()`). It's a name collision with the run-id concept and may confuse anyone reading generated workflow code.
 

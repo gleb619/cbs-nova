@@ -1,5 +1,6 @@
 package cbs.nova.starter.config;
 
+import cbs.nova.starter.config.properties.DslScheduleProperties;
 import cbs.nova.starter.service.DslScheduleService;
 import io.temporal.client.schedules.ScheduleClient;
 import io.temporal.client.schedules.ScheduleClientOptions;
@@ -9,12 +10,14 @@ import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import tools.jackson.databind.ObjectMapper;
 
 @AutoConfiguration
 @AutoConfigureAfter(TemporalConfiguration.class)
 @ConditionalOnBean(WorkflowServiceStubs.class)
+@EnableConfigurationProperties(DslScheduleProperties.class)
 public class DslScheduleConfiguration {
 
   @Bean
@@ -30,7 +33,10 @@ public class DslScheduleConfiguration {
 
   @Bean
   @ConditionalOnBean(ScheduleClient.class)
-  DslScheduleService dslScheduleService(ScheduleClient scheduleClient, ObjectMapper objectMapper) {
-    return new DslScheduleService(scheduleClient, objectMapper);
+  DslScheduleService dslScheduleService(
+          ScheduleClient scheduleClient,
+          ObjectMapper objectMapper,
+          DslScheduleProperties scheduleProperties) {
+    return new DslScheduleService(scheduleClient, objectMapper, scheduleProperties.catchupWindow());
   }
 }

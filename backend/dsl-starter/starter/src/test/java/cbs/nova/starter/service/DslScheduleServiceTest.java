@@ -10,6 +10,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import cbs.nova.starter.config.properties.DslScheduleProperties;
+
 import cbs.nova.dsl.DslObject.DslType;
 import cbs.nova.dsl.GeneratedClassDescriptor;
 import cbs.nova.dsl.GlobalManager;
@@ -29,12 +31,15 @@ import io.temporal.client.schedules.ScheduleOptions;
 import io.temporal.client.schedules.ScheduleSpec;
 import io.temporal.client.schedules.ScheduleState;
 import io.temporal.client.schedules.ScheduleAlreadyRunningException;
+import io.temporal.client.schedules.SchedulePolicy;
 import io.temporal.workflow.WorkflowInterface;
 import io.temporal.workflow.WorkflowMethod;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import tools.jackson.databind.ObjectMapper;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -43,7 +48,8 @@ class DslScheduleServiceTest {
   private final ScheduleClient scheduleClient = mock(ScheduleClient.class);
   private final ScheduleHandle handle = mock(ScheduleHandle.class);
   private final ObjectMapper objectMapper = new ObjectMapper();
-  private final DslScheduleService service = new DslScheduleService(scheduleClient, objectMapper);
+  private final DslScheduleService service = new DslScheduleService(scheduleClient, objectMapper,
+          Duration.ofMinutes(1));
 
   @BeforeEach
   void setUp() {
@@ -96,6 +102,25 @@ class DslScheduleServiceTest {
     service.create(new CreateScheduleRequest("LoanDisbursement", "0 9 * * *", null, null, null));
 
     verify(scheduleClient).createSchedule(eq("sched-LoanDisbursement"), any(), any());
+  }
+
+  @Test
+  void createUsesConfiguredCatchupWindowFromScheduleProperties() {
+    DslScheduleProperties properties = new DslScheduleProperties(Duration.ofMinutes(30));
+    DslScheduleService configuredService = new DslScheduleService(scheduleClient, objectMapper,
+            properties.catchupWindow());
+    when(scheduleClient.createSchedule(eq("sched-LoanDisbursement"), any(Schedule.class),
+            any(ScheduleOptions.class)))
+            .thenReturn(handle);
+
+    configuredService
+            .create(new CreateScheduleRequest("LoanDisbursement", "0 9 * * *", "UTC", null, null));
+
+    ArgumentCaptor<Schedule> scheduleCaptor = ArgumentCaptor.forClass(Schedule.class);
+    verify(scheduleClient).createSchedule(eq("sched-LoanDisbursement"), scheduleCaptor.capture(),
+            any(ScheduleOptions.class));
+    SchedulePolicy policy = scheduleCaptor.getValue().getPolicy();
+    assertThat(policy.getCatchupWindow()).isEqualTo(Duration.ofMinutes(30));
   }
 
   @Test

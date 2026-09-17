@@ -63,6 +63,9 @@ public class DslScheduleService {
   private final ScheduleClient scheduleClient;
   private final ObjectMapper objectMapper;
 
+  /** How long after a missed fire Temporal still catches it up; from {@code cbs.nova.schedule.catchup-window}. */
+  private final Duration catchupWindow;
+
   /**
    * Returns the schedule id we use for a given definition name.
    *
@@ -124,7 +127,7 @@ public class DslScheduleService {
             .setSpec(spec)
             .setPolicy(SchedulePolicy.newBuilder()
                     .setOverlap(ScheduleOverlapPolicy.SCHEDULE_OVERLAP_POLICY_SKIP)
-                    .setCatchupWindow(Duration.ofMinutes(1))
+                    .setCatchupWindow(catchupWindow)
                     .build())
             .build();
 

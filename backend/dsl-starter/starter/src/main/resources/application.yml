@@ -166,9 +166,16 @@ cbs:
         # oldest events are evicted; this cap prevents an unbounded buffer if a run logs heavily.
         max-events-per-run: 1000
 
+# cbs.nova.schedule.* — Temporal schedules created via the DSL schedule API
+# (DslScheduleService).
 # cbs.nova.tracing.* — OpenTelemetry identity and OTLP export.
 cbs:
   nova:
+    schedule:
+      # How long after a missed fire Temporal still catches it up. Fires missed beyond this
+      # window (e.g. during a Temporal outage longer than 1 minute) are silently dropped —
+      # they do not backfill when Temporal recovers. Default 1m.
+      catchup-window: 1m
     tracing:
       # service.name attached to every exported span.
       service-name: cbs-nova
