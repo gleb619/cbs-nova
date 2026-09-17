@@ -1,6 +1,5 @@
 package cbs.nova.dsl.model;
 
-//TODO: good start for a 'Problems' tab in UI
 public final class DiagnosticCodes {
 
   private DiagnosticCodes() {

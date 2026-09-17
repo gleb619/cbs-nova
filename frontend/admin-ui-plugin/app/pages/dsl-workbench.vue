@@ -21,8 +21,8 @@ import {
   type DropdownMenuItem,
   DslBodyEditor,
   DslConstructExplorer,
-  DslDeleteDraftConfirmationModal,
   DslDefinitionTestsPanel,
+  DslDeleteDraftConfirmationModal,
   DslDiagnosticsHistoryPanel,
   DslDraftRestoreBanner,
   DslHelperCatalog,
@@ -100,10 +100,6 @@ const editorMarkers = computed<EditorMarker[]>(() =>
 )
 
 const bodyEditorRef = ref<InstanceType<typeof DslBodyEditor> | null>(null)
-
-function onProblemSelect(payload: { index: number; error: ValidationError }) {
-  bodyEditorRef.value?.selectProblem(payload)
-}
 
 function onHelperSelect(result: ObjectSearchResult) {
   bodyEditorRef.value?.insertAtCursor(buildHelperSnippet(result))
@@ -548,9 +544,10 @@ onBeforeUnmount(() => {
             :explain="runExplain"
             :markers="editorMarkers"
             :errors="displayValidationErrors"
+            :diagnostics-fetch="dslApi.fetchDiagnostics"
+            :diagnostics-definition="selectedConstruct?.name ?? ''"
             @update:code="onCodeChange"
             @save="handleEditorSave"
-            @select="onProblemSelect"
           />
         </div>
       </main>

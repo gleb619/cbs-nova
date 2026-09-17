@@ -5,7 +5,13 @@ import {
   createNamespacedLocalStorageState,
   type UseCookieFactory,
 } from '../../composables/useLocalStorageState'
-import type { DslConstruct, HelperCatalogEntry, StepDef, ValidationError } from '../../types/dsl'
+import type {
+  DiagnosticsPage,
+  DslConstruct,
+  HelperCatalogEntry,
+  StepDef,
+  ValidationError,
+} from '../../types/dsl'
 import type { RunnerOutput } from '../../types/runner'
 import CodeTab from './CodeTab.vue'
 import ExplainTab from './ExplainTab.vue'
@@ -40,8 +46,16 @@ const props = withDefaults(
     ) => Promise<RunnerOutput> | RunnerOutput
     /** Inline diagnostic markers — forwarded to the Code tab. */
     markers?: EditorMarker[]
-    /** Validation errors — surfaced under the Problems tab. */
+    /** Validation errors — surfaced under the Problems tab badge and as markers. */
     errors?: ValidationError[]
+    /** Fetcher for the persisted diagnostics that populate the Problems tab. */
+    diagnosticsFetch?: (params: {
+      definition?: string
+      limit: number
+      offset: number
+    }) => Promise<DiagnosticsPage>
+    /** Definition whose diagnostics should be shown in the Problems tab. */
+    diagnosticsDefinition?: string
   }>(),
   { markers: () => [], errors: () => [] },
 )
@@ -122,6 +136,7 @@ onBeforeUpdate(() => {
 })
 
 const codeTabRef = ref<InstanceType<typeof CodeTab> | null>(null)
+const problemsCount = ref<number | null>(null)
 
 function revealPosition(line: number, column = 1) {
   codeTabRef.value?.revealPosition(line, column)
@@ -141,6 +156,19 @@ function selectProblem(payload: { index: number; error: ValidationError }) {
     codeTabRef.value?.revealPosition(line, payload.error.column ?? 1)
   }
 }
+
+function onProblemNavigate(payload: { line: number | null; column: number | null }) {
+  if (typeof payload.line === 'number' && payload.line > 0) {
+    tab.value = 'code'
+    codeTabRef.value?.revealPosition(payload.line, payload.column ?? 1)
+  }
+}
+
+function onProblemsCount(total: number) {
+  problemsCount.value = total
+}
+
+const problemBadgeCount = computed(() => problemsCount.value ?? props.errors.length)
 
 defineExpose({ revealPosition, insertAtCursor, selectProblem })
 </script>
@@ -194,11 +222,11 @@ defineExpose({ revealPosition, insertAtCursor, selectProblem })
       >
         Problems
         <span
-          v-if="props.errors.length"
+          v-if="problemBadgeCount"
           class="ml-1 inline-flex items-center justify-center min-w-[1.25rem] px-1 rounded-full text-xs"
           :class="tab === 'problems' ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'"
         >
-          {{ props.errors.length }}
+          {{ problemBadgeCount }}
         </span>
       </button>
     </div>
@@ -232,7 +260,14 @@ defineExpose({ revealPosition, insertAtCursor, selectProblem })
         :type="construct?.type as ConstructType | undefined"
         :explain="props.explain!"
       />
-      <ProblemsPanel v-show="tab === 'problems'" :errors="props.errors" @select="selectProblem" />
+      <ProblemsPanel
+        v-if="diagnosticsFetch && diagnosticsDefinition"
+        v-show="tab === 'problems'"
+        :fetch-page="diagnosticsFetch"
+        :definition="diagnosticsDefinition"
+        @navigate="onProblemNavigate"
+        @count="onProblemsCount"
+      />
     </div>
   </div>
 </template>

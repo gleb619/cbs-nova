@@ -1,4 +1,5 @@
 export * from './useCrc32'
+export * from './useDiagnosticCodeRegistry'
 export * from './useDiffLines'
 export * from './useHelperCompletion'
 export * from './useHelperSearch'
