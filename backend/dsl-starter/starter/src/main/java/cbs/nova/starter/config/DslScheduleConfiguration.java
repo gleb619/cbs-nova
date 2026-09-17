@@ -1,15 +1,19 @@
 package cbs.nova.starter.config;
 
+import cbs.nova.starter.service.DslScheduleService;
 import io.temporal.client.schedules.ScheduleClient;
 import io.temporal.client.schedules.ScheduleClientOptions;
 import io.temporal.serviceclient.WorkflowServiceStubs;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
+import tools.jackson.databind.ObjectMapper;
 
-@Configuration
+@AutoConfiguration
+@AutoConfigureAfter(TemporalConfiguration.class)
 @ConditionalOnBean(WorkflowServiceStubs.class)
 public class DslScheduleConfiguration {
 
@@ -22,5 +26,11 @@ public class DslScheduleConfiguration {
             .setNamespace(namespace)
             .build();
     return ScheduleClient.newInstance(workflowServiceStubs, options);
+  }
+
+  @Bean
+  @ConditionalOnBean(ScheduleClient.class)
+  DslScheduleService dslScheduleService(ScheduleClient scheduleClient, ObjectMapper objectMapper) {
+    return new DslScheduleService(scheduleClient, objectMapper);
   }
 }

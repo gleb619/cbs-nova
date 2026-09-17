@@ -1,5 +1,6 @@
 package cbs.nova.starter.config.router;
 
+import cbs.nova.starter.config.DslRunRepositoryConfiguration;
 import cbs.nova.starter.controller.DslDiagnosticsHandler;
 import cbs.nova.starter.model.PageResponse;
 import cbs.nova.starter.persistence.CompileDiagnosticRecordRepository;
@@ -11,9 +12,11 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import org.springdoc.core.annotations.RouterOperation;
 import org.springdoc.core.annotations.RouterOperations;
+import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.servlet.function.RouterFunction;
 import org.springframework.web.servlet.function.RouterFunctions;
@@ -29,7 +32,8 @@ import javax.sql.DataSource;
  * Only registered when a {@link DataSource} is present, because the underlying
  * {@link CompileDiagnosticRecordRepository} is conditional on the same bean.
  */
-@Configuration
+@AutoConfiguration
+@AutoConfigureAfter({DataSourceAutoConfiguration.class, DslRunRepositoryConfiguration.class})
 @ConditionalOnBean(DataSource.class)
 public class DslDiagnosticsRouterConfiguration {
 

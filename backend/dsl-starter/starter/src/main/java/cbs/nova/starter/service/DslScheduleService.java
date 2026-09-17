@@ -32,8 +32,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
-import org.springframework.stereotype.Component;
 import tools.jackson.databind.ObjectMapper;
 
 import java.time.DateTimeException;
@@ -50,12 +48,11 @@ import java.util.stream.Stream;
  * process workflows directly via {@link ScheduleActionStartWorkflow}.
  *
  * <p>
- * The bean only loads when a {@link ScheduleClient} is available, keeping the schedule surface
- * absent in non-Temporal deployments.
+ * Declared as a {@code @Bean} in {@code DslScheduleConfiguration} (conditional on
+ * {@link ScheduleClient}) rather than component-scanned: a {@code @ConditionalOnBean} on a scanned
+ * class is evaluated before the auto-configuration phase and would never match.
  */
 @Slf4j
-@Component
-@ConditionalOnBean(ScheduleClient.class)
 @RequiredArgsConstructor
 public class DslScheduleService {
 
