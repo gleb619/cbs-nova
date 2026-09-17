@@ -22,25 +22,32 @@ import java.util.Set;
  * <p>
  * Pairs with {@link FormatMessageHelper}, which evaluates the template as a single SpEL expression
  * (powerful but unsafe for operator- or user-supplied templates). Use {@code interpolate} when the
- * template is configuration data that must not be able to call methods. Phase 1 supports flat keys
- * only — dotted paths ({@code ${order.id}}) and default-value syntax ({@code ${name:-anon}}) are
- * deliberate follow-ups.
+ * template is configuration data that must not be able to call methods.
  *
  * <p>
  * Rules:
  * <ul>
- * <li>{@code ${key}} is substituted from {@code params}; the key is {@code trim()}-ed.</li>
+ * <li>{@code ${key}} is substituted from {@code params}; the key is {@code trim()}-ed. Dotted keys
+ * walk nested {@code Map<String,Object>} params, e.g. {@code ${order.id}} reads
+ * {@code ((Map) params.get("order")).get("id")}.</li>
+ * <li>{@code ${key:-default}} uses the literal text after the first {@code :-} as the value when
+ * the key is missing. The default is <b>not</b> re-interpolated, so {@code ${x:-${y}}} emits the
+ * literal string {@code ${y}} when {@code x} is missing.</li>
+ * <li>Default values only apply to missing keys. A key present in the map but mapped to
+ * {@code null} renders as {@code ""}, even under {@code onMissing=error} or with a default value.
+ * Missing means absent from the map or unreachable because an intermediate path segment is absent
+ * or not a map; it does not mean {@code null}-valued.</li>
  * <li>{@code $${} renders a literal {@code $} (i.e. {@code "$${x}"} → {@code "${x}"} when {@code x}
  * is unknown or always produces a literal leading {@code $} when followed by a placeholder).</li>
  * <li>{@code ${}} (empty key) and an unclosed {@code ${} (no matching {@code }}) fail.</li>
  * <li>Braces inside keys are not supported — the first {@code }} closes the placeholder, so
  * {@code ${a${b}} substitutes key {@code a${b}.</li>
- * <li>A value present in the map but mapped to {@code null} renders as {@code ""}, even under
- * {@code onMissing=error}. "Missing" means absent from the map, not {@code null}-valued.</li>
  * </ul>
  */
 @Helper(name = "interpolate")
 public class InterpolateHelper implements Executable<InterpolateIn, InterpolateOut> {
+
+  private static final Object ABSENT = new Object();
 
   @Override
   public @NonNull Result<InterpolateOut> execute(@NonNull Context<InterpolateIn> ctx) {
@@ -84,18 +91,35 @@ public class InterpolateHelper implements Executable<InterpolateIn, InterpolateO
             return Result.failure(new IllegalArgumentException(
                     "interpolate: empty key at offset " + i));
           }
-          String key = rawKey;
-          if (params.containsKey(key)) {
-            Object value = params.get(key);
-            out.append(formatValue(value));
-            seenKeys.add(key);
+
+          int defaultIdx = rawKey.indexOf(":-");
+          String keyPath;
+          String defaultValue;
+          if (defaultIdx >= 0) {
+            keyPath = rawKey.substring(0, defaultIdx).trim();
+            defaultValue = rawKey.substring(defaultIdx + 2);
+          } else {
+            keyPath = rawKey;
+            defaultValue = null;
+          }
+          if (keyPath.isEmpty()) {
+            return Result.failure(new IllegalArgumentException(
+                    "interpolate: empty key at offset " + i));
+          }
+
+          Object resolved = resolvePath(params, keyPath.split("\\."));
+          if (resolved != ABSENT) {
+            out.append(formatValue(resolved));
+            seenKeys.add(keyPath);
+          } else if (defaultValue != null) {
+            out.append(defaultValue);
           } else {
             switch (policy) {
               case "empty" -> out.append("");
               case "keep" -> out.append(template, i, close + 1);
               default -> {
                 return Result.failure(new IllegalArgumentException(
-                        "interpolate: missing key '" + key + "'"));
+                        "interpolate: missing key '" + keyPath + "'"));
               }
             }
           }
@@ -126,6 +150,26 @@ public class InterpolateHelper implements Executable<InterpolateIn, InterpolateO
       case "error", "empty", "keep" -> lower;
       default -> null;
     };
+  }
+
+  private static Object resolvePath(Map<String, Object> params, String[] segments) {
+    Object current = params;
+    for (int i = 0; i < segments.length; i++) {
+      if (!(current instanceof Map<?, ?> map)) {
+        return ABSENT;
+      }
+      String segment = segments[i];
+      if (!map.containsKey(segment)) {
+        return ABSENT;
+      }
+      current = map.get(segment);
+      if (current == null) {
+        // A null value anywhere along the path is treated as a present null and renders as empty,
+        // not as a missing key, consistent with the flat-key null-vs-absent rule.
+        return null;
+      }
+    }
+    return current;
   }
 
   private static String formatValue(Object value) {

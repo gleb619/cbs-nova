@@ -200,6 +200,213 @@ class InterpolateHelperTest {
     assertThat(result.value().resolvedKeys()).isEmpty();
   }
 
+  // ---------- dotted paths ----------
+
+  @Test
+  void dottedPathPresent() {
+    Map<String, Object> order = new LinkedHashMap<>();
+    order.put("id", "ORD-42");
+    Result<InterpolateOut> result = execute(
+            "Order ${order.id}", Map.of("order", order));
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(result.value().result()).isEqualTo("Order ORD-42");
+    assertThat(result.value().resolvedKeys()).containsExactly("order.id");
+  }
+
+  @Test
+  void dottedPathDeepPresent() {
+    Map<String, Object> address = Map.of("zip", "12345");
+    Map<String, Object> order = Map.of("address", address);
+    Result<InterpolateOut> result = execute(
+            "Zip ${order.address.zip}", Map.of("order", order));
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(result.value().result()).isEqualTo("Zip 12345");
+    assertThat(result.value().resolvedKeys()).containsExactly("order.address.zip");
+  }
+
+  @Test
+  void dottedPathMissingTopKeyFollowsOnMissing() {
+    Result<InterpolateOut> error = execute("${order.id}", Map.of(), "error");
+    Result<InterpolateOut> empty = execute("${order.id}", Map.of(), "empty");
+    Result<InterpolateOut> keep = execute("${order.id}", Map.of(), "keep");
+
+    assertThat(error.isSuccess()).isFalse();
+    assertThat(error.cause()).hasMessageContaining("missing key 'order.id'");
+    assertThat(empty.value().result()).isEqualTo("");
+    assertThat(keep.value().result()).isEqualTo("${order.id}");
+  }
+
+  @Test
+  void dottedPathMissingNestedKeyFollowsOnMissing() {
+    Map<String, Object> order = new LinkedHashMap<>();
+    order.put("id", null);
+    Result<InterpolateOut> error = execute("${order.id}", Map.of("order", order), "error");
+    // 'id' is present (mapped to null), so it is not missing.
+    assertThat(error.isSuccess()).isTrue();
+    assertThat(error.value().result()).isEqualTo("");
+
+    order.remove("id");
+    Result<InterpolateOut> missing = execute("${order.id}", Map.of("order", order), "error");
+    assertThat(missing.isSuccess()).isFalse();
+    assertThat(missing.cause()).hasMessageContaining("missing key 'order.id'");
+  }
+
+  @Test
+  void dottedPathIntermediateNotAMapFollowsOnMissing() {
+    Result<InterpolateOut> result = execute(
+            "${order.id}", Map.of("order", "not-a-map"), "error");
+    assertThat(result.isSuccess()).isFalse();
+    assertThat(result.cause()).hasMessageContaining("missing key 'order.id'");
+  }
+
+  @Test
+  void dottedPathNullAtLeafRendersEmpty() {
+    Map<String, Object> order = new LinkedHashMap<>();
+    order.put("id", null);
+    Result<InterpolateOut> result = execute("(${order.id})", Map.of("order", order), "error");
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(result.value().result()).isEqualTo("()");
+    assertThat(result.value().resolvedKeys()).containsExactly("order.id");
+  }
+
+  @Test
+  void dottedPathNullAtIntermediateRendersEmpty() {
+    // A present null before the final segment is handled as a present null (renders empty),
+    // not as a missing key.
+    Map<String, Object> params = new LinkedHashMap<>();
+    params.put("order", null);
+    Result<InterpolateOut> result = execute(
+            "${order.id}", params, "error");
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(result.value().result()).isEqualTo("");
+    assertThat(result.value().resolvedKeys()).containsExactly("order.id");
+  }
+
+  // ---------- default values ----------
+
+  @Test
+  void defaultValueShortCircuitsErrorMode() {
+    Result<InterpolateOut> result = execute(
+            "Hi ${name:-anon}!", Map.of(), "error");
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(result.value().result()).isEqualTo("Hi anon!");
+    assertThat(result.value().resolvedKeys()).isEmpty();
+  }
+
+  @Test
+  void defaultValueShortCircuitsEmptyMode() {
+    Result<InterpolateOut> result = execute(
+            "Hi ${name:-anon}!", Map.of(), "empty");
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(result.value().result()).isEqualTo("Hi anon!");
+  }
+
+  @Test
+  void defaultValueShortCircuitsKeepMode() {
+    Result<InterpolateOut> result = execute(
+            "Hi ${name:-anon}!", Map.of(), "keep");
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(result.value().result()).isEqualTo("Hi anon!");
+  }
+
+  @Test
+  void presentNullDoesNotUseDefault() {
+    Map<String, Object> params = new LinkedHashMap<>();
+    params.put("name", null);
+    Result<InterpolateOut> result = execute(
+            "Hi ${name:-anon}!", params, "error");
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(result.value().result()).isEqualTo("Hi !");
+    assertThat(result.value().resolvedKeys()).containsExactly("name");
+  }
+
+  @Test
+  void dottedPathPresentNullDoesNotUseDefault() {
+    Map<String, Object> order = new LinkedHashMap<>();
+    order.put("id", null);
+    Result<InterpolateOut> result = execute(
+            "(${order.id:-unknown})", Map.of("order", order), "error");
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(result.value().result()).isEqualTo("()");
+    assertThat(result.value().resolvedKeys()).containsExactly("order.id");
+  }
+
+  @Test
+  void defaultValueIsLiteralAndNotReInterpolated() {
+    Result<InterpolateOut> result = execute(
+            "${missing:-${foo}}", Map.of("foo", "bar"), "error");
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(result.value().result()).isEqualTo("${foo}");
+    assertThat(result.value().resolvedKeys()).isEmpty();
+  }
+
+  @Test
+  void defaultValueEmptyStringIsUsed() {
+    Result<InterpolateOut> result = execute(
+            "[${missing:-}]", Map.of(), "error");
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(result.value().result()).isEqualTo("[]");
+  }
+
+  @Test
+  void emptyKeyWithDefaultStillFails() {
+    Result<InterpolateOut> result = execute("${:-default}", Map.of(), "error");
+    assertThat(result.isSuccess()).isFalse();
+    assertThat(result.cause()).hasMessageContaining("empty key");
+  }
+
+  // ---------- combined dotted + default ----------
+
+  @Test
+  void dottedPathWithDefaultPresent() {
+    Map<String, Object> order = Map.of("id", "ORD-1");
+    Result<InterpolateOut> result = execute(
+            "${order.id:-unknown}", Map.of("order", order));
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(result.value().result()).isEqualTo("ORD-1");
+    assertThat(result.value().resolvedKeys()).containsExactly("order.id");
+  }
+
+  @Test
+  void dottedPathWithDefaultMissingUsesDefault() {
+    Result<InterpolateOut> result = execute(
+            "Order: ${order.id:-unknown}", Map.of(), "error");
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(result.value().result()).isEqualTo("Order: unknown");
+    assertThat(result.value().resolvedKeys()).isEmpty();
+  }
+
+  @Test
+  void dottedPathWithDefaultMissingNestedUsesDefault() {
+    Map<String, Object> order = new LinkedHashMap<>();
+    Result<InterpolateOut> result = execute(
+            "Order: ${order.id:-unknown}", Map.of("order", order), "error");
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(result.value().result()).isEqualTo("Order: unknown");
+  }
+
+  // ---------- escaping edge cases ----------
+
+  @Test
+  void dollarEscapeWithDefaultRendersLiteral() {
+    // The existing $$ escape must still prevent the following placeholder from being parsed,
+    // even when the placeholder body contains the new :- default delimiter.
+    Result<InterpolateOut> result = execute(
+            "$${name:-anon}", Map.of(), "error");
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(result.value().result()).isEqualTo("${name:-anon}");
+    assertThat(result.value().resolvedKeys()).isEmpty();
+  }
+
+  @Test
+  void defaultValueUsesFirstDelimiterOnly() {
+    // The first :- splits key and default; any later :- stays inside the literal default.
+    Result<InterpolateOut> result = execute(
+            "${x:-a:-b}", Map.of(), "error");
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(result.value().result()).isEqualTo("a:-b");
+  }
+
   private Result<InterpolateOut> execute(String template, Map<String, Object> params) {
     return execute(template, params, null);
   }
