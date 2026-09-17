@@ -931,6 +931,43 @@ RandomOut picked = ctx.runHelper("random",
 `base64url`. `length` must be in `[0, 100000]`; a length of `0` returns the empty string.
 `choice` rejects a null or empty `list` (`"random.choice.list must not be empty"`).
 
+## Secrets and tokens
+
+`secret` generates cryptographic random values backed by `SecureRandom` — the helper to use
+for API keys, signing secrets, session tokens, and idempotency keys. Unlike `random` (which
+is explicitly NOT safe for secrets), every value here comes from a CSPRNG. The `mode`
+discriminator picks `bytes` or `token`; both take `length` in `[0, 100000]`.
+
+### Random bytes and URL-safe tokens
+
+```java
+// 32 random bytes as lowercase hex (default encoding) — an API key
+SecretOut key = ctx.runHelper("secret",
+        new SecretIn("bytes", 32, null))
+        .as(SecretOut.class);
+String apiKey = key.result();
+
+// Random bytes as base64url — a signing secret for HMAC
+SecretOut signing = ctx.runHelper("secret",
+        new SecretIn("bytes", 32, "base64url"))
+        .as(SecretOut.class);
+
+// URL-safe opaque token: 43 chars from the 64-char base64url alphabet
+// (A-Z a-z 0-9 - _), 6 bits of entropy per character = 258 bits total
+SecretOut session = ctx.runHelper("secret",
+        new SecretIn("token", 43, null))
+        .as(SecretOut.class);
+String sessionToken = session.result();
+```
+
+`bytes` encodes `length` random bytes as `"hex"` (default), `"base64"`, or `"base64url"`
+(selected by `encoding`, case-insensitive); an unknown encoding is rejected
+(`"secret.bytes.encoding must be one of hex, base64, base64url, was: ..."`). `token` draws
+`length` characters uniformly from the base64url alphabet — no padding, URL-safe by
+construction — giving exactly 6 bits of entropy per character, so `length = 32` already
+yields 192 bits. Out-of-range lengths are rejected with `IllegalArgumentException`
+(`"secret.<mode>.length must be >= 0, was: ..."` / `"... must be <= 100000, was: ..."`).
+
 ## Versioning
 
 `semver` parses, compares, range-checks, bumps, and formats SemVer 2.0.0 versions
