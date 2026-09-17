@@ -9,21 +9,19 @@ import org.junit.jupiter.api.Test;
 
 class HmacSha256SupportTest {
 
-  // RFC 4231-style known answer: HMAC-SHA256(key="key", msg="The quick brown fox jumps over the lazy dog")
+  // RFC 4231-style known answer: HMAC-SHA256(key="key", msg="The quick brown fox jumps over the
+  // lazy dog")
   private static final String QUICK_BROWN_FOX_KEY = "key";
-  private static final String QUICK_BROWN_FOX_MSG =
-          "The quick brown fox jumps over the lazy dog";
-  private static final String QUICK_BROWN_FOX_HEX =
-          "f7bc83f430538424b13298e6aa6fb143ef4d59a14946175997479dbc2d1a3cd8";
+  private static final String QUICK_BROWN_FOX_MSG = "The quick brown fox jumps over the lazy dog";
+  private static final String QUICK_BROWN_FOX_HEX = "f7bc83f430538424b13298e6aa6fb143ef4d59a14946175997479dbc2d1a3cd8";
 
   // RFC 4231 Test Case 1: key = 0x0b * 20, data = "Hi There".
   private static final byte[] RFC4231_KEY_TC1 = new byte[]{
-          0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
-          0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
-          0x0b, 0x0b, 0x0b, 0x0b
+      0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
+      0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
+      0x0b, 0x0b, 0x0b, 0x0b
   };
-  private static final String RFC4231_TC1_HEX =
-          "b0344c61d8db38535ca8afceaf0bf12b881dc200c9833da726e9376c2e32cff7";
+  private static final String RFC4231_TC1_HEX = "b0344c61d8db38535ca8afceaf0bf12b881dc200c9833da726e9376c2e32cff7";
 
   // ---------- encodingsList / normalizeEncoding ----------
 

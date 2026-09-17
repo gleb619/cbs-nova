@@ -26,7 +26,8 @@ class YamlSupportTest {
   void safeLoaderParsesMixedCaseBooleansAsBooleans() {
     // The Yaml12Resolver accepts the canonical spellings true/True/TRUE/false/False/FALSE;
     // mixed-case variants (e.g. tRue) fall through to the generic string resolver.
-    Object loaded = YamlSupport.safeLoader().load("- true\n- True\n- TRUE\n- false\n- False\n- FALSE\n");
+    Object loaded = YamlSupport.safeLoader()
+            .load("- true\n- True\n- TRUE\n- false\n- False\n- FALSE\n");
     assertThat((List<Object>) loaded)
             .containsExactly(Boolean.TRUE, Boolean.TRUE, Boolean.TRUE,
                     Boolean.FALSE, Boolean.FALSE, Boolean.FALSE);
@@ -163,9 +164,9 @@ class YamlSupportTest {
     // Every spelling of an unknown global tag must be rejected — this pins the TagInspector
     // blanket-deny regardless of which exotic alias the loader is asked about.
     String[] samples = {
-            "v: !!python/object:os.system ['id']\n",
-            "v: !custom\n  any: 1\n",
-            "v: !!java.io.File '/etc/passwd'\n"
+        "v: !!python/object:os.system ['id']\n",
+        "v: !custom\n  any: 1\n",
+        "v: !!java.io.File '/etc/passwd'\n"
     };
     for (String sample : samples) {
       assertThatThrownBy(() -> YamlSupport.safeLoader().load(sample))
@@ -206,7 +207,8 @@ class YamlSupportTest {
     assertThat(first).isEqualTo(second);
   }
 
-  // ---------- cross-check: resolver does not leave BOOL on the inherited YAML 1.1 triggers ----------
+  // ---------- cross-check: resolver does not leave BOOL on the inherited YAML 1.1 triggers
+  // ----------
 
   @Test
   void safeLoaderDoesNotMistakeEmptyStringForBool() {

@@ -102,7 +102,8 @@ class RunTimeseriesBucketingTest {
     RunTimeseriesBucket row = new RunTimeseriesBucket(WINDOW_START.minusSeconds(300), "RUNNING", 1);
     RunTimeseriesBucket after = new RunTimeseriesBucket(WINDOW_START.plusSeconds(60), "RUNNING", 2);
 
-    assertThat(RunTimeseriesBucketing.foldMinuteBuckets(List.of(after, row), WINDOW_START, FIVE_MINUTES))
+    assertThat(RunTimeseriesBucketing.foldMinuteBuckets(List.of(after, row), WINDOW_START,
+            FIVE_MINUTES))
             .containsExactly(
                     new RunTimeseriesBucket(WINDOW_START.minusSeconds(300), "RUNNING", 1),
                     new RunTimeseriesBucket(WINDOW_START, "RUNNING", 2));
