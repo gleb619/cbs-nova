@@ -10,6 +10,11 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+/**
+ * Adapter-level tests: verifies {@link DslBuilderProperties} maps onto the shared
+ * {@link cbs.nova.dsl.utils.UrlSafetyValidator} and that error messages carry the {@code repoUrl}
+ * label. Full validation-matrix coverage lives in {@code UrlSafetyValidatorTest} (dsl-api).
+ */
 class RepoUrlValidatorTest {
 
   @TempDir
@@ -53,141 +58,56 @@ class RepoUrlValidatorTest {
   }
 
   @Test
-  void allowsHttpsPublicHost() {
+  void mapsDefaultConfigAndAllowsHttps() {
     assertThatCode(() -> RepoUrlValidator.validate("https://github.com/org/repo.git",
             defaultProperties())).doesNotThrowAnyException();
   }
 
   @Test
-  void rejectsFileScheme() {
-    assertThatThrownBy(() -> RepoUrlValidator.validate("file:///tmp/x", defaultProperties()))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessageContaining("file");
+  void mapsAllowedSchemesFromProperties() {
+    assertThatThrownBy(() -> RepoUrlValidator.validate("ssh://git@git.example/repo.git",
+            defaultProperties()))
+            .isInstanceOf(IllegalArgumentException.class);
+
+    var allowSsh = properties(List.of("https", "ssh"), false, null);
+    assertThatCode(() -> RepoUrlValidator.validate("ssh://git.example/repo.git", allowSsh))
+            .doesNotThrowAnyException();
   }
 
   @Test
-  void rejectsPlainHttpByDefault() {
+  void mapsAllowPlainHttpFlagFromProperties() {
     assertThatThrownBy(() -> RepoUrlValidator.validate("http://git.example/repo.git",
             defaultProperties()))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("http");
-  }
 
-  @Test
-  void allowsPlainHttpWhenEnabled() {
-    var properties = properties(List.of("https", "http"), true, null);
-
-    assertThatCode(() -> RepoUrlValidator.validate("http://git.example/repo.git", properties))
+    var allowHttp = properties(List.of("https", "http"), true, null);
+    assertThatCode(() -> RepoUrlValidator.validate("http://git.example/repo.git", allowHttp))
             .doesNotThrowAnyException();
   }
 
   @Test
-  void rejectsLoopbackIpv4() {
-    assertThatThrownBy(() -> RepoUrlValidator.validate("https://127.0.0.1/x",
-            defaultProperties()))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessageContaining("loopback");
-  }
-
-  @Test
-  void rejectsCloudMetadataAddress() {
-    assertThatThrownBy(() -> RepoUrlValidator.validate("https://169.254.169.254/latest/meta-data",
-            defaultProperties()))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessageContaining("link-local");
-  }
-
-  @Test
-  void rejectsLoopbackIpv6() {
-    assertThatThrownBy(() -> RepoUrlValidator.validate("https://[::1]/x", defaultProperties()))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessageContaining("loopback");
-  }
-
-  @Test
-  void rejectsGitAndSshSchemesByDefault() {
-    assertThatThrownBy(() -> RepoUrlValidator.validate("git://git.example/repo.git",
-            defaultProperties()))
-            .isInstanceOf(IllegalArgumentException.class);
-    assertThatThrownBy(() -> RepoUrlValidator.validate("ssh://git@git.example/repo.git",
-            defaultProperties()))
-            .isInstanceOf(IllegalArgumentException.class);
-  }
-
-  @Test
-  void rejectsSchemelessUrl() {
-    assertThatThrownBy(() -> RepoUrlValidator.validate("github.com/org/repo.git",
-            defaultProperties()))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessageContaining("scheme");
-  }
-
-  @Test
-  void allowsSshWhenExplicitlyAllowlisted() {
-    var properties = properties(List.of("https", "ssh"), false, null);
-
-    assertThatCode(() -> RepoUrlValidator.validate("ssh://git.example/repo.git", properties))
-            .doesNotThrowAnyException();
-  }
-
-  @Test
-  void enforcesAllowedRepoHosts() {
-    var properties = properties(null, false, List.of("github.com", "*.internal.example"));
-
-    assertThatCode(() -> RepoUrlValidator.validate("https://github.com/org/repo.git", properties))
-            .doesNotThrowAnyException();
-    assertThatCode(() -> RepoUrlValidator.validate("https://git.internal.example/org/repo.git",
-            properties)).doesNotThrowAnyException();
-    assertThatThrownBy(() -> RepoUrlValidator.validate("https://gitlab.com/org/repo.git",
-            properties))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessageContaining("host is not allowed");
-  }
-
-  @Test
-  void wildcardHostEntryDoesNotMatchApex() {
-    var properties = properties(null, false, List.of("*.internal.example"));
-
-    assertThatThrownBy(() -> RepoUrlValidator.validate("https://internal.example/org/repo.git",
-            properties))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessageContaining("host is not allowed");
-  }
-
-  @Test
-  void localAddressCheckAppliesEvenWithoutHostAllowlist() {
-    var properties = properties(null, false, List.of());
-
-    assertThatThrownBy(() -> RepoUrlValidator.validate("https://192.168.1.10/repo.git",
-            properties))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessageContaining("site-local");
-    assertThatThrownBy(() -> RepoUrlValidator.validate("https://localhost/repo.git", properties))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessageContaining("loopback");
-  }
-
-  @Test
-  void neverLeaksUserInfoIntoRejectionMessage() {
-    assertThatThrownBy(() -> RepoUrlValidator.validate("https://user:token@127.0.0.1/x",
-            defaultProperties()))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessageNotContaining("user:token")
-            .hasMessageNotContaining("token");
-
+  void mapsAllowedHostsFromProperties() {
     var restricted = properties(null, false, List.of("github.com"));
-    assertThatThrownBy(() -> RepoUrlValidator.validate("https://user:token@gitlab.com/x",
+
+    assertThatCode(() -> RepoUrlValidator.validate("https://github.com/org/repo.git", restricted))
+            .doesNotThrowAnyException();
+    assertThatThrownBy(() -> RepoUrlValidator.validate("https://gitlab.com/org/repo.git",
             restricted))
             .isInstanceOf(IllegalArgumentException.class)
-            .hasMessageNotContaining("user:token")
-            .hasMessageNotContaining("token");
+            .hasMessageContaining("host is not allowed");
   }
 
   @Test
-  void rejectsUnparseableUrl() {
-    assertThatThrownBy(() -> RepoUrlValidator.validate("https://exa mple.com/\\repo",
+  void rejectionMessageCarriesRepoUrlLabel() {
+    assertThatThrownBy(() -> RepoUrlValidator.validate("ftp://example.com/repo.git",
             defaultProperties()))
             .isInstanceOf(IllegalArgumentException.class)
-            .hasMessageContaining("not a valid URI");
+            .hasMessageContaining("repoUrl");
+
+    assertThatThrownBy(
+            () -> RepoUrlValidator.validate("https://exa mple.com/\\repo", defaultProperties()))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("Invalid repoUrl");
   }
 }
