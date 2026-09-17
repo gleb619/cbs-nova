@@ -221,6 +221,9 @@ class AdvancedDslExamplesTest {
       if (helperClass == Sha256Helper.class) {
         return new Sha256Helper();
       }
+      if (helperClass == SecretHelper.class) {
+        return new SecretHelper();
+      }
       if (helperClass == MaskHelper.class) {
         return new MaskHelper();
       }
