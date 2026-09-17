@@ -1,5 +1,11 @@
 {
-  "names": ["currentTimestamp", "formatDate", "httpCall", "uuidV7"],
+  "names": [
+    "currentTimestamp",
+    "formatDate",
+    "formatNumber",
+    "httpCall",
+    "uuidV7"
+  ],
   "helpers": [
     {
       "name": "currentTimestamp",
@@ -14,6 +20,14 @@
       "description": "Formats a date string with a pattern",
       "inputType": "FormatDateIn",
       "outputType": "FormatDateOut",
+      "hasSideEffects": false,
+      "previewBehavior": "deterministic"
+    },
+    {
+      "name": "formatNumber",
+      "description": "Formats a numeric value with a locale-aware pattern",
+      "inputType": "FormatNumberIn",
+      "outputType": "FormatNumberOut",
       "hasSideEffects": false,
       "previewBehavior": "deterministic"
     },

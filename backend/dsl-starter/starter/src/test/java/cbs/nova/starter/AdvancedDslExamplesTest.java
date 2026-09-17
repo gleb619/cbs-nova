@@ -111,6 +111,9 @@ class AdvancedDslExamplesTest {
       if (helperClass == FormatMessageHelper.class) {
         return new FormatMessageHelper();
       }
+      if (helperClass == FormatNumberHelper.class) {
+        return new FormatNumberHelper();
+      }
       if (helperClass == HttpCallHelper.class) {
         return new HttpCallHelper(HttpClient.newHttpClient(),
                 new CbsNovaLoggingProperties(Level.INFO, Level.INFO, true));
