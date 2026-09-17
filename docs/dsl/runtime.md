@@ -119,7 +119,7 @@ it and `.explainVia("file.md")` loads markdown lazily through the injectable
 default `ClasspathExplainResourceResolver` prefix `explain/`; the starter publishes a
 `@ConditionalOnMissingBean` `SpringExplainResourceResolver` driven by
 `cbs.nova.explain.resources-prefix`).
-Helpers such as the starter's `MathHelper` override `explain` to produce mode- and
+Helpers such as the starter's `ArithmeticHelper` override `explain` to produce mode- and
 argument-specific descriptions. The starter's explain pipe still produces the full 14-field
 `ExplainGraphReport` (execution trace, external calls, metrics, AST, dry-run logs; graph-shaped with
 `children` and `hasCompensation`, self-rendering mermaid/PlantUML/BPMN diagrams; package

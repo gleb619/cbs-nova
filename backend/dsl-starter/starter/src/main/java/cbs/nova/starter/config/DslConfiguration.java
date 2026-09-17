@@ -30,6 +30,7 @@ import cbs.nova.starter.service.DefaultDslWorkspaceResolver;
 import cbs.nova.starter.service.DslFileBulkhead;
 import cbs.nova.starter.service.DslWorkspaceResolver;
 import cbs.nova.starter.resolver.SpringOrGeneratedHelperInstanceResolver;
+import cbs.nova.starter.helper.ArithmeticHelper;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import io.avaje.jsonb.Jsonb;
@@ -77,6 +78,7 @@ public class DslConfiguration {
       registerTransactionInvoker(transactionInvoker);
       registerHelperInstanceResolver(helperInstanceResolver);
       registerHelperResolvers();
+      registerArithmeticAliases();
       registerJsonSchemaGenerator(jsonSchemaGenerator);
       registerExplainResourceResolver(explainResourceResolver);
       registerBeanResolver(beanResolver);
@@ -241,6 +243,10 @@ public class DslConfiguration {
             .replace(transactionInvoker);
   }
 
+  private void registerArithmeticAliases() {
+    // Backward-compatible alias for the deprecated `math` helper.
+    GlobalManager.globalManager().registerHelper("math", new ArithmeticHelper());
+  }
   private void registerJsonSchemaGenerator(JsonSchemaGenerator jsonSchemaGenerator) {
     DslConfig.dslConfig().jsonSchemaGenerator().replace(jsonSchemaGenerator);
   }

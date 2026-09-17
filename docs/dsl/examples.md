@@ -380,9 +380,9 @@ JsonExtractOut readOut = read.as(JsonExtractOut.class);
 
 Patching `{"status":"pending","counter":1}` with `{"status":"ready","counter":2}` and reading `status` returns `patchedJson={"status":"ready","counter":2}` and `extractedValue=ready` with `present=true`.
 
-## Aggregating records with `listOps` pluck/groupBy and `math` mean/max
+## Aggregating records with `listOps` pluck/groupBy and `arithmetic` mean/max
 
-Turn a list of records into derived values: pull a numeric column with `listOps` `pluck`, group the same records with `groupBy`, then run `math` `mean` and `max` over the extracted numbers.
+Turn a list of records into derived values: pull a numeric column with `listOps` `pluck`, group the same records with `groupBy`, then run `arithmetic` `mean` and `max` over the extracted numbers.
 
 See `backend/dsl-starter/dsl-examples/src/dsl/RecordAggregationDsl.java` (input/output models in `backend/dsl-starter/dsl-examples/src/models/AggregationModels.java`).
 
@@ -397,17 +397,16 @@ var grouped = ctx.runHelper("listOps",
 Map<String, List<Map<String, Object>>> groups =
         (Map<String, List<Map<String, Object>>>) grouped.as(ListOpsOut.class).result();
 
-double mean = ((Number) ctx.runHelper("math",
-        new MathIn("mean", (List<Number>) (List<?>) prices, null, null, null, null, null))
-        .as(MathOut.class).result()).doubleValue();
+double mean = ((Number) ctx.runHelper("arithmetic",
+        new ArithmeticIn("mean", null, (List<Number>) (List<?>) prices, null, null, null, null, null, null))
+        .as(ArithmeticOut.class).result()).doubleValue();
 
-double max = ((Number) ctx.runHelper("math",
-        new MathIn("max", (List<Number>) (List<?>) prices, null, null, null, null, null))
-        .as(MathOut.class).result()).doubleValue();
+double max = ((Number) ctx.runHelper("arithmetic",
+        new ArithmeticIn("max", null, (List<Number>) (List<?>) prices, null, null, null, null, null, null))
+        .as(ArithmeticOut.class).result()).doubleValue();
 ```
 
 Given sales records grouped by `region` and values in `amount`, the process returns the extracted `prices`, a `groups` map keyed by region, plus the `mean` and `max` amounts.
-
 ## Checking a release window with `semver` compare and `dateMath` add
 
 Gate a rollout on a minimum semantic version and compute the planned rollout date by adding days to a release anchor with `dateMath`.
@@ -537,9 +536,9 @@ See `backend/dsl-starter/dsl-examples/src/dsl/PricingFunctionsDsl.java` (input/o
 The example declares two Functions and two consumers:
 
 - `lineTotalFn` — multiplies each order line's `quantity * unitPrice` and sums the results with
-  the built-in `math` helper (Function → Helper).
+  the built-in `arithmetic` helper (backward-compatible alias `math`) (Function → Helper).
 - `orderPricingFn` — chains `lineTotalFn` (Function → Function), applies a 10% discount for
-  `VIP` tier customers, adds 20% tax, and rounds each amount to two decimals with the `math`
+  `VIP` tier customers, adds 20% tax, and rounds each amount to two decimals with the `arithmetic`
   helper's `round` mode.
 - `CheckoutProcess` (Process) and `QuoteTransaction` (Transaction) — both price an order through
   the same `orderPricingFn`, demonstrating "extract shared pure logic once".

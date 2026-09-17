@@ -1,8 +1,8 @@
 import cbs.nova.dslexamples.AggregationModels.*;
+import cbs.nova.starter.helper.model.ArithmeticIn;
+import cbs.nova.starter.helper.model.ArithmeticOut;
 import cbs.nova.starter.helper.model.ListOpsIn;
 import cbs.nova.starter.helper.model.ListOpsOut;
-import cbs.nova.starter.helper.model.MathIn;
-import cbs.nova.starter.helper.model.MathOut;
 import java.util.List;
 import java.util.Map;
 
@@ -34,19 +34,19 @@ List<DslObject> define() {
         Map<String, List<Map<String, Object>>> groups =
             (Map<String, List<Map<String, Object>>>) groupedOut.result();
 
-        var meanResult = ctx.runHelper("math",
-            new MathIn("mean", numbers, null, null, null, null, null));
+        var meanResult = ctx.runHelper("arithmetic",
+            new ArithmeticIn("mean", null, numbers, null, null, null, null, null, null));
         if (!meanResult.isSuccess()) {
           return Result.failure(meanResult.cause());
         }
-        double mean = ((Number) meanResult.as(MathOut.class).result()).doubleValue();
+        double mean = ((Number) meanResult.as(ArithmeticOut.class).result()).doubleValue();
 
-        var maxResult = ctx.runHelper("math",
-            new MathIn("max", numbers, null, null, null, null, null));
+        var maxResult = ctx.runHelper("arithmetic",
+            new ArithmeticIn("max", null, numbers, null, null, null, null, null, null));
         if (!maxResult.isSuccess()) {
           return Result.failure(maxResult.cause());
         }
-        double max = ((Number) maxResult.as(MathOut.class).result()).doubleValue();
+        double max = ((Number) maxResult.as(ArithmeticOut.class).result()).doubleValue();
 
         return Result.success(new AggregationOut(prices, groups, mean, max));
       })
