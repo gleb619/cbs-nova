@@ -25,7 +25,6 @@ import org.testcontainers.junit.jupiter.Testcontainers;
  * pinned using the same Postgres migration the runtime uses. JSONB normalizes formatting, so
  * payload assertions compare the parsed value rather than the raw string.
  */
-// TODO: move to integrationTest folder
 @Deprecated
 @Testcontainers
 class DslEventRepositoryTest {
