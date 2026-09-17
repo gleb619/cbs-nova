@@ -4,6 +4,7 @@ import cbs.nova.starter.builder.DslBuilderClient;
 import cbs.nova.starter.config.properties.DslProperties;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashSet;
@@ -27,6 +28,11 @@ public class DslGitStatusResolver {
   private final DslProperties dslProperties;
   private final ObjectProvider<DslBuilderClient> builderClientProvider;
   private final ConcurrentHashMap<Path, Snapshot> cache = new ConcurrentHashMap<>();
+  private Clock clock = Clock.systemUTC();
+
+  void setClock(Clock clock) {
+    this.clock = clock;
+  }
 
   public Optional<RepoStatus> status(Path candidateDir) {
     var builder = builderClient();
@@ -43,7 +49,7 @@ public class DslGitStatusResolver {
     }
     try {
       RepoStatus repoStatus = loadStatus(root);
-      cache.put(root, new Snapshot(repoStatus, Instant.now().plus(ttl())));
+      cache.put(root, new Snapshot(repoStatus, clock.instant().plus(ttl()), clock));
       return Optional.of(repoStatus);
     } catch (Exception e) {
       log.warn("[DSL git] failed to read status for {}: {}", root, e.getMessage());
@@ -99,9 +105,9 @@ public class DslGitStatusResolver {
     return builderClientProvider == null ? null : builderClientProvider.getIfAvailable();
   }
 
-  private record Snapshot(RepoStatus repoStatus, Instant expiresAt) {
+  private record Snapshot(RepoStatus repoStatus, Instant expiresAt, Clock clock) {
     boolean expired() {
-      return Instant.now().isAfter(expiresAt);
+      return clock.instant().isAfter(expiresAt);
     }
   }
 }
