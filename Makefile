@@ -164,13 +164,16 @@ KANBAN_SCRIPT     := scripts/kanban/kanban-cli.js
 # Defaults for `make kanban-add`
 # DESCRIPTION is constrained to 128 characters. Longer values are accepted,
 # trimmed to 125, and suffixed with '...'; a warning is logged when trimming.
+# Optional fields are only forwarded when explicitly set; the CLI supplies the
+# documented defaults (Priority=Low, Owner=loop, Blocks/BlockedBy/Plan=-).
 TITLE             ?=
-PRIORITY          ?= Low
-OWNER             ?= loop
-BLOCKS            ?= -
-BLOCKED_BY        ?= -
-PLAN              ?= -
-DESCRIPTION       ?= -
+ID                ?=
+PRIORITY          ?=
+OWNER             ?=
+BLOCKS            ?=
+BLOCKED_BY        ?=
+PLAN              ?=
+DESCRIPTION       ?=
 
 .PHONY: kanban-install
 kanban-install: ## Install kanban CLI Node dependencies
@@ -200,16 +203,17 @@ kanban-show: kanban-install ## Show task details: ID=... [WITH_PLAN=1]
 	@node $(KANBAN_SCRIPT) show --id "$(ID)" $(if $(WITH_PLAN),--with-plan) "$(KANBAN_FILE)"
 
 .PHONY: kanban-add
-kanban-add: kanban-install ## Add task: TITLE=... [PRIORITY=... OWNER=... BLOCKS=... BLOCKED_BY=... PLAN=... DESCRIPTION=...]
+kanban-add: kanban-install ## Add/update task: ID=... TITLE=... [PRIORITY=... OWNER=... BLOCKS=... BLOCKED_BY=... PLAN=... DESCRIPTION=...]
 	@test -n "$(TITLE)" || (echo "TITLE is required" && exit 1)
 	@node $(KANBAN_SCRIPT) add "$(KANBAN_FILE)" \
+		$(if $(ID),--id "$(ID)") \
 		--title "$(TITLE)" \
-		--priority "$(PRIORITY)" \
-		--owner "$(OWNER)" \
-		--blocks "$(BLOCKS)" \
-		--blockedBy "$(BLOCKED_BY)" \
-		--plan "$(PLAN)" \
-		--description "$(DESCRIPTION)"
+		$(if $(PRIORITY),--priority "$(PRIORITY)") \
+		$(if $(OWNER),--owner "$(OWNER)") \
+		$(if $(BLOCKS),--blocks "$(BLOCKS)") \
+		$(if $(BLOCKED_BY),--blockedBy "$(BLOCKED_BY)") \
+		$(if $(PLAN),--plan "$(PLAN)") \
+		$(if $(DESCRIPTION),--description "$(DESCRIPTION)")
 
 .PHONY: kanban-clean
 kanban-clean: kanban-install ## Remove all Done tasks from the kanban table

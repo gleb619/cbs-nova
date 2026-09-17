@@ -49,10 +49,10 @@ cbs-nova is a Temporal DSL Orchestration Engine with a Java backend and a Vue/Nu
 
 ## Kanban CLI
 
-When working with kanban tasks, use the project-local skill `cbs-nova-kanban`. It routes all board operations through
+When working with kanban `tasks`, use the project-local skill `cbs-nova-kanban`. It routes all board operations through
 the `make kanban-*` CLI and enforces status/selection rules.
 
-- Skill path: `~/.agents/skills/cbs-nova-kanban/`
+- Skill path: `./.agents/skills/cbs-nova-kanban/`
 - Invocation: load the skill before reading or editing `docs/kanban.md`.
 - Prefer `make kanban-next`, `make kanban-start`, `make kanban-status`, `make kanban-add`, `make kanban-clean`, `make kanban-show`.
 - Sandbox regression test: `make kanban-test`.

@@ -99,7 +99,18 @@ def check(kanban_path: Path, root: Path) -> int:
             )
         plan = row.plan_file.strip("`").strip()
         if plan and plan != "-":
-            if not (root / plan).exists():
+            # Tolerate missing plan file if any file for the same task ID exists in
+            # docs/plans. This prevents false positives after `kanban-clean` removes
+            # Done rows while their plan files remain.
+            task_id = row.task_id
+            plans_dir = root / "docs" / "plans"
+            fallback_exists = False
+            if plans_dir.exists() and task_id.startswith("T"):
+                for candidate in plans_dir.iterdir():
+                    if candidate.is_file() and candidate.name.startswith(task_id + "-"):
+                        fallback_exists = True
+                        break
+            if not (root / plan).exists() and not fallback_exists:
                 violations.append(
                     f"line {row.line_no}: {row.task_id} Plan File '{plan}' does not exist"
                 )

@@ -90,6 +90,21 @@ class TestCheck:
         kanban = write_kanban(tmp_path, [ROW_T1, ROW_T2.replace("In Progress", "Doing")])
         assert check(kanban, tmp_path) == 1
 
+
+    def test_missing_plan_allowed_when_id_prefixed_file_exists(self, tmp_path):
+        """If the exact plan path is missing but a docs/plans/<ID>-*.md file exists,
+        lint-kanban should pass."""
+        kanban = write_kanban(tmp_path, [ROW_T1, ROW_T2])
+        # Create a plan file with the task ID prefix but a different suffix.
+        plans_dir = tmp_path / "docs" / "plans"
+        plans_dir.mkdir(parents=True, exist_ok=True)
+        (plans_dir / "T2-some-old-plan.md").write_text("# old plan")
+        assert check(kanban, tmp_path) == 0
+
+    def test_missing_plan_still_fails_when_no_id_prefixed_file_exists(self, tmp_path):
+        kanban = write_kanban(tmp_path, [ROW_T1, ROW_T2])
+        assert check(kanban, tmp_path) == 1
+
     def test_missing_plan_file_fails(self, tmp_path):
         kanban = write_kanban(tmp_path, [ROW_T1, ROW_T2])
         assert check(kanban, tmp_path) == 1  # docs/plans/T2-plan.md not created yet

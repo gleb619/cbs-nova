@@ -7,6 +7,30 @@ import remarkGfm from 'remark-gfm';
 import remarkStringify from 'remark-stringify';
 import { visit } from 'unist-util-visit';
 
+const USAGE = `Usage: node kanban-cli.js <command> [file] [options]
+
+Commands:
+  list                          List all tasks
+  next [--start]                Show next executable task; --start marks it In Progress
+  show --id <id> [--with-plan]  Show task details and optional plan preview
+  add [--id <id>] --title <title> [options]
+                                Add a new task or update fields of an existing task
+  status --id <id> --status <s> Change task status
+  remove --id <id>              Remove a task by ID
+  clean                         Remove all Done tasks
+
+Options:
+  --id <id>                     Task ID (omit to auto-generate on add)
+  --title <title>               Task title
+  --priority <High|Medium|Low>  Default: Low
+  --owner <owner>               Default: loop
+  --blocks <ids>                Comma-separated blocked task IDs
+  --blockedBy <ids>             Comma-separated blocker task IDs
+  --plan <path>                 Path to plan file
+  --description <text>          Short description (max 128 chars)
+  --help, -h                    Show this help
+`;
+
 const DEFAULT_FILE = 'docs/kanban.md';
 const STATUSES = ['Backlog', 'In Progress', 'Blocked', 'Done'];
 const PRIORITY_ORDER = { High: 0, Medium: 1, Low: 2 };
@@ -54,11 +78,17 @@ function cellText(cell) {
 }
 
 function setCellText(cell, text) {
-  cell.children = [{ type: 'text', value: String(text) }];
+  const escaped = String(text).replace(/(?<!\\)\|/g, '\\|');
+  cell.children = [{ type: 'text', value: escaped }];
 }
 
 function makeCell(text) {
-  return { type: 'tableCell', children: [{ type: 'text', value: String(text) }] };
+  // Escape only unescaped pipe characters so the Markdown table remains valid.
+  // We do NOT escape backslashes themselves; callers already passed the intended
+  // string value via the shell/CLI. Escaping is idempotent: a pipe preceded by a
+  // backslash is left untouched.
+  const escaped = String(text).replace(/(?<!\\)\|/g, '\\|');
+  return { type: 'tableCell', children: [{ type: 'text', value: escaped }] };
 }
 
 function parseKanban(fileContent) {
@@ -303,6 +333,19 @@ async function cmdShow(file, opts) {
     console.log(`\n[note] For full details, read the complete plan file: ${abs}`);
   }
 }
+
+async function cmdRemove(file, opts) {
+  const id = opts.id;
+  if (!id) throw new Error('Usage: remove --id <id> [file]');
+  const content = await read(file);
+  const { processor, tree, tableNode, headers } = parseKanban(content);
+  const rowIdx = findRowById(tableNode, headers, id);
+  if (rowIdx === -1) throw new Error(`Task ${id} not found`);
+  tableNode.children.splice(rowIdx, 1);
+  await save(file, processor, tree);
+  console.log(`Removed ${id}`);
+}
+
 async function cmdClean(file) {
   const content = await read(file);
   const { processor, tree, tableNode, headers } = parseKanban(content);
@@ -322,16 +365,23 @@ async function cmdClean(file) {
 
 async function main() {
   const { cmd, file, opts } = parseArgs(process.argv);
+  if (opts.help || opts.h) {
+    console.log(USAGE);
+    process.exit(0);
+  }
   switch (cmd) {
     case 'list': await cmdList(file); break;
     case 'next': await cmdNext(file, opts); break;
     case 'status': await cmdStatus(file, opts); break;
     case 'add': await cmdAdd(file, opts); break;
+    case 'remove': await cmdRemove(file, opts); break;
     case 'clean': await cmdClean(file); break;
     case 'show': await cmdShow(file, opts); break;
     default: throw new Error(`Unknown command: ${cmd}`);
   }
 }
+
+
 
 main().catch(err => {
   console.error(err.message);

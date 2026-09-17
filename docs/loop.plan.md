@@ -15,6 +15,8 @@ Invoke before any work, every fire:
 - `caveman` — compressed communication throughout.
 - `cbs-nova-kanban` — when reading or appending `docs/kanban.md`; always use `make kanban-*` commands.
 
+*Note* - a `cbs-nova-kanban` skill located at `./.agents/skills/cbs-nova-kanban/`
+
 ## Key Files
 
 | File                    | Purpose                                        |

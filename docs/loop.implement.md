@@ -20,6 +20,8 @@ Invoke before any work:
 - `delegate-with-at` — delegate code writing to subagents via the `at` CLI
 - `cbs-nova-kanban` — when reading or updating `docs/kanban.md`; always use `make kanban-*` commands
 
+*Note* - a `cbs-nova-kanban` skill located at `./.agents/skills/cbs-nova-kanban/`
+
 ## Key Files
 
 | File                           | Purpose                                                       |
