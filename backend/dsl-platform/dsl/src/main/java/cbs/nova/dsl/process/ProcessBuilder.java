@@ -11,12 +11,10 @@ import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.Constants;
 import cbs.nova.dsl.explain.ExplainResourceExplainer;
 import cbs.nova.dsl.model.ExplainReport;
-import cbs.nova.dsl.model.ExplainReports;
 import cbs.nova.dsl.model.MapInput;
 import cbs.nova.dsl.model.MapOutput;
 import cbs.nova.dsl.registry.DefaultParameterRegistry;
 import cbs.nova.dsl.registry.ParameterRegistry;
-import cbs.nova.dsl.explain.ExplainBudget;
 import cbs.nova.dsl.transaction.TransactionExecution;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -145,14 +143,10 @@ public final class ProcessBuilder<I, O> implements ObjectBuilder<ProcessDslObjec
     return List.of(build());
   }
 
-  // TODO: it's forbidden to `truncateTo`, without traverse a whole graph
-  @Deprecated(forRemoval = true)
   private @NonNull Function<ProcessContext<?>, Result<ExplainReport>> defaultExplain() {
     return ctx -> Result.success(
-            ExplainReports.truncateTo(
-                    ExplainReport.of(name,
-                            GlobalManager.globalManager().resolveExplainContent(name)),
-                    ExplainBudget.of(ctx)));
+            ExplainReport.of(name,
+                    GlobalManager.globalManager().resolveExplainContent(name)));
   }
 
   @SuppressWarnings("unchecked")

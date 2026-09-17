@@ -30,25 +30,6 @@ public final class ExplainReports {
             mergeChildren(left.children(), right.children()));
   }
 
-  // TODO: trace usage of method, and remove all links, it must be used only in PipeStage instead
-  @Deprecated
-  public static @NonNull ExplainReport truncateTo(@NonNull ExplainReport report, int budgetChars) {
-    if (budgetChars < 0) {
-      return new ExplainReport(report.name(), "", "", report.children());
-    }
-    int totalLength = report.description().length() + report.mermaid().length();
-    if (totalLength <= budgetChars) {
-      return report;
-    }
-    int descriptionLimit = Math.min(report.description().length(), budgetChars);
-    String truncatedDescription = report.description().substring(0, descriptionLimit);
-    int remainingBudget = Math.max(budgetChars - truncatedDescription.length(), 0);
-    int mermaidLimit = Math.min(report.mermaid().length(), remainingBudget);
-    String truncatedMermaid = report.mermaid().substring(0, mermaidLimit);
-    return new ExplainReport(report.name(), truncatedDescription, truncatedMermaid,
-            report.children());
-  }
-
   public static @NonNull String toMarkdown(@NonNull ExplainReport root, int budgetChars) {
     List<ExplainReport> visited = GraphWalk.breadthFirst(root, ExplainReport::children,
             ExplainReport::name);

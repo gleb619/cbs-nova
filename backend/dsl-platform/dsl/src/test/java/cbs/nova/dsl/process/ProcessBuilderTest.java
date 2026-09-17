@@ -227,7 +227,7 @@ class ProcessBuilderTest {
   }
 
   @Test
-  void explainViaTruncatesMarkdownToMetadataBudget() {
+  void explainViaLoadsFullMarkdownRegardlessOfMetadataBudget() {
     var process = Dsl.process("DocProcBudget")
             .execute(ctx -> Result.success("exec"))
             .explainVia("explain/builder-sample.md")
@@ -241,7 +241,9 @@ class ProcessBuilderTest {
 
     var result = process.explainLogic().apply(ctx);
 
-    assertThat(result.value().mermaid()).hasSizeLessThanOrEqualTo(8);
+    assertThat(result.value().mermaid())
+            .contains("# Builder Sample")
+            .hasSizeGreaterThan(8);
   }
 
   @Test

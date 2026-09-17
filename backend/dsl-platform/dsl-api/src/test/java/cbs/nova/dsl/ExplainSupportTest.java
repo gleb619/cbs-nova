@@ -68,37 +68,17 @@ class ExplainSupportTest {
   }
 
   @Test
-  void executableExplainTruncatesReportToMetadataBudget() {
+  void executableExplainDoesNotTruncateReportToMetadataBudget() {
     Executable<String, String> executable = ctx -> Result.success("ok");
     var bounded = new StubContext("body", Map.of("explain.budgetChars", 50));
 
     var report = executable.explain(bounded);
 
-    assertThat(report.description().length()).isLessThanOrEqualTo(50);
-  }
-
-  @Test
-  void explainReportTruncateToLeavesShortReportUnchanged() {
-    var report = ExplainReport.builder().name("n").description("abc").mermaid("def").build();
-    assertThat(ExplainReports.truncateTo(report, 10)).isSameAs(report);
-  }
-
-  @Test
-  void explainReportTruncateToTruncatesDescriptionFirstThenDiagram() {
-    var report = ExplainReport.builder().name("n").description("description")
-            .mermaid("mermaidDiagram").build();
-    var truncated = ExplainReports.truncateTo(report, 15);
-    assertThat(truncated.description()).isEqualTo("description");
-    assertThat(truncated.mermaid()).isEqualTo("merm");
-  }
-
-  @Test
-  void explainReportTruncateToHandlesNegativeBudget() {
-    var report = ExplainReport.builder().name("n").description("description")
-            .mermaid("mermaidDiagram").build();
-    var truncated = ExplainReports.truncateTo(report, -1);
-    assertThat(truncated.description()).isEmpty();
-    assertThat(truncated.mermaid()).isEmpty();
+    assertThat(report.description().length()).isGreaterThan(50);
+    assertThat(report.description())
+            .contains("Helper `null`")
+            .contains("untyped")
+            .contains("has side effects");
   }
 
   @Test

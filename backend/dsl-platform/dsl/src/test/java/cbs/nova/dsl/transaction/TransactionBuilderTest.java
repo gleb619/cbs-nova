@@ -177,7 +177,7 @@ class TransactionBuilderTest {
   }
 
   @Test
-  void explainViaTruncatesMarkdownToMetadataBudget() {
+  void explainViaLoadsFullMarkdownRegardlessOfMetadataBudget() {
     var tx = Dsl.transaction("DocTxBudget")
             .execute(ctx -> Result.success("exec"))
             .explainVia("builder-sample.md")
@@ -191,7 +191,9 @@ class TransactionBuilderTest {
 
     var result = tx.effectiveExplain().apply(ctx);
 
-    assertThat(result.value().mermaid()).hasSizeLessThanOrEqualTo(5);
+    assertThat(result.value().mermaid())
+            .contains("# Builder Sample")
+            .hasSizeGreaterThan(5);
   }
 
   @Test

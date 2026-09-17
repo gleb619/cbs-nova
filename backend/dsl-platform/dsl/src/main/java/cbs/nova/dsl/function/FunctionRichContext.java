@@ -1,5 +1,6 @@
 package cbs.nova.dsl.function;
 
+import cbs.nova.dsl.BeanResolver;
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.listener.ExecutionListener;
 import cbs.nova.dsl.ExecutionMode;
@@ -123,5 +124,15 @@ public final class FunctionRichContext<T> implements FunctionContext<T> {
             contextFactory.of(input, delegate.mode(), delegate.runId()));
     trace("called helper: " + name);
     return result;
+  }
+
+  @Override
+  public @NonNull BeanResolver beanResolver() {
+    return delegate.beanResolver();
+  }
+
+  @Override
+  public @NonNull Context<T> withBeanResolver(@Nullable BeanResolver beanResolver) {
+    return new FunctionRichContext(delegate.withBeanResolver(beanResolver), contextFactory);
   }
 }

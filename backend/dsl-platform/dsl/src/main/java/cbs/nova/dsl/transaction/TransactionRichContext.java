@@ -1,5 +1,6 @@
 package cbs.nova.dsl.transaction;
 
+import cbs.nova.dsl.BeanResolver;
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.DslSaga;
 import cbs.nova.dsl.listener.ExecutionListener;
@@ -133,5 +134,15 @@ public final class TransactionRichContext<T> implements TransactionContext<T> {
             contextFactory.of(input, delegate.mode(), delegate.runId()));
     trace("called helper: " + name);
     return result;
+  }
+
+  @Override
+  public @NonNull BeanResolver beanResolver() {
+    return delegate.beanResolver();
+  }
+
+  @Override
+  public @NonNull Context<T> withBeanResolver(@Nullable BeanResolver beanResolver) {
+    return new TransactionRichContext(delegate.withBeanResolver(beanResolver), contextFactory);
   }
 }
