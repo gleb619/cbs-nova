@@ -154,3 +154,111 @@ seed-history: ## Seed up to 5 historical sample runs (seed-history-*, mixed stat
 .PHONY: loadtest
 loadtest: ## Load-test read-only BFF endpoints and report latency percentiles + error rate
 	@python3 $(SCRIPT) loadtest
+
+# -----------------------------------------------------------------------------
+# Kanban CLI — Markdown AST manipulation via unified/remark
+# -----------------------------------------------------------------------------
+KANBAN_FILE       ?= docs/kanban.md
+KANBAN_SCRIPT     := scripts/kanban/kanban-cli.js
+
+# Defaults for `make kanban-add`
+# DESCRIPTION is constrained to 128 characters. Longer values are accepted,
+# trimmed to 125, and suffixed with '...'; a warning is logged when trimming.
+TITLE             ?=
+PRIORITY          ?= Low
+OWNER             ?= loop
+BLOCKS            ?= -
+BLOCKED_BY        ?= -
+PLAN              ?= -
+DESCRIPTION       ?= -
+
+.PHONY: kanban-install
+kanban-install: ## Install kanban CLI Node dependencies
+	@cd scripts/kanban && pnpm install --silent
+
+.PHONY: kanban-list
+kanban-list: kanban-install ## List kanban tasks
+	@node $(KANBAN_SCRIPT) list "$(KANBAN_FILE)"
+
+.PHONY: kanban-next
+kanban-next: kanban-install ## Show next executable kanban task (highest priority, unblocked backlog)
+	@node $(KANBAN_SCRIPT) next "$(KANBAN_FILE)"
+
+.PHONY: kanban-start
+kanban-start: kanban-install ## Mark next executable kanban task as In Progress
+	@node $(KANBAN_SCRIPT) next "$(KANBAN_FILE)" --start
+
+.PHONY: kanban-status
+kanban-status: kanban-install ## Change task status: ID=... STATUS=...
+	@test -n "$(ID)" || (echo "ID is required" && exit 1)
+	@test -n "$(STATUS)" || (echo "STATUS is required" && exit 1)
+	@node $(KANBAN_SCRIPT) status --id "$(ID)" --status "$(STATUS)" "$(KANBAN_FILE)"
+
+.PHONY: kanban-show
+kanban-show: kanban-install ## Show task details: ID=... [WITH_PLAN=1]
+	@test -n "$(ID)" || (echo "ID is required" && exit 1)
+	@node $(KANBAN_SCRIPT) show --id "$(ID)" $(if $(WITH_PLAN),--with-plan) "$(KANBAN_FILE)"
+
+.PHONY: kanban-add
+kanban-add: kanban-install ## Add task: TITLE=... [PRIORITY=... OWNER=... BLOCKS=... BLOCKED_BY=... PLAN=... DESCRIPTION=...]
+	@test -n "$(TITLE)" || (echo "TITLE is required" && exit 1)
+	@node $(KANBAN_SCRIPT) add "$(KANBAN_FILE)" \
+		--title "$(TITLE)" \
+		--priority "$(PRIORITY)" \
+		--owner "$(OWNER)" \
+		--blocks "$(BLOCKS)" \
+		--blockedBy "$(BLOCKED_BY)" \
+		--plan "$(PLAN)" \
+		--description "$(DESCRIPTION)"
+
+.PHONY: kanban-clean
+kanban-clean: kanban-install ## Remove all Done tasks from the kanban table
+	@node $(KANBAN_SCRIPT) clean "$(KANBAN_FILE)"
+
+.PHONY: kanban-test
+kanban-test: kanban-install ## Run sandbox tests on kanban.test.md
+	@set -e; \
+	TMP=$$(mktemp /tmp/kanban-test.XXXXXX.md); \
+	cp kanban.test.md "$$TMP"; \
+	echo "==> list"; node $(KANBAN_SCRIPT) list "$$TMP"; \
+	echo "==> next (current)"; node $(KANBAN_SCRIPT) next "$$TMP"; \
+	echo "==> status T2 Done"; node $(KANBAN_SCRIPT) status --id T2 --status Done "$$TMP"; \
+	echo "==> next (unblocked)"; node $(KANBAN_SCRIPT) next "$$TMP"; \
+	echo "==> start next"; node $(KANBAN_SCRIPT) next "$$TMP" --start; \
+	echo "==> add"; node $(KANBAN_SCRIPT) add "$$TMP" --title "Sandbox add" --priority Low; \
+	echo "==> clean"; node $(KANBAN_SCRIPT) clean "$$TMP"; \
+	echo "==> final list"; node $(KANBAN_SCRIPT) list "$$TMP"; \
+	rm "$$TMP"; \
+	echo "kanban-test OK"
+
+# -----------------------------------------------------------------------------
+# Git helpers — worktree / branch management per task
+# -----------------------------------------------------------------------------
+TASK_ID ?=
+WORKTREE_DIR ?= ../cbs-nova-$(TASK_ID)
+BRANCH_NAME ?= feat/$(TASK_ID)
+
+.PHONY: task-start
+task-start: ## Create worktree + branch for a task: make task-start TASK_ID=T123
+	@test -n "$(TASK_ID)" || (echo "TASK_ID is required" && exit 1)
+	@test ! -d "$(WORKTREE_DIR)" || (echo "Worktree $(WORKTREE_DIR) already exists" && exit 1)
+	git worktree add "$(WORKTREE_DIR)" -b "$(BRANCH_NAME)"
+
+.PHONY: task-merge
+task-merge: ## Merge task branch, remove worktree + branch: make task-merge TASK_ID=T123
+	@test -n "$(TASK_ID)" || (echo "TASK_ID is required" && exit 1)
+	git merge "$(BRANCH_NAME)"
+	git worktree remove "$(WORKTREE_DIR)"
+	git branch -d "$(BRANCH_NAME)"
+
+.PHONY: task-abort
+task-abort: ## Force-remove worktree + delete branch on failure: make task-abort TASK_ID=T123
+	@test -n "$(TASK_ID)" || (echo "TASK_ID is required" && exit 1)
+	git worktree remove --force "$(WORKTREE_DIR)"
+	git branch -d "$(BRANCH_NAME)" || true
+
+.PHONY: task-status
+task-status: ## List worktrees and matching branches for TASK_ID
+	@test -n "$(TASK_ID)" || (echo "TASK_ID is required" && exit 1)
+	@echo "== worktrees =="; git worktree list | grep "$(TASK_ID)" || true
+	@echo "== branches =="; git branch | grep "$(BRANCH_NAME)" || true

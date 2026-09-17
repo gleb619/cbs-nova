@@ -1,0 +1,5 @@
+display_name: cbs-nova kanban
+short_description: Manage the cbs-nova kanban board via make-driven CLI.
+default_prompt: Update the kanban board in docs/kanban.md using make kanban-* commands.
+policy:
+  allow_implicit_invocation: true

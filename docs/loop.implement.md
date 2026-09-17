@@ -18,6 +18,7 @@ Invoke before any work:
 - `caveman` — compressed communication throughout all sessions
 - `codegraph` — codebase exploration; never grep when `codegraph_*` tools are available
 - `delegate-with-at` — delegate code writing to subagents via the `at` CLI
+- `cbs-nova-kanban` — when reading or updating `docs/kanban.md`; always use `make kanban-*` commands
 
 ## Key Files
 
@@ -29,8 +30,11 @@ Invoke before any work:
 | `docs/dsl/*.md`                | DSL constructs, authoring rules, codegen, runtime             |
 | `backend/AGENTS.md`            | Backend coding conventions, module map, build commands        |
 | `docs/kanban.md`               | Task board — source of truth for current loop state           |
+| `Makefile`                     | Kanban CLI via `make kanban-*`                                |
 | `docs/plans/`                  | Detailed plan files for each task (written by `loop.plan.md`) |
 | `docs/loop.plan.md`            | Planning loop — writes plan files for `Backlog` tasks         |
+
+`make kanban-add` is owned by `docs/loop.plan.md`; this loop only updates status. When rows are added, `DESCRIPTION` must be the final argument and is constrained to 128 characters — longer text is accepted, trimmed to 125, and suffixed with `...` (a warning is logged when trimming).
 
 ## Entry Point — Determine Current State
 
@@ -64,7 +68,11 @@ Run once per new batch before SELECT:
 4. Confirm task tier from the plan:
    - **Backend task** — code under `backend/` or `dsl-examples/`, build with Gradle.
    - **Frontend task** — code under `frontend/`, build with pnpm.
-5. Update kanban: set task status to `In Progress`.
+5. Update kanban: mark next task `In Progress`:
+   ```bash
+   make kanban-start
+   ```
+   Or for a specific task: `make kanban-status ID=<id> STATUS="In Progress"`.
 6. Transition to DELEGATE.
 
 ---
@@ -73,12 +81,22 @@ Run once per new batch before SELECT:
 
 1. Create a git worktree for the task:
    ```bash
+   make task-start TASK_ID=<task-id>
+   ```
+   Equivalent:
+   ```bash
    git worktree add ../cbs-nova-<task-id> -b feat/<task-id>
    ```
 2. Invoke `delegate-with-at` skill. Pass:
    - Plan file path: `docs/plans/<ID>-short-title.md`
    - Worktree path: `../cbs-nova-<task-id>`
    - Constraint: work entirely inside the worktree
+   - Constraint: plan file must require the subagent to load and use skills `caveman` and `codegraph` before any 
+     code work, if missing add one in instructions
+   - Constraint: plan file must include this exact line for subagent self-direction:
+     ```
+     You are not alone, focus on your task, ignore other errors. Keep caveman/ultra-brief responses to user when reporting progress. Minimal texting, save tokens.
+     ```, if missing add one in instructions
    - Constraint: run tier-specific verification before committing:
      - Backend: `./gradlew spotlessApply && ./gradlew build test` in `backend/`
      - Frontend: `pnpm install && pnpm --filter @cbs/admin-ui-plugin lint && pnpm --filter @cbs/admin-ui-plugin test` in `frontend/`
@@ -96,14 +114,30 @@ Run once per new batch before SELECT:
    - Frontend: `pnpm --filter @cbs/admin-ui-plugin lint && pnpm --filter @cbs/admin-ui-plugin test` in `frontend/`
 3. **Pass** — merge worktree branch, remove worktree, update kanban:
    ```bash
+   make task-merge TASK_ID=<task-id>
+   ```
+   Equivalent:
+   ```bash
    git merge feat/<task-id>
    git worktree remove ../cbs-nova-<task-id>
    git branch -d feat/<task-id>
    ```
-   Set task status to `Done`. Transition to SCAN (pick next implementable `Backlog` task, if any).
+   Set task status to `Done`:
+   ```bash
+   make kanban-status ID=<task-id> STATUS="Done"
+   ```
+   Transition to SCAN (pick next implementable `Backlog` task, if any).
 4. **Fail, attempt < 2** — increment attempt count. Append failure context (error output, stack trace) to the plan file
    under a `## Retry Notes` section. Transition to DELEGATE.
-5. **Fail, attempt = 2** — set task status to `Blocked`. Append failure summary to plan file. Remove worktree:
+5. **Fail, attempt = 2** — set task status to `Blocked`:
+   ```bash
+   make kanban-status ID=<task-id> STATUS="Blocked"
+   ```
+   Append failure summary to plan file. Remove worktree:
+   ```bash
+   make task-abort TASK_ID=<task-id>
+   ```
+   Equivalent:
    ```bash
    git worktree remove --force ../cbs-nova-<task-id>
    git branch -d feat/<task-id>

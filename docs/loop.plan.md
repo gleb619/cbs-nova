@@ -13,6 +13,7 @@ Invoke before any work, every fire:
 - `codegraph` — reindex + survey + dedup. Never grep when `codegraph_*` tools available.
 - `brainstorming` — generate candidate ideas, refine the winner.
 - `caveman` — compressed communication throughout.
+- `cbs-nova-kanban` — when reading or appending `docs/kanban.md`; always use `make kanban-*` commands.
 
 ## Key Files
 
@@ -40,7 +41,7 @@ Reindex deltas since last fire. Never skip — stale index → stale ideas.
 - `codegraph_context` — current code reality. Note weak spots: untested areas, thin helpers,
   missing integrations, gaps between `architecture*.md` roadmaps and implemented code.
 - Run test coverage (if available) to spot untested areas.
-- Scan `docs/kanban.md` for pending tasks and done items to avoid duplication.
+- Scan `docs/kanban.md` for pending tasks and done items to avoid duplication. Use `make kanban-list`.
 
 ### 3.a. TODO SWEEP – prioritize codebase TODOs
 
@@ -100,14 +101,23 @@ Pick the **top 1**. Discard the rest.
 
 ### 7. WRITE — kanban row + stub plan
 
-- New task ID = highest existing kanban ID + 1 (currently T66 → next T67).
-- Append kanban row: `Backlog` status, `loop` owner, tier tag (`backend`/`frontend`), `-` blocks.
+- Load skill `cbs-nova-kanban`. New task ID = highest existing kanban ID + 1. Use `make kanban-add` with `DESCRIPTION` as the last argument:
+  ```bash
+  make kanban-add TITLE="<short title>" PRIORITY=<High|Medium|Low> OWNER=loop PLAN="./docs/plans/<ID>-short-title.md" DESCRIPTION="<summary>"
+  ```
+  DESCRIPTION is constrained to 128 characters. Longer summaries are accepted, trimmed to 125, and suffixed with `...`; a warning is logged when trimming occurs.
+- Or append manually: `Backlog` status, `loop` owner, tier tag (`backend`/`frontend`), `-` blocks.
 - Create `docs/plans/<ID>-short-title.md` stub:
   - Goal (1–2 lines)
   - Acceptance criteria (3–5 bullets, skeleton)
   - Tier (`backend` or `frontend`)
   - Files to create/modify (best guess, may be refined by execution loop)
   - Build/test commands per tier
+  - Constraint: plan file must require to load and use skills `caveman` and `codegraph` on work start
+  - Constraint: plan file must include this exact line for self-direction:
+    ```
+    You are not alone, focus on your task, ignore other errors. Keep caveman/ultra-brief responses to user when reporting progress. Minimal texting, save tokens.
+    ```
 
 ---
 

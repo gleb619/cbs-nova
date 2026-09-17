@@ -127,6 +127,56 @@ change-management workflow.
 
 ---
 
+## Epic 6 — Execution authorization manifest ("piece guard")
+
+**Problem.** Authorization and safety checks around what can be executed — a UI button, an API
+route, a DSL object/helper — are hardcoded per call site (route annotations, ad-hoc `if` guards).
+There is no single declarative source of truth for "what is this piece, who may trigger it, what
+must hold before/after it runs." Epic 2's capability allowlist for DSL execution sandboxing has
+the same shape and would otherwise be built a third, divergent way.
+
+**Target state.** A YAML manifest declares every guarded "piece" (button / API call / DSL object)
+with pre-check and post-check hooks; one engine enforces it server-side, the UI reads a read-only
+subset to disable/hide affected controls as defense-in-depth (never the sole gate).
+
+### Workstreams
+
+| Domain | Changes |
+|---|---|
+| Manifest schema | YAML schema for a "piece": `id`, `target` (`button`/`api`/`object`), `preCheck[]` (role, feature flag, rate class), `postCheck[]` (audit write, invariant assert, notify), `failMode`. JSON Schema + `docs/vhs-manifest.md`. |
+| Manifest loader | Backend service parses + validates the manifest at startup; fails fast on schema errors; hot-reload endpoint for edit-without-restart. |
+| Pre-check enforcement | Middleware wraps routes named in the manifest, evaluates `preCheck` before the handler runs, denies with the unified `ErrorResponse` (Epic 1). |
+| Post-check pipeline | After a successful execution, run `postCheck` hooks (audit write, invariant assert, notify) async; configurable failure policy. |
+| Frontend consumption | BFF exposes the read-only manifest subset; UI buttons disable/hide per role/flag using it. |
+| DSL object binding | Map DSL constructs (helper/process/function) to manifest pieces — this **is** Epic 2's "DSL execution sandboxing" capability allowlist, built once. |
+| Coverage guard | CI check: every mutating route/button in code has a manifest entry or an explicit, reviewed opt-out — no silently-unguarded pieces. |
+
+---
+
+## Epic 7 — VHS: execution recording & replay
+
+**Problem.** There is no way to capture a real execution (a run, an API call sequence) and play it
+back later — for exact bug reproduction, for load testing, or for regression coverage — without
+depending on the original production data still existing.
+
+**Target state.** A pluggable recorder captures execution flow into a versioned jsonl "tape";
+a replay engine reproduces a tape exactly (bug repro), at volume (load test), or with sensitive
+fields swapped for synthetic equivalents (repro/load-test without real data).
+
+### Workstreams
+
+| Domain | Changes |
+|---|---|
+| Tape format | Versioned jsonl schema per event: call metadata, input, output, timing, correlation id. `docs/vhs-tape-format.md`. |
+| Recorder | Hooks into the execution pipeline (reuse Epic 3's event/outbox plumbing) to capture request/response into a tape sink (file or object storage); toggle per environment/route. |
+| Record-time scrubbing | Pluggable redactor masks PII or replaces it with deterministic fakes (existing helpers) before a tape is persisted. |
+| Replay engine | Reads a tape and replays it against a target environment — exact sequence for bug repro, or N concurrent tapes at a speed multiplier for load testing. |
+| Replay-time faking | Swaps a tape's real IDs/secrets for synthetic equivalents at replay time, so lower environments never need real data. |
+| Tape management | CLI/API to list/download/delete tapes and trigger a replay run; surfaced in the Workbench or an ops view. |
+| Load-test integration | Replay tapes at scale, report latency/error percentiles; optional CI perf gate. |
+
+---
+
 ## Sequencing notes
 
 - **Epic 1** unblocks 3, 4, and 5 (shared schema + error envelope + correlation plumbing), do it first.
@@ -135,3 +185,7 @@ change-management workflow.
 - **Epic 3** and **Epic 4** share the correlation-id / outbox plumbing; build the event store once.
 - **Epic 5** is the largest surface area but the least blocking for other teams — it can run in
   parallel once Epic 1 lands.
+- **Epic 6** depends on Epic 2's role model for `preCheck` role evaluation, and subsumes Epic 2's
+  DSL execution sandboxing workstream — build the allowlist once, inside the manifest engine.
+- **Epic 7** depends on Epic 3's event/outbox plumbing for the recorder hook point; independent of
+  Epic 6 otherwise, can run in parallel.

@@ -14,6 +14,11 @@ configurations {
   integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
 }
 
+//dependencies {
+//  integrationTestImplementation files(sourceSets.main.output.classesDirs, sourceSets.main.output.resourcesDir)
+//  integrationTestRuntimeOnly files(sourceSets.main.output.classesDirs, sourceSets.main.output.resourcesDir)
+//}
+
 tasks.withType(Test).configureEach {
   useJUnitPlatform()
 
