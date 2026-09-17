@@ -1,9 +1,6 @@
 package cbs.nova.starter.core.stage;
 
 import cbs.nova.dsl.Context;
-import cbs.nova.dsl.DslSaga;
-import cbs.nova.dsl.listener.ExecutionTraceCollector;
-import cbs.nova.dsl.listener.ExecutionListener;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.ContextFactory;
@@ -15,7 +12,6 @@ import cbs.nova.starter.core.pipe.PreviewTimeoutException;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
-import org.jspecify.annotations.Nullable;
 
 import java.time.Duration;
 import java.util.concurrent.ExecutionException;
@@ -80,29 +76,11 @@ public final class DispatchStage implements DslPipeStage {
             context.mode(),
             context.runId(),
             original.transactionRouting());
-    modeCtx = withExistingListener(modeCtx, original.executionListener());
-    modeCtx = withExistingSaga(modeCtx, original.saga());
-    modeCtx = withExistingCollector(modeCtx, original.executionTraceCollector());
-    modeCtx = withHelperInterceptor(modeCtx);
+    modeCtx = modeCtx.withExecutionListener(original.executionListener());
+    modeCtx = modeCtx.withSaga(original.saga());
+    modeCtx = modeCtx.withExecutionTraceCollector(original.executionTraceCollector());
+    modeCtx = modeCtx.withHelperInterceptor(helperInterceptor);
     return modeCtx;
-  }
-
-  private @NonNull Context<?> withExistingListener(@NonNull Context<?> ctx,
-          @Nullable ExecutionListener listener) {
-    return listener != null ? ctx.withExecutionListener(listener) : ctx;
-  }
-
-  private @NonNull Context<?> withExistingSaga(@NonNull Context<?> ctx, @Nullable DslSaga saga) {
-    return saga != null ? ctx.withSaga(saga) : ctx;
-  }
-
-  private @NonNull Context<?> withExistingCollector(@NonNull Context<?> ctx,
-          @Nullable ExecutionTraceCollector collector) {
-    return collector != null ? ctx.withExecutionTraceCollector(collector) : ctx;
-  }
-
-  private @NonNull Context<?> withHelperInterceptor(@NonNull Context<?> ctx) {
-    return helperInterceptor != null ? ctx.withHelperInterceptor(helperInterceptor) : ctx;
   }
 
   private @NonNull Result<?> dispatchWithOptionalTimeout(@NonNull String name,

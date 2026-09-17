@@ -50,17 +50,17 @@ public final class FunctionRichContext<T> implements FunctionContext<T> {
   }
 
   @Override
-  public @Nullable ExecutionListener executionListener() {
+  public @NonNull ExecutionListener executionListener() {
     return delegate.executionListener();
   }
 
   @Override
-  public @Nullable ExecutionTraceCollector executionTraceCollector() {
+  public @NonNull ExecutionTraceCollector executionTraceCollector() {
     return delegate.executionTraceCollector();
   }
 
   @Override
-  public @Nullable HelperInterceptor helperInterceptor() {
+  public @NonNull HelperInterceptor helperInterceptor() {
     return delegate.helperInterceptor();
   }
 
@@ -97,10 +97,7 @@ public final class FunctionRichContext<T> implements FunctionContext<T> {
   }
 
   private void trace(@NonNull String entry) {
-    ExecutionTraceCollector collector = delegate.executionTraceCollector();
-    if (collector != null) {
-      collector.add(entry);
-    }
+    delegate.executionTraceCollector().add(entry);
   }
 
   @Override

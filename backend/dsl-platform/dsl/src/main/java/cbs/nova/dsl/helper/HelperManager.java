@@ -35,22 +35,18 @@ public final class HelperManager implements HelperRegistrar {
 
   public @NonNull Result<?> executeHelper(@NonNull String name, @NonNull Context<?> ctx) {
     HelperInterceptor interceptor = ctx.helperInterceptor();
-    if (interceptor != null) {
-      Optional<Result<?>> fake = interceptor.intercept(name, ctx);
-      if (fake.isPresent()) {
-        return fake.get();
-      }
+    Optional<Result<?>> fake = interceptor.intercept(name, ctx);
+    if (fake.isPresent()) {
+      return fake.get();
     }
     return runner.runHelper(name, ctx, registry);
   }
 
   public @NonNull Result<?> executeFunction(@NonNull String name, @NonNull Context<?> ctx) {
     HelperInterceptor interceptor = ctx.helperInterceptor();
-    if (interceptor != null) {
-      Optional<Result<?>> fake = interceptor.intercept(name, ctx);
-      if (fake.isPresent()) {
-        return fake.get();
-      }
+    Optional<Result<?>> fake = interceptor.intercept(name, ctx);
+    if (fake.isPresent()) {
+      return fake.get();
     }
     return runner.runFunction(name, ctx, registry);
   }

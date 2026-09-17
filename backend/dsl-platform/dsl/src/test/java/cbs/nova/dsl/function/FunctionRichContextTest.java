@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.listener.ExecutionListener;
+import cbs.nova.dsl.listener.NoopExecutionListener;
+import cbs.nova.dsl.listener.NoopExecutionTraceCollector;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.listener.ExecutionTraceCollector;
 import cbs.nova.dsl.GlobalManager;
@@ -133,7 +135,7 @@ class FunctionRichContextTest {
     assertThat(next).isInstanceOf(FunctionRichContext.class);
     assertThat(next).isNotSameAs(rich);
     assertThat(next.executionListener()).isSameAs(listener);
-    assertThat(rich.executionListener()).isNull();
+    assertThat(rich.executionListener()).isSameAs(NoopExecutionListener.INSTANCE);
   }
 
   @Test
@@ -150,7 +152,7 @@ class FunctionRichContextTest {
     };
     var rich = newContext().withExecutionListener(listener).withExecutionListener(null);
     assertThat(rich).isInstanceOf(FunctionRichContext.class);
-    assertThat(rich.executionListener()).isNull();
+    assertThat(rich.executionListener()).isSameAs(NoopExecutionListener.INSTANCE);
   }
 
   @Test
@@ -159,7 +161,7 @@ class FunctionRichContextTest {
     Context<String> next = rich.withExecutionTraceCollector(null);
     assertThat(next).isInstanceOf(FunctionRichContext.class);
     assertThat(next).isNotSameAs(rich);
-    assertThat(next.executionTraceCollector()).isNull();
+    assertThat(next.executionTraceCollector()).isSameAs(NoopExecutionTraceCollector.INSTANCE);
     assertThat(rich.executionTraceCollector()).isSameAs(traceCollector);
   }
 

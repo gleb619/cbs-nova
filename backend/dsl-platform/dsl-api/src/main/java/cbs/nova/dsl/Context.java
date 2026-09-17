@@ -1,8 +1,11 @@
 package cbs.nova.dsl;
 
 import cbs.nova.dsl.helper.HelperInterceptor;
+import cbs.nova.dsl.helper.NoopHelperInterceptor;
 import cbs.nova.dsl.listener.ExecutionListener;
 import cbs.nova.dsl.listener.ExecutionTraceCollector;
+import cbs.nova.dsl.listener.NoopExecutionListener;
+import cbs.nova.dsl.listener.NoopExecutionTraceCollector;
 import cbs.nova.dsl.transaction.TransactionRouting;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -67,28 +70,24 @@ public interface Context<T> {
     return TransactionRouting.LOCAL;
   }
 
-  @Nullable
-  // TODO: make it an @NonNull
+  @NonNull
   default ExecutionListener executionListener() {
-    return null;
+    return NoopExecutionListener.INSTANCE;
   }
 
-  @Nullable
-  // TODO: make it an @NonNull
+  @NonNull
   default DslSaga saga() {
-    return null;
+    return NoopSaga.INSTANCE;
   }
 
-  @Nullable
-  // TODO: make it an @NonNull
+  @NonNull
   default ExecutionTraceCollector executionTraceCollector() {
-    return null;
+    return NoopExecutionTraceCollector.INSTANCE;
   }
 
-  @Nullable
-  // TODO: make it an @NonNull
+  @NonNull
   default HelperInterceptor helperInterceptor() {
-    return null;
+    return NoopHelperInterceptor.INSTANCE;
   }
 
   @NonNull

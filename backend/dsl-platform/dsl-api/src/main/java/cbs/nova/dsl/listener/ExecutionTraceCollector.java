@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public final class ExecutionTraceCollector {
+public class ExecutionTraceCollector {
 
   private final ConcurrentLinkedQueue<String> entries = new ConcurrentLinkedQueue<>();
   private final AtomicBoolean active = new AtomicBoolean();

@@ -26,10 +26,7 @@ public final class DefaultProcessRunner implements ProcessRunner {
   @Override
   public @NonNull Result<?> run(@NonNull ProcessDslObject process, @NonNull Context<?> ctx) {
     var historyListener = new DefaultExecutionListener(ctx.runId(), transactionExecutionRepository);
-    var existingListener = ctx.executionListener();
-    var listener = existingListener != null
-            ? new ChainedExecutionListener(existingListener, historyListener)
-            : historyListener;
+    var listener = new ChainedExecutionListener(ctx.executionListener(), historyListener);
     var listeningCtx = ctx.withExecutionListener(listener);
     var outcome = execute(process, listeningCtx);
     if (outcome.launchedByTemporal()) {

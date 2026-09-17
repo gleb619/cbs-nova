@@ -52,22 +52,22 @@ public final class ProcessRichContext<T> implements ProcessContext<T> {
   }
 
   @Override
-  public @Nullable ExecutionListener executionListener() {
+  public @NonNull ExecutionListener executionListener() {
     return delegate.executionListener();
   }
 
   @Override
-  public @Nullable DslSaga saga() {
+  public @NonNull DslSaga saga() {
     return delegate.saga();
   }
 
   @Override
-  public @Nullable ExecutionTraceCollector executionTraceCollector() {
+  public @NonNull ExecutionTraceCollector executionTraceCollector() {
     return delegate.executionTraceCollector();
   }
 
   @Override
-  public @Nullable HelperInterceptor helperInterceptor() {
+  public @NonNull HelperInterceptor helperInterceptor() {
     return delegate.helperInterceptor();
   }
 
@@ -109,10 +109,7 @@ public final class ProcessRichContext<T> implements ProcessContext<T> {
   }
 
   private void trace(@NonNull String entry) {
-    ExecutionTraceCollector collector = delegate.executionTraceCollector();
-    if (collector != null) {
-      collector.add(entry);
-    }
+    delegate.executionTraceCollector().add(entry);
   }
 
   @Override

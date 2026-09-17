@@ -10,6 +10,10 @@ import cbs.nova.dsl.helper.HelperInterceptor;
 import cbs.nova.dsl.json.AvajeJsonValue;
 import cbs.nova.dsl.listener.ExecutionListener;
 import cbs.nova.dsl.listener.ExecutionTraceCollector;
+import cbs.nova.dsl.NoopSaga;
+import cbs.nova.dsl.helper.NoopHelperInterceptor;
+import cbs.nova.dsl.listener.NoopExecutionListener;
+import cbs.nova.dsl.listener.NoopExecutionTraceCollector;
 import cbs.nova.dsl.transaction.TransactionRouting;
 import lombok.Builder;
 import lombok.RequiredArgsConstructor;
@@ -61,23 +65,29 @@ public final class SimpleContext<T> implements Context<T> {
   }
 
   @Override
-  public @Nullable ExecutionListener executionListener() {
-    return executionListener;
+  public @NonNull ExecutionListener executionListener() {
+    return executionListener != null
+            ? executionListener
+            : NoopExecutionListener.INSTANCE;
   }
 
   @Override
-  public @Nullable DslSaga saga() {
-    return saga;
+  public @NonNull DslSaga saga() {
+    return saga != null ? saga : NoopSaga.INSTANCE;
   }
 
   @Override
-  public @Nullable ExecutionTraceCollector executionTraceCollector() {
-    return executionTraceCollector;
+  public @NonNull ExecutionTraceCollector executionTraceCollector() {
+    return executionTraceCollector != null
+            ? executionTraceCollector
+            : NoopExecutionTraceCollector.INSTANCE;
   }
 
   @Override
-  public @Nullable HelperInterceptor helperInterceptor() {
-    return helperInterceptor;
+  public @NonNull HelperInterceptor helperInterceptor() {
+    return helperInterceptor != null
+            ? helperInterceptor
+            : NoopHelperInterceptor.INSTANCE;
   }
 
   @Override

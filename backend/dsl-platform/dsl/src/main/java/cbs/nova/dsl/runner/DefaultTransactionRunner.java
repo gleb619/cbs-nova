@@ -30,9 +30,7 @@ public final class DefaultTransactionRunner implements TransactionRunner {
           @NonNull TransactionDslObject transaction, @NonNull Context<?> ctx) {
     var listener = ctx.executionListener();
     var startedAt = Instant.now();
-    if (listener != null) {
-      listener.onTransactionStart(ctx.runId(), transaction.name(), ctx.body());
-    }
+    listener.onTransactionStart(ctx.runId(), transaction.name(), ctx.body());
     Result<?> result = null;
     try {
       var richCtx = new TransactionRichContext<>(ctx, contextFactory);
@@ -54,10 +52,8 @@ public final class DefaultTransactionRunner implements TransactionRunner {
       notifyFailure(ctx, transaction, ex, startedAt, Instant.now());
       return failure;
     } finally {
-      if (listener != null) {
-        listener.onTransactionEnd(ctx.runId(), transaction.name(),
-                result != null ? result.value() : null, result != null && result.isSuccess());
-      }
+      listener.onTransactionEnd(ctx.runId(), transaction.name(),
+              result != null ? result.value() : null, result != null && result.isSuccess());
     }
   }
 
@@ -67,7 +63,7 @@ public final class DefaultTransactionRunner implements TransactionRunner {
       return;
     }
     DslSaga saga = ctx.saga();
-    if (saga != null) {
+    if (!saga.isNoop()) {
       saga.addCompensation(() -> {
         Object compensationBody = ctx.body();
         var compCtxBase = contextFactory.of(compensationBody, Map.of(),
@@ -90,9 +86,6 @@ public final class DefaultTransactionRunner implements TransactionRunner {
           @NonNull Instant startedAt,
           @NonNull Instant finishedAt) {
     var listener = ctx.executionListener();
-    if (listener == null) {
-      return;
-    }
     if (result.isSuccess()) {
       listener.onTransactionSuccess(new TransactionExecution(
               ctx.runId(),
@@ -124,18 +117,16 @@ public final class DefaultTransactionRunner implements TransactionRunner {
           @NonNull Instant startedAt,
           @NonNull Instant finishedAt) {
     var listener = ctx.executionListener();
-    if (listener != null) {
-      listener.onTransactionFailure(ctx.runId(), transaction.name(), cause);
-      listener.onTransactionSuccess(new TransactionExecution(
-              ctx.runId(),
-              transaction.name(),
-              ctx.body(),
-              finishedAt,
-              startedAt,
-              finishedAt,
-              statusFor(false, ctx),
-              cause.getMessage()));
-    }
+    listener.onTransactionFailure(ctx.runId(), transaction.name(), cause);
+    listener.onTransactionSuccess(new TransactionExecution(
+            ctx.runId(),
+            transaction.name(),
+            ctx.body(),
+            finishedAt,
+            startedAt,
+            finishedAt,
+            statusFor(false, ctx),
+            cause.getMessage()));
   }
 
   private TransactionExecutionStatus statusFor(boolean success, Context<?> ctx) {

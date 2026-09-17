@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.function.FunctionDslObject;
 import cbs.nova.dsl.helper.HelperInterceptor;
+import cbs.nova.dsl.helper.NoopHelperInterceptor;
 import cbs.nova.dsl.helper.HelperManager;
 import cbs.nova.dsl.registry.HelperRegistry;
 import cbs.nova.dsl.runner.HelperRunner;
@@ -151,7 +152,7 @@ class HelperManagerTest {
     var manager = new HelperManager(registry, runner);
     var ctx = contextFactory.of("input", ExecutionMode.RUN, "run-plain");
 
-    assertThat(ctx.helperInterceptor()).isNull();
+    assertThat(ctx.helperInterceptor()).isSameAs(NoopHelperInterceptor.INSTANCE);
     assertThat(manager.executeHelper("greet", ctx).value()).isEqualTo("plain");
     assertThat(runner.helperNames).containsExactly("greet");
   }
