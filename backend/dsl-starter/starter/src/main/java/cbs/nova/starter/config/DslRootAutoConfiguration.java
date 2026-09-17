@@ -44,6 +44,7 @@ import org.springframework.context.annotation.Import;
     ApiKeyAuthMisconfigurationWarning.class,
     ProductionSecurityPostureValidator.class,
     SecurityPostureReporter.class,
+    ExplainBudgetStageWarmupConfiguration.class,
     SentryStatusReporter.class,
     DslHealthIndicatorConfiguration.class,
     BuilderClientConfiguration.class,

@@ -77,6 +77,7 @@ class DslRootAutoConfigurationTest {
             SecurityPostureReporter.class,
             SentryStatusReporter.class,
             DslHealthIndicatorConfiguration.class,
+            ExplainBudgetStageWarmupConfiguration.class,
             BuilderClientConfiguration.class);
   }
 

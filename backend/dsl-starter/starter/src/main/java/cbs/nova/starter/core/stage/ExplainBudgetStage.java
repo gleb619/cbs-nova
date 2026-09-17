@@ -18,8 +18,6 @@ import org.jspecify.annotations.Nullable;
 @RequiredArgsConstructor
 public final class ExplainBudgetStage implements DslPipeStage {
 
-  // TODO: measure in CL100K_BASE Encoding is very slow, we need: memoize and some on start async
-  // warmup, to speed up runtime
   private static final Encoding ENCODING = Encodings.newDefaultEncodingRegistry()
           .getEncoding(EncodingType.CL100K_BASE);
 
@@ -27,6 +25,15 @@ public final class ExplainBudgetStage implements DslPipeStage {
   private final int nameMaxTokens;
   private final int descriptionMaxTokens;
   private final int mermaidMaxTokens;
+
+  /**
+   * Forces initialization of the statically memoized CL100K_BASE encoding. Called from an async
+   * startup hook so the ~430 ms registry init cost is paid during application warmup instead of on
+   * the first live explain request.
+   */
+  public static void warmUpEncoding() {
+    ENCODING.countTokens("");
+  }
 
   @Override
   @SuppressWarnings("unchecked")
