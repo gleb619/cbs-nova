@@ -4,7 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.DslSaga;
+import cbs.nova.dsl.NoopSaga;
 import cbs.nova.dsl.listener.ExecutionListener;
+import cbs.nova.dsl.listener.NoopExecutionListener;
+import cbs.nova.dsl.listener.NoopExecutionTraceCollector;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.listener.ExecutionTraceCollector;
 import cbs.nova.dsl.GlobalManager;
@@ -140,7 +143,7 @@ class TransactionRichContextTest {
     assertThat(next).isInstanceOf(TransactionRichContext.class);
     assertThat(next).isNotSameAs(rich);
     assertThat(next.executionListener()).isSameAs(listener);
-    assertThat(rich.executionListener()).isNull();
+    assertThat(rich.executionListener()).isSameAs(NoopExecutionListener.INSTANCE);
   }
 
   @Test
@@ -149,8 +152,8 @@ class TransactionRichContextTest {
     Context<String> next = rich.withSaga(null);
     assertThat(next).isInstanceOf(TransactionRichContext.class);
     assertThat(next).isNotSameAs(rich);
-    assertThat(next.saga()).isNull();
-    assertThat(rich.saga()).isNull();
+    assertThat(next.saga()).isSameAs(NoopSaga.INSTANCE);
+    assertThat(rich.saga()).isSameAs(NoopSaga.INSTANCE);
   }
 
   @Test
@@ -159,7 +162,7 @@ class TransactionRichContextTest {
     Context<String> next = rich.withExecutionTraceCollector(null);
     assertThat(next).isInstanceOf(TransactionRichContext.class);
     assertThat(next).isNotSameAs(rich);
-    assertThat(next.executionTraceCollector()).isNull();
+    assertThat(next.executionTraceCollector()).isSameAs(NoopExecutionTraceCollector.INSTANCE);
     assertThat(rich.executionTraceCollector()).isSameAs(traceCollector);
   }
 

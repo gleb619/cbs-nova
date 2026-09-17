@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import cbs.nova.dsl.config.ContextFactory;
 import cbs.nova.dsl.helper.HelperInterceptor;
+import cbs.nova.dsl.helper.NoopHelperInterceptor;
 import cbs.nova.dsl.model.MapInput;
 import cbs.nova.dsl.transaction.TransactionRouting;
 import org.junit.jupiter.api.Test;
@@ -134,9 +135,9 @@ class SimpleContextTest {
   }
 
   @Test
-  void helperInterceptorDefaultsToNull() {
+  void helperInterceptorDefaultsToNoop() {
     var ctx = contextFactory.of("body", ExecutionMode.RUN, "r1");
-    assertThat(ctx.helperInterceptor()).isNull();
+    assertThat(ctx.helperInterceptor()).isSameAs(NoopHelperInterceptor.INSTANCE);
   }
 
   @Test
@@ -145,7 +146,7 @@ class SimpleContextTest {
     HelperInterceptor interceptor = (name, c) -> Optional.empty();
     var updated = ctx.withHelperInterceptor(interceptor);
     assertThat(updated.helperInterceptor()).isSameAs(interceptor);
-    assertThat(ctx.helperInterceptor()).isNull();
+    assertThat(ctx.helperInterceptor()).isSameAs(NoopHelperInterceptor.INSTANCE);
   }
 
   @Test
@@ -167,6 +168,6 @@ class SimpleContextTest {
     var ctx = contextFactory.of("body", ExecutionMode.RUN, "r1")
             .withHelperInterceptor(interceptor);
     var cleared = ctx.withHelperInterceptor(null);
-    assertThat(cleared.helperInterceptor()).isNull();
+    assertThat(cleared.helperInterceptor()).isSameAs(NoopHelperInterceptor.INSTANCE);
   }
 }

@@ -40,9 +40,9 @@ public final class ProcessCompensationHandler {
           ProcessDslObject process, Context<?> ctx, List<TransactionExecution> history) {
     DslSaga saga = ctx.saga();
     return process.compensationLogic() != null
-            || (saga != null && saga.hasCompensations())
+            || (!saga.isNoop() && saga.hasCompensations())
             || compensationRegistry.hasCompensation(ctx.runId())
-            || (saga == null && !history.isEmpty());
+            || (saga.isNoop() && !history.isEmpty());
   }
 
   private Result<?> runCompensation(
@@ -53,7 +53,7 @@ public final class ProcessCompensationHandler {
     var compensationError = resolveCompensationError(outcome);
     try {
       DslSaga saga = ctx.saga();
-      if (saga != null && saga.hasCompensations()) {
+      if (!saga.isNoop() && saga.hasCompensations()) {
         saga.compensate();
       } else if (compensationRegistry.hasCompensation(ctx.runId())) {
         compensationRegistry.compensateAll(ctx.runId(), compensationError, contextFactory);

@@ -30,9 +30,7 @@ public final class DefaultHelperRunner implements HelperRunner {
               .failure(new DslEntityNotFoundException(ctx.runId(), "Helper not found: " + name));
     }
     var listener = ctx.executionListener();
-    if (listener != null) {
-      listener.onHelperStart(ctx.runId(), name, ctx.body());
-    }
+    listener.onHelperStart(ctx.runId(), name, ctx.body());
     Result<?> result = null;
     try {
       var cast = (Executable<Object, Object>) helper.get();
@@ -45,10 +43,8 @@ public final class DefaultHelperRunner implements HelperRunner {
       result = Result.failure(new DslExecutionException(ctx.runId(), message, ex));
       return result;
     } finally {
-      if (listener != null) {
-        listener.onHelperEnd(ctx.runId(), name,
-                result != null ? result.value() : null, result != null && result.isSuccess());
-      }
+      listener.onHelperEnd(ctx.runId(), name,
+              result != null ? result.value() : null, result != null && result.isSuccess());
     }
   }
 
@@ -61,9 +57,7 @@ public final class DefaultHelperRunner implements HelperRunner {
               .failure(new DslEntityNotFoundException(ctx.runId(), "Function not found: " + name));
     }
     var listener = ctx.executionListener();
-    if (listener != null) {
-      listener.onFunctionStart(ctx.runId(), name, ctx.body());
-    }
+    listener.onFunctionStart(ctx.runId(), name, ctx.body());
     Result<?> result = null;
     try {
       var richCtx = new FunctionRichContext<>(ctx, contextFactory);
@@ -81,10 +75,8 @@ public final class DefaultHelperRunner implements HelperRunner {
       result = Result.failure(new DslExecutionException(ctx.runId(), message, ex));
       return result;
     } finally {
-      if (listener != null) {
-        listener.onFunctionEnd(ctx.runId(), name,
-                result != null ? result.value() : null, result != null && result.isSuccess());
-      }
+      listener.onFunctionEnd(ctx.runId(), name,
+              result != null ? result.value() : null, result != null && result.isSuccess());
     }
   }
 }

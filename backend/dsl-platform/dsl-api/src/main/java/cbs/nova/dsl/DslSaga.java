@@ -14,6 +14,10 @@ public interface DslSaga {
 
   boolean hasCompensations();
 
+  default boolean isNoop() {
+    return false;
+  }
+
   static @NonNull DslSaga create() {
     return new DefaultDslSaga(Options.DEFAULT);
   }
