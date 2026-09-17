@@ -1,5 +1,4 @@
 package cbs.nova.starter.core.stage;
-import cbs.nova.dsl.model.ObjectDescriptor;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -10,7 +9,9 @@ import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.Executable;
+import cbs.nova.dsl.ExecutableDescriptor;
 import cbs.nova.dsl.ExecutionMode;
+import cbs.nova.dsl.model.Descriptors;
 import cbs.nova.dsl.model.ExplainGraphAccumulator;
 import cbs.nova.dsl.model.ExplainGraphReport;
 import cbs.nova.dsl.GlobalManager;
@@ -62,47 +63,14 @@ class ExplainReportStageTest {
   }
 
   @Test
-  // TODO: change inline descriptor creation
-  @Deprecated(forRemoval = true)
   void descriptionIsBuiltFromDescriptorTypeWhenFound() {
     String fnName = "MyFn-" + System.nanoTime();
     GlobalManager.globalManager().registerFunction(
             Dsl.function(fnName)
                     .execute(c -> Result.success("ok"))
-                    .describe(() -> DslDescriptor.builder()
-                            .objectDescriptor(new ObjectDescriptor() {
-                              @Override
-                              public String name() {
-                                return fnName;
-                              }
-
-                              @Override
-                              public DslObject.DslType type() {
-                                return DslObject.DslType.FUNCTION;
-                              }
-
-                              @Override
-                              public String description() {
-                                return null;
-                              }
-
-                              @Override
-                              public Class<?> inputType() {
-                                return null;
-                              }
-
-                              @Override
-                              public Class<?> outputType() {
-                                return null;
-                              }
-                            })
-                            .hasSideEffects(false)
-                            .parameters(List.of())
-                            .taskQueue(null)
-                            .version(null)
-                            .startToCloseTimeout(null)
-                            .heartbeatTimeout(null)
-                            .build())
+                    .describe(() -> Descriptors.from(fnName,
+                            new ExecutableDescriptor(
+                                    fnName, null, null, null, false, null, List.of())))
                     .build());
 
     DslPipeContext pipeContext = pipeContext(fnName, ExecutionMode.PREVIEW);

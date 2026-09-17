@@ -1,6 +1,4 @@
 package cbs.nova.starter.service.introspection.mapper;
-import cbs.nova.dsl.DslObject;
-import cbs.nova.dsl.model.ObjectDescriptor;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -9,6 +7,7 @@ import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.DslObject.DslType;
 import cbs.nova.dsl.ExecutableDescriptor;
 import cbs.nova.dsl.Result;
+import cbs.nova.dsl.model.Descriptors;
 import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.transaction.TransactionDslObject;
 import cbs.nova.starter.converter.DslIntrospectionMapper;
@@ -83,43 +82,10 @@ class DslIntrospectionMapperTest {
   }
 
   @Test
-  // TODO: change inline descriptor creation
-  @Deprecated(forRemoval = true)
   void mapsDslDescriptorToHelperSearchResult() {
-    DslDescriptor descriptor = DslDescriptor.builder()
-            .objectDescriptor(new ObjectDescriptor() {
-              @Override
-              public String name() {
-                return "fn";
-              }
-
-              @Override
-              public DslObject.DslType type() {
-                return DslType.FUNCTION;
-              }
-
-              @Override
-              public String description() {
-                return "desc";
-              }
-
-              @Override
-              public Class<?> inputType() {
-                return String.class;
-              }
-
-              @Override
-              public Class<?> outputType() {
-                return Integer.class;
-              }
-            })
-            .hasSideEffects(false)
-            .parameters(List.of())
-            .taskQueue(null)
-            .version(null)
-            .startToCloseTimeout(null)
-            .heartbeatTimeout(null)
-            .build();
+    DslDescriptor descriptor = Descriptors.from("fn",
+            new ExecutableDescriptor(
+                    "fn", "desc", String.class, Integer.class, false, null, List.of()));
 
     HelperSearchResult result = mapper.toHelperSearchResult(descriptor);
 
@@ -207,43 +173,10 @@ class DslIntrospectionMapperTest {
   }
 
   @Test
-  // TODO: change inline descriptor creation
-  @Deprecated(forRemoval = true)
   void mapsDslDescriptorToDefinitionMetaDto() {
-    DslDescriptor descriptor = DslDescriptor.builder()
-            .objectDescriptor(new ObjectDescriptor() {
-              @Override
-              public String name() {
-                return "fn";
-              }
-
-              @Override
-              public DslObject.DslType type() {
-                return DslType.FUNCTION;
-              }
-
-              @Override
-              public String description() {
-                return "desc";
-              }
-
-              @Override
-              public Class<?> inputType() {
-                return String.class;
-              }
-
-              @Override
-              public Class<?> outputType() {
-                return Integer.class;
-              }
-            })
-            .hasSideEffects(false)
-            .parameters(List.of())
-            .taskQueue(null)
-            .version(null)
-            .startToCloseTimeout(null)
-            .heartbeatTimeout(null)
-            .build();
+    DslDescriptor descriptor = Descriptors.from("fn",
+            new ExecutableDescriptor(
+                    "fn", "desc", String.class, Integer.class, false, null, List.of()));
 
     DefinitionMetaDto dto = mapper.toFunctionDefinitionMeta(descriptor);
 
