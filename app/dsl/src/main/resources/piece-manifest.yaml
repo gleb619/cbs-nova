@@ -1,0 +1,57 @@
+pieces:
+  - id: dsl-reload
+    target:
+      type: api
+      route: POST /api/dsl/reload
+    preCheck:
+      - type: role
+        anyOf: [author, operator, admin]
+      - type: rate-class
+        class: control-plane
+    postCheck:
+      - type: audit-write
+        action: DEFINITION_RELOAD
+      - type: notify
+        channel: workbench
+    failMode: deny
+
+  - id: execution-cancel
+    target:
+      type: api
+      route: POST /api/executions/*/cancel
+    preCheck:
+      - type: role
+        anyOf: [runner, admin]
+      - type: rate-class
+        class: run-mutations
+    postCheck:
+      - type: audit-write
+        action: RUN_CANCEL
+    failMode: deny
+
+  - id: workbench-publish
+    target:
+      type: button
+      uiKey: workbench-publish-btn
+    preCheck:
+      - type: role
+        anyOf: [author, admin]
+      - type: feature-flag
+        flag: workbench-publish
+    postCheck:
+      - type: notify
+        channel: workbench
+    failMode: deny
+
+  - id: preview-sandbox-helper
+    target:
+      type: object
+      objectType: helper
+      objectName: PreviewSandbox
+    preCheck:
+      - type: role
+        anyOf: [runner, author, admin]
+    postCheck:
+      - type: invariant-assert
+        description: preview helper returned only sandbox-safe types
+    failMode: audit-only

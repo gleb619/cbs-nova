@@ -1,0 +1,196 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cbs-nova.local/schemas/piece-manifest.json",
+  "title": "cbs-nova Piece Manifest",
+  "description": "Declarative contract for guarded DSL pieces. One YAML document, top-level pieces[].",
+  "type": "object",
+  "required": ["pieces"],
+  "additionalProperties": false,
+  "properties": {
+    "pieces": {
+      "type": "array",
+      "description": "All declared pieces, in manifest order.",
+      "items": { "$ref": "#/$defs/piece" },
+      "minItems": 0
+    }
+  },
+  "$defs": {
+    "piece": {
+      "type": "object",
+      "required": ["id", "target", "preCheck", "postCheck", "failMode"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+          "description": "Stable kebab-case identifier, unique within the manifest."
+        },
+        "target": { "$ref": "#/$defs/target" },
+        "preCheck": {
+          "type": "array",
+          "description": "Ordered pre-execution checks. All must pass.",
+          "items": { "$ref": "#/$defs/preCheck" },
+          "minItems": 0
+        },
+        "postCheck": {
+          "type": "array",
+          "description": "Ordered post-execution hooks. Run after successful execution.",
+          "items": { "$ref": "#/$defs/postCheck" },
+          "minItems": 0
+        },
+        "failMode": {
+          "type": "string",
+          "enum": ["deny", "audit-only"],
+          "default": "deny",
+          "description": "Policy when a preCheck fails. deny: reject the request. audit-only: log/audit and allow."
+        }
+      }
+    },
+    "target": {
+      "oneOf": [
+        { "$ref": "#/$defs/apiTarget" },
+        { "$ref": "#/$defs/buttonTarget" },
+        { "$ref": "#/$defs/objectTarget" }
+      ]
+    },
+    "apiTarget": {
+      "type": "object",
+      "required": ["type", "route"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "api" },
+        "route": {
+          "type": "string",
+          "pattern": "^[A-Z]+ .+$",
+          "description": "HTTP method and path, e.g. POST /api/dsl/reload."
+        }
+      }
+    },
+    "buttonTarget": {
+      "type": "object",
+      "required": ["type", "uiKey"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "button" },
+        "uiKey": {
+          "type": "string",
+          "description": "Frontend component key / data-testid the button guard binds to."
+        }
+      }
+    },
+    "objectTarget": {
+      "type": "object",
+      "required": ["type", "objectType", "objectName"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "object" },
+        "objectType": {
+          "type": "string",
+          "enum": ["helper", "process", "function"],
+          "description": "Class of DSL object being allowlisted / guarded."
+        },
+        "objectName": {
+          "type": "string",
+          "description": "Name of the DSL object (helper, process, or function)."
+        }
+      }
+    },
+    "preCheck": {
+      "oneOf": [
+        { "$ref": "#/$defs/roleCheck" },
+        { "$ref": "#/$defs/featureFlagCheck" },
+        { "$ref": "#/$defs/rateClassCheck" }
+      ]
+    },
+    "roleCheck": {
+      "type": "object",
+      "required": ["type", "anyOf"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "role" },
+        "anyOf": {
+          "type": "array",
+          "description": "At least one of these roles must be satisfied.",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "enum": ["viewer", "runner", "author", "operator", "admin"],
+            "description": "Lower-case name of a cbs.nova.starter.security.Role enum constant."
+          }
+        }
+      }
+    },
+    "featureFlagCheck": {
+      "type": "object",
+      "required": ["type", "flag"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "feature-flag" },
+        "flag": {
+          "type": "string",
+          "description": "Name of the feature flag that must be enabled."
+        }
+      }
+    },
+    "rateClassCheck": {
+      "type": "object",
+      "required": ["type", "class"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "rate-class" },
+        "class": {
+          "type": "string",
+          "description": "Named rate-limit class the piece is assigned to."
+        }
+      }
+    },
+    "postCheck": {
+      "oneOf": [
+        { "$ref": "#/$defs/auditWriteCheck" },
+        { "$ref": "#/$defs/invariantAssertCheck" },
+        { "$ref": "#/$defs/notifyCheck" }
+      ]
+    },
+    "auditWriteCheck": {
+      "type": "object",
+      "required": ["type", "action"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "audit-write" },
+        "action": {
+          "type": "string",
+          "description": "Audit action name, aligned with StarterConstants ACTION_* constants."
+        }
+      }
+    },
+    "invariantAssertCheck": {
+      "type": "object",
+      "required": ["type"],
+      "additionalProperties": false,
+      "minProperties": 2,
+      "properties": {
+        "type": { "const": "invariant-assert" },
+        "expr": {
+          "type": "string",
+          "description": "Invariant expression or assertion identifier."
+        },
+        "description": {
+          "type": "string",
+          "description": "Human-readable invariant description."
+        }
+      }
+    },
+    "notifyCheck": {
+      "type": "object",
+      "required": ["type", "channel"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "notify" },
+        "channel": {
+          "type": "string",
+          "description": "Notification channel name."
+        }
+      }
+    }
+  }
+}
