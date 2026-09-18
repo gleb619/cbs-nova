@@ -84,6 +84,16 @@ public class StarterConstants {
   public static final String OUTCOME_SUCCESS = "SUCCESS";
   public static final String OUTCOME_FAILURE = "FAILURE";
 
+  // Object-level capability enforcement (T552)
+
+  public static final String CAPABILITY_DENIED_CODE = "CAPABILITY_DENIED";
+  public static final String DSL_DEFINITION_NAME_METADATA_KEY = "cbs.nova.dsl.definitionName";
+  public static final String ACTION_OBJECT_GUARD_DENY = "OBJECT_GUARD_DENY";
+  public static final String ACTION_OBJECT_GUARD_PERMISSIVE = "OBJECT_GUARD_PERMISSIVE";
+  public static final String OBJECT_GUARD_DENIED_COUNTER = "dsl.piece.object.denied";
+  public static final String OBJECT_TYPE_TAG = "type";
+
+
   // Cancellation reasons
 
   public static final String CANCELLED_REASON = "Cancelled by user";

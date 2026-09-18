@@ -20,6 +20,7 @@ import cbs.nova.starter.core.pipe.ExplainDslPipe;
 import cbs.nova.starter.core.pipe.HierarchyDslPipe;
 import cbs.nova.starter.core.pipe.PreviewDslPipe;
 import cbs.nova.starter.core.pipe.RunDslPipe;
+import cbs.nova.starter.security.ManifestObjectGuard;
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.core.pipe.RunScopedFakeConfig;
 import cbs.nova.starter.core.recorder.ExternalCallRecorder;
@@ -219,11 +220,12 @@ public class TemporalConfiguration {
           CbsNovaFakesProperties fakesProperties,
           RunScopedFakeConfig runScopedFakeConfig,
           MeterRegistry meterRegistry,
-          @Qualifier("cbsNovaPreviewDispatchExecutor") ExecutorService dispatchExecutor) {
+          @Qualifier("cbsNovaPreviewDispatchExecutor") ExecutorService dispatchExecutor,
+          ObjectProvider<ManifestObjectGuard> objectGuardProvider) {
     return new PreviewDslPipe(externalCallRecorder, dryRunLoggingContext,
             bufferRegistry, dryRunProperties.log().maxEventsPerRun(), previewResultCache,
             previewProperties, fakesProperties, runScopedFakeConfig, meterRegistry,
-            dispatchExecutor);
+            dispatchExecutor, objectGuardProvider.getIfAvailable());
   }
 
   @Bean
@@ -232,9 +234,10 @@ public class TemporalConfiguration {
           ExternalCallRecorder externalCallRecorder,
           CbsNovaFakesProperties fakesProperties,
           RunScopedFakeConfig runScopedFakeConfig,
-          DslExecutionEventBus dslExecutionEventBus) {
+          DslExecutionEventBus dslExecutionEventBus,
+          ObjectProvider<ManifestObjectGuard> objectGuardProvider) {
     return new RunDslPipe(externalCallRecorder, fakesProperties,
-            runScopedFakeConfig, dslExecutionEventBus);
+            runScopedFakeConfig, dslExecutionEventBus, objectGuardProvider.getIfAvailable());
   }
 
   @Bean
@@ -249,11 +252,12 @@ public class TemporalConfiguration {
           RunScopedFakeConfig runScopedFakeConfig,
           MeterRegistry meterRegistry,
           HierarchyDiagramRenderer diagramRenderer,
-          @Qualifier("cbsNovaPreviewDispatchExecutor") ExecutorService dispatchExecutor) {
+          @Qualifier("cbsNovaPreviewDispatchExecutor") ExecutorService dispatchExecutor,
+          ObjectProvider<ManifestObjectGuard> objectGuardProvider) {
     return new HierarchyDslPipe(externalCallRecorder, dryRunLoggingContext,
             bufferRegistry, dryRunProperties.log().maxEventsPerRun(), previewProperties,
             fakesProperties, runScopedFakeConfig, meterRegistry, diagramRenderer,
-            dispatchExecutor);
+            dispatchExecutor, objectGuardProvider.getIfAvailable());
   }
 
   @Bean

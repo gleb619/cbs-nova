@@ -23,4 +23,10 @@ public class Constants {
 
   public static final String CURRENT_OBJECT_NAME = "current.object_name";
 
+  public static final String DSL_DEFINITION_NAME_METADATA_KEY = "cbs.nova.dsl.definitionName";
+
+  public static final String CORRELATION_ID_METADATA_KEY = "correlationId";
+
+
+
 }

@@ -1,8 +1,11 @@
 package cbs.nova.starter.core.pipe;
 
 import cbs.nova.dsl.Context;
+import cbs.nova.dsl.config.DslConfig;
+import cbs.nova.dsl.security.ObjectGuard;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
+import cbs.nova.starter.core.StarterConstants;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 
@@ -21,8 +24,11 @@ public final class DslExecutionPipeline<R> implements DslExecutionPipe<R> {
 
   @Override
   public @NonNull Result<R> execute(@NonNull String name, @NonNull Context<?> ctx) {
+    Context<?> enriched = DslConfig.dslConfig().objectGuard().get().active()
+            ? ctx.withMetadata(StarterConstants.DSL_DEFINITION_NAME_METADATA_KEY, name)
+            : ctx;
     DslPipeContext context = DslPipeContext.of(
-            name, ctx, ctx.mode(), generateRunId(ctx));
+            name, enriched, enriched.mode(), generateRunId(enriched));
     return executeStage(context, 0);
   }
 

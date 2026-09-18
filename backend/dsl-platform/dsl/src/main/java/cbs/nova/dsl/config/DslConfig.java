@@ -9,6 +9,7 @@ import cbs.nova.dsl.explain.ClasspathExplainResourceResolver;
 import cbs.nova.dsl.explain.ExplainResourceRegistry;
 import cbs.nova.dsl.explain.ExplainResourceResolver;
 import cbs.nova.dsl.helper.HelperInstanceResolver;
+import cbs.nova.dsl.security.ObjectGuard;
 import cbs.nova.dsl.history.TransactionExecutionRepository;
 import cbs.nova.dsl.model.RetryPolicy;
 import cbs.nova.dsl.process.ProcessManager;
@@ -121,6 +122,11 @@ public class DslConfig implements SingletonSupport {
 
   public @NonNull Replaceable<JsonSchemaGenerator> jsonSchemaGenerator() {
     return replaceable("jsonSchemaGenerator");
+  }
+
+
+  public @NonNull Replaceable<ObjectGuard> objectGuard() {
+    return replaceable("objectGuard", () -> ObjectGuard.NO_OP);
   }
 
   public @NonNull Replaceable<HelperInstanceResolver> helperInstanceResolver() {

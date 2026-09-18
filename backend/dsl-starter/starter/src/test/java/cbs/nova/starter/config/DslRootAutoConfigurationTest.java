@@ -52,7 +52,8 @@ class DslRootAutoConfigurationTest {
                       PieceCheckPipelineConfiguration.class.getName(),
                       "cbs.nova.starter.config.router.DslDiagnosticsRouterConfiguration",
                       "cbs.nova.starter.config.router.DslScheduleRouterConfiguration",
-                      "cbs.nova.starter.config.router.DslManifestRouterConfiguration");
+                      "cbs.nova.starter.config.router.DslManifestRouterConfiguration",
+                      ManifestObjectGuardConfiguration.class.getName());
     }
   }
 

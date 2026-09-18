@@ -1,11 +1,15 @@
 package cbs.nova.starter.service;
 
+import java.util.LinkedHashSet;
+
 import static cbs.nova.starter.core.StarterConstants.ACTION_MANIFEST_RELOAD;
 
 import cbs.nova.starter.config.properties.CbsDslManifestProperties;
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.exception.PieceManifestValidationException;
 import cbs.nova.starter.model.ManifestReloadResponse;
+import cbs.nova.starter.model.ObjectAllow;
+import cbs.nova.starter.model.ObjectDeny;
 import cbs.nova.starter.model.Piece;
 import cbs.nova.starter.model.PieceManifest;
 import cbs.nova.starter.model.PostCheck;
@@ -111,6 +115,17 @@ public class PieceManifestService {
    */
   public List<Piece> byTarget(Target target) {
     return snapshot.byTargetType.getOrDefault(target.type(), List.of());
+  }
+
+  /**
+   * Returns all object-target pieces whose {@code objectType} and {@code objectName} match exactly.
+   */
+  public List<Piece> findByObject(String objectType, String objectName) {
+    return snapshot.objectPieces.stream()
+            .filter(p -> p.target() instanceof Target.ObjectTarget ot
+                    && ot.objectType().equals(objectType)
+                    && ot.objectName().equals(objectName))
+            .toList();
   }
 
   /**
@@ -318,7 +333,10 @@ public class PieceManifestService {
               "unknown failMode '" + failMode + "'; expected 'deny' or 'audit-only'");
     }
 
-    return new Piece(id, target, preChecks, postChecks, failMode);
+    ObjectAllow allow = parseObjectAllow(raw.get("allow"), id);
+    ObjectDeny deny = parseObjectDeny(raw.get("deny"), id);
+
+    return new Piece(id, target, preChecks, postChecks, failMode, allow, deny);
   }
 
   private Target parseTarget(Map<String, Object> raw, String pieceId) {
@@ -425,6 +443,53 @@ public class PieceManifestService {
     return checks;
   }
 
+
+  @SuppressWarnings("unchecked")
+  private ObjectAllow parseObjectAllow(Object raw, String pieceId) {
+    if (raw == null) {
+      return null;
+    }
+    if (!(raw instanceof Map<?, ?>)) {
+      throw entryError(pieceId, "allow", "allow must be an object");
+    }
+    Map<String, Object> map = (Map<String, Object>) raw;
+    return new ObjectAllow(
+            stringSet(map.get("definitions")),
+            stringSet(map.get("helpers")),
+            stringSet(map.get("capabilities")));
+  }
+
+  @SuppressWarnings("unchecked")
+  private ObjectDeny parseObjectDeny(Object raw, String pieceId) {
+    if (raw == null) {
+      return null;
+    }
+    if (!(raw instanceof Map<?, ?>)) {
+      throw entryError(pieceId, "deny", "deny must be an object");
+    }
+    Map<String, Object> map = (Map<String, Object>) raw;
+    return new ObjectDeny(
+            stringSet(map.get("definitions")),
+            stringSet(map.get("helpers")),
+            stringSet(map.get("capabilities")));
+  }
+
+  @SuppressWarnings("unchecked")
+  private Set<String> stringSet(Object raw) {
+    if (raw == null) {
+      return Set.of();
+    }
+    if (!(raw instanceof List<?> list)) {
+      return Set.of();
+    }
+    Set<String> result = new LinkedHashSet<>();
+    for (Object item : list) {
+      if (item instanceof String s && !s.isBlank()) {
+        result.add(s);
+      }
+    }
+    return result;
+  }
   private String requireString(Map<String, Object> map, String key, String pieceId) {
     Object value = map.get(key);
     if (!(value instanceof String s) || s.isBlank()) {
@@ -510,32 +575,40 @@ public class PieceManifestService {
     final Map<String, Piece> byId;
     final Map<String, List<Piece>> byTargetType;
     final List<Piece> apiPieces;
+    final List<Piece> objectPieces;
 
     private Snapshot(List<Piece> pieces, Map<String, Piece> byId,
-            Map<String, List<Piece>> byTargetType, List<Piece> apiPieces) {
+            Map<String, List<Piece>> byTargetType, List<Piece> apiPieces,
+            List<Piece> objectPieces) {
       this.pieces = pieces;
       this.byId = byId;
       this.byTargetType = byTargetType;
       this.apiPieces = apiPieces;
+      this.objectPieces = objectPieces;
     }
 
     static Snapshot empty() {
-      return new Snapshot(List.of(), Map.of(), Map.of(), List.of());
+      return new Snapshot(List.of(), Map.of(), Map.of(), List.of(), List.of());
     }
 
     static Snapshot of(List<Piece> pieces) {
       Map<String, Piece> byId = new LinkedHashMap<>();
       Map<String, List<Piece>> byTargetType = new LinkedHashMap<>();
       List<Piece> apiPieces = new ArrayList<>();
+      List<Piece> objectPieces = new ArrayList<>();
       for (Piece piece : pieces) {
         byId.put(piece.id(), piece);
         byTargetType.computeIfAbsent(piece.target().type(), k -> new ArrayList<>()).add(piece);
         if (piece.target() instanceof Target.ApiTarget) {
           apiPieces.add(piece);
         }
+        if (piece.target() instanceof Target.ObjectTarget) {
+          objectPieces.add(piece);
+        }
       }
       return new Snapshot(List.copyOf(pieces), Collections.unmodifiableMap(byId),
-              Collections.unmodifiableMap(byTargetType), List.copyOf(apiPieces));
+              Collections.unmodifiableMap(byTargetType), List.copyOf(apiPieces),
+              List.copyOf(objectPieces));
     }
   }
 }

@@ -19,11 +19,13 @@ import cbs.nova.starter.core.stage.HierarchyReportStage;
 import cbs.nova.starter.core.stage.MetricsStage;
 import cbs.nova.starter.logging.DryRunLogBufferRegistry;
 import cbs.nova.starter.reporting.HierarchyDiagramRenderer;
+import cbs.nova.starter.security.ManifestObjectGuard;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Duration;
 import java.util.concurrent.ExecutorService;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 @RequiredArgsConstructor
 public final class HierarchyDslPipe implements DslExecutionPipe<HierarchyReport> {
@@ -38,11 +40,34 @@ public final class HierarchyDslPipe implements DslExecutionPipe<HierarchyReport>
   private final MeterRegistry meterRegistry;
   private final HierarchyDiagramRenderer diagramRenderer;
   private final ExecutorService executor;
+  private final @Nullable ManifestObjectGuard objectGuard;
+
+  /**
+   * Legacy constructor used by tests that do not exercise object-level enforcement.
+   */
+  public HierarchyDslPipe(
+          ExternalCallRecorder recorder,
+          DryRunLoggingContext dryRunLoggingContext,
+          DryRunLogBufferRegistry bufferRegistry,
+          int maxEventsPerRun,
+          CbsNovaPreviewProperties previewProperties,
+          CbsNovaFakesProperties fakesProperties,
+          RunScopedFakeConfig runScopedFakeConfig,
+          MeterRegistry meterRegistry,
+          HierarchyDiagramRenderer diagramRenderer,
+          ExecutorService executor) {
+    this(recorder, dryRunLoggingContext, bufferRegistry, maxEventsPerRun, previewProperties,
+            fakesProperties, runScopedFakeConfig, meterRegistry, diagramRenderer, executor,
+            null);
+  }
 
   @Override
   public @NonNull Result<HierarchyReport> execute(@NonNull String name,
           @NonNull Context<?> ctx) {
     HelperInterceptor fakeInterceptor = new FakeHelperInterceptor(runScopedFakeConfig, recorder);
+    HelperInterceptor dispatchInterceptor = objectGuard != null
+            ? new ManifestObjectGuardHelperInterceptor(objectGuard, fakeInterceptor)
+            : fakeInterceptor;
     Context<?> hierarchyCtx = ctx.withMetadata(
             cbs.nova.dsl.config.Constants.HIERARCHY_GRAPH_ACCUMULATOR_KEY,
             new HierarchyAccumulator());
@@ -54,7 +79,7 @@ public final class HierarchyDslPipe implements DslExecutionPipe<HierarchyReport>
             .stage(new ExecutionTraceStage())
             .stage(new FakingStage(fakesProperties, runScopedFakeConfig))
             .stage(new ExternalCallRecordingStage(recorder))
-            .stage(new DispatchStage(fakeInterceptor,
+            .stage(new DispatchStage(dispatchInterceptor,
                     Duration.ofMillis(previewProperties.execution().timeoutMs()), executor,
                     meterRegistry, dryRunLoggingContext))
             .build()

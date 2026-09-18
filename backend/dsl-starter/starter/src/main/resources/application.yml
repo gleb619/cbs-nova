@@ -154,6 +154,13 @@ cbs:
         # manifest reload or restart.
         block-ttl: 30m
         block-scope: piece
+      # Object-level capability enforcement (T552).
+      # Master feature flag — ships OFF by default. When false the guard is a no-op.
+      object-enforcement:
+        enabled: false
+      # Production default policy for unlisted helpers/processes/functions: permissive
+      # allows and audits; strict denies-by-default. Preview is always deny-by-default.
+      object-mode: permissive
 
 # DSL builder HTTP client resilience (T498).
 # Wired from csb.dsl.builder-client.* (namespace preserved for backwards compatibility).

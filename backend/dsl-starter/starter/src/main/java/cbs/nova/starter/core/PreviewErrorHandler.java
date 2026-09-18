@@ -8,6 +8,7 @@ import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.dsl.exception.DslCompensationException;
 import cbs.nova.dsl.exception.DslEntityNotFoundException;
 import cbs.nova.starter.core.pipe.PreviewTimeoutException;
+import cbs.nova.starter.exception.DslCapabilityDeniedException;
 import cbs.nova.dsl.exception.DslValidationException;
 import lombok.NoArgsConstructor;
 import org.jspecify.annotations.NonNull;
@@ -43,6 +44,9 @@ public class PreviewErrorHandler {
       }
       case ClassCastException cce -> {
         return inputValidationError(messageOf(cce), cce, entityName);
+      }
+      case DslCapabilityDeniedException dcd -> {
+        return capabilityDenied(dcd, entityName);
       }
       case PreviewTimeoutException _ -> {
         return build(PreviewErrorCode.PREVIEW_TIMEOUT,
@@ -87,6 +91,24 @@ public class PreviewErrorHandler {
             Map.of("exceptionType", cause.getClass().getName()), entityName);
   }
 
+
+  private static @NonNull ErrorResponse capabilityDenied(@NonNull DslCapabilityDeniedException dcd,
+          @Nullable String entityName) {
+    Map<String, Object> ctx = new HashMap<>();
+    ctx.put("pieceId", dcd.pieceId());
+    ctx.put("objectType", dcd.objectType());
+    ctx.put("objectName", dcd.objectName());
+    ctx.put("reason", dcd.reason());
+    if (dcd.correlationId() != null) {
+      ctx.put("correlationId", dcd.correlationId());
+    }
+    if (entityName != null && !entityName.isBlank()) {
+      ctx.put("name", entityName);
+    }
+    return new ErrorResponse(PreviewErrorCode.CAPABILITY_DENIED.name(), dcd.getMessage(),
+            entityName, dcd.runId(), dcd.correlationId(), null, null,
+            defaultSuggestion(PreviewErrorCode.CAPABILITY_DENIED), ctx);
+  }
   private static @NonNull ErrorResponse helperNotFound(@NonNull String message,
           @Nullable String helperName, @Nullable String entityName) {
     Map<String, Object> ctx = new HashMap<>();
@@ -165,6 +187,9 @@ public class PreviewErrorHandler {
 
   private static @NonNull String defaultSuggestion(@NonNull PreviewErrorCode code) {
     return switch (code) {
+      case CAPABILITY_DENIED ->
+        "Add an object-target manifest piece that allow-lists this helper/capability for the definition; "
+            + "or disable cbs.dsl.manifest.object-enforcement.enabled if this is intentional.";
       case DSL_COMPILATION_ERROR ->
         "Check the DSL source for syntax or validation errors; review the referenced entity names.";
       case HELPER_NOT_FOUND ->

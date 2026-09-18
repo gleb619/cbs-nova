@@ -3,6 +3,8 @@ package cbs.nova.dsl;
 import cbs.nova.dsl.model.SimpleContext;
 import cbs.nova.dsl.config.Constants;
 import cbs.nova.dsl.config.DslConfig;
+import cbs.nova.dsl.security.ObjectGuard;
+import cbs.nova.dsl.config.Constants;
 import cbs.nova.dsl.exception.DslEntityNotFoundException;
 import cbs.nova.dsl.exception.DslExecutionException;
 import cbs.nova.dsl.explain.ExplainResource;
@@ -28,6 +30,7 @@ import org.jspecify.annotations.NonNull;
 
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
 import java.util.Optional;
 import java.util.ServiceLoader;
 import java.util.concurrent.atomic.AtomicReference;
@@ -379,11 +382,16 @@ public final class GlobalManager {
           @NonNull String runId,
           @NonNull Object input,
           @NonNull ProcessDslObject process) {
+    Map<String, Object> metadata = new HashMap<>();
+    if (DslConfig.dslConfig().objectGuard().get().active()) {
+      metadata.put(Constants.DSL_DEFINITION_NAME_METADATA_KEY, process.name());
+    }
     return runProcessWithCompensation(
             runId,
             input,
             ctx -> runProcess(process, ctx),
-            (compCtx, error) -> compensateProcess(process, compCtx, error));
+            (compCtx, error) -> compensateProcess(process, compCtx, error),
+            metadata);
   }
 
   public @NonNull Object runProcessWithCompensation(
@@ -391,10 +399,19 @@ public final class GlobalManager {
           @NonNull Object input,
           @NonNull ProcessMain main,
           @NonNull ProcessCompensation compensation) {
+    return runProcessWithCompensation(runId, input, main, compensation, Map.of());
+  }
+
+  private @NonNull Object runProcessWithCompensation(
+          @NonNull String runId,
+          @NonNull Object input,
+          @NonNull ProcessMain main,
+          @NonNull ProcessCompensation compensation,
+          @NonNull Map<String, Object> metadata) {
     var saga = DslSaga.create();
     var repository = DslConfig.dslConfig().transactionExecutionRepository().get();
     var listener = new DefaultExecutionListener(runId, repository);
-    var ctx = createContext(input, Map.of(), ExecutionMode.RUN, runId)
+    var ctx = createContext(input, metadata, ExecutionMode.RUN, runId)
             .withTransactionRouting(TransactionRouting.TEMPORAL_ACTIVITY)
             .withExecutionListener(listener)
             .withSaga(saga);
@@ -435,6 +452,7 @@ public final class GlobalManager {
     INSTANCE.set(null);
     DslConfig.dslConfig().temporalProcessLauncher().replace(null);
     DslConfig.dslConfig().transactionInvoker().replace(null);
+    DslConfig.dslConfig().objectGuard().replace(ObjectGuard.NO_OP);
   }
 
   public void replaceGlobalManager(@NonNull GlobalManager replacement) {

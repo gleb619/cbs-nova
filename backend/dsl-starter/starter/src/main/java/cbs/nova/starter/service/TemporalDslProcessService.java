@@ -7,6 +7,8 @@ import cbs.nova.dsl.Context;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.listener.ExecutionTraceCollector;
 import cbs.nova.dsl.GlobalManager;
+import cbs.nova.dsl.config.DslConfig;
+import cbs.nova.dsl.security.ObjectGuard;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.history.DslRun;
 import cbs.nova.dsl.history.DslRunRepository;
@@ -41,6 +43,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -414,7 +417,11 @@ public class TemporalDslProcessService {
     activeSpans.put(runId, span);
     try (Scope ignored = span.makeCurrent()) {
       ExecutionTraceCollector traceCollector = new ExecutionTraceCollector();
-      Context<?> ctx = SimpleContext.builder().body(body).metadata(metadata).mode(ExecutionMode.RUN)
+      Map<String, Object> enrichedMetadata = new HashMap<>(metadata);
+      if (DslConfig.dslConfig().objectGuard().get().active()) {
+        enrichedMetadata.put(StarterConstants.DSL_DEFINITION_NAME_METADATA_KEY, processName);
+      }
+      Context<?> ctx = SimpleContext.builder().body(body).metadata(enrichedMetadata).mode(ExecutionMode.RUN)
               .runId(runId).build()
               .withExecutionTraceCollector(traceCollector);
       traceCollector.start();
