@@ -12,7 +12,7 @@ import cbs.nova.dsl.Context;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.Constants;
-import cbs.nova.dsl.model.ExplainGraphAccumulator;
+import cbs.nova.dsl.model.HierarchyAccumulator;
 import cbs.nova.starter.core.pipe.DslPipeContext;
 import cbs.nova.starter.core.pipe.DslPipeStage;
 import cbs.nova.starter.core.recorder.ExternalCall;
@@ -118,10 +118,10 @@ class ExternalCallRecordingStageTest {
   @Test
   void recordedCallsGoToAccumulatorWhenPresent() {
     ExternalCallRecorder recorder = mock(ExternalCallRecorder.class);
-    ExplainGraphAccumulator accumulator = new ExplainGraphAccumulator();
+    HierarchyAccumulator accumulator = new HierarchyAccumulator();
     Context<?> ctx = SimpleContext.builder("body").mode(ExecutionMode.EXPLAIN).runId("run-6")
             .build()
-            .withMetadata(Constants.EXPLAIN_GRAPH_ACCUMULATOR_KEY, accumulator);
+            .withMetadata(Constants.HIERARCHY_GRAPH_ACCUMULATOR_KEY, accumulator);
     DslPipeContext pipeContext = DslPipeContext.of("Ping", ctx, ExecutionMode.EXPLAIN, "run-6");
     List<ExternalCall> recorded = List.of(
             new ExternalCall(ExternalCallRecorder.TYPE_DATABASE, "jdbc:db", "select", 0L, Map.of()),

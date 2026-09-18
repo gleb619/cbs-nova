@@ -7,6 +7,7 @@ import cbs.nova.dsl.CallKind;
 import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.GlobalManager;
+import cbs.nova.dsl.model.HierarchyReport;
 import cbs.nova.dsl.model.PreviewReport;
 import cbs.nova.dsl.Result;
 import cbs.nova.starter.config.properties.CbsNovaFakesProperties;
@@ -16,6 +17,7 @@ import cbs.nova.starter.config.properties.CbsNovaExplainProperties;
 import cbs.nova.starter.config.properties.DryRunProperties;
 import cbs.nova.starter.core.event.DslExecutionEvent.DslExternalCallEvent;
 import cbs.nova.starter.core.pipe.ExplainDslPipe;
+import cbs.nova.starter.core.pipe.HierarchyDslPipe;
 import cbs.nova.starter.core.pipe.PreviewDslPipe;
 import cbs.nova.starter.core.pipe.RunDslPipe;
 import cbs.nova.starter.core.pipe.RunScopedFakeConfig;
@@ -24,7 +26,7 @@ import cbs.nova.starter.logging.DryRunLogBufferRegistry;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import cbs.nova.starter.logging.DryRunLogbackAppender;
 import cbs.nova.starter.logging.ThreadLocalDryRunLoggingContext;
-import cbs.nova.starter.reporting.ExplainDiagramRenderer;
+import cbs.nova.starter.reporting.HierarchyDiagramRenderer;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
@@ -62,13 +64,15 @@ class DevDslRuntimeTest {
           new CbsNovaFakesProperties(false, null),
           new RunScopedFakeConfig(Caffeine.newBuilder().build()),
           new DslExecutionEventBus());
-  private final ExplainDslPipe explainPipe = new ExplainDslPipe(recorder,
+  private final HierarchyDslPipe hierarchyPipe = new HierarchyDslPipe(recorder,
           dryRunLoggingContext, bufferRegistry, defaultMaxEventsPerRun(),
           previewProperties, new CbsNovaFakesProperties(false, null),
           new RunScopedFakeConfig(Caffeine.newBuilder().build()),
-          new SimpleMeterRegistry(), new ExplainDiagramRenderer(),
-          new CbsNovaExplainProperties(4000, "explain/", 128, 256, 4096), null);
-  private final DevDslRuntime runtime = new DevDslRuntime(previewPipe, runPipe, explainPipe);
+          new SimpleMeterRegistry(), new HierarchyDiagramRenderer(), null);
+  private final ExplainDslPipe explainPipe = new ExplainDslPipe(hierarchyPipe,
+          new CbsNovaExplainProperties(4000, "explain/", 128, 256, 4096));
+  private final DevDslRuntime runtime = new DevDslRuntime(previewPipe, runPipe, hierarchyPipe,
+          explainPipe);
 
   @BeforeEach
   void reset() {
@@ -132,6 +136,17 @@ class DevDslRuntimeTest {
     assertThat(report.name()).isEqualTo("Ping");
     assertThat(report.description()).startsWith("Process: Ping");
     assertThat(report.mermaid()).isNotBlank();
+    assertThat(report.children()).isEmpty();
+  }
+
+  @Test
+  void hierarchyReturnsGraphReport() {
+    var ctx = SimpleContext.builder("input").mode(ExecutionMode.HIERARCHY).build();
+    var result = runtime.hierarchy("Ping", ctx);
+    assertThat(result.isSuccess()).isTrue();
+    HierarchyReport report = result.value();
+    assertThat(report.name()).isEqualTo("Ping");
+    assertThat(report.astTree()).isNotNull();
   }
 
   @Test

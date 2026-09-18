@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
-class ExplainGraphReportTest {
+class HierarchyReportTest {
 
   private static final List<Map<String, Object>> CALLS = List.of(
           Map.of("type", "http", "target", "payment-api", "operation", "POST /pay"));
@@ -27,7 +27,7 @@ class ExplainGraphReportTest {
     var dsl = descriptor("echo", DslObject.DslType.PROCESS);
     var ast = new CallNode("echo", CallKind.PROCESS, null, null, true, List.of(), List.of());
 
-    var report = new ExplainGraphReport(
+    var report = new HierarchyReport(
             "echo",
             "Echoes input",
             List.of("step-1"),
@@ -60,7 +60,7 @@ class ExplainGraphReportTest {
 
   @Test
   void nullableDescriptorsAcceptNull() {
-    var report = new ExplainGraphReport(
+    var report = new HierarchyReport(
             "n", "d",
             List.of(), List.of(), Map.of(),
             false, null, null, null, List.of(), null, List.of(), List.of(), null);
@@ -77,8 +77,8 @@ class ExplainGraphReportTest {
   void listComponentsAreCopiedFromMutableSources() {
     var dryRunLogs = new ArrayList<Map<String, Object>>();
     var errors = new ArrayList<ErrorResponse>();
-    var children = new ArrayList<ExplainGraphReport>();
-    var report = new ExplainGraphReport(
+    var children = new ArrayList<HierarchyReport>();
+    var report = new HierarchyReport(
             "n", "d", List.of(), List.of(), Map.of(),
             false, null, null, null, dryRunLogs, null, errors, children, null);
     dryRunLogs.add(Map.of("log", "entry"));
@@ -95,33 +95,33 @@ class ExplainGraphReportTest {
     var trace = List.of("step-1");
     var calls = List.<Map<String, Object>>of();
     var counts = Map.of("a", 1);
-    var left = new ExplainGraphReport(
+    var left = new HierarchyReport(
             "n", "d", trace, calls, counts, false, null, null, null, List.of(), null, List.of(),
             List.of(), null);
-    var right = new ExplainGraphReport(
+    var right = new HierarchyReport(
             "n", "d", List.of("step-1"), List.of(), Map.of("a", 1), false, null, null, null,
             List.of(), null, List.of(), List.of(), null);
 
     assertThat(left).isEqualTo(right).hasSameHashCodeAs(right);
 
-    var differentDescription = new ExplainGraphReport(
+    var differentDescription = new HierarchyReport(
             "n", "other", trace, calls, counts, false, null, null, null, List.of(), null, List.of(),
             List.of(), null);
     assertThat(left).isNotEqualTo(differentDescription);
 
     var executable = new ExecutableDescriptor(
             "e", null, null, null, false, null, List.of());
-    var differentExecutable = new ExplainGraphReport(
+    var differentExecutable = new HierarchyReport(
             "n", "d", trace, calls, counts, false, executable, null, null, List.of(), null,
             List.of(), List.of(), null);
     assertThat(left).isNotEqualTo(differentExecutable);
 
-    var withCompensation = new ExplainGraphReport(
+    var withCompensation = new HierarchyReport(
             "n", "d", trace, calls, counts, true, null, null, null, List.of(), null, List.of(),
             List.of(), null);
     assertThat(left).isNotEqualTo(withCompensation);
 
-    var withChild = new ExplainGraphReport(
+    var withChild = new HierarchyReport(
             "n", "d", trace, calls, counts, false, null, null, null, List.of(), null, List.of(),
             List.of(left), null);
     assertThat(left).isNotEqualTo(withChild);
@@ -129,7 +129,7 @@ class ExplainGraphReportTest {
 
   @Test
   void toStringContainsComponentNames() {
-    var report = new ExplainGraphReport(
+    var report = new HierarchyReport(
             "n", "d", List.of(), List.of(), Map.of(), false, null, null, null, List.of(), null,
             List.of(), List.of(), null);
 
@@ -272,12 +272,12 @@ class ExplainGraphReportTest {
   }
 
   private static String nodeMermaid(String name, DslObject.DslType kind, boolean hasCompensation) {
-    return ExplainGraphDiagrams.mermaidNode(kind, name, hasCompensation, CALLS, COUNTS);
+    return HierarchyDiagrams.mermaidNode(kind, name, hasCompensation, CALLS, COUNTS);
   }
 
-  private static ExplainGraphReport graphReport(String name, DslObject.DslType kind,
-          boolean hasCompensation, ExplainGraphReport... children) {
-    return new ExplainGraphReport(
+  private static HierarchyReport graphReport(String name, DslObject.DslType kind,
+          boolean hasCompensation, HierarchyReport... children) {
+    return new HierarchyReport(
             name,
             name + " description",
             List.of(),

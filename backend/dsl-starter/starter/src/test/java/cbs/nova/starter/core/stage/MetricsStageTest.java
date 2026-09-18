@@ -11,7 +11,7 @@ import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.PreviewMetricsSnapshot;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.Constants;
-import cbs.nova.dsl.model.ExplainGraphAccumulator;
+import cbs.nova.dsl.model.HierarchyAccumulator;
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.core.pipe.DslPipeContext;
 import cbs.nova.starter.core.pipe.DslPipeStage;
@@ -180,10 +180,10 @@ class MetricsStageTest {
   @Test
   void explainModeReadsAstTreeAndExternalCallsFromAccumulatorAndWritesMetricsBack() {
     MeterRegistry registry = new SimpleMeterRegistry();
-    ExplainGraphAccumulator accumulator = new ExplainGraphAccumulator();
+    HierarchyAccumulator accumulator = new HierarchyAccumulator();
     Context<?> originalDsl = SimpleContext.builder("body").mode(ExecutionMode.EXPLAIN)
             .runId("run-1").build()
-            .withMetadata(Constants.EXPLAIN_GRAPH_ACCUMULATOR_KEY, accumulator);
+            .withMetadata(Constants.HIERARCHY_GRAPH_ACCUMULATOR_KEY, accumulator);
     DslPipeContext pipeContext = DslPipeContext.of(
             "Ping", originalDsl, ExecutionMode.EXPLAIN, "run-1");
     accumulator.astTree(CallNode.leaf("root", CallKind.PROCESS, null, "ok", true));

@@ -17,6 +17,7 @@ import cbs.nova.starter.config.properties.CbsNovaLoggingProperties;
 import cbs.nova.starter.controller.DslRuntimeHandler;
 import cbs.nova.starter.converter.DslRuntimeMapper;
 import cbs.nova.starter.core.pipe.ExplainDslPipe;
+import cbs.nova.starter.core.pipe.HierarchyDslPipe;
 import cbs.nova.starter.core.pipe.PreviewDslPipe;
 import cbs.nova.starter.core.pipe.RunDslPipe;
 import cbs.nova.starter.core.pipe.RunScopedFakeConfig;
@@ -25,7 +26,7 @@ import cbs.nova.starter.logging.ThreadLocalDryRunLoggingContext;
 import cbs.nova.starter.logging.DryRunLogBufferRegistry;
 import cbs.nova.starter.logging.DryRunLogbackAppender;
 import cbs.nova.starter.logging.LoggingExecutionListener;
-import cbs.nova.starter.reporting.ExplainDiagramRenderer;
+import cbs.nova.starter.reporting.HierarchyDiagramRenderer;
 import cbs.nova.starter.service.DslRuntimeService;
 import cbs.nova.starter.service.InputValidator;
 import cbs.nova.dsl.jsonschema.JacksonJsonSchemaGenerator;
@@ -74,13 +75,14 @@ class DslStarterIntegrationTest {
             new SimpleMeterRegistry(), null);
     var runPipe = new RunDslPipe(recorder, new CbsNovaFakesProperties(false, null),
             new RunScopedFakeConfig(Caffeine.newBuilder().build()), new DslExecutionEventBus());
-    var explainPipe = new ExplainDslPipe(recorder, dryRunLoggingContext,
+    var hierarchyPipe = new HierarchyDslPipe(recorder, dryRunLoggingContext,
             bufferRegistry, defaultMaxEventsPerRun(), previewProperties,
             new CbsNovaFakesProperties(false, null),
             new RunScopedFakeConfig(Caffeine.newBuilder().build()),
-            new SimpleMeterRegistry(), new ExplainDiagramRenderer(),
-            new CbsNovaExplainProperties(4000, "explain/", 128, 256, 4096), null);
-    var runtime = new DevDslRuntime(previewPipe, runPipe, explainPipe);
+            new SimpleMeterRegistry(), new HierarchyDiagramRenderer(), null);
+    var explainPipe = new ExplainDslPipe(hierarchyPipe,
+            new CbsNovaExplainProperties(4000, "explain/", 128, 256, 4096));
+    var runtime = new DevDslRuntime(previewPipe, runPipe, hierarchyPipe, explainPipe);
     var loggingProperties = new CbsNovaLoggingProperties(
             CbsNovaLoggingProperties.Level.INFO,
             CbsNovaLoggingProperties.Level.INFO,

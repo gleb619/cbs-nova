@@ -20,6 +20,7 @@ import cbs.nova.dsl.exception.DslException;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.model.ExplainReport;
 import cbs.nova.dsl.GlobalManager;
+import cbs.nova.dsl.model.HierarchyReport;
 import cbs.nova.dsl.PreviewErrorCode;
 import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.dsl.model.PreviewReport;
@@ -204,6 +205,23 @@ class DslRuntimeResourceTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.name").value("P"))
             .andExpect(jsonPath("$.description").value("desc"));
+  }
+
+  @Test
+  void hierarchyReturns200WithReport() throws Exception {
+    HierarchyReport report = new HierarchyReport(
+            "Ping", "Process: Ping", List.of(), List.of(), Map.of(),
+            false, null, null, null, List.of(), null, List.of(), List.of(), null);
+    doReturn(Result.success(report)).when(dslRuntime).hierarchy(eq("Ping"), any());
+
+    mockMvc
+            .perform(
+                    post("/api/dsl/hierarchy/Ping")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"body\": \"hello\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.name").value("Ping"))
+            .andExpect(jsonPath("$.description").value("Process: Ping"));
   }
 
   @Test

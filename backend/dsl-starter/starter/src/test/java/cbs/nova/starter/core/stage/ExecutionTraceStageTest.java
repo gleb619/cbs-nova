@@ -9,7 +9,7 @@ import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.listener.ExecutionTraceCollector;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.Constants;
-import cbs.nova.dsl.model.ExplainGraphAccumulator;
+import cbs.nova.dsl.model.HierarchyAccumulator;
 import cbs.nova.starter.core.pipe.DslPipeContext;
 import cbs.nova.starter.core.pipe.DslPipeStage;
 import java.util.List;
@@ -87,10 +87,10 @@ class ExecutionTraceStageTest {
 
   @Test
   void executionTraceGoesToAccumulatorWhenPresent() {
-    ExplainGraphAccumulator accumulator = new ExplainGraphAccumulator();
+    HierarchyAccumulator accumulator = new HierarchyAccumulator();
     Context<?> originalDsl = SimpleContext.builder("body").mode(ExecutionMode.EXPLAIN)
             .runId("run-1").build()
-            .withMetadata(Constants.EXPLAIN_GRAPH_ACCUMULATOR_KEY, accumulator);
+            .withMetadata(Constants.HIERARCHY_GRAPH_ACCUMULATOR_KEY, accumulator);
     DslPipeContext pipeContext = DslPipeContext.of(
             "Ping", originalDsl, ExecutionMode.EXPLAIN, "run-1");
 

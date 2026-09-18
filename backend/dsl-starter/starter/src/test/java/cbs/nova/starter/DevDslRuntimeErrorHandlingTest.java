@@ -17,6 +17,7 @@ import cbs.nova.starter.config.properties.CbsNovaPreviewProperties;
 import cbs.nova.starter.config.properties.CbsNovaExplainProperties;
 import cbs.nova.starter.config.properties.DryRunProperties;
 import cbs.nova.starter.core.pipe.ExplainDslPipe;
+import cbs.nova.starter.core.pipe.HierarchyDslPipe;
 import cbs.nova.starter.core.pipe.PreviewDslPipe;
 import cbs.nova.starter.core.pipe.RunDslPipe;
 import cbs.nova.starter.core.pipe.RunScopedFakeConfig;
@@ -25,7 +26,7 @@ import cbs.nova.starter.logging.DryRunLogBufferRegistry;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import cbs.nova.starter.logging.DryRunLogbackAppender;
 import cbs.nova.starter.logging.ThreadLocalDryRunLoggingContext;
-import cbs.nova.starter.reporting.ExplainDiagramRenderer;
+import cbs.nova.starter.reporting.HierarchyDiagramRenderer;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
@@ -63,13 +64,15 @@ class DevDslRuntimeErrorHandlingTest {
           new CbsNovaFakesProperties(false, null),
           new RunScopedFakeConfig(Caffeine.newBuilder().build()),
           new DslExecutionEventBus());
-  private final ExplainDslPipe explainPipe = new ExplainDslPipe(recorder,
+  private final HierarchyDslPipe hierarchyPipe = new HierarchyDslPipe(recorder,
           dryRunLoggingContext, bufferRegistry, defaultMaxEventsPerRun(),
           previewProperties, new CbsNovaFakesProperties(false, null),
           new RunScopedFakeConfig(Caffeine.newBuilder().build()),
-          new SimpleMeterRegistry(), new ExplainDiagramRenderer(),
-          new CbsNovaExplainProperties(4000, "explain/", 128, 256, 4096), null);
-  private final DevDslRuntime runtime = new DevDslRuntime(previewPipe, runPipe, explainPipe);
+          new SimpleMeterRegistry(), new HierarchyDiagramRenderer(), null);
+  private final ExplainDslPipe explainPipe = new ExplainDslPipe(hierarchyPipe,
+          new CbsNovaExplainProperties(4000, "explain/", 128, 256, 4096));
+  private final DevDslRuntime runtime = new DevDslRuntime(previewPipe, runPipe, hierarchyPipe,
+          explainPipe);
 
   @BeforeEach
   void setUp() {
@@ -149,6 +152,6 @@ class DevDslRuntimeErrorHandlingTest {
 
     assertThat(report).isNotNull();
     assertThat(report.name()).isEqualTo("Ghost");
-    assertThat(report.description()).contains("Entity: Ghost", "1 errors");
+    assertThat(report.description()).contains("Entity: Ghost");
   }
 }

@@ -11,11 +11,11 @@ import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.PreviewErrorCode;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.model.ExplainReport;
+import cbs.nova.dsl.model.HierarchyReport;
 import cbs.nova.starter.config.properties.CbsNovaFakesProperties;
 import cbs.nova.starter.config.properties.CbsNovaPreviewProperties;
-import cbs.nova.starter.config.properties.CbsNovaExplainProperties;
 import cbs.nova.starter.config.properties.DryRunProperties;
-import cbs.nova.starter.core.pipe.ExplainDslPipe;
+import cbs.nova.starter.core.pipe.HierarchyDslPipe;
 import cbs.nova.starter.core.pipe.PreviewDslPipe;
 import cbs.nova.starter.core.pipe.RunScopedFakeConfig;
 import cbs.nova.starter.core.recorder.RunIdKeyedExternalCallRecorder;
@@ -23,7 +23,7 @@ import cbs.nova.starter.logging.DryRunLogBufferRegistry;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import cbs.nova.starter.logging.DryRunLogbackAppender;
 import cbs.nova.starter.logging.ThreadLocalDryRunLoggingContext;
-import cbs.nova.starter.reporting.ExplainDiagramRenderer;
+import cbs.nova.starter.reporting.HierarchyDiagramRenderer;
 import cbs.nova.starter.service.PreviewResultCache;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.AfterEach;
@@ -152,11 +152,11 @@ class PreviewTimeoutTest {
 
   @Test
   void explainPathHonoursTimeout() {
-    ExplainDslPipe pipe = explainPipe(timeoutProperties(100), dispatchExecutor);
+    HierarchyDslPipe pipe = hierarchyPipe(timeoutProperties(100), dispatchExecutor);
 
     long start = System.currentTimeMillis();
     var result = pipe.execute("Slow",
-            SimpleContext.builder("in").mode(ExecutionMode.EXPLAIN).build());
+            SimpleContext.builder("in").mode(ExecutionMode.HIERARCHY).build());
     long elapsed = System.currentTimeMillis() - start;
 
     assertThat(result.isSuccess()).isTrue();
@@ -180,14 +180,12 @@ class PreviewTimeoutTest {
             executor);
   }
 
-  private ExplainDslPipe explainPipe(CbsNovaPreviewProperties properties,
+  private HierarchyDslPipe hierarchyPipe(CbsNovaPreviewProperties properties,
           ExecutorService executor) {
-    return new ExplainDslPipe(recorder, dryRunLoggingContext, bufferRegistry,
+    return new HierarchyDslPipe(recorder, dryRunLoggingContext, bufferRegistry,
             defaultMaxEventsPerRun(), properties,
             new CbsNovaFakesProperties(false, null),
             new RunScopedFakeConfig(Caffeine.newBuilder().build()), meterRegistry,
-            new ExplainDiagramRenderer(), new CbsNovaExplainProperties(4000, "explain/", 128, 256,
-                    4096),
-            executor);
+            new HierarchyDiagramRenderer(), executor);
   }
 }

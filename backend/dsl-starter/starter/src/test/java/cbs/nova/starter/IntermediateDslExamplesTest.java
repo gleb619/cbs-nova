@@ -29,6 +29,7 @@ import cbs.nova.starter.config.properties.CbsNovaLoggingProperties.Level;
 import cbs.nova.starter.config.properties.CbsNovaExplainProperties;
 import cbs.nova.starter.config.properties.DryRunProperties;
 import cbs.nova.starter.core.pipe.ExplainDslPipe;
+import cbs.nova.starter.core.pipe.HierarchyDslPipe;
 import cbs.nova.starter.core.pipe.PreviewDslPipe;
 import cbs.nova.starter.core.pipe.RunDslPipe;
 import cbs.nova.starter.core.pipe.RunScopedFakeConfig;
@@ -39,7 +40,7 @@ import cbs.nova.starter.helper.HttpCallHelper;
 import cbs.nova.starter.helper.JsonExtractHelper;
 import cbs.nova.starter.helper.UnreliableApiHelper;
 import cbs.nova.starter.logging.DryRunLogBufferRegistry;
-import cbs.nova.starter.reporting.ExplainDiagramRenderer;
+import cbs.nova.starter.reporting.HierarchyDiagramRenderer;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -72,13 +73,15 @@ class IntermediateDslExamplesTest {
           new CbsNovaFakesProperties(false, null),
           new RunScopedFakeConfig(Caffeine.newBuilder().build()),
           new DslExecutionEventBus());
-  private final ExplainDslPipe explainPipe = new ExplainDslPipe(recorder,
+  private final HierarchyDslPipe hierarchyPipe = new HierarchyDslPipe(recorder,
           dryRunLoggingContext, bufferRegistry, defaultMaxEventsPerRun(),
           previewProperties, new CbsNovaFakesProperties(false, null),
           new RunScopedFakeConfig(Caffeine.newBuilder().build()),
-          new SimpleMeterRegistry(), new ExplainDiagramRenderer(),
-          new CbsNovaExplainProperties(4000, "explain/", 128, 256, 4096), null);
-  private final DevDslRuntime runtime = new DevDslRuntime(previewPipe, runPipe, explainPipe);
+          new SimpleMeterRegistry(), new HierarchyDiagramRenderer(), null);
+  private final ExplainDslPipe explainPipe = new ExplainDslPipe(hierarchyPipe,
+          new CbsNovaExplainProperties(4000, "explain/", 128, 256, 4096));
+  private final DevDslRuntime runtime = new DevDslRuntime(previewPipe, runPipe, hierarchyPipe,
+          explainPipe);
 
   @BeforeEach
   void loadCompactDsls() {

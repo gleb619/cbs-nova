@@ -13,8 +13,8 @@ import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.ExecutableDescriptor;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.model.Descriptors;
-import cbs.nova.dsl.model.ExplainGraphAccumulator;
-import cbs.nova.dsl.model.ExplainGraphReport;
+import cbs.nova.dsl.model.HierarchyAccumulator;
+import cbs.nova.dsl.model.HierarchyReport;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.PreviewErrorCode;
 import cbs.nova.dsl.model.ErrorResponse;
@@ -22,15 +22,15 @@ import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.Constants;
 import cbs.nova.starter.core.pipe.DslPipeContext;
 import cbs.nova.starter.core.pipe.DslPipeStage;
-import cbs.nova.starter.core.pipe.ExplainGraphAccumulators;
-import cbs.nova.starter.reporting.ExplainDiagramRenderer;
+import cbs.nova.starter.core.pipe.HierarchyAccumulators;
+import cbs.nova.starter.reporting.HierarchyDiagramRenderer;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-class ExplainReportStageTest {
+class HierarchyReportStageTest {
 
   @BeforeEach
   void setUp() {
@@ -51,11 +51,11 @@ class ExplainReportStageTest {
       return Result.failure(new RuntimeException("downstream"));
     };
 
-    Result<?> result = new ExplainReportStage(new ExplainDiagramRenderer()).execute(pipeContext,
+    Result<?> result = new HierarchyReportStage(new HierarchyDiagramRenderer()).execute(pipeContext,
             next);
 
     assertThat(result.isSuccess()).isTrue();
-    ExplainGraphReport report = (ExplainGraphReport) result.value();
+    HierarchyReport report = (HierarchyReport) result.value();
     assertThat(report.errors()).hasSize(1);
     assertThat(report.errors().get(0).message()).contains("boom");
   }
@@ -74,10 +74,10 @@ class ExplainReportStageTest {
     DslPipeContext pipeContext = pipeContext(fnName, ExecutionMode.PREVIEW);
     DslPipeStage.Next next = c -> Result.success("downstream");
 
-    Result<?> result = new ExplainReportStage(new ExplainDiagramRenderer()).execute(pipeContext,
+    Result<?> result = new HierarchyReportStage(new HierarchyDiagramRenderer()).execute(pipeContext,
             next);
 
-    ExplainGraphReport report = (ExplainGraphReport) result.value();
+    HierarchyReport report = (HierarchyReport) result.value();
     assertThat(report.description()).isEqualTo("Function: " + fnName);
     assertThat(report.dslDescriptor()).isNotNull();
     assertThat(report.dslDescriptor().type()).isEqualTo(DslObject.DslType.FUNCTION);
@@ -92,10 +92,10 @@ class ExplainReportStageTest {
                     .compensation((ctx, history) -> ctx.log("rolled back"))
                     .build());
 
-    Result<?> result = new ExplainReportStage(new ExplainDiagramRenderer()).execute(
+    Result<?> result = new HierarchyReportStage(new HierarchyDiagramRenderer()).execute(
             pipeContext(processName, ExecutionMode.PREVIEW), c -> Result.success("downstream"));
 
-    ExplainGraphReport report = (ExplainGraphReport) result.value();
+    HierarchyReport report = (HierarchyReport) result.value();
     assertThat(report.hasCompensation()).isTrue();
     assertThat(report.mermaidDiagram()).contains("Compensate[Compensate]");
   }
@@ -108,13 +108,13 @@ class ExplainReportStageTest {
     String helperName = "echo-helper-" + System.nanoTime();
     GlobalManager.globalManager().registerHelper(helperName, new EchoHelper());
 
-    Result<?> processResult = new ExplainReportStage(new ExplainDiagramRenderer()).execute(
+    Result<?> processResult = new HierarchyReportStage(new HierarchyDiagramRenderer()).execute(
             pipeContext(processName, ExecutionMode.PREVIEW), c -> Result.success("downstream"));
-    Result<?> helperResult = new ExplainReportStage(new ExplainDiagramRenderer()).execute(
+    Result<?> helperResult = new HierarchyReportStage(new HierarchyDiagramRenderer()).execute(
             pipeContext(helperName, ExecutionMode.PREVIEW), c -> Result.success("downstream"));
 
-    assertThat(((ExplainGraphReport) processResult.value()).hasCompensation()).isFalse();
-    assertThat(((ExplainGraphReport) helperResult.value()).hasCompensation()).isFalse();
+    assertThat(((HierarchyReport) processResult.value()).hasCompensation()).isFalse();
+    assertThat(((HierarchyReport) helperResult.value()).hasCompensation()).isFalse();
   }
 
   @Test
@@ -123,10 +123,10 @@ class ExplainReportStageTest {
     GlobalManager.globalManager().registerProcess(
             Dsl.process(processName).execute(ctx -> Result.success("ok")).build());
 
-    Result<?> result = new ExplainReportStage(new ExplainDiagramRenderer()).execute(
+    Result<?> result = new HierarchyReportStage(new HierarchyDiagramRenderer()).execute(
             pipeContext(processName, ExecutionMode.PREVIEW), c -> Result.success("downstream"));
 
-    ExplainGraphReport report = (ExplainGraphReport) result.value();
+    HierarchyReport report = (HierarchyReport) result.value();
     assertThat(report.children()).isEmpty();
   }
 
@@ -138,10 +138,10 @@ class ExplainReportStageTest {
     DslPipeContext pipeContext = pipeContext(helperName, ExecutionMode.PREVIEW);
     DslPipeStage.Next next = c -> Result.success("downstream");
 
-    Result<?> result = new ExplainReportStage(new ExplainDiagramRenderer()).execute(pipeContext,
+    Result<?> result = new HierarchyReportStage(new HierarchyDiagramRenderer()).execute(pipeContext,
             next);
 
-    ExplainGraphReport report = (ExplainGraphReport) result.value();
+    HierarchyReport report = (HierarchyReport) result.value();
     assertThat(report.description()).isEqualTo("Helper: " + helperName);
     assertThat(report.dslDescriptor()).isNull();
     assertThat(report.executableDescriptor()).isNotNull();
@@ -153,10 +153,10 @@ class ExplainReportStageTest {
     DslPipeContext pipeContext = pipeContext(orphan, ExecutionMode.PREVIEW);
     DslPipeStage.Next next = c -> Result.success("downstream");
 
-    Result<?> result = new ExplainReportStage(new ExplainDiagramRenderer()).execute(pipeContext,
+    Result<?> result = new HierarchyReportStage(new HierarchyDiagramRenderer()).execute(pipeContext,
             next);
 
-    ExplainGraphReport report = (ExplainGraphReport) result.value();
+    HierarchyReport report = (HierarchyReport) result.value();
     assertThat(report.description()).isEqualTo("Entity: " + orphan);
     assertThat(report.dslDescriptor()).isNull();
     assertThat(report.executableDescriptor()).isNull();
@@ -171,10 +171,10 @@ class ExplainReportStageTest {
       return Result.success("downstream");
     };
 
-    Result<?> result = new ExplainReportStage(new ExplainDiagramRenderer()).execute(pipeContext,
+    Result<?> result = new HierarchyReportStage(new HierarchyDiagramRenderer()).execute(pipeContext,
             next);
 
-    ExplainGraphReport report = (ExplainGraphReport) result.value();
+    HierarchyReport report = (HierarchyReport) result.value();
     assertThat(report.errors()).isEmpty();
   }
 
@@ -184,10 +184,10 @@ class ExplainReportStageTest {
             ExecutionMode.PREVIEW);
     DslPipeStage.Next next = c -> Result.success("downstream");
 
-    Result<?> result = new ExplainReportStage(new ExplainDiagramRenderer()).execute(pipeContext,
+    Result<?> result = new HierarchyReportStage(new HierarchyDiagramRenderer()).execute(pipeContext,
             next);
 
-    ExplainGraphReport report = (ExplainGraphReport) result.value();
+    HierarchyReport report = (HierarchyReport) result.value();
     assertThat(report.errors()).isEmpty();
   }
 
@@ -199,10 +199,10 @@ class ExplainReportStageTest {
       return Result.success("downstream");
     };
 
-    Result<?> result = new ExplainReportStage(new ExplainDiagramRenderer()).execute(pipeContext,
+    Result<?> result = new HierarchyReportStage(new HierarchyDiagramRenderer()).execute(pipeContext,
             next);
 
-    ExplainGraphReport report = (ExplainGraphReport) result.value();
+    HierarchyReport report = (HierarchyReport) result.value();
     assertThat(report.errors()).hasSize(1);
     ErrorResponse detail = report.errors().get(0);
     assertThat(detail.code()).isEqualTo(PreviewErrorCode.UNKNOWN_ERROR.name());
@@ -215,10 +215,10 @@ class ExplainReportStageTest {
             ExecutionMode.PREVIEW);
     DslPipeStage.Next next = c -> Result.success("downstream");
 
-    Result<?> result = new ExplainReportStage(new ExplainDiagramRenderer()).execute(pipeContext,
+    Result<?> result = new HierarchyReportStage(new HierarchyDiagramRenderer()).execute(pipeContext,
             next);
 
-    ExplainGraphReport report = (ExplainGraphReport) result.value();
+    HierarchyReport report = (HierarchyReport) result.value();
     assertThat(report.externalCalls()).isEmpty();
     assertThat(report.callCounts()).isEmpty();
   }
@@ -236,10 +236,10 @@ class ExplainReportStageTest {
             .callCounts(Map.of("database", 1, "http", 1));
     DslPipeStage.Next next = c -> Result.success("downstream");
 
-    Result<?> result = new ExplainReportStage(new ExplainDiagramRenderer()).execute(pipeContext,
+    Result<?> result = new HierarchyReportStage(new HierarchyDiagramRenderer()).execute(pipeContext,
             next);
 
-    ExplainGraphReport report = (ExplainGraphReport) result.value();
+    HierarchyReport report = (HierarchyReport) result.value();
     assertThat(report.externalCalls()).hasSize(2);
     assertThat(report.callCounts())
             .containsEntry("database", 1)
@@ -257,10 +257,10 @@ class ExplainReportStageTest {
                     Map.of(cbs.nova.dsl.CallKind.PROCESS, 1), Map.of()));
     DslPipeStage.Next next = c -> Result.success("downstream");
 
-    Result<?> result = new ExplainReportStage(new ExplainDiagramRenderer()).execute(pipeContext,
+    Result<?> result = new HierarchyReportStage(new HierarchyDiagramRenderer()).execute(pipeContext,
             next);
 
-    ExplainGraphReport report = (ExplainGraphReport) result.value();
+    HierarchyReport report = (HierarchyReport) result.value();
     assertThat(report.executionTrace()).containsExactly("step-1", "step-2");
     assertThat(report.dryRunLogs()).hasSize(1);
     assertThat(report.metrics()).isNotNull();
@@ -275,10 +275,10 @@ class ExplainReportStageTest {
             ExecutionMode.PREVIEW, "run-1");
     DslPipeStage.Next next = c -> Result.success("downstream");
 
-    assertThatThrownBy(() -> new ExplainReportStage(new ExplainDiagramRenderer())
+    assertThatThrownBy(() -> new HierarchyReportStage(new HierarchyDiagramRenderer())
             .execute(pipeContext, next))
             .isInstanceOf(IllegalStateException.class)
-            .hasMessageContaining("ExplainGraphAccumulator");
+            .hasMessageContaining("HierarchyAccumulator");
   }
 
   @Test
@@ -287,10 +287,10 @@ class ExplainReportStageTest {
             ExecutionMode.PREVIEW);
     DslPipeStage.Next next = c -> Result.success("downstream");
 
-    Result<?> result = new ExplainReportStage(new ExplainDiagramRenderer()).execute(pipeContext,
+    Result<?> result = new HierarchyReportStage(new HierarchyDiagramRenderer()).execute(pipeContext,
             next);
 
-    ExplainGraphReport report = (ExplainGraphReport) result.value();
+    HierarchyReport report = (HierarchyReport) result.value();
     assertThat(report.executionTrace()).isEmpty();
     assertThat(report.dryRunLogs()).isEmpty();
     assertThat(report.astTree()).isNull();
@@ -299,13 +299,13 @@ class ExplainReportStageTest {
 
   private DslPipeContext pipeContext(String name, ExecutionMode mode) {
     Context<?> ctx = SimpleContext.builder("body").mode(mode).runId("run-1").build()
-            .withMetadata(Constants.EXPLAIN_GRAPH_ACCUMULATOR_KEY,
-                    new ExplainGraphAccumulator());
+            .withMetadata(Constants.HIERARCHY_GRAPH_ACCUMULATOR_KEY,
+                    new HierarchyAccumulator());
     return DslPipeContext.of(name, ctx, mode, "run-1");
   }
 
-  private ExplainGraphAccumulator accumulatorOf(DslPipeContext pipeContext) {
-    return ExplainGraphAccumulators.resolve(pipeContext).orElseThrow();
+  private HierarchyAccumulator accumulatorOf(DslPipeContext pipeContext) {
+    return HierarchyAccumulators.resolve(pipeContext).orElseThrow();
   }
 
   private static final class EchoHelper implements Executable<Object, Object> {

@@ -5,18 +5,18 @@ import static org.assertj.core.api.Assertions.assertThat;
 import cbs.nova.dsl.generator.BpmnDiagramGenerator;
 import cbs.nova.dsl.generator.MermaidDiagramGenerator;
 import cbs.nova.dsl.generator.PlantUmlDiagramGenerator;
-import cbs.nova.dsl.model.ExplainGraphReport;
+import cbs.nova.dsl.model.HierarchyReport;
 import cbs.nova.dsl.model.ObjectDescriptor;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 /**
- * Snapshot-style equivalence: an {@link ExplainGraphReport} built from the same fields a live
+ * Snapshot-style equivalence: an {@link HierarchyReport} built from the same fields a live
  * process/transaction/helper exposes must render to exactly the diagram strings the generators
  * produce for that live object, in all three formats.
  */
-class ExplainGraphReportDiagramTest {
+class HierarchyReportDiagramTest {
 
   private static final List<Map<String, Object>> CALLS = List.of(
           Map.of("type", "http", "target", "payment-api", "operation", "POST /pay"));
@@ -78,9 +78,9 @@ class ExplainGraphReportDiagramTest {
     assertThat(bpmn.forReport(report)).isEqualTo(report.toBpmn());
   }
 
-  private static ExplainGraphReport reportOf(String name, DslObject.DslType kind,
+  private static HierarchyReport reportOf(String name, DslObject.DslType kind,
           boolean hasCompensation) {
-    return new ExplainGraphReport(
+    return new HierarchyReport(
             name,
             name,
             List.of(),

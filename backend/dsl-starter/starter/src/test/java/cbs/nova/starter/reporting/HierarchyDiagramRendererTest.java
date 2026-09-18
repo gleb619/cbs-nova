@@ -10,16 +10,16 @@ import cbs.nova.dsl.ExecutableDescriptor;
 import cbs.nova.dsl.DslObject.DslType;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.model.ExplainGraphReport;
+import cbs.nova.dsl.model.HierarchyReport;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-class ExplainDiagramRendererTest {
+class HierarchyDiagramRendererTest {
 
-  private final ExplainDiagramRenderer renderer = new ExplainDiagramRenderer();
+  private final HierarchyDiagramRenderer renderer = new HierarchyDiagramRenderer();
 
   @BeforeEach
   void setUp() {
@@ -39,7 +39,7 @@ class ExplainDiagramRendererTest {
                     .execute(ctx -> Result.success("ok"))
                     .build());
 
-    ExplainGraphReport report = new ExplainGraphReport(
+    HierarchyReport report = new HierarchyReport(
             processName,
             "Process: " + processName,
             List.of(),
@@ -98,7 +98,7 @@ class ExplainDiagramRendererTest {
   @Test
   void reportRenderingDoesNotDependOnRegistryState() {
     String processName = "GoneProcess-" + System.nanoTime();
-    ExplainGraphReport report = new ExplainGraphReport(
+    HierarchyReport report = new HierarchyReport(
             processName,
             "Process: " + processName,
             List.of(),

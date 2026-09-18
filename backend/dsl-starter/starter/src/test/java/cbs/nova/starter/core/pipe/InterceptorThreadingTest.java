@@ -17,7 +17,7 @@ import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.fake.FakeConfig;
 import cbs.nova.dsl.fake.FakeEntry;
-import cbs.nova.dsl.model.ExplainGraphReport;
+import cbs.nova.dsl.model.ExplainReport;
 import cbs.nova.dsl.model.PreviewReport;
 import cbs.nova.starter.config.properties.CbsNovaFakesProperties;
 import cbs.nova.starter.config.properties.CbsNovaPreviewProperties;
@@ -29,7 +29,7 @@ import cbs.nova.starter.logging.DryRunLogBufferRegistry;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import cbs.nova.starter.logging.DryRunLogbackAppender;
 import cbs.nova.starter.logging.ThreadLocalDryRunLoggingContext;
-import cbs.nova.starter.reporting.ExplainDiagramRenderer;
+import cbs.nova.starter.reporting.HierarchyDiagramRenderer;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -172,15 +172,16 @@ class InterceptorThreadingTest {
     runScopedFakeConfig.register("run-explain",
             FakeConfig.of(new FakeEntry("helper", "dbCall", "faked-db")));
 
-    var explainPipe = new ExplainDslPipe(recorder, dryRunLoggingContext,
+    var hierarchyPipe = new HierarchyDslPipe(recorder, dryRunLoggingContext,
             bufferRegistry, defaultMaxEventsPerRun(), previewProperties,
             new CbsNovaFakesProperties(false, null), runScopedFakeConfig,
-            new SimpleMeterRegistry(), new ExplainDiagramRenderer(),
-            new CbsNovaExplainProperties(4000, "explain/", 128, 256, 4096), null);
+            new SimpleMeterRegistry(), new HierarchyDiagramRenderer(), null);
+    var explainPipe = new ExplainDslPipe(hierarchyPipe,
+            new CbsNovaExplainProperties(4000, "explain/", 128, 256, 4096));
 
     Context<?> ctx = SimpleContext.builder("payload").mode(ExecutionMode.EXPLAIN)
             .runId("run-explain").build();
-    Result<ExplainGraphReport> result = explainPipe.execute("dbCall", ctx);
+    Result<ExplainReport> result = explainPipe.execute("dbCall", ctx);
 
     assertThat(result.isSuccess()).isTrue();
     verify(recorder).record(eq("helper"), eq("dbCall"), eq("execute"), eq("faked-db"));
