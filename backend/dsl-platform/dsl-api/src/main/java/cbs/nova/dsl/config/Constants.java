@@ -19,7 +19,7 @@ public class Constants {
 
   public static final String EXPLAIN_BUDGET_CHARS_KEY = "explain.budgetChars";
 
-  public static final String EXPLAIN_GRAPH_ACCUMULATOR_KEY = "explain.graphAccumulator";
+  public static final String HIERARCHY_GRAPH_ACCUMULATOR_KEY = "hierarchy.graphAccumulator";
 
   public static final String CURRENT_OBJECT_NAME = "current.object_name";
 

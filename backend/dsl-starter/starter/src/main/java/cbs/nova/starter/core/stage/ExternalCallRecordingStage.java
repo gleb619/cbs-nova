@@ -5,7 +5,7 @@ import cbs.nova.starter.converter.ExternalCallConverter;
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.core.pipe.DslPipeContext;
 import cbs.nova.starter.core.pipe.DslPipeStage;
-import cbs.nova.starter.core.pipe.ExplainGraphAccumulators;
+import cbs.nova.starter.core.pipe.HierarchyAccumulators;
 import cbs.nova.starter.core.recorder.ExternalCall;
 import cbs.nova.starter.core.recorder.ExternalCallRecorder;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +25,7 @@ public final class ExternalCallRecordingStage implements DslPipeStage {
       return next.proceed(context);
     } finally {
       List<ExternalCall> calls = recorder.finishRun(context.runId());
-      var accumulator = ExplainGraphAccumulators.resolve(context);
+      var accumulator = HierarchyAccumulators.resolve(context);
       if (accumulator.isPresent()) {
         accumulator.get()
                 .externalCalls(ExternalCallConverter.toCallJson(calls))

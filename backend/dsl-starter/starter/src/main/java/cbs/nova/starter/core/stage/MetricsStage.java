@@ -5,11 +5,11 @@ import cbs.nova.dsl.CallNode;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.PreviewMetricsSnapshot;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.model.ExplainGraphAccumulator;
+import cbs.nova.dsl.model.HierarchyAccumulator;
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.core.pipe.DslPipeContext;
 import cbs.nova.starter.core.pipe.DslPipeStage;
-import cbs.nova.starter.core.pipe.ExplainGraphAccumulators;
+import cbs.nova.starter.core.pipe.HierarchyAccumulators;
 import cbs.nova.starter.core.recorder.ExternalCall;
 import cbs.nova.starter.metric.PreviewMetricsCollector;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -33,7 +33,7 @@ public final class MetricsStage implements DslPipeStage {
     }
     PreviewMetricsCollector collector = PreviewMetricsCollector.start();
     Timer.Sample sample = Timer.start(meterRegistry);
-    var accumulator = ExplainGraphAccumulators.resolve(context);
+    var accumulator = HierarchyAccumulators.resolve(context);
     try {
       return next.proceed(context);
     } finally {
@@ -54,7 +54,7 @@ public final class MetricsStage implements DslPipeStage {
   }
 
   private void countCallKinds(@NonNull DslPipeContext context,
-          @NonNull Optional<ExplainGraphAccumulator> accumulator,
+          @NonNull Optional<HierarchyAccumulator> accumulator,
           @NonNull PreviewMetricsCollector collector) {
     CallNode tree = accumulator.isPresent()
             ? accumulator.get().astTree()
@@ -74,7 +74,7 @@ public final class MetricsStage implements DslPipeStage {
   }
 
   private void countExternalCalls(@NonNull DslPipeContext context,
-          @NonNull Optional<ExplainGraphAccumulator> accumulator,
+          @NonNull Optional<HierarchyAccumulator> accumulator,
           @NonNull PreviewMetricsCollector collector) {
     if (accumulator.isPresent()) {
       for (Map<String, Object> call : accumulator.get().externalCalls()) {
