@@ -11,13 +11,13 @@ import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
 /**
- * One node of the explain call graph: the full execution trace of a single call plus links
+ * One node of the hierarchy call graph: the full execution trace of a single call plus links
  * ({@code children}) to the reports of the entities it calls. Diagrams are derived on demand from
  * the report's own fields — {@code name}, {@code dslDescriptor}, {@code hasCompensation},
  * {@code externalCalls}, {@code callCounts}, {@code children} — with no live registry lookups, via
  * {@link #toMermaid()}, {@link #toPlantUml()} and {@link #toBpmn()}.
  */
-public record ExplainGraphReport(
+public record HierarchyReport(
         @NonNull String name,
         @NonNull String description,
         @NonNull List<String> executionTrace,
@@ -30,24 +30,24 @@ public record ExplainGraphReport(
         @NonNull List<Map<String, Object>> dryRunLogs,
         @Nullable PreviewMetricsSnapshot metrics,
         @Nullable List<ErrorResponse> errors,
-        @NonNull List<ExplainGraphReport> children,
+        @NonNull List<HierarchyReport> children,
         @Nullable String mermaidDiagram) {
 
-  public ExplainGraphReport {
+  public HierarchyReport {
     dryRunLogs = dryRunLogs == null ? List.of() : List.copyOf(dryRunLogs);
     errors = errors == null ? List.of() : List.copyOf(errors);
     children = children == null ? List.of() : List.copyOf(children);
   }
 
   public @NonNull String toMermaid() {
-    return ExplainGraphDiagrams.mermaid(this);
+    return HierarchyDiagrams.mermaid(this);
   }
 
   public @NonNull String toPlantUml() {
-    return ExplainGraphDiagrams.plantUml(this);
+    return HierarchyDiagrams.plantUml(this);
   }
 
   public @NonNull String toBpmn() {
-    return ExplainGraphDiagrams.bpmn(this);
+    return HierarchyDiagrams.bpmn(this);
   }
 }

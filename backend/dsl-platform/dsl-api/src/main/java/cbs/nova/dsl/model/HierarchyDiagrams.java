@@ -9,28 +9,28 @@ import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Diagram rendering for {@link ExplainGraphReport} graphs and nodes. Whole-graph methods walk the
+ * Diagram rendering for {@link HierarchyReport} graphs and nodes. Whole-graph methods walk the
  * report graph (cycle-safe, breadth-first, keyed by node name) and render one diagram per node,
  * concatenated in walk order. Node-level methods render a single node from the same fields the
  * report carries, and are what the dsl-module {@code DiagramGenerator} implementations delegate to,
  * so a live process/transaction/helper and an equivalent report render to identical strings.
  */
-public final class ExplainGraphDiagrams {
+public final class HierarchyDiagrams {
 
-  private ExplainGraphDiagrams() {
+  private HierarchyDiagrams() {
   }
 
-  public static @NonNull String mermaid(@NonNull ExplainGraphReport report) {
+  public static @NonNull String mermaid(@NonNull HierarchyReport report) {
     return render(report, node -> MermaidGraphDiagram.render(kindOf(node), node.name(),
             node.hasCompensation(), node.externalCalls(), node.callCounts()));
   }
 
-  public static @NonNull String plantUml(@NonNull ExplainGraphReport report) {
+  public static @NonNull String plantUml(@NonNull HierarchyReport report) {
     return render(report, node -> PlantUmlGraphDiagram.render(kindOf(node), node.name(),
             node.hasCompensation(), node.externalCalls(), node.callCounts()));
   }
 
-  public static @NonNull String bpmn(@NonNull ExplainGraphReport report) {
+  public static @NonNull String bpmn(@NonNull HierarchyReport report) {
     return render(report, node -> BpmnGraphDiagram.render(kindOf(node), node.name(),
             node.hasCompensation(), node.externalCalls(), node.callCounts()));
   }
@@ -53,13 +53,13 @@ public final class ExplainGraphDiagrams {
     return BpmnGraphDiagram.render(kind, name, hasCompensation, externalCalls, callCounts);
   }
 
-  static @NonNull DslType kindOf(@NonNull ExplainGraphReport report) {
+  static @NonNull DslType kindOf(@NonNull HierarchyReport report) {
     return report.dslDescriptor() != null ? report.dslDescriptor().type() : DslType.OTHER;
   }
 
-  private static @NonNull String render(@NonNull ExplainGraphReport report,
-          @NonNull Function<ExplainGraphReport, String> nodeRenderer) {
-    return GraphWalk.breadthFirst(report, ExplainGraphReport::children, ExplainGraphReport::name)
+  private static @NonNull String render(@NonNull HierarchyReport report,
+          @NonNull Function<HierarchyReport, String> nodeRenderer) {
+    return GraphWalk.breadthFirst(report, HierarchyReport::children, HierarchyReport::name)
             .stream()
             .map(nodeRenderer)
             .collect(Collectors.joining("\n\n"));

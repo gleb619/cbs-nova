@@ -11,12 +11,12 @@ import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Typed in-progress carrier for one explain run's graph contributions. Pipe stages append their
+ * Typed in-progress carrier for one hierarchy run's graph contributions. Pipe stages append their
  * results via the fluent accessors; the report stage finishes the run with
  * {@link #build(String, String, ExecutableDescriptor, DslDescriptor)}. Stored in
- * {@code Context.metadata()} under {@code Constants.EXPLAIN_GRAPH_ACCUMULATOR_KEY}.
+ * {@code Context.metadata()} under {@code Constants.HIERARCHY_GRAPH_ACCUMULATOR_KEY}.
  */
-public final class ExplainGraphAccumulator {
+public final class HierarchyAccumulator {
 
   private @Nullable CallNode astTree;
   private @NonNull List<String> executionTrace = List.of();
@@ -31,7 +31,7 @@ public final class ExplainGraphAccumulator {
     return astTree;
   }
 
-  public @NonNull ExplainGraphAccumulator astTree(@Nullable CallNode astTree) {
+  public @NonNull HierarchyAccumulator astTree(@Nullable CallNode astTree) {
     this.astTree = astTree;
     return this;
   }
@@ -40,7 +40,7 @@ public final class ExplainGraphAccumulator {
     return executionTrace;
   }
 
-  public @NonNull ExplainGraphAccumulator executionTrace(@NonNull List<String> executionTrace) {
+  public @NonNull HierarchyAccumulator executionTrace(@NonNull List<String> executionTrace) {
     this.executionTrace = List.copyOf(executionTrace);
     return this;
   }
@@ -49,7 +49,7 @@ public final class ExplainGraphAccumulator {
     return externalCalls;
   }
 
-  public @NonNull ExplainGraphAccumulator externalCalls(
+  public @NonNull HierarchyAccumulator externalCalls(
           @NonNull List<Map<String, Object>> externalCalls) {
     this.externalCalls = List.copyOf(externalCalls);
     return this;
@@ -59,7 +59,7 @@ public final class ExplainGraphAccumulator {
     return callCounts;
   }
 
-  public @NonNull ExplainGraphAccumulator callCounts(@NonNull Map<String, Integer> callCounts) {
+  public @NonNull HierarchyAccumulator callCounts(@NonNull Map<String, Integer> callCounts) {
     this.callCounts = Map.copyOf(callCounts);
     return this;
   }
@@ -68,7 +68,7 @@ public final class ExplainGraphAccumulator {
     return dryRunLogs;
   }
 
-  public @NonNull ExplainGraphAccumulator dryRunLogs(
+  public @NonNull HierarchyAccumulator dryRunLogs(
           @NonNull List<Map<String, Object>> dryRunLogs) {
     this.dryRunLogs = List.copyOf(dryRunLogs);
     return this;
@@ -78,7 +78,7 @@ public final class ExplainGraphAccumulator {
     return metrics;
   }
 
-  public @NonNull ExplainGraphAccumulator metrics(@Nullable PreviewMetricsSnapshot metrics) {
+  public @NonNull HierarchyAccumulator metrics(@Nullable PreviewMetricsSnapshot metrics) {
     this.metrics = metrics;
     return this;
   }
@@ -87,7 +87,7 @@ public final class ExplainGraphAccumulator {
     return errors;
   }
 
-  public @NonNull ExplainGraphAccumulator errors(@NonNull List<ErrorResponse> errors) {
+  public @NonNull HierarchyAccumulator errors(@NonNull List<ErrorResponse> errors) {
     this.errors = List.copyOf(errors);
     return this;
   }
@@ -96,15 +96,15 @@ public final class ExplainGraphAccumulator {
     return hasCompensation;
   }
 
-  public @NonNull ExplainGraphAccumulator hasCompensation(boolean hasCompensation) {
+  public @NonNull HierarchyAccumulator hasCompensation(boolean hasCompensation) {
     this.hasCompensation = hasCompensation;
     return this;
   }
 
-  public @NonNull ExplainGraphReport build(@NonNull String name, @NonNull String description,
+  public @NonNull HierarchyReport build(@NonNull String name, @NonNull String description,
           @Nullable ExecutableDescriptor executableDescriptor,
           @Nullable DslDescriptor dslDescriptor) {
-    return new ExplainGraphReport(
+    return new HierarchyReport(
             name,
             description,
             executionTrace,
