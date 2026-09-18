@@ -8,6 +8,8 @@ import cbs.nova.starter.security.PieceGuardFilter;
 import cbs.nova.starter.security.PropertiesFeatureFlagSource;
 import cbs.nova.starter.security.RoleResolver;
 import cbs.nova.starter.service.DslAuditService;
+import cbs.nova.starter.service.PieceCheckBlockRegistry;
+import cbs.nova.starter.service.PieceCheckPipeline;
 import cbs.nova.starter.service.PieceManifestService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
@@ -74,10 +76,14 @@ public class PieceGuardFilterConfiguration {
           FeatureFlagSource flagSource,
           CbsDslManifestProperties properties,
           ObjectProvider<DslAuditService> auditServiceProvider,
-          ObjectMapper objectMapper) {
+          ObjectMapper objectMapper,
+          ObjectProvider<PieceCheckPipeline> postCheckPipelineProvider,
+          ObjectProvider<PieceCheckBlockRegistry> blockRegistryProvider) {
     log.info("PieceGuardFilter active — pre-check enforcement on manifest api-target routes");
     return new PieceGuardFilter(manifestService, roleResolver, flagSource, properties,
-            auditServiceProvider, objectMapper, System::nanoTime);
+            auditServiceProvider, objectMapper, System::nanoTime,
+            postCheckPipelineProvider.getIfAvailable(),
+            blockRegistryProvider.getIfAvailable());
   }
 
   @Bean

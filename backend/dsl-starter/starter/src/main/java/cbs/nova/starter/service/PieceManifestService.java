@@ -29,6 +29,7 @@ import java.util.stream.Stream;
 import java.util.stream.Collectors;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
@@ -60,6 +61,8 @@ import org.yaml.snakeyaml.error.YAMLException;
 public class PieceManifestService {
 
   private static final Set<String> VALID_FAIL_MODES = Set.of("deny", "audit-only");
+  private static final Set<String> VALID_ON_FAILURE = Set.of(
+          PostCheck.ON_FAILURE_WARN, PostCheck.ON_FAILURE_BLOCK);
   private static final Set<String> VALID_OBJECT_TYPES = Set.of("helper", "process", "function");
   private static final Set<String> VALID_ROLES = Stream.of(Role.values())
           .map(r -> r.name().toLowerCase(Locale.ROOT))
@@ -70,6 +73,7 @@ public class PieceManifestService {
   private final CbsDslManifestProperties properties;
   private final ResourceLoader resourceLoader;
   private final ObjectProvider<DslAuditService> auditServiceProvider;
+  private final @Nullable ObjectProvider<PieceCheckBlockRegistry> blockRegistryProvider;
   private final ReentrantLock reloadLock = new ReentrantLock();
   private final AntPathMatcher pathMatcher = new AntPathMatcher();
   private volatile Snapshot snapshot;
@@ -77,11 +81,19 @@ public class PieceManifestService {
   public PieceManifestService(CbsDslManifestProperties properties,
           ResourceLoader resourceLoader,
           ObjectProvider<DslAuditService> auditServiceProvider) {
+    this(properties, resourceLoader, auditServiceProvider, null);
+  }
+
+  public PieceManifestService(CbsDslManifestProperties properties,
+          ResourceLoader resourceLoader,
+          ObjectProvider<DslAuditService> auditServiceProvider,
+          @Nullable ObjectProvider<PieceCheckBlockRegistry> blockRegistryProvider) {
     this.properties = Objects.requireNonNull(properties, "properties required");
     this.resourceLoader = resourceLoader == null
             ? new org.springframework.core.io.DefaultResourceLoader()
             : resourceLoader;
     this.auditServiceProvider = auditServiceProvider;
+    this.blockRegistryProvider = blockRegistryProvider;
     this.snapshot = loadSnapshot(properties.path());
   }
 
@@ -140,6 +152,7 @@ public class PieceManifestService {
       snapshot = candidate;
       int count = candidate.pieces.size();
       log.info("[Manifest reload] swapped snapshot: {} piece(s) loaded", count);
+      clearBlockRegistry();
       audit(request, properties.path(), StarterConstants.OUTCOME_SUCCESS,
               Map.of("pieceCount", count));
       return ServerResponse.ok()
@@ -182,9 +195,24 @@ public class PieceManifestService {
     try {
       var candidate = loadSnapshot(properties.path());
       snapshot = candidate;
+      clearBlockRegistry();
       return new PieceManifest(candidate.pieces);
     } finally {
       reloadLock.unlock();
+    }
+  }
+
+  /**
+   * A successful reload is the operator's "reviewed and fixed" signal: all
+   * {@code block-next-execution} blocks clear so the reloaded manifest governs from scratch.
+   */
+  private void clearBlockRegistry() {
+    if (blockRegistryProvider == null) {
+      return;
+    }
+    PieceCheckBlockRegistry registry = blockRegistryProvider.getIfAvailable();
+    if (registry != null) {
+      registry.clear();
     }
   }
 
@@ -381,11 +409,14 @@ public class PieceManifestService {
       Map<String, Object> map = (Map<String, Object>) rawCheck;
       String type = requireString(map, "type", pieceId);
       checks.add(switch (type) {
-        case "audit-write" -> new PostCheck.AuditWriteCheck(requireString(map, "action", pieceId));
+        case "audit-write" -> new PostCheck.AuditWriteCheck(requireString(map, "action", pieceId),
+                onFailureOf(map, pieceId));
         case "invariant-assert" -> new PostCheck.InvariantAssertCheck(
                 map.get("expr") instanceof String s ? s : null,
-                map.get("description") instanceof String s ? s : null);
-        case "notify" -> new PostCheck.NotifyCheck(requireString(map, "channel", pieceId));
+                map.get("description") instanceof String s ? s : null,
+                onFailureOf(map, pieceId));
+        case "notify" -> new PostCheck.NotifyCheck(requireString(map, "channel", pieceId),
+                onFailureOf(map, pieceId));
         default -> throw entryError(pieceId, "postCheck.type",
                 "unknown postCheck type '" + type
                         + "'; expected audit-write, invariant-assert, or notify");
@@ -400,6 +431,23 @@ public class PieceManifestService {
       throw entryError(pieceId, key, "required string field '" + key + "' is missing or blank");
     }
     return s;
+  }
+
+  /**
+   * Reads and validates a postCheck entry's {@code onFailure} policy; absent/blank defaults to
+   * {@code warn} (T547 schema, enforced since T550).
+   */
+  private String onFailureOf(Map<String, Object> map, String pieceId) {
+    String onFailure = map.get("onFailure") instanceof String s ? s.trim() : null;
+    if (onFailure == null || onFailure.isBlank()) {
+      return PostCheck.ON_FAILURE_WARN;
+    }
+    String normalized = onFailure.toLowerCase(Locale.ROOT);
+    if (!VALID_ON_FAILURE.contains(normalized)) {
+      throw entryError(pieceId, "postCheck.onFailure",
+              "unknown onFailure '" + onFailure + "'; expected 'warn' or 'block-next-execution'");
+    }
+    return normalized;
   }
 
   private void validateId(String id) {

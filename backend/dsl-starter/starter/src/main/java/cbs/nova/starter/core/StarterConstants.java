@@ -48,6 +48,7 @@ public class StarterConstants {
 
   public static final String ACTION_MANIFEST_RELOAD = "MANIFEST_RELOAD";
   public static final String ACTION_PIECE_GUARD_DENY = "PIECE_GUARD_DENY";
+  public static final String ACTION_PIECE_POSTCHECK_FAILURE = "PIECE_POSTCHECK_FAILURE";
 
   // Correlation-id plumbing
 
@@ -58,6 +59,8 @@ public class StarterConstants {
 
   public static final String EMPTY_OUTPUT_JSON = "{}";
   public static final String PURGED_COUNTER = "dsl.runs.purged";
+  public static final String POSTCHECK_TOTAL_COUNTER = "dsl.piece.postcheck.total";
+  public static final String POSTCHECK_FAILED_COUNTER = "dsl.piece.postcheck.failed";
   public static final String TRANSACTIONS_PURGED_COUNTER = "dsl.run.transactions.purged";
   public static final String RUN_DURATION_TIMER = "dsl.run.duration";
   public static final String RUN_COUNT_COUNTER = "dsl.run.count";
@@ -162,6 +165,10 @@ public class StarterConstants {
   // Security error codes (RbacAuthorizationFilter)
 
   public static final String FORBIDDEN_CODE = "FORBIDDEN";
+
+  // Security error codes (PieceGuardFilter, T550 block-next-execution)
+
+  public static final String PIECE_BLOCKED_CODE = "PIECE_BLOCKED";
 
   // Cache tunables (CompensationTrackerHelper)
 

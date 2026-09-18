@@ -1,6 +1,7 @@
 package cbs.nova.starter.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -12,12 +13,17 @@ import static org.mockito.Mockito.when;
 import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.starter.config.properties.CbsDslManifestProperties;
 import cbs.nova.starter.core.StarterConstants;
+import cbs.nova.starter.model.InvariantContext;
 import cbs.nova.starter.model.Piece;
+import cbs.nova.starter.model.PostCheck;
 import cbs.nova.starter.model.PreCheck;
 import cbs.nova.starter.model.Target;
 import cbs.nova.starter.service.DslAuditService;
+import cbs.nova.starter.service.PieceCheckBlockRegistry;
+import cbs.nova.starter.service.PieceCheckPipeline;
 import cbs.nova.starter.service.PieceManifestService;
 import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -316,13 +322,172 @@ class PieceGuardFilterTest {
     verify(auditService, never()).record(any(), any(), any(), any(), any(), any());
   }
 
+  // --- T550: post-check trigger + block consult ----------------------------------
+
+  @Test
+  void successfulExecutionTriggersPostCheckPipelineWithExecutionContext() throws Exception {
+    PieceCheckPipeline pipeline = mock(PieceCheckPipeline.class);
+    filter = newFilter(new CbsDslManifestProperties(true, "classpath:piece-manifest.yaml"),
+            new PropertiesFeatureFlagSource(
+                    new CbsDslManifestProperties(true, "classpath:piece-manifest.yaml")),
+            pipeline, null);
+    authenticateAs("caller", Role.AUTHOR);
+    pieceWithPostChecks(List.of(new PreCheck.RoleCheck(List.of("author"))),
+            List.of(new PostCheck.AuditWriteCheck("DEFINITION_RELOAD")));
+
+    MockHttpServletRequest request = new MockHttpServletRequest("POST", ROUTE);
+    request.addHeader(StarterConstants.CORRELATION_ID_HEADER, "rid-42");
+    Invocation invocation = invoke(request, chainWriting(200, "ok"));
+
+    assertThat(invocation.chainRan()).isTrue();
+    assertThat(invocation.response().getStatus()).isEqualTo(200);
+    ArgumentCaptor<InvariantContext> context = ArgumentCaptor.forClass(InvariantContext.class);
+    verify(pipeline).onSuccess(any(Piece.class), anyString(), anyString(), eq("rid-42"),
+            context.capture());
+    assertThat(context.getValue().pieceId()).isEqualTo(PIECE_ID);
+    assertThat(context.getValue().principalRole()).isEqualTo("AUTHOR");
+    assertThat(context.getValue().method()).isEqualTo("POST");
+    assertThat(context.getValue().path()).isEqualTo(ROUTE);
+    assertThat(context.getValue().status()).isEqualTo(200);
+  }
+
+  @Test
+  void postChecksNeverRunOnFailedExecutionStatus() throws Exception {
+    PieceCheckPipeline pipeline = mock(PieceCheckPipeline.class);
+    filter = newFilter(new CbsDslManifestProperties(true, "classpath:piece-manifest.yaml"),
+            new PropertiesFeatureFlagSource(
+                    new CbsDslManifestProperties(true, "classpath:piece-manifest.yaml")),
+            pipeline, null);
+    authenticateAs("caller", Role.AUTHOR);
+    pieceWithPostChecks(List.of(new PreCheck.RoleCheck(List.of("author"))),
+            List.of(new PostCheck.NotifyCheck("workbench")));
+
+    Invocation invocation = invoke(new MockHttpServletRequest("POST", ROUTE),
+            chainWriting(500, "boom"));
+
+    assertThat(invocation.response().getStatus()).isEqualTo(500);
+    verify(pipeline, never()).onSuccess(any(), any(), any(), any(), any());
+  }
+
+  @Test
+  void postChecksNeverRunOnHandlerException() throws Exception {
+    PieceCheckPipeline pipeline = mock(PieceCheckPipeline.class);
+    filter = newFilter(new CbsDslManifestProperties(true, "classpath:piece-manifest.yaml"),
+            new PropertiesFeatureFlagSource(
+                    new CbsDslManifestProperties(true, "classpath:piece-manifest.yaml")),
+            pipeline, null);
+    authenticateAs("caller", Role.AUTHOR);
+    pieceWithPostChecks(List.of(new PreCheck.RoleCheck(List.of("author"))),
+            List.of(new PostCheck.NotifyCheck("workbench")));
+
+    FilterChain throwingChain = (req, res) -> {
+      throw new ServletException("handler exploded");
+    };
+    MockHttpServletResponse response = new MockHttpServletResponse();
+    assertThatThrownBy(() -> filter.doFilter(new MockHttpServletRequest("POST", ROUTE), response,
+            throwingChain)).isInstanceOf(ServletException.class);
+    verify(pipeline, never()).onSuccess(any(), any(), any(), any(), any());
+  }
+
+  @Test
+  void postChecksNeverRunOnPreCheckDenial() throws Exception {
+    PieceCheckPipeline pipeline = mock(PieceCheckPipeline.class);
+    filter = newFilter(new CbsDslManifestProperties(true, "classpath:piece-manifest.yaml"),
+            new PropertiesFeatureFlagSource(
+                    new CbsDslManifestProperties(true, "classpath:piece-manifest.yaml")),
+            pipeline, null);
+    authenticateAs("caller", Role.RUNNER);
+    pieceWithPostChecks(List.of(new PreCheck.RoleCheck(List.of("operator"))),
+            List.of(new PostCheck.NotifyCheck("workbench")));
+
+    Invocation invocation = invoke(new MockHttpServletRequest("POST", ROUTE),
+            chainWriting(200, "ok"));
+
+    assertThat(invocation.response().getStatus()).isEqualTo(403);
+    verify(pipeline, never()).onSuccess(any(), any(), any(), any(), any());
+  }
+
+  @Test
+  void postChecksNeverRunForRoutesAbsentFromTheManifest() throws Exception {
+    PieceCheckPipeline pipeline = mock(PieceCheckPipeline.class);
+    filter = newFilter(new CbsDslManifestProperties(true, "classpath:piece-manifest.yaml"),
+            new PropertiesFeatureFlagSource(
+                    new CbsDslManifestProperties(true, "classpath:piece-manifest.yaml")),
+            pipeline, null);
+    when(manifestService.findByRoute("GET", "/api/dsl/processes")).thenReturn(Optional.empty());
+
+    invoke(new MockHttpServletRequest("GET", "/api/dsl/processes"), chainWriting(200, "hello"));
+
+    verify(pipeline, never()).onSuccess(any(), any(), any(), any(), any());
+  }
+
+  @Test
+  void blockedPieceIsDeniedWithPieceBlockedCodeBeforePreChecks() throws Exception {
+    PieceCheckPipeline pipeline = mock(PieceCheckPipeline.class);
+    PieceCheckBlockRegistry registry = mock(PieceCheckBlockRegistry.class);
+    when(registry.isBlocked(PIECE_ID, "auth:caller")).thenReturn(true);
+    filter = newFilter(new CbsDslManifestProperties(true, "classpath:piece-manifest.yaml"),
+            new PropertiesFeatureFlagSource(
+                    new CbsDslManifestProperties(true, "classpath:piece-manifest.yaml")),
+            pipeline, registry);
+    // Pre-check would pass — the block alone must deny.
+    authenticateAs("caller", Role.ADMIN);
+    pieceWithPostChecks(List.of(new PreCheck.RoleCheck(List.of("admin"))),
+            List.of(new PostCheck.NotifyCheck("workbench")));
+
+    Invocation invocation = invoke(new MockHttpServletRequest("POST", ROUTE),
+            chainWriting(200, "ok"));
+
+    assertThat(invocation.chainRan()).isFalse();
+    assertThat(invocation.response().getStatus()).isEqualTo(403);
+    ErrorResponse body = decode(invocation.response());
+    assertThat(body.getCode()).isEqualTo(StarterConstants.PIECE_BLOCKED_CODE);
+    assertThat(body.getContext())
+            .containsEntry("pieceId", PIECE_ID)
+            .containsEntry("check", "post-check-block");
+    verify(pipeline, never()).onSuccess(any(), any(), any(), any(), any());
+  }
+
+  @Test
+  void unblockedPieceProceedsThroughPreChecksNormally() throws Exception {
+    PieceCheckPipeline pipeline = mock(PieceCheckPipeline.class);
+    PieceCheckBlockRegistry registry = mock(PieceCheckBlockRegistry.class);
+    when(registry.isBlocked(anyString(), anyString())).thenReturn(false);
+    filter = newFilter(new CbsDslManifestProperties(true, "classpath:piece-manifest.yaml"),
+            new PropertiesFeatureFlagSource(
+                    new CbsDslManifestProperties(true, "classpath:piece-manifest.yaml")),
+            pipeline, registry);
+    authenticateAs("caller", Role.AUTHOR);
+    pieceWithPostChecks(List.of(new PreCheck.RoleCheck(List.of("author"))), List.of());
+
+    Invocation invocation = invoke(new MockHttpServletRequest("POST", ROUTE),
+            chainWriting(200, "ok"));
+
+    assertThat(invocation.chainRan()).isTrue();
+    verify(registry).isBlocked(PIECE_ID, "auth:caller");
+    // No postCheck entries → no pipeline invocation.
+    verify(pipeline, never()).onSuccess(any(), any(), any(), any(), any());
+  }
+
   // --- helpers ----------------------------------------------------------------------
 
   private PieceGuardFilter newFilter(CbsDslManifestProperties properties,
           FeatureFlagSource flagSource) {
+    return newFilter(properties, flagSource, null, null);
+  }
+
+  private PieceGuardFilter newFilter(CbsDslManifestProperties properties,
+          FeatureFlagSource flagSource, PieceCheckPipeline postCheckPipeline,
+          PieceCheckBlockRegistry blockRegistry) {
     return new PieceGuardFilter(manifestService,
             new RoleResolver(StarterConstants.DEFAULT_CLAIM_NAME), flagSource, properties,
-            auditServiceProvider, objectMapper, clock::get);
+            auditServiceProvider, objectMapper, clock::get, postCheckPipeline, blockRegistry);
+  }
+
+  private void pieceWithPostChecks(List<PreCheck> preChecks, List<PostCheck> postChecks) {
+    Piece piece = new Piece(PIECE_ID,
+            new Target.ApiTarget("POST " + ROUTE), preChecks, postChecks, "deny");
+    when(manifestService.findByRoute(eq("POST"), eq(ROUTE))).thenReturn(Optional.of(piece));
   }
 
   private void pieceWith(List<PreCheck> preChecks) {

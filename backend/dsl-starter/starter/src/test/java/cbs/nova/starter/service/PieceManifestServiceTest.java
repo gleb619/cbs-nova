@@ -7,6 +7,7 @@ import cbs.nova.starter.AuditTestSupport;
 import cbs.nova.starter.config.properties.CbsDslManifestProperties;
 import cbs.nova.starter.exception.PieceManifestValidationException;
 import cbs.nova.starter.model.Piece;
+import cbs.nova.starter.model.PostCheck;
 import cbs.nova.starter.model.Target;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -19,6 +20,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.core.io.DefaultResourceLoader;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.web.servlet.function.ServerRequest;
@@ -357,6 +359,96 @@ class PieceManifestServiceTest {
     var row = rows.items().get(0);
     assertThat(row.action()).isEqualTo("MANIFEST_RELOAD");
     assertThat(row.outcome()).isEqualTo("FAILURE");
+  }
+
+  @Test
+  void parsesOnFailurePolicyPerPostCheckEntryDefaultingToWarn() throws IOException {
+    Path file = writeManifest("""
+            pieces:
+              - id: post-checked
+                target:
+                  type: api
+                  route: POST /api/post-checked
+                preCheck: []
+                postCheck:
+                  - type: audit-write
+                    action: DEFINITION_RELOAD
+                  - type: notify
+                    channel: workbench
+                    onFailure: block-next-execution
+                failMode: deny
+            """);
+    var service = service(file.toUri().toString());
+
+    var postChecks = service.find("post-checked").orElseThrow().postCheck();
+    assertThat(postChecks).hasSize(2);
+    assertThat(postChecks.get(0).onFailure()).isEqualTo(PostCheck.ON_FAILURE_WARN);
+    assertThat(postChecks.get(1).onFailure()).isEqualTo(PostCheck.ON_FAILURE_BLOCK);
+  }
+
+  @Test
+  void unknownOnFailurePolicyIsRejectedWithPieceIdAndField() throws IOException {
+    Path file = writeManifest("""
+            pieces:
+              - id: post-checked
+                target:
+                  type: api
+                  route: POST /api/post-checked
+                preCheck: []
+                postCheck:
+                  - type: notify
+                    channel: workbench
+                    onFailure: explode
+                failMode: deny
+            """);
+
+    assertThatThrownBy(() -> service(file.toUri().toString()))
+            .isInstanceOf(PieceManifestValidationException.class)
+            .hasMessageContaining("post-checked")
+            .hasMessageContaining("postCheck.onFailure");
+  }
+
+  @Test
+  void successfulReloadClearsPostCheckBlocks() throws IOException {
+    Path file = writeManifest("""
+            pieces:
+              - id: post-checked
+                target:
+                  type: api
+                  route: POST /api/post-checked
+                preCheck: []
+                postCheck: []
+                failMode: deny
+            """);
+    PieceCheckBlockRegistry registry = new PieceCheckBlockRegistry(
+            new CbsDslManifestProperties(true, "classpath:piece-manifest.yaml"),
+            System::currentTimeMillis);
+    registry.block("post-checked", "auth:alice", "invariant failed");
+    var service = new PieceManifestService(
+            new CbsDslManifestProperties(true, file.toUri().toString()),
+            new DefaultResourceLoader(),
+            AuditTestSupport.emptyProvider(),
+            new ObjectProvider<PieceCheckBlockRegistry>() {
+              @Override
+              public PieceCheckBlockRegistry getObject() {
+                return registry;
+              }
+
+              @Override
+              public PieceCheckBlockRegistry getIfAvailable() {
+                return registry;
+              }
+
+              @Override
+              public PieceCheckBlockRegistry getIfUnique() {
+                return registry;
+              }
+            });
+
+    var response = service.reload(reloadRequest());
+
+    assertThat(response.statusCode().value()).isEqualTo(200);
+    assertThat(registry.isBlocked("post-checked", "auth:alice")).isFalse();
   }
 
   private static PieceManifestService service(String path) {
