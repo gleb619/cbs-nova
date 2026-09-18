@@ -280,6 +280,20 @@ A server-side per-construct draft API exists (`DslDraftHandler` — save / read 
 (T401) is blocked because the draft API's `DraftRequest` carries only metadata (`name`, `type`, `status`,
 `version`, `taskQueue`) and no definition-body field, so there is nowhere server-side to store the edited source.
 
+## Manifest button guard (`T551`)
+
+`frontend/admin-ui-plugin/app/composables/useManifestGuard.ts` consumes the backend's read-only
+button-guard snapshot (`GET /api/v1/dsl/manifest/guard`, proxied by
+`server/api/v1/dsl/manifest/guard.get.ts`). The backend resolves every `button`-target manifest
+piece to an allow/deny verdict for the current principal — verdicts only, never `preCheck`/`postCheck`
+internals — and the composable fetches that snapshot once per session (`callOnce` + `useState`, same
+pattern as `useAuth`), exposing `{ allowed(pieceId), ready }`. Guardable buttons bind
+`:disabled="!allowed('piece-id')"` (proof call site: the workbench Publish action); the composable
+fails closed — fetch errors, 401/403, malformed payloads, and the not-yet-ready window all deny every
+piece, so a denied button never flashes enabled. This is strictly defense-in-depth UX sugar: the
+security boundary is T549's server-side `PieceGuardFilter`, which re-evaluates every guard at
+execution time and must never be replaced by client-side hiding.
+
 ## Styling
 
 All UI styling is based on the brandbook in [`colors.md`](colors.md).

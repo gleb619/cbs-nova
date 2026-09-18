@@ -47,6 +47,7 @@ vi.mock('h3', async (importOriginal) => {
 const healthHandler = (await import('../health.get')).default
 const definitionsHandler = (await import('../dsl/definitions.get')).default
 const reloadHandler = (await import('../dsl/reload.post')).default
+const manifestGuardHandler = (await import('../dsl/manifest/guard.get')).default
 const auditHandler = (await import('../dsl/audit.get')).default
 const eventsHandler = (await import('../dsl/events.get')).default
 const runHandler = (await import('../dsl/run/[name].post')).default
@@ -164,6 +165,14 @@ describe('dsl/reload.post', () => {
     expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/reload', {
       method: 'POST',
     })
+  })
+})
+
+describe('dsl/manifest/guard.get', () => {
+  it('GETs /api/dsl/manifest/guard with no query and no opts', async () => {
+    await manifestGuardHandler(fakeEvent)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/manifest/guard')
+    expect(proxyToBackendMock.mock.calls[0][2]).toBeUndefined()
   })
 })
 

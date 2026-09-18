@@ -37,6 +37,7 @@ type ExpectedProxy = {
 //     - DslIntrospectionRouterConfiguration.java
 //     - DslRuntimeRouterConfiguration.java
 //     - DslReloadRouterConfiguration.java
+//     - DslManifestRouterConfiguration.java
 //     - DslExecutionsRouterConfiguration.java
 //     - DslDiagnosticsRouterConfiguration.java
 //     - ApiKeyAdminRouterConfiguration.java
@@ -215,6 +216,12 @@ const expectedProxies: readonly ExpectedProxy[] = [
     method: 'POST',
     backendPath: '/api/dsl/reload',
     bffPath: '/api/v1/dsl/reload',
+  },
+  // DslManifestRouterConfiguration (T551 guard snapshot)
+  {
+    method: 'GET',
+    backendPath: '/api/dsl/manifest/guard',
+    bffPath: '/api/v1/dsl/manifest/guard',
   },
   // DslAuditRouterConfiguration
   {

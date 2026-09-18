@@ -4,6 +4,7 @@ import { useDraftDirty } from '@cbs/admin-ui-plugin/composables/useDraftDirty'
 import { useDraftSave } from '@cbs/admin-ui-plugin/composables/useDraftSave'
 import { useDslApi } from '@cbs/admin-ui-plugin/composables/useDslApi'
 import { useDslWorkbench } from '@cbs/admin-ui-plugin/composables/useDslWorkbench'
+import { useManifestGuard } from '@cbs/admin-ui-plugin/composables/useManifestGuard'
 import { useWorkbenchDraft } from '@cbs/admin-ui-plugin/composables/useWorkbenchDraft'
 import type {
   DslConstruct,
@@ -45,6 +46,9 @@ import { buildHelperSnippet } from '../utils/helperSnippet'
 
 const workbench = useDslWorkbench()
 const route = useRoute()
+// T551 — defense-in-depth button guard: the backend resolves the verdict server-side
+// (PieceGuardFilter stays the real gate); this only disables the Publish action when denied.
+const { allowed: guardAllowed } = useManifestGuard()
 const {
   state,
   selectedConstruct,
@@ -429,7 +433,8 @@ const actionItems = computed<DropdownMenuItem[]>(() => [
   {
     label: 'Publish',
     value: 'publish',
-    disabled: !selectedConstruct.value || state.value.isSaving,
+    disabled:
+      !selectedConstruct.value || state.value.isSaving || !guardAllowed('workbench-publish'),
     variant: 'primary',
   },
 ])
