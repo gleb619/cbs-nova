@@ -49,7 +49,8 @@ public final class DefaultProcessRunner implements ProcessRunner {
   }
 
   private boolean shouldUseTemporalLauncher(@NonNull Context<?> ctx) {
-    if (ctx.mode() == ExecutionMode.EXPLAIN || ctx.mode() == ExecutionMode.PREVIEW) {
+    if (ctx.mode() == ExecutionMode.EXPLAIN || ctx.mode() == ExecutionMode.PREVIEW
+            || ctx.mode() == ExecutionMode.HIERARCHY) {
       return false;
     }
     return temporalProcessLauncher != null && temporalProcessLauncher.canRun(ctx);
@@ -74,7 +75,7 @@ public final class DefaultProcessRunner implements ProcessRunner {
     try {
       result = switch (listeningCtx.mode()) {
         case EXPLAIN -> runExplainMode(process, richCtx);
-        case PREVIEW -> runPreviewMode(process, richCtx);
+        case PREVIEW, HIERARCHY -> runPreviewMode(process, richCtx);
         default -> runExecuteMode(process, richCtx);
       };
     } finally {
