@@ -141,15 +141,16 @@ Prefer `codegraph_*` over grep.
   from `CbsNovaExplainProperties.resourcesPrefix()` (`cbs.nova.explain.resources-prefix`, default
   `explain/`; same record carries `budgetChars`) and registers it into `DslConfig` in
   `dslApplicationRunner`; a user-defined `ExplainResourceResolver` bean wins. The pipe/stage explain
-  chain lives in the starter (`core/pipe/ExplainDslPipe`, stages in `core/stage` such as
-  `ExplainBudgetStage`/`ExplainReportStage`); helpers override `explain` for mode/arg-specific reports
-  (see `MathHelper`). Starter builds full 14-field `ExplainGraphReport` (package `cbs.nova.dsl.model/` —
+  chain lives in the starter (`core/pipe/ExplainDslPipe` delegating to `HierarchyDslPipe`, budget via
+  `core/pipe/ExplainBudget`); helpers override `explain` for mode/arg-specific reports
+  (see `MathHelper`). Starter builds a full 14-field `HierarchyReport` (package `cbs.nova.dsl.model/` —
   graph-shaped: `children`, `hasCompensation`, self-rendering `toMermaid()`/`toPlantUml()`/`toBpmn()`);
-  `DevDslRuntime` maps it to simple `ExplainReport` with one-line trace summary. Stage contributions
+  `ExplainDslPipe` maps it to the simple `ExplainReport` (name, description, per-node mermaid, children)
+  and applies the budget. Stage contributions
   (`astTree`, `executionTrace`, `externalCalls`, `callCounts`, `dryRunLogs`, `metrics`, `errors`,
-  `hasCompensation`) are accumulated in a typed `ExplainGraphAccumulator` (dsl-api) threaded via
-  `Context.metadata()` under `Constants.EXPLAIN_GRAPH_ACCUMULATOR_KEY`, created once per run by
-  `ExplainDslPipe` and finished by `ExplainReportStage` via `accumulator.build(...)`; shared stages
+  `hasCompensation`) are accumulated in a typed `HierarchyAccumulator` (dsl-api) threaded via
+  `Context.metadata()` under `Constants.HIERARCHY_GRAPH_ACCUMULATOR_KEY`, created once per run by
+  `HierarchyDslPipe` and finished by `HierarchyReportStage` via `accumulator.build(...)`; shared stages
   (`ExecutionTreeStage`, `ExecutionTraceStage`, `MetricsStage`, `DryRunLogStage`,
   `ExternalCallRecordingStage`) fall back to `DslPipeContext.attributes` when the accumulator is
   absent (preview/run pipes).
