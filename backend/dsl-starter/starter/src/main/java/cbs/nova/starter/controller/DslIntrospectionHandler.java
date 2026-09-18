@@ -6,7 +6,7 @@ import cbs.nova.starter.model.DslIntrospectionModels.DefinitionMetaDto;
 import cbs.nova.starter.model.DslIntrospectionModels.HelperSearchResult;
 import cbs.nova.starter.model.DslIntrospectionModels.ProcessDiagramDto;
 import cbs.nova.starter.model.PageResponse;
-import cbs.nova.starter.reporting.ExplainDiagramRenderer;
+import cbs.nova.starter.reporting.HierarchyDiagramRenderer;
 import cbs.nova.starter.service.DslIntrospectionService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +17,7 @@ import org.springframework.web.servlet.function.ServerResponse;
 public class DslIntrospectionHandler {
 
   private final DslIntrospectionService service;
-  private final ExplainDiagramRenderer diagramRenderer;
+  private final HierarchyDiagramRenderer diagramRenderer;
   private final RequestQueryConverter queryConverter;
 
   public ServerResponse processes(ServerRequest request) {

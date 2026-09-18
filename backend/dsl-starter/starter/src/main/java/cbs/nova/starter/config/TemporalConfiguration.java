@@ -25,7 +25,7 @@ import cbs.nova.starter.core.recorder.ExternalCallRecorder;
 import cbs.nova.starter.core.recorder.RunIdKeyedExternalCallRecorder;
 import cbs.nova.starter.logging.DryRunLogBufferRegistry;
 import cbs.nova.starter.logging.DryRunLoggingContextPropagator;
-import cbs.nova.starter.reporting.ExplainDiagramRenderer;
+import cbs.nova.starter.reporting.HierarchyDiagramRenderer;
 import cbs.nova.starter.service.DslRunCancellationService;
 import cbs.nova.starter.service.PreviewResultCache;
 import cbs.nova.starter.service.TemporalDslProcessLauncher;
@@ -247,7 +247,7 @@ public class TemporalConfiguration {
           CbsNovaFakesProperties fakesProperties,
           RunScopedFakeConfig runScopedFakeConfig,
           MeterRegistry meterRegistry,
-          ExplainDiagramRenderer diagramRenderer,
+          HierarchyDiagramRenderer diagramRenderer,
           CbsNovaExplainProperties explainProperties,
           @Qualifier("cbsNovaPreviewDispatchExecutor") ExecutorService dispatchExecutor) {
     return new ExplainDslPipe(externalCallRecorder, dryRunLoggingContext,

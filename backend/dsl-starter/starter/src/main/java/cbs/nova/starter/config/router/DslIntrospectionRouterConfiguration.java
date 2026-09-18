@@ -2,7 +2,7 @@ package cbs.nova.starter.config.router;
 
 import cbs.nova.starter.controller.DslIntrospectionHandler;
 import cbs.nova.starter.converter.RequestQueryConverter;
-import cbs.nova.starter.reporting.ExplainDiagramRenderer;
+import cbs.nova.starter.reporting.HierarchyDiagramRenderer;
 import cbs.nova.starter.service.DslIntrospectionService;
 import cbs.nova.starter.model.DslIntrospectionModels.ConstructBodyDto;
 import cbs.nova.starter.model.DslIntrospectionModels.ConstructSchemaDto;
@@ -32,7 +32,7 @@ public class DslIntrospectionRouterConfiguration {
 
   @Bean
   DslIntrospectionHandler dslIntrospectionHandler(DslIntrospectionService service,
-          ExplainDiagramRenderer diagramRenderer,
+          HierarchyDiagramRenderer diagramRenderer,
           RequestQueryConverter requestQueryConverter) {
     return new DslIntrospectionHandler(service, diagramRenderer, requestQueryConverter);
   }
