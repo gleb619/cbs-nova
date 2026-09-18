@@ -236,6 +236,20 @@ hot-reload toggles.
 
 ---
 
+## `cbs.dsl.manifest`
+
+Class: `CbsDslManifestProperties` (record). Declarative piece-manifest loader (T548). Loads a YAML
+contract that describes guarded DSL pieces (API routes, UI buttons, and allowlisted objects) along
+with their pre-execution checks and post-execution hooks. The service exposes an in-memory,
+read-only lookup index for later enforcement layers.
+
+| Key | Type | Default | Effect |
+|-----|------|---------|--------|
+| `cbs.dsl.manifest.enabled` | `boolean` | `true` | Whether the manifest loader is active. |
+| `cbs.dsl.manifest.path` | `String` | `classpath:piece-manifest.yaml` | Location of the piece-manifest YAML. A missing or blank path starts the service with an empty snapshot instead of failing. |
+
+---
+
 ## Temporal & server env
 
 A few runtime knobs are wired through `@Value`/YAML rather than a `@ConfigurationProperties` class. Defaults come

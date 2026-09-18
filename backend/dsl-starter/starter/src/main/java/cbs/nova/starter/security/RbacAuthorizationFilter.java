@@ -56,6 +56,7 @@ public final class RbacAuthorizationFilter extends OncePerRequestFilter {
           // --- AUTHOR: draft writes / publish / reload / file staging / bundle
           // import ---
           new RouteRule(HttpMethod.POST, "/api/dsl/reload", Role.AUTHOR),
+          new RouteRule(HttpMethod.POST, "/api/dsl/manifest/reload", Role.AUTHOR),
           new RouteRule(HttpMethod.POST, "/api/dsl/drafts/*/save", Role.AUTHOR),
           new RouteRule(HttpMethod.POST, "/api/dsl/drafts/*/publish", Role.AUTHOR),
           new RouteRule(HttpMethod.POST, "/api/dsl/drafts/*/history/*/restore", Role.AUTHOR),

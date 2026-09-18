@@ -46,6 +46,8 @@ public class StarterConstants {
   public static final String ACTION_TESTS_RUN = "TESTS_RUN";
   public static final String ACTION_DEFINITION_RELOAD = "DEFINITION_RELOAD";
 
+  public static final String ACTION_MANIFEST_RELOAD = "MANIFEST_RELOAD";
+
   // Correlation-id plumbing
 
   public static final String CORRELATION_ID_HEADER = "X-Correlation-Id";
