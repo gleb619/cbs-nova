@@ -53,7 +53,7 @@ public final class HierarchyDiagrams {
     return BpmnGraphDiagram.render(kind, name, hasCompensation, externalCalls, callCounts);
   }
 
-  static @NonNull DslType kindOf(@NonNull HierarchyReport report) {
+  public static @NonNull DslType kindOf(@NonNull HierarchyReport report) {
     return report.dslDescriptor() != null ? report.dslDescriptor().type() : DslType.OTHER;
   }
 
