@@ -47,6 +47,7 @@ public class StarterConstants {
   public static final String ACTION_DEFINITION_RELOAD = "DEFINITION_RELOAD";
 
   public static final String ACTION_MANIFEST_RELOAD = "MANIFEST_RELOAD";
+  public static final String ACTION_PIECE_GUARD_DENY = "PIECE_GUARD_DENY";
 
   // Correlation-id plumbing
 

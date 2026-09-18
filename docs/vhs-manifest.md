@@ -69,6 +69,40 @@ certain helpers may be allowlisted only in preview mode or specific runtime cont
 | `invariant-assert` | `expr` and/or `description` | asserts a post-condition; semantics defined by T550 |
 | `notify` | `channel: <name>` | emits a best-effort log/event to the named channel |
 
+## Enforcement semantics (T549)
+
+`PieceGuardFilter` enforces the `preCheck[]` of `api`-target pieces on the live request path:
+
+- **Opt-in by manifest presence.** The filter consults `PieceManifestService.findByRoute(method,
+  path)` on every `/api/*` request. A route with no matching piece proceeds byte-for-byte
+  untouched — no attributes, no response rewriting, no rate-bucket consumption. There is no
+  global gate.
+- **Check order.** Checks evaluate in manifest order; the first failure governs the response.
+  - `role` — resolved via `RoleResolver` (X-Api-Key → ADMIN; JWT `roles` claim with
+    `scope`/`scp` fallback; anonymous → VIEWER). The caller passes if its role
+    `satisfies()` at least one of `anyOf`.
+  - `feature-flag` — evaluated by the `FeatureFlagSource` seam. Default implementation is
+    properties-backed: `cbs.dsl.manifest.flags.<name>=true`. Absent/false = disabled
+    (fail-closed). A real flag platform can replace it with a bean.
+  - `rate-class` — the guard owns a token bucket per (rate class, principal). Class shape:
+    `cbs.dsl.manifest.rate-classes.<name>.capacity` / `.refill-per-second`. A class named by
+    the manifest but not configured **fails closed** (403 + audit). These buckets are additive
+    and independent of the global `cbs.security.ratelimit.*` filter, which keeps its own
+    per-client-IP buckets and hardcoded route list — the guard does not double-limit.
+- **Failure.** `deny` (default) → 403 with the unified `ErrorResponse` envelope
+  (`code = "FORBIDDEN"`, message naming the check type and piece id, `context` carrying
+  `pieceId` and `check`). `audit-only` → a FAILURE `dsl_audit` row (action
+  `PIECE_GUARD_DENY`, when `DslAuditService` is present) and the request continues.
+- **Success attributes.** The matched piece id (`cbs.nova.piece.id`) and resolved role
+  (`cbs.nova.piece.principal-role`) are set as request attributes for the T550 post-check
+  pipeline to reuse without re-resolving.
+- **Filter ordering.** Registered at `Ordered.HIGHEST_PRECEDENCE + 3`, after the API-key (+1),
+  RBAC and global rate-limit (+2) filters, before the route handler. The guard is additive to
+  `RbacAuthorizationFilter`, which stays authoritative where enabled; migrating `RULES` into
+  manifest pieces is a follow-up.
+- **Activation.** First-class auto-configuration gated on `@ConditionalOnBean(PieceManifestService)`:
+  when the manifest subsystem is off the filter is not registered at all.
+
 ## `failMode` vs hook `onFailure`
 
 `failMode` governs **pre-checks** only:

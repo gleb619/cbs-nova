@@ -131,6 +131,19 @@ cbs:
     manifest:
       enabled: true
       path: classpath:piece-manifest.yaml
+      # Pre-check enforcement knobs (T549), used by PieceGuardFilter on manifest api-target
+      # routes only. Routes absent from the manifest are unaffected.
+      # flags.<name> — boolean feature flags referenced by preCheck: feature-flag. Absent or
+      # false means disabled (fail-closed).
+      # flags:
+      #   workbench-publish: true
+      # rate-classes.<name> — token buckets for preCheck: rate-class, owned per
+      # principal+piece by the guard (independent of cbs.security.ratelimit.*, which keeps its
+      # global per-client-IP buckets). A manifest rate class with no config here fails closed.
+      # rate-classes:
+      #   control-plane:
+      #     capacity: 20
+      #     refill-per-second: 5.0
 
 # DSL builder HTTP client resilience (T498).
 # Wired from csb.dsl.builder-client.* (namespace preserved for backwards compatibility).

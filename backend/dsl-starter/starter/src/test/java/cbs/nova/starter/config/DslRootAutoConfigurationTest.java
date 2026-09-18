@@ -25,8 +25,9 @@ import java.util.Set;
  * Verifies the starter's auto-configuration split: the root auto-configuration aggregates the bulk
  * of the nested {@link Import} configs, while the {@code @ConditionalOnBean}-gated configs
  * ({@link DslScheduleConfiguration}, {@link DslManifestConfiguration},
- * {@code DslDiagnosticsRouterConfiguration}, {@code DslScheduleRouterConfiguration},
- * {@code DslManifestRouterConfiguration}) are first-class auto-configurations listed in
+ * {@link PieceGuardFilterConfiguration}, {@code DslDiagnosticsRouterConfiguration},
+ * {@code DslScheduleRouterConfiguration}, {@code DslManifestRouterConfiguration}) are first-class
+ * auto-configurations listed in
  * {@code META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports} so their
  * conditions are evaluated in the auto-configuration phase, after the beans they require are
  * registered. {@link DslRunRepositoryConfiguration} is imported by the root but carries no
@@ -47,6 +48,7 @@ class DslRootAutoConfigurationTest {
                       DslRootAutoConfiguration.class.getName(),
                       DslScheduleConfiguration.class.getName(),
                       DslManifestConfiguration.class.getName(),
+                      PieceGuardFilterConfiguration.class.getName(),
                       "cbs.nova.starter.config.router.DslDiagnosticsRouterConfiguration",
                       "cbs.nova.starter.config.router.DslScheduleRouterConfiguration",
                       "cbs.nova.starter.config.router.DslManifestRouterConfiguration");

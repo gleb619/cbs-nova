@@ -238,7 +238,8 @@ hot-reload toggles.
 
 ## `cbs.dsl.manifest`
 
-Class: `CbsDslManifestProperties` (record). Declarative piece-manifest loader (T548). Loads a YAML
+Class: `CbsDslManifestProperties` (record). Declarative piece-manifest loader (T548) and
+pre-check enforcement config (T549, `PieceGuardFilter`). Loads a YAML
 contract that describes guarded DSL pieces (API routes, UI buttons, and allowlisted objects) along
 with their pre-execution checks and post-execution hooks. The service exposes an in-memory,
 read-only lookup index for later enforcement layers.
@@ -247,6 +248,9 @@ read-only lookup index for later enforcement layers.
 |-----|------|---------|--------|
 | `cbs.dsl.manifest.enabled` | `boolean` | `true` | Whether the manifest loader is active. |
 | `cbs.dsl.manifest.path` | `String` | `classpath:piece-manifest.yaml` | Location of the piece-manifest YAML. A missing or blank path starts the service with an empty snapshot instead of failing. |
+| `cbs.dsl.manifest.flags.<name>` | `boolean` | — (absent) | Feature flags for `preCheck: feature-flag`. Absent or `false` means disabled (fail-closed). Read by the properties-backed default `FeatureFlagSource`; a custom `FeatureFlagSource` bean overrides this map. |
+| `cbs.dsl.manifest.rate-classes.<name>.capacity` | `int` | `20` | Token-bucket capacity for `preCheck: rate-class`. Buckets are per principal+piece, owned by `PieceGuardFilter` — independent of `cbs.security.ratelimit.*`. A manifest class with no config fails closed (denied). |
+| `cbs.dsl.manifest.rate-classes.<name>.refill-per-second` | `double` | `5.0` | Bucket refill rate per second for the named rate class. |
 
 ---
 
