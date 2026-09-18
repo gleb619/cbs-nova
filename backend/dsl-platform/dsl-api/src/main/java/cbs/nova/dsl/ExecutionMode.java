@@ -1,5 +1,5 @@
 package cbs.nova.dsl;
 
 public enum ExecutionMode {
-  RUN, PREVIEW, EXPLAIN, COMPENSATION
+  RUN, PREVIEW, EXPLAIN, HIERARCHY, COMPENSATION
 }
