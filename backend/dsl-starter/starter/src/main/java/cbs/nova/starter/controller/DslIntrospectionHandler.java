@@ -2,6 +2,7 @@ package cbs.nova.starter.controller;
 
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.converter.RequestQueryConverter;
+import cbs.nova.starter.model.DslIntrospectionModels.ConstructSchemaMode;
 import cbs.nova.starter.model.DslIntrospectionModels.DefinitionMetaDto;
 import cbs.nova.starter.model.DslIntrospectionModels.HelperSearchResult;
 import cbs.nova.starter.model.DslIntrospectionModels.ProcessDiagramDto;
@@ -71,7 +72,8 @@ public class DslIntrospectionHandler {
 
   public ServerResponse constructSchema(ServerRequest request) {
     String name = request.pathVariable("name");
-    return service.constructSchema(name)
+    ConstructSchemaMode mode = ConstructSchemaMode.from(request.param("mode").orElse(null));
+    return service.constructSchema(name, mode)
             .map(s -> ServerResponse.ok().body(s))
             .orElse(ServerResponse.notFound().build());
   }

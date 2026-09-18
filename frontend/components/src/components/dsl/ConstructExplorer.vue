@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import type { DslConstruct } from '../../types/dsl'
 import DslPlainConstructListSkeleton from './PlainConstructListSkeleton.vue'
 
@@ -15,10 +15,12 @@ const emit = defineEmits<{
 
 const collapsed = defineModel<boolean>('collapsed', { default: false })
 
-const search = ref('')
+// Exposed so the parent can pre-fill the filter (e.g. from `?objectName=...`
+// on deep links). Two-way bound via `v-model:filter`.
+const filter = defineModel<string>('filter', { default: '' })
 
 const filteredConstructs = computed(() => {
-  const q = search.value.trim().toLowerCase()
+  const q = filter.value.trim().toLowerCase()
   if (!q) return props.constructs
   return props.constructs.filter((c) => c.name.toLowerCase().includes(q))
 })
@@ -52,11 +54,11 @@ function handleSelect(name: string) {
       </button>
     </div>
 
-    <div v-show="!collapsed" class="p-3 border-b border-gray-800" data-testid="explorer-search">
+    <div v-show="!collapsed" class="p-3 border-b border-gray-800" data-testid="explorer-filter">
       <input
-        v-model="search"
+        v-model="filter"
         type="text"
-        placeholder="Search constructs..."
+        placeholder="Filter constructs..."
         class="w-full px-2 py-1.5 text-sm rounded bg-gray-800 text-gray-100 placeholder-gray-500 border border-gray-700 focus:outline-none focus:border-gray-500"
       >
     </div>

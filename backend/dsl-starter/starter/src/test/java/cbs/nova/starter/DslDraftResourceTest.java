@@ -44,6 +44,7 @@ import org.springframework.web.servlet.function.ServerResponse;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
@@ -84,7 +85,7 @@ class DslDraftResourceTest {
   }
 
   private static final List<HttpMessageConverter<?>> CONVERTERS = List
-          .of(new InputStreamHttpMessageConverter());
+          .of(new InputStreamHttpMessageConverter(), new StringBodyHttpMessageConverter());
 
   private static ServerRequest postRequest(String path) {
     return postRequest(path, "foo");
@@ -102,6 +103,19 @@ class DslDraftResourceTest {
             ("{\"name\":\"" + name
                     + "\",\"type\":\"process\",\"status\":\"Draft\",\"version\":\"" + version
                     + "\"}")
+                    .getBytes());
+    return ServerRequest.create(req, CONVERTERS);
+  }
+
+  private static ServerRequest postRequestWithSource(String path, String name, String version,
+          String source) {
+    var req = new MockHttpServletRequest("POST", path);
+    req.setAttribute(RouterFunctions.URI_TEMPLATE_VARIABLES_ATTRIBUTE, Map.of("name", name));
+    req.setContentType("application/json");
+    req.setContent(
+            ("{\"name\":\"" + name
+                    + "\",\"type\":\"process\",\"status\":\"Draft\",\"version\":\"" + version
+                    + "\",\"source\":\"" + source + "\"}")
                     .getBytes());
     return ServerRequest.create(req, CONVERTERS);
   }
@@ -129,6 +143,7 @@ class DslDraftResourceTest {
     String body = Files.readString(draft);
     assertThat(body).contains("\"name\" : \"foo\"");
     assertThat(body).contains("\"status\" : \"Draft\"");
+    assertThat(body).contains("\"savedAt\"");
   }
 
   @Test
@@ -319,7 +334,7 @@ class DslDraftResourceTest {
 
   @Test
   void readReturnsDraftPayload() throws Exception {
-    handler.save(postRequest("/api/dsl/drafts/foo/save"));
+    handler.save(postRequestWithSource("/api/dsl/drafts/foo/save", "foo", "1", "workbench"));
 
     ServerResponse response = handler
             .read(getRequest("/api/dsl/drafts/foo", Map.of("name", "foo")));
@@ -329,6 +344,8 @@ class DslDraftResourceTest {
             .entity();
     assertThat(body.name()).isEqualTo("foo");
     assertThat(body.status()).isEqualTo("Draft");
+    assertThat(body.source()).isEqualTo("workbench");
+    assertThat(body.savedAt()).isNotNull();
   }
 
   @Test
@@ -720,13 +737,44 @@ class DslDraftResourceTest {
     }
   }
 
+  private static final class StringBodyHttpMessageConverter
+          implements
+            HttpMessageConverter<String> {
+
+    @Override
+    public boolean canRead(Class<?> clazz, MediaType mediaType) {
+      return String.class.isAssignableFrom(clazz);
+    }
+
+    @Override
+    public boolean canWrite(Class<?> clazz, MediaType mediaType) {
+      return false;
+    }
+
+    @Override
+    public List<MediaType> getSupportedMediaTypes() {
+      return List.of(MediaType.ALL);
+    }
+
+    @Override
+    public String read(Class<? extends String> clazz, HttpInputMessage inputMessage)
+            throws IOException {
+      return new String(inputMessage.getBody().readAllBytes(), StandardCharsets.UTF_8);
+    }
+
+    @Override
+    public void write(String string, MediaType contentType, HttpOutputMessage outputMessage) {
+      throw new UnsupportedOperationException();
+    }
+  }
+
   @Test
   void saveDelegatesToBuilderClient() throws Exception {
     DslBuilderClient client = mock(DslBuilderClient.class);
     stubSuccessfulCompile(client);
     when(client.saveDraft(eq("foo"), any())).thenReturn(
             new DraftResponse("foo", "Draft", "/remote/.workbench/drafts/foo.json", false,
-                    LoadResult.empty(), null, null));
+                    LoadResult.empty(), null, null, null));
     handler = builderDraftHandler(client);
 
     ServerResponse response = handler.save(postRequest("/api/dsl/drafts/foo/save"));
@@ -744,7 +792,7 @@ class DslDraftResourceTest {
     stubSuccessfulCompile(client);
     when(client.publishDraft(eq("foo"), any())).thenReturn(
             new DraftResponse("foo", "Published", "/remote/.workbench/published/foo.json", false,
-                    LoadResult.empty(), null, null));
+                    LoadResult.empty(), null, null, null));
     handler = builderDraftHandler(client);
 
     ServerResponse response = handler.publish(postRequest("/api/dsl/drafts/foo/publish"));
@@ -767,7 +815,7 @@ class DslDraftResourceTest {
             List.of(new CompileDiagnostic("Broken.java", 1L, null, "bad syntax", "error", null))));
     when(client.publishDraft(eq("foo"), any())).thenReturn(
             new DraftResponse("foo", "Published", "/remote/.workbench/published/foo.json", false,
-                    LoadResult.empty(), null, null));
+                    LoadResult.empty(), null, null, null));
     handler = builderDraftHandler(client);
 
     ServerResponse response = handler.publish(postRequest("/api/dsl/drafts/foo/publish"));
@@ -783,7 +831,7 @@ class DslDraftResourceTest {
   void deleteDelegatesToBuilderClient() throws Exception {
     DslBuilderClient client = mock(DslBuilderClient.class);
     when(client.deleteDraft("foo")).thenReturn(
-            new DraftResponse("foo", "Deleted", null, false, LoadResult.empty(), null, null));
+            new DraftResponse("foo", "Deleted", null, false, LoadResult.empty(), null, null, null));
     handler = builderDraftHandler(client);
 
     ServerResponse response = handler.delete(deleteRequest("foo", "/api/dsl/drafts/foo"));

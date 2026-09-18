@@ -1,4 +1,4 @@
-import { type ComputedRef, type Ref, computed, customRef, onUnmounted, ref } from 'vue'
+import { type ComputedRef, computed, customRef, onUnmounted, type Ref, ref } from 'vue'
 import { createEmitter } from '../utils/createEmitter'
 
 export interface WorkbenchDraftPayload {
@@ -6,8 +6,25 @@ export interface WorkbenchDraftPayload {
   savedAt: number
 }
 
+export interface WorkbenchDraftServerSync {
+  /**
+   * Persist the body server-side. Resolves to the server-echoed `savedAt`
+   * (server clock) when the backend provides one, otherwise undefined and the
+   * caller falls back to the local clock.
+   */
+  save: (body: string) => Promise<number | undefined>
+  /** Fetch the server-side draft payload, or null when none exists. */
+  load: (name: string) => Promise<WorkbenchDraftPayload | null>
+}
+
+export interface UseWorkbenchDraftOptions {
+  server?: WorkbenchDraftServerSync
+}
+
+//TODO: instead of hardcode add some settings, that can be overrired via ENV
 const DRAFT_TTL_MS = 24 * 60 * 60 * 1000
 const SAVE_DEBOUNCE_MS = 250
+const SERVER_SAVE_DEBOUNCE_MS = 3000
 
 function draftKey(name: string): string {
   return `cbs.nova.draft.${name}`
@@ -51,7 +68,8 @@ function readDraft(name: string): WorkbenchDraftPayload | null {
   }
 
   if (parsed.savedAt + DRAFT_TTL_MS < Date.now()) {
-    // Stale (older than 24h) — clear on read per T201 TTL requirement.
+    // Stale (older than 24h) — clear on read per T201 TTL requirement. The
+    // server draft (no TTL) remains the durable copy.
     removeDraft(name)
     return null
   }
@@ -82,8 +100,10 @@ export interface UseWorkbenchDraftReturn {
   dirty: ComputedRef<boolean>
   clearDraft: () => void
   lastSavedAt: Ref<number | null>
-  /** True when `body` was just restored from a fresh localStorage draft — drive the recovery banner off this. */
+  /** True when `body` was just restored from a fresh draft — drive the recovery banner off this. */
   restoredFromDraft: Ref<boolean>
+  /** True when the last server autosave failed — the local copy is the only one until it recovers. */
+  autosaveOffline: Ref<boolean>
   /** Switch to a different draft key and load its persisted body. */
   setName: (name: string) => void
   /** Listen for debounced localStorage save events. */
@@ -94,7 +114,11 @@ export interface UseWorkbenchDraftReturn {
   onCleared: (handler: () => void) => () => void
 }
 
-export function useWorkbenchDraft(name: string | Ref<string> = ''): UseWorkbenchDraftReturn {
+export function useWorkbenchDraft(
+  name: string | Ref<string> = '',
+  options: UseWorkbenchDraftOptions = {},
+): UseWorkbenchDraftReturn {
+  const server = options.server
   const currentName = ref(typeof name === 'string' ? name : name.value)
   const emitter = createEmitter<WorkbenchDraftEvents>()
 
@@ -127,10 +151,16 @@ export function useWorkbenchDraft(name: string | Ref<string> = ''): UseWorkbench
   }
 
   const savedBody = ref('')
+  const serverSavedBody = ref('')
   const lastSavedAt = ref<number | null>(null)
   const restoredFromDraft = ref(false)
+  const autosaveOffline = ref(false)
 
   let saveTimer: ReturnType<typeof setTimeout> | null = null
+  let serverTimer: ReturnType<typeof setTimeout> | null = null
+  let serverSavePending = false
+  let serverSaveQueued = false
+  let serverLoadToken = 0
 
   function clearSaveTimer(): void {
     if (saveTimer != null) {
@@ -139,21 +169,101 @@ export function useWorkbenchDraft(name: string | Ref<string> = ''): UseWorkbench
     }
   }
 
+  function clearServerTimer(): void {
+    if (serverTimer != null) {
+      clearTimeout(serverTimer)
+      serverTimer = null
+    }
+  }
+
+  function clearServerState(): void {
+    clearServerTimer()
+    serverSavePending = false
+    serverSaveQueued = false
+    autosaveOffline.value = false
+  }
+
+  async function flushServerSave(): Promise<void> {
+    if (serverSavePending) {
+      serverSaveQueued = true
+      return
+    }
+    const nameAtFlush = currentName.value
+    const value = _body.value
+    if (!nameAtFlush || value === serverSavedBody.value) return
+    serverSavePending = true
+    try {
+      const echo = await server?.save(value)
+      if (currentName.value !== nameAtFlush) return
+      serverSavedBody.value = value
+      autosaveOffline.value = false
+      const savedAt = typeof echo === 'number' ? echo : Date.now()
+      writeDraft(nameAtFlush, { body: value, savedAt })
+      savedBody.value = value
+      lastSavedAt.value = savedAt
+    } catch {
+      // The localStorage write from the local debounce already happened, so
+      // the draft survives; surface the degraded mode instead.
+      autosaveOffline.value = true
+    } finally {
+      serverSavePending = false
+      if (serverSaveQueued) {
+        serverSaveQueued = false
+        void flushServerSave()
+      }
+    }
+  }
+
+  function armServerTimer(): void {
+    if (!server) return
+    clearServerTimer()
+    serverTimer = setTimeout(() => {
+      serverTimer = null
+      void flushServerSave()
+    }, SERVER_SAVE_DEBOUNCE_MS)
+  }
+
+  async function resolveServerDraft(nameAtLoad: string, local: WorkbenchDraftPayload | null) {
+    if (!server || !nameAtLoad) return
+    const token = ++serverLoadToken
+    let serverDraft: WorkbenchDraftPayload | null = null
+    try {
+      serverDraft = await server.load(nameAtLoad)
+    } catch {
+      return
+    }
+    if (token !== serverLoadToken || currentName.value !== nameAtLoad) return
+    if (!serverDraft) return
+    if (local && serverDraft.savedAt <= local.savedAt) return
+    setBodySilently(serverDraft.body)
+    savedBody.value = serverDraft.body
+    serverSavedBody.value = serverDraft.body
+    lastSavedAt.value = serverDraft.savedAt
+    restoredFromDraft.value = true
+    writeDraft(nameAtLoad, serverDraft)
+    emitter.emit('restored', serverDraft)
+  }
+
   function loadFor(currentNameVal: string): void {
     clearSaveTimer()
+    clearServerState()
+    serverLoadToken++
     const draft = currentNameVal ? readDraft(currentNameVal) : null
     if (draft) {
       setBodySilently(draft.body)
       savedBody.value = draft.body
+      serverSavedBody.value = draft.body
       lastSavedAt.value = draft.savedAt
       restoredFromDraft.value = true
       emitter.emit('restored', draft)
     } else {
       setBodySilently('')
       savedBody.value = ''
+      serverSavedBody.value = ''
       lastSavedAt.value = null
       restoredFromDraft.value = false
     }
+    void resolveServerDraft(currentNameVal, draft)
   }
 
   // Restore synchronously on setup so the caller sees the restored banner
@@ -177,6 +287,7 @@ export function useWorkbenchDraft(name: string | Ref<string> = ''): UseWorkbench
       lastSavedAt.value = savedAt
       emitter.emit('saved', { body: value, savedAt })
     }, SAVE_DEBOUNCE_MS)
+    armServerTimer()
   })
 
   const dirty = computed(() => body.value !== savedBody.value)
@@ -189,9 +300,12 @@ export function useWorkbenchDraft(name: string | Ref<string> = ''): UseWorkbench
 
   function clearDraft(): void {
     clearSaveTimer()
+    clearServerState()
+    serverLoadToken++
     removeDraft(currentName.value)
     setBodySilently('')
     savedBody.value = ''
+    serverSavedBody.value = ''
     lastSavedAt.value = null
     restoredFromDraft.value = false
     emitter.emit('cleared')
@@ -199,6 +313,7 @@ export function useWorkbenchDraft(name: string | Ref<string> = ''): UseWorkbench
 
   onUnmounted(() => {
     clearSaveTimer()
+    clearServerTimer()
     stopNameListener()
     stopBodyListener()
   })
@@ -209,6 +324,7 @@ export function useWorkbenchDraft(name: string | Ref<string> = ''): UseWorkbench
     clearDraft,
     lastSavedAt,
     restoredFromDraft,
+    autosaveOffline,
     setName,
     onSaved: (handler) => emitter.on('saved', handler),
     onRestored: (handler) => emitter.on('restored', handler),

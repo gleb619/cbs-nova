@@ -3,12 +3,14 @@ import type { JsonSchema } from '../types/jsonSchema'
 import { createEmitter } from '../utils/createEmitter'
 
 export type ConstructType = 'Process' | 'Transaction' | 'Helper' | 'Function'
+export type ConstructSchemaMode = 'preview' | 'explain'
 
 interface SchemaCacheEntry {
   inputSchema: JsonSchema | null
   outputSchema: JsonSchema | null
   inputType: string | null
   outputType: string | null
+  report: unknown | null
 }
 
 const cache = new Map<string, SchemaCacheEntry>()
@@ -80,14 +82,20 @@ export interface ConstructSchemaEvents {
   change: ConstructSchemaChangeEvent
 }
 
-export function useConstructSchema({ name: nameRef, type: typeRef }: UseConstructSchemaOptions) {
+export function useConstructSchema({
+  name: nameRef,
+  type: typeRef,
+  mode: modeRef,
+}: UseConstructSchemaOptions) {
   const name = ref(toValue(nameRef) ?? '')
   const type = ref(toValue(typeRef))
+  const mode = computed(() => toValue(modeRef) ?? 'preview')
 
   const inputSchema = ref<JsonSchema | null>(null)
   const outputSchema = ref<JsonSchema | null>(null)
   const inputType = ref<string | null>(null)
   const outputType = ref<string | null>(null)
+  const report = ref<unknown | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
 
@@ -102,47 +110,52 @@ export function useConstructSchema({ name: nameRef, type: typeRef }: UseConstruc
   )
 
   function cacheKey() {
-    return `${type.value ?? 'unknown'}:${name.value}`
+    return `${mode.value}:${type.value ?? 'unknown'}:${name.value}`
   }
 
   function endpoint() {
-    return `/api/v1/dsl/schemas/${encodeURIComponent(name.value)}`
+    const base = `/api/v1/dsl/schemas/${encodeURIComponent(name.value)}`
+    return mode.value === 'preview' ? base : `${base}?mode=${mode.value}`
+  }
+
+  function emptyEntry(): SchemaCacheEntry {
+    return {
+      inputSchema: null,
+      outputSchema: null,
+      inputType: null,
+      outputType: null,
+      report: null,
+    }
+  }
+
+  function applyEntry(entry: SchemaCacheEntry) {
+    inputSchema.value = entry.inputSchema
+    outputSchema.value = entry.outputSchema
+    inputType.value = entry.inputType
+    outputType.value = entry.outputType
+    report.value = entry.report
+    error.value = null
   }
 
   async function load() {
     if (!name.value) {
-      inputSchema.value = null
-      outputSchema.value = null
-      inputType.value = null
-      outputType.value = null
-      error.value = null
+      applyEntry(emptyEntry())
       return
     }
     if (!hasKnownEndpoint.value) {
-      inputSchema.value = null
-      outputSchema.value = null
-      inputType.value = null
-      outputType.value = null
-      error.value = null
+      applyEntry(emptyEntry())
       return
     }
     if (!schemaFetch) {
+      applyEntry(emptyEntry())
       error.value = 'Schema fetcher is not provided. Register the DSL schema fetch plugin.'
-      inputSchema.value = null
-      outputSchema.value = null
-      inputType.value = null
-      outputType.value = null
       loading.value = false
       return
     }
     const key = cacheKey()
     const cached = cache.get(key)
     if (cached) {
-      inputSchema.value = cached.inputSchema
-      outputSchema.value = cached.outputSchema
-      inputType.value = cached.inputType
-      outputType.value = cached.outputType
-      error.value = null
+      applyEntry(cached)
       return
     }
     const pending = inFlight.get(key)
@@ -155,20 +168,12 @@ export function useConstructSchema({ name: nameRef, type: typeRef }: UseConstruc
       }
       const after = cache.get(key)
       if (after) {
-        inputSchema.value = after.inputSchema
-        outputSchema.value = after.outputSchema
-        inputType.value = after.inputType
-        outputType.value = after.outputType
-        error.value = null
+        applyEntry(after)
       }
       return
     }
     loading.value = true
-    error.value = null
-    inputSchema.value = null
-    outputSchema.value = null
-    inputType.value = null
-    outputType.value = null
+    applyEntry(emptyEntry())
     const fetchPromise = (async () => {
       try {
         const response = (await schemaFetch(endpoint())) as {
@@ -177,31 +182,23 @@ export function useConstructSchema({ name: nameRef, type: typeRef }: UseConstruc
           inputType?: string | null
           outputType?: string | null
         }
-        const inSchema = response?.inputSchema ?? null
-        const outSchema = response?.outputSchema ?? null
-        const inType = response?.inputType ?? null
-        const outType = response?.outputType ?? null
-        if (inSchema || outSchema) {
-          cache.set(key, {
-            inputSchema: inSchema,
-            outputSchema: outSchema,
-            inputType: inType,
-            outputType: outType,
-          })
+        const entry: SchemaCacheEntry = {
+          inputSchema: response?.inputSchema ?? null,
+          outputSchema: response?.outputSchema ?? null,
+          inputType: response?.inputType ?? null,
+          outputType: response?.outputType ?? null,
+          report: mode.value === 'explain' ? response : null,
         }
-        inputSchema.value = inSchema
-        outputSchema.value = outSchema
-        inputType.value = inType
-        outputType.value = outType
+        if (entry.inputSchema || entry.outputSchema || entry.report) {
+          cache.set(key, entry)
+        }
+        applyEntry(entry)
       } catch (err) {
+        applyEntry(emptyEntry())
         error.value =
           (err as { statusMessage?: string; message?: string }).statusMessage ??
           (err as Error).message ??
           'Failed to load schema'
-        inputSchema.value = null
-        outputSchema.value = null
-        inputType.value = null
-        outputType.value = null
       } finally {
         inFlight.delete(key)
       }
@@ -236,6 +233,8 @@ export function useConstructSchema({ name: nameRef, type: typeRef }: UseConstruc
     outputSchema: computed(() => outputSchema.value),
     inputType: computed(() => inputType.value),
     outputType: computed(() => outputType.value),
+    report: computed(() => report.value),
+    hasReport: computed(() => report.value != null),
     loading: computed(() => loading.value),
     error: computed(() => error.value),
     hasSchema: computed(() => hasUsefulSchema(inputSchema.value)),
@@ -260,4 +259,5 @@ function hasUsefulSchema(s: JsonSchema | null): boolean {
 export interface UseConstructSchemaOptions {
   name: MaybeRefOrGetter<string>
   type?: MaybeRefOrGetter<ConstructType | undefined>
+  mode?: MaybeRefOrGetter<ConstructSchemaMode | undefined>
 }

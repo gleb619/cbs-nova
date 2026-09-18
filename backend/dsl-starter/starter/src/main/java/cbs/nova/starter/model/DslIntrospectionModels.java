@@ -3,9 +3,27 @@ package cbs.nova.starter.model;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonValue;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 public final class DslIntrospectionModels {
+
+  public enum ConstructSchemaMode {
+    PREVIEW, EXPLAIN;
+
+    public static @NonNull ConstructSchemaMode from(@Nullable String value) {
+      if (value == null || value.isBlank()) {
+        return PREVIEW;
+      }
+      return switch (value.trim().toLowerCase(Locale.ROOT)) {
+        case "preview" -> PREVIEW;
+        case "explain" -> EXPLAIN;
+        default -> throw new IllegalArgumentException("Unknown schema mode: " + value);
+      };
+    }
+  }
 
   public record DefinitionMetaDto(
           String name,

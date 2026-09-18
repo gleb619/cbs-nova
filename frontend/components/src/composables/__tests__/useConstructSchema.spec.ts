@@ -55,6 +55,24 @@ describe('useConstructSchema', () => {
     expect(schema.value).toBeTruthy()
   })
 
+  it('appends mode=explain and caches separately from preview', async () => {
+    fetchMock.mockResolvedValue({ inputSchema: { type: 'object', properties: {} } })
+    mountUseConstructSchema({ name: 'Demo', type: 'Process', mode: 'explain' })
+    await waitForNextTick()
+    await waitForNextTick()
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/schemas/Demo?mode=explain')
+
+    fetchMock.mockClear()
+    fetchMock.mockResolvedValue({
+      inputSchema: { type: 'object', properties: { x: { type: 'number' } } },
+    })
+    const preview = mountUseConstructSchema({ name: 'Demo', type: 'Process', mode: 'preview' })
+    await waitForNextTick()
+    await waitForNextTick()
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/schemas/Demo')
+    expect(preview.schema.value).toBeTruthy()
+  })
+
   it('fetches transaction schema when type is Transaction', async () => {
     fetchMock.mockResolvedValue({ inputSchema: { type: 'object', properties: {} } })
     const { schema } = mountUseConstructSchema({ name: 'Tx', type: 'Transaction' })

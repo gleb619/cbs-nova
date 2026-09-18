@@ -427,6 +427,7 @@ public final class GlobalManager {
     return describeProcess(name).map(DslDescriptor::description)
             .or(() -> describeTransaction(name).map(DslDescriptor::description))
             .or(() -> describeHelper(name).map(ExecutableDescriptor::description))
+            .or(() -> findHelper(name).map(Executable::description))
             .or(() -> describeFunction(name).map(DslDescriptor::description));
   }
 

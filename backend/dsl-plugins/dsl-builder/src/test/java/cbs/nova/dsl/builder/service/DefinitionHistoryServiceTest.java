@@ -69,7 +69,7 @@ class DefinitionHistoryServiceTest {
     Path publishedFile = publishedDir.resolve("LoanProcess.json");
     objectMapper.writerWithDefaultPrettyPrinter()
             .writeValue(publishedFile.toFile(),
-                    new DraftRequest("LoanProcess", "process", "Published", "v1", "q"));
+                    new DraftRequest("LoanProcess", "process", "Published", "v1", "q", null, null));
 
     customService.snapshotBeforePublish(workspace, "LoanProcess");
 

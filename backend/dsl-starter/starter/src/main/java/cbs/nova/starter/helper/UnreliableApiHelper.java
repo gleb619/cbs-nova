@@ -40,6 +40,34 @@ public class UnreliableApiHelper implements Executable<UnreliableApiIn, Unreliab
     return Result.success(new UnreliableApiOut(updated.attempts(), "ok"));
   }
 
+  @Override
+  public @NonNull String description() {
+    return """
+            Simulates an unreliable downstream API so the DSL can exercise retries and compensations.
+
+            The helper keeps a tiny in-memory counter for each `operationId`. Every time it is called
+            it increments that counter, then decides whether to fail using the chosen pattern:
+
+            - **CONSECUTIVE** — fails the first `failCount` attempts, then succeeds. Optional `jitter`
+              can add one extra random failure after the configured failures.
+            - **RANDOM** — treats `failCount` as a percentage (0–100) and fails that often using a
+              random roll.
+
+            ```mermaid
+            flowchart LR
+                A[Receive call] --> B{Which pattern?}
+                B -->|CONSECUTIVE| C[attempts &lt;= failCount?]
+                C -->|yes| D[Return failure]
+                C -->|no| E{jitter && random true?}
+                E -->|yes| D
+                E -->|no| F[Return success]
+                B -->|RANDOM| G[random &lt; failCount%?]
+                G -->|yes| D
+                G -->|no| F
+            ```
+            """;
+  }
+
   private boolean shouldFail(UnreliableApiIn input, AttemptState state) {
     return switch (input.effectivePattern()) {
       case CONSECUTIVE -> consecutiveShouldFail(input, state);

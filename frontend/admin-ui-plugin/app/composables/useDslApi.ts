@@ -5,9 +5,9 @@ import {
   type DiagnosticsPage,
   type DomainEventPage,
   type DomainEventQuery,
+  unwrapList,
   type WebhookDeliveryPage,
   type WebhookDeliveryQuery,
-  unwrapList,
 } from '@cbs/components'
 import { $fetch } from 'ofetch'
 import { extractApiError } from '../utils/extractApiError'
@@ -79,6 +79,7 @@ export function useDslApi() {
       version?: string
       taskQueue?: string
       description?: string
+      source?: string
     },
   ) {
     log.info('saveDraft request', { name })

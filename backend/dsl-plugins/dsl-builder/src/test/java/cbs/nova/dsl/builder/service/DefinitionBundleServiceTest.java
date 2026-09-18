@@ -75,10 +75,10 @@ class DefinitionBundleServiceTest {
     Files.createDirectories(draftsDir);
     objectMapper.writerWithDefaultPrettyPrinter()
             .writeValue(publishedDir.resolve("A.json").toFile(),
-                    new DraftRequest("A", "process", "Published", "v1", "q"));
+                    new DraftRequest("A", "process", "Published", "v1", "q", null, null));
     objectMapper.writerWithDefaultPrettyPrinter()
             .writeValue(draftsDir.resolve("B.json").toFile(),
-                    new DraftRequest("B", "process", "Draft", "v1", "q"));
+                    new DraftRequest("B", "process", "Draft", "v1", "q", null, null));
 
     DefinitionBundle exported = customService.export(workspace, true);
 
@@ -89,7 +89,8 @@ class DefinitionBundleServiceTest {
     // Validation rejects bundles whose formatVersion no longer matches the configured one.
     assertThatThrownBy(() -> customService.validateForImport(
             new DefinitionBundle(1, "1.0", "now", List.of(new DefinitionBundleEntry(
-                    new DraftRequest("A", "process", "Published", "v1", "q"), "published")))))
+                    new DraftRequest("A", "process", "Published", "v1", "q", null, null),
+                    "published")))))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("Unsupported bundle formatVersion 1 (expected 7)");
   }

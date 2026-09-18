@@ -48,7 +48,6 @@ import org.springframework.web.servlet.function.ServerRequest;
 import org.springframework.web.servlet.function.ServerResponse;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -93,7 +92,7 @@ public class DslDraftHandler {
               Map.of("error", "drafts directory not configured"));
       return dir.response();
     }
-    var payload = withStatus(body, "Draft");
+    var payload = withStatus(withSavedAt(body), "Draft");
     var builder = builderClient();
     if (builder != null) {
       try {
@@ -120,7 +119,7 @@ public class DslDraftHandler {
       return ServerResponse.ok()
               .contentType(MediaType.APPLICATION_JSON)
               .body(new DraftResponse(name, "Draft", file.toString(), false, LoadResult.empty(),
-                      null, null));
+                      null, null, payload.savedAt()));
     } catch (IOException | RuntimeException e) {
       audit(request, ACTION_DRAFT_WRITE, name, StarterConstants.OUTCOME_FAILURE,
               Map.of("error", String.valueOf(e.getMessage())));
@@ -327,7 +326,8 @@ public class DslDraftHandler {
     log.info("[DSL drafts] deleted {} from {}", name, draftFile);
     return ServerResponse.ok()
             .contentType(MediaType.APPLICATION_JSON)
-            .body(new DraftResponse(name, "Deleted", null, false, LoadResult.empty(), null, null));
+            .body(new DraftResponse(name, "Deleted", null, false, LoadResult.empty(), null, null,
+                    null));
   }
 
   public ServerResponse list(ServerRequest request) {
@@ -657,16 +657,18 @@ public class DslDraftHandler {
         recordDiagnostics(CompileDiagnosticSource.PUBLISH, name, compilation.diagnostics());
         return new DraftResponse(name, "Published", location, false,
                 LoadResult.empty(),
-                compilation.getMessage(), compilation.diagnostics().stream().limit(20).toList());
+                compilation.getMessage(), compilation.diagnostics().stream().limit(20).toList(),
+                null);
       }
       if (e instanceof ValidationException ve) {
         return new DraftResponse(name, "Published", location, false, LoadResult.empty(),
-                ve.getMessage(), toValidationDiagnostics(ve, name).stream().limit(20).toList());
+                ve.getMessage(), toValidationDiagnostics(ve, name).stream().limit(20).toList(),
+                null);
       }
       return new DraftResponse(name, "Published", location, false, LoadResult.empty(),
-              e.getMessage(), null);
+              e.getMessage(), null, null);
     }
-    return new DraftResponse(name, "Published", location, reloaded, loadResult, null, null);
+    return new DraftResponse(name, "Published", location, reloaded, loadResult, null, null, null);
   }
 
   private sealed interface PathResult {
@@ -714,9 +716,14 @@ public class DslDraftHandler {
     return new PathResult.Ok(dir);
   }
 
+  private DraftRequest withSavedAt(DraftRequest body) {
+    return new DraftRequest(body.name(), body.type(), body.status(), body.version(),
+            body.taskQueue(), body.source(), System.currentTimeMillis());
+  }
+
   private DraftRequest parse(ServerRequest request) throws IOException {
     try {
-      return objectMapper.readValue(request.body(InputStream.class), DraftRequest.class);
+      return objectMapper.readValue(request.body(String.class), DraftRequest.class);
     } catch (JacksonException e) {
       log.warn("[DSL drafts] failed to parse request body: {}", e.getMessage(), e);
       return null;
@@ -753,7 +760,9 @@ public class DslDraftHandler {
             body.type(),
             status,
             body.version(),
-            body.taskQueue());
+            body.taskQueue(),
+            body.source(),
+            body.savedAt());
   }
 
   private Path writePayload(Path directory, DraftRequest payload) throws IOException {

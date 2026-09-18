@@ -28,7 +28,7 @@ class DslDefinitionHistoryServiceTest {
   }
 
   private DraftRequest sampleRequest() {
-    return new DraftRequest("order", "process", "Published", "1", null);
+    return new DraftRequest("order", "process", "Published", "1", null, null, null);
   }
 
   private Path publishedFile(Path dir, String name) {

@@ -82,6 +82,18 @@ class UnreliableApiHelperTest {
     return run(helper, id, failCount, jitter, null);
   }
 
+  @Test
+  void descriptionIsNonEmptyMarkdown() {
+    UnreliableApiHelper helper = defaultHelper();
+    String desc = helper.description();
+
+    assertThat(desc).isNotBlank()
+            .contains("unreliable")
+            .contains("CONSECUTIVE")
+            .contains("RANDOM")
+            .contains("```mermaid");
+  }
+
   private Result<UnreliableApiOut> run(UnreliableApiHelper helper, String id, int failCount,
           boolean jitter, UnreliableApiFailurePattern pattern) {
     var ctx = SimpleContext.<UnreliableApiIn>builder()

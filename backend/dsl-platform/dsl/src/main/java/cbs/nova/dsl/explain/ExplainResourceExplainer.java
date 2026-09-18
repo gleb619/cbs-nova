@@ -3,6 +3,7 @@ package cbs.nova.dsl.explain;
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.model.ExplainReport;
+import cbs.nova.dsl.explain.ExplainResourceFrontmatter;
 import java.util.function.Function;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -23,7 +24,13 @@ public final class ExplainResourceExplainer {
                         + ClasspathExplainResourceResolver.DEFAULT_PREFIX + resourcePath,
                 ex));
       }
-      return Result.success(ExplainReport.of(name, markdown));
+      var parsed = ExplainResourceFrontmatter.parse(markdown);
+      var description = parsed.metadata().getOrDefault("description", "");
+      return Result.success(ExplainReport.builder()
+              .name(name)
+              .description(description)
+              .mermaid(parsed.body())
+              .build());
     };
   }
 }

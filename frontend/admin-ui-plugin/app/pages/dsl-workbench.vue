@@ -70,6 +70,15 @@ const explorerOpen = useWorkbenchStorage<boolean>('explorer-open', true)
 const explorerCollapsed = useWorkbenchStorage<boolean>('explorer-collapsed', false, {
   useCookie,
 })
+// Two-way bound to `<DslConstructExplorer>` so the `?objectName=<name>` deep
+// link can pre-fill the filter alongside selecting the matched construct.
+const explorerFilter = ref('')
+
+// Seeded from `?activeTab=<name>` so deep links land on the requested tab.
+// Implemented via `bodyEditorRef.setTab(...)` (event/listen style) rather
+// than v-model — the editor never writes back, so URL stays stable on click.
+const BODY_EDITOR_TABS = ['structure', 'code', 'preview', 'explain', 'problems'] as const
+type BodyEditorTab = (typeof BODY_EDITOR_TABS)[number]
 const helperSearchOpen = useWorkbenchStorage<boolean>('helper-search-open', false)
 const helperCatalogOpen = useWorkbenchStorage<boolean>('helper-catalog-open', false)
 const historyPanelOpen = useWorkbenchStorage<boolean>('history-panel-open', false)
@@ -178,8 +187,26 @@ function toggleHelperCatalog() {
   }
 }
 
-const workbenchDraft = useWorkbenchDraft(state.value.selectedName ?? '')
-const { body: draftBody, clearDraft, lastSavedAt: draftSavedAt, restoredFromDraft } = workbenchDraft
+const workbenchDraft = useWorkbenchDraft(state.value.selectedName ?? '', {
+  server: {
+    save: async (body: string) => {
+      const result = (await workbench.autosaveDraft(body)) as { savedAt?: number } | undefined
+      return result?.savedAt
+    },
+    load: async (name: string) => {
+      const result = (await dslApi.readDraft(name)) as { source?: string; savedAt?: number } | null
+      if (typeof result?.source !== 'string' || typeof result.savedAt !== 'number') return null
+      return { body: result.source, savedAt: result.savedAt }
+    },
+  },
+})
+const {
+  body: draftBody,
+  clearDraft,
+  lastSavedAt: draftSavedAt,
+  restoredFromDraft,
+  autosaveOffline,
+} = workbenchDraft
 
 // Source-file-backed constructs load their Java source from the backend.
 const fileCode = ref('')
@@ -443,8 +470,39 @@ function handleSaveShortcut(event: KeyboardEvent) {
 
 useEventListener(window, 'keydown', handleSaveShortcut)
 
-onMounted(() => {
-  void loadConstructs().then(() => syncSelectionEffects())
+onMounted(async () => {
+  // Deep-link target: `?objectName=<name>` (e.g. from CLI / search results).
+  // Seeds the explorer filter and selects the matching construct once the
+  // list has loaded — keeps ConstructExplorer free of URL navigation.
+  const requestedObject = route.query.objectName
+  const objectName = Array.isArray(requestedObject) ? requestedObject[0] : requestedObject
+  if (objectName) {
+    explorerFilter.value = String(objectName)
+  }
+
+  // Deep-link target: `?activeTab=<structure|code|preview|explain|problems>`
+  // Emits a window CustomEvent; BodyEditor listens (event-bus pattern).
+  const requestedTab = route.query.activeTab
+  const tabCandidate = Array.isArray(requestedTab) ? requestedTab[0] : requestedTab
+  if (
+    typeof tabCandidate === 'string' &&
+    (BODY_EDITOR_TABS as readonly string[]).includes(tabCandidate) &&
+    typeof window !== 'undefined'
+  ) {
+    window.dispatchEvent(
+      new CustomEvent<BodyEditorTab>('cbs:body-editor:set-tab', {
+        detail: tabCandidate as BodyEditorTab,
+      }),
+    )
+  }
+
+  await loadConstructs()
+  syncSelectionEffects()
+
+  if (objectName) {
+    safeSelectConstruct(String(objectName))
+  }
+
   refreshDrafts()
   // A draft picked from the navbar widget on another route arrives as a query.
   const requested = route.query.draft
@@ -505,6 +563,7 @@ onBeforeUnmount(() => {
       >
         <DslConstructExplorer
           v-model:collapsed="explorerCollapsed"
+          v-model:filter="explorerFilter"
           :constructs="displayConstructs"
           :selected-name="state.selectedName"
           :loading="loaders.constructs"
@@ -526,6 +585,19 @@ onBeforeUnmount(() => {
         <DslMetadataPanel :construct="selectedConstruct" :loading="fileCodeLoading" />
         <div v-if="restoredFromDraft && !isFileBacked" class="px-3 pt-2">
           <DslDraftRestoreBanner :saved-at="draftSavedAt" @discard="clearDraft" />
+        </div>
+        <div v-if="autosaveOffline && !isFileBacked" class="px-3 pt-2">
+          <div
+            role="status"
+            class="flex items-center gap-2 px-3 py-2 text-sm rounded border border-amber-200 bg-amber-50 text-amber-800"
+            data-testid="dsl-autosave-offline-banner"
+          >
+            <span aria-hidden="true">⚠</span>
+            <span>
+              Autosave offline — draft kept in this browser only. It will retry on the next edit or
+              manual save.
+            </span>
+          </div>
         </div>
 
         <div v-if="deleteError" class="px-3 pt-2" data-testid="dsl-workbench-delete-error">

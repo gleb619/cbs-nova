@@ -2,7 +2,8 @@
 import { computed, onBeforeUpdate, ref } from 'vue'
 import { type ConstructType, useConstructSchema } from '../../composables/useConstructSchema'
 import type { PreviewHistoryEntry, RunnerOutput, RunnerStatus } from '../../types/runner'
-import ExplainOutput from '../runner/ExplainOutput.vue'
+import ExplainMarkdownView from '../runner/ExplainMarkdownView.vue'
+import ExplainRawView from '../runner/ExplainRawView.vue'
 import ResultTab from '../runner/ResultTab.vue'
 import PreviewHistoryPanel from './PreviewHistoryPanel.vue'
 import SchemaForm from './SchemaForm.vue'
@@ -29,17 +30,37 @@ let previousName = props.name
 let previousType = props.type
 let previousOutput: RunnerOutput | null = props.output
 
-type PanelMode = 'form' | 'json' | 'schema' | 'history'
-const mode = ref<PanelMode>('json')
+type PanelMode = 'form' | 'json' | 'schema' | 'history' | 'view' | 'raw'
+
+const isExplain = computed(() => props.endpoint === 'explain')
+const hasExplainBody = computed(() =>
+  Boolean(props.output?.description || props.output?.mermaidDiagram),
+)
+
+function initialMode(): PanelMode {
+  if (isExplain.value && hasExplainBody.value) return 'view'
+  return 'json'
+}
+
+const mode = ref<PanelMode>(initialMode())
 const selectedEntryId = ref<string | null>(null)
 
-const { outputSchema, outputType, loading, error, hasOutputSchema, events } = useConstructSchema({
-  name: () => props.name,
-  type: () => props.type,
-})
+const { outputSchema, outputType, loading, error, hasOutputSchema, report, hasReport, events } =
+  useConstructSchema({
+    name: () => props.name,
+    type: () => props.type,
+    mode: () => (isExplain.value ? 'explain' : 'preview'),
+  })
 
-const effectiveMode = computed(() => {
-  if (mode.value === 'schema' && !hasOutputSchema.value) return 'json'
+const schemaViewPayload = computed(() => (isExplain.value ? report.value : outputSchema.value))
+
+const effectiveMode = computed<PanelMode>(() => {
+  if (isExplain.value && hasExplainBody.value) {
+    if (mode.value === 'form' || mode.value === 'json') return 'view'
+    return mode.value
+  }
+  if (mode.value === 'view' || mode.value === 'raw') return 'json'
+  if (mode.value === 'schema' && schemaViewPayload.value == null) return 'json'
   return mode.value
 })
 
@@ -122,13 +143,17 @@ const footerStatus = computed(() => {
       return { text: 'History — stored result', type: 'muted' as const }
     return { text: `History — ${props.history.length} run(s)`, type: 'muted' as const }
   }
+  if (effectiveMode.value === 'view') return { text: 'Markdown view', type: 'muted' as const }
+  if (effectiveMode.value === 'raw') return { text: 'Markdown source', type: 'muted' as const }
   if (effectiveMode.value === 'form') {
     if (loading.value) return { text: 'Loading schema…', type: 'muted' as const }
     if (error.value) return { text: `Schema unavailable: ${error.value}`, type: 'danger' as const }
     if (!hasOutputSchema.value) return { text: 'Output schema unavailable', type: 'muted' as const }
     return { text: 'Form output', type: 'muted' as const }
   }
-  if (effectiveMode.value === 'schema') return { text: 'Output schema', type: 'muted' as const }
+  if (effectiveMode.value === 'schema') {
+    return { text: isExplain.value ? 'Explain report' : 'Output schema', type: 'muted' as const }
+  }
   return { text: 'Result JSON', type: 'muted' as const }
 })
 
@@ -139,12 +164,15 @@ const canFormat = computed(() => {
   return raw !== undefined && raw !== null
 })
 
+const showExplainToggles = computed(() => isExplain.value && hasExplainBody.value)
+const showFormJsonToggles = computed(() => !showExplainToggles.value)
+
 onBeforeUpdate(() => {
   if (props.name !== previousName || props.type !== previousType) {
     previousName = props.name
     previousType = props.type
     events.emit('change', { name: props.name, type: props.type })
-    mode.value = 'json'
+    mode.value = initialMode()
     selectedEntryId.value = null
   }
   if (props.output !== previousOutput) {
@@ -175,7 +203,15 @@ onBeforeUpdate(() => {
     </header>
 
     <div class="flex-1 min-h-0 overflow-hidden">
-      <div v-if="effectiveMode === 'json'" class="h-full overflow-auto p-3">
+      <div v-if="effectiveMode === 'view'" class="h-full overflow-auto p-3">
+        <ExplainMarkdownView :markdown="output?.description" />
+      </div>
+
+      <div v-else-if="effectiveMode === 'raw'" class="h-full overflow-auto p-3">
+        <ExplainRawView :markdown="output?.description" />
+      </div>
+
+      <div v-else-if="effectiveMode === 'json'" class="h-full overflow-auto p-3">
         <div v-if="status === 'loading'" class="space-y-2" data-testid="result-skeleton">
           <div v-for="i in 6" :key="i" class="h-3 bg-gray-200 rounded animate-pulse" />
         </div>
@@ -189,10 +225,9 @@ onBeforeUpdate(() => {
           </p>
         </div>
         <template v-else>
-          <ExplainOutput
+          <ExplainMarkdownView
             v-if="output?.description || output?.mermaidDiagram"
-            :description="output.description"
-            :mermaid-diagram="output.mermaidDiagram"
+            :markdown="output.description"
           />
           <ResultTab :result="output?.result" />
         </template>
@@ -215,7 +250,7 @@ onBeforeUpdate(() => {
         <pre
           data-testid="schema-view"
           class="w-full h-full min-h-0 overflow-auto font-mono text-xs leading-relaxed text-ink bg-white whitespace-pre-wrap break-words"
-        >{{ JSON.stringify(outputSchema, null, 2) }}</pre>
+        >{{ JSON.stringify(schemaViewPayload, null, 2) }}</pre>
       </div>
 
       <PreviewHistoryPanel
@@ -230,7 +265,10 @@ onBeforeUpdate(() => {
 
     <footer class="flex items-center justify-between px-3 py-2 border-t border-line gap-3">
       <div class="flex items-center shrink-0 gap-2">
-        <div class="flex items-center border border-line rounded-sm overflow-hidden">
+        <div
+          v-if="showFormJsonToggles"
+          class="flex items-center border border-line rounded-sm overflow-hidden"
+        >
           <button
             type="button"
             class="text-xs px-2 py-1"
@@ -251,8 +289,33 @@ onBeforeUpdate(() => {
           </button>
         </div>
 
+        <div
+          v-else
+          class="flex items-center border border-line rounded-sm overflow-hidden"
+          data-testid="explain-mode-toggles"
+        >
+          <button
+            type="button"
+            class="text-xs px-2 py-1"
+            :class="effectiveMode === 'view' ? 'bg-accent-500 text-white' : 'hover:bg-surface text-ink'"
+            data-testid="mode-view"
+            @click="setMode('view')"
+          >
+            View
+          </button>
+          <button
+            type="button"
+            class="text-xs px-2 py-1"
+            :class="effectiveMode === 'raw' ? 'bg-accent-500 text-white' : 'hover:bg-surface text-ink'"
+            data-testid="mode-raw"
+            @click="setMode('raw')"
+          >
+            Raw
+          </button>
+        </div>
+
         <button
-          v-if="hasOutputSchema"
+          v-if="hasOutputSchema || (isExplain && hasReport)"
           type="button"
           class="text-xs px-2 py-1 border border-line hover:bg-surface disabled:opacity-50"
           :class="effectiveMode === 'schema' ? 'bg-accent-500 text-white' : 'text-ink'"

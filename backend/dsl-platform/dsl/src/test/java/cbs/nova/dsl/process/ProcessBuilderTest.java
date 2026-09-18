@@ -406,4 +406,53 @@ class ProcessBuilderTest {
       }
     };
   }
+
+  @Test
+  void descriptionPropagatesToBuiltObjectAndDescriptor() {
+    var process = Dsl.process("DescribedProc")
+            .input(String.class)
+            .output(Integer.class)
+            .description("A described process.")
+            .execute(ctx -> Result.success(42))
+            .build();
+
+    assertThat(process.description()).isEqualTo("A described process.");
+    assertThat(process.descriptor().objectDescriptor().description())
+            .isEqualTo("A described process.");
+  }
+
+  @Test
+  void defaultExplainUsesBuilderDescriptionWhenNoResourceRegistered() {
+    var process = Dsl.process("DescribedDefaultExplainProc")
+            .description("Default description.")
+            .execute(ctx -> Result.success(null))
+            .build();
+    var ctx = new ProcessRichContext<>(
+            SimpleContext.builder().body("body").mode(ExecutionMode.EXPLAIN).runId("run-desc")
+                    .build());
+
+    var result = process.explainLogic().apply(ctx);
+
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(result.value().description()).isEqualTo("Default description.");
+    assertThat(result.value().mermaid()).isEqualTo(Constants.EMPTY_MARKDOWN);
+  }
+
+  @Test
+  void explainViaSetsDescriptionFromFrontmatter() {
+    var process = Dsl.process("FrontmatterProc")
+            .execute(ctx -> Result.success("exec"))
+            .explainVia("builder-sample.md")
+            .build();
+    var ctx = new ProcessRichContext<>(
+            SimpleContext.builder().body("body").mode(ExecutionMode.EXPLAIN).runId("run-fm")
+                    .build());
+
+    var result = process.explainLogic().apply(ctx);
+
+    assertThat(result.value().description())
+            .isEqualTo("Markdown backing the explainVia builder tests.");
+    assertThat(result.value().mermaid()).contains("# Builder Sample");
+  }
+
 }

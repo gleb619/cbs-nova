@@ -220,4 +220,202 @@ describe('useWorkbenchDraft', () => {
     // window restored — nothing should have leaked into storage
     expect(window.localStorage.getItem(KEY)).toBeNull()
   })
+
+  describe('server autosave (T401)', () => {
+    function deferred<T>() {
+      let resolve!: (value: T) => void
+      let reject!: (reason?: unknown) => void
+      const promise = new Promise<T>((res, rej) => {
+        resolve = res
+        reject = rej
+      })
+      return { promise, resolve, reject }
+    }
+
+    it('debounces the server save by 3s and sends the latest body', async () => {
+      const save = vi.fn().mockResolvedValue(555)
+      const { body } = useWorkbenchDraft('c1', { server: { save, load: vi.fn() } })
+
+      body.value = 'a'
+      await vi.advanceTimersByTimeAsync(1000)
+      body.value = 'ab'
+      await vi.advanceTimersByTimeAsync(2999)
+      expect(save).not.toHaveBeenCalled()
+
+      await vi.advanceTimersByTimeAsync(1)
+      await flush()
+      await flush()
+
+      expect(save).toHaveBeenCalledTimes(1)
+      expect(save).toHaveBeenCalledWith('ab')
+    })
+
+    it('echoes the server savedAt into the local copy on success', async () => {
+      const save = vi.fn().mockResolvedValue(555)
+      const { body, lastSavedAt, autosaveOffline } = useWorkbenchDraft('c1', {
+        server: { save, load: vi.fn() },
+      })
+
+      body.value = 'hello'
+      await vi.advanceTimersByTimeAsync(3000)
+      await flush()
+      await flush()
+
+      expect(autosaveOffline.value).toBe(false)
+      const parsed = JSON.parse(window.localStorage.getItem(KEY) as string)
+      expect(parsed.body).toBe('hello')
+      expect(parsed.savedAt).toBe(555)
+      expect(lastSavedAt.value).toBe(555)
+    })
+
+    it('keeps the local copy and flags autosaveOffline when the server save fails', async () => {
+      const save = vi.fn().mockRejectedValue(new Error('boom'))
+      const { body, autosaveOffline } = useWorkbenchDraft('c1', {
+        server: { save, load: vi.fn() },
+      })
+
+      body.value = 'offline body'
+      await vi.advanceTimersByTimeAsync(3000)
+      await flush()
+      await flush()
+
+      expect(autosaveOffline.value).toBe(true)
+      const parsed = JSON.parse(window.localStorage.getItem(KEY) as string)
+      expect(parsed.body).toBe('offline body')
+    })
+
+    it('skips while a save is pending and flushes a trailing save with the newest body', async () => {
+      const pending = deferred<number>()
+      const save = vi.fn().mockReturnValueOnce(pending.promise).mockResolvedValue(1)
+      const { body } = useWorkbenchDraft('c1', { server: { save, load: vi.fn() } })
+
+      body.value = 'first'
+      await vi.advanceTimersByTimeAsync(3000)
+      await flush()
+      expect(save).toHaveBeenCalledTimes(1)
+      expect(save).toHaveBeenLastCalledWith('first')
+
+      // Change while the first save is still in flight.
+      body.value = 'second'
+      await vi.advanceTimersByTimeAsync(3000)
+      await flush()
+      expect(save).toHaveBeenCalledTimes(1)
+
+      pending.resolve(111)
+      await flush()
+      await flush()
+
+      expect(save).toHaveBeenCalledTimes(2)
+      expect(save).toHaveBeenLastCalledWith('second')
+    })
+
+    it('does not re-save a body that was just restored from the server', async () => {
+      const save = vi.fn().mockResolvedValue(1)
+      const load = vi.fn().mockResolvedValue({ body: 'server body', savedAt: Date.now() - 1000 })
+      const { body } = useWorkbenchDraft('c1', { server: { save, load } })
+      await flush()
+      await flush()
+
+      expect(body.value).toBe('server body')
+      await vi.advanceTimersByTimeAsync(5000)
+      await flush()
+      expect(save).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('server-vs-local precedence (T401)', () => {
+    it('adopts the server draft when it is fresher than the local one', async () => {
+      const now = Date.now()
+      window.localStorage.setItem(KEY, JSON.stringify({ body: 'local body', savedAt: now - 2000 }))
+      const load = vi.fn().mockResolvedValue({ body: 'server body', savedAt: now - 1000 })
+
+      const { body, restoredFromDraft, lastSavedAt } = useWorkbenchDraft('c1', {
+        server: { save: vi.fn(), load },
+      })
+      await flush()
+      await flush()
+
+      expect(body.value).toBe('server body')
+      expect(restoredFromDraft.value).toBe(true)
+      expect(lastSavedAt.value).toBe(now - 1000)
+      // local copy is refreshed so the offline fallback matches the server
+      const parsed = JSON.parse(window.localStorage.getItem(KEY) as string)
+      expect(parsed).toEqual({ body: 'server body', savedAt: now - 1000 })
+    })
+
+    it('keeps the local draft when it is fresher than the server one', async () => {
+      const now = Date.now()
+      window.localStorage.setItem(KEY, JSON.stringify({ body: 'local body', savedAt: now - 1000 }))
+      const load = vi.fn().mockResolvedValue({ body: 'server body', savedAt: now - 2000 })
+
+      const { body, restoredFromDraft } = useWorkbenchDraft('c1', {
+        server: { save: vi.fn(), load },
+      })
+      await flush()
+      await flush()
+
+      expect(body.value).toBe('local body')
+      expect(restoredFromDraft.value).toBe(true)
+    })
+
+    it('keeps the local draft when savedAt values are equal', async () => {
+      const now = Date.now()
+      window.localStorage.setItem(KEY, JSON.stringify({ body: 'local body', savedAt: now - 1000 }))
+      const load = vi.fn().mockResolvedValue({ body: 'server body', savedAt: now - 1000 })
+
+      const { body } = useWorkbenchDraft('c1', { server: { save: vi.fn(), load } })
+      await flush()
+      await flush()
+
+      expect(body.value).toBe('local body')
+    })
+
+    it('restores from the server when the local draft expired past the TTL', async () => {
+      const staleSavedAt = Date.now() - (24 * 60 * 60 * 1000 + 1)
+      window.localStorage.setItem(
+        KEY,
+        JSON.stringify({ body: 'stale body', savedAt: staleSavedAt }),
+      )
+      const load = vi.fn().mockResolvedValue({ body: 'server body', savedAt: Date.now() })
+
+      const { body, restoredFromDraft } = useWorkbenchDraft('c1', {
+        server: { save: vi.fn(), load },
+      })
+      await flush()
+      await flush()
+
+      expect(body.value).toBe('server body')
+      expect(restoredFromDraft.value).toBe(true)
+      const parsed = JSON.parse(window.localStorage.getItem(KEY) as string)
+      expect(parsed.body).toBe('server body')
+    })
+
+    it('keeps the local draft when the server has none', async () => {
+      window.localStorage.setItem(
+        KEY,
+        JSON.stringify({ body: 'local body', savedAt: Date.now() - 1000 }),
+      )
+      const load = vi.fn().mockResolvedValue(null)
+
+      const { body } = useWorkbenchDraft('c1', { server: { save: vi.fn(), load } })
+      await flush()
+      await flush()
+
+      expect(body.value).toBe('local body')
+    })
+
+    it('keeps the local draft when the server load fails', async () => {
+      window.localStorage.setItem(
+        KEY,
+        JSON.stringify({ body: 'local body', savedAt: Date.now() - 1000 }),
+      )
+      const load = vi.fn().mockRejectedValue(new Error('backend down'))
+
+      const { body } = useWorkbenchDraft('c1', { server: { save: vi.fn(), load } })
+      await flush()
+      await flush()
+
+      expect(body.value).toBe('local body')
+    })
+  })
 })

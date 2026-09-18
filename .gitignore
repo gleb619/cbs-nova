@@ -163,3 +163,4 @@ backend/.intellijPlatform/
 docs/adr/
 __pycache__/
 *.pyc
+/dsl-workbench-objectname.png

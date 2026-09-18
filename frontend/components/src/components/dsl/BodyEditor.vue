@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUpdate, ref } from 'vue'
+import { computed, onBeforeUnmount, onBeforeUpdate, onMounted, ref } from 'vue'
 import type { ConstructType } from '../../composables/useConstructSchema'
 import {
   createNamespacedLocalStorageState,
@@ -169,6 +169,26 @@ function onProblemsCount(total: number) {
 }
 
 const problemBadgeCount = computed(() => problemsCount.value ?? props.errors.length)
+
+// Cross-component coordination uses window CustomEvents (emit/listen),
+// not v-model/watch. The page dispatches `cbs:body-editor:set-tab` from a
+// deep link; the editor subscribes while mounted and unsubscribes on
+// teardown. Selector stays valid against BODY_EDITOR_TABS.
+function handleSetTabEvent(event: Event) {
+  const detail = (event as CustomEvent<BodyEditorTab>).detail
+  if (typeof detail !== 'string') return
+  if ((BODY_EDITOR_TABS as readonly string[]).includes(detail)) {
+    tab.value = detail
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('cbs:body-editor:set-tab', handleSetTabEvent)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('cbs:body-editor:set-tab', handleSetTabEvent)
+})
 
 defineExpose({ revealPosition, insertAtCursor, selectProblem })
 </script>

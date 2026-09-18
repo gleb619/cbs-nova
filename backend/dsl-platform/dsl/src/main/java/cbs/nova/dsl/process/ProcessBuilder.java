@@ -41,6 +41,8 @@ public final class ProcessBuilder<I, O> implements ObjectBuilder<ProcessDslObjec
   @Nullable
   private Function<ProcessContext<I>, Result<?>> previewLogic;
   @Nullable
+  private String description;
+  @Nullable
   private Function<ProcessContext<I>, Result<ExplainReport>> explainLogic;
 
   public ProcessBuilder(@NonNull String name) {
@@ -76,6 +78,11 @@ public final class ProcessBuilder<I, O> implements ObjectBuilder<ProcessDslObjec
 
   public ProcessBuilder<I, O> version(@NonNull String version) {
     this.version = version;
+    return this;
+  }
+
+  public ProcessBuilder<I, O> description(@NonNull String description) {
+    this.description = description;
     return this;
   }
 
@@ -118,13 +125,13 @@ public final class ProcessBuilder<I, O> implements ObjectBuilder<ProcessDslObjec
     var descriptor = defaultDescriptor(
             name, taskQueue, version, inputType, outputType,
             parameters != null ? parameters : List.of(),
-            compensationLogic != null, null);
+            compensationLogic != null, description);
     var resolvedExecute = rawExecute();
     var explain = rawExplain() != null ? rawExplain() : defaultExplain();
     var resolvedPreview = rawPreview() != null ? rawPreview() : resolvedExecute;
     return ProcessDslObject.builder()
             .name(name)
-            .description(Constants.EMPTY_MARKDOWN)
+            .description(description != null ? description : Constants.EMPTY_MARKDOWN)
             .taskQueue(taskQueue)
             .version(version)
             .inputType(inputType != null ? inputType : Void.class)
@@ -145,8 +152,11 @@ public final class ProcessBuilder<I, O> implements ObjectBuilder<ProcessDslObjec
 
   private @NonNull Function<ProcessContext<?>, Result<ExplainReport>> defaultExplain() {
     return ctx -> Result.success(
-            ExplainReport.of(name,
-                    GlobalManager.globalManager().resolveExplainContent(name)));
+            ExplainReport.builder()
+                    .name(name)
+                    .description(description != null ? description : "")
+                    .mermaid(GlobalManager.globalManager().resolveExplainContent(name))
+                    .build());
   }
 
   @SuppressWarnings("unchecked")

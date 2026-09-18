@@ -86,7 +86,8 @@ class DslDefinitionBundleServiceTest {
     DefinitionBundle bundle = new DefinitionBundle(
             StarterConstants.BUNDLE_FORMAT_VERSION, "1.0", "now",
             List.of(new DefinitionBundleEntry(
-                    new DraftRequest("A", "process", "Published", "v1", "q"), "published")),
+                    new DraftRequest("A", "process", "Published", "v1", "q", null, null),
+                    "published")),
             null);
 
     service.validateForImport(bundle);
@@ -103,7 +104,8 @@ class DslDefinitionBundleServiceTest {
   void validateForImportRejectsZeroFormatVersion() {
     DefinitionBundle bundle = new DefinitionBundle(0, "1.0", "now",
             List.of(new DefinitionBundleEntry(
-                    new DraftRequest("A", "process", "Published", "v1", "q"), "published")),
+                    new DraftRequest("A", "process", "Published", "v1", "q", null, null),
+                    "published")),
             null);
     assertThatThrownBy(() -> service.validateForImport(bundle))
             .isInstanceOf(IllegalArgumentException.class)
@@ -114,7 +116,8 @@ class DslDefinitionBundleServiceTest {
   void validateForImportRejectsUnsupportedFormatVersion() {
     DefinitionBundle bundle = new DefinitionBundle(99, "1.0", "now",
             List.of(new DefinitionBundleEntry(
-                    new DraftRequest("A", "process", "Published", "v1", "q"), "published")),
+                    new DraftRequest("A", "process", "Published", "v1", "q", null, null),
+                    "published")),
             null);
     assertThatThrownBy(() -> service.validateForImport(bundle))
             .isInstanceOf(IllegalArgumentException.class)
@@ -135,7 +138,8 @@ class DslDefinitionBundleServiceTest {
     DefinitionBundle bundle = new DefinitionBundle(
             StarterConstants.BUNDLE_FORMAT_VERSION, "1.0", "now",
             List.of(new DefinitionBundleEntry(
-                    new DraftRequest("", "process", "Published", "v1", "q"), "published")),
+                    new DraftRequest("", "process", "Published", "v1", "q", null, null),
+                    "published")),
             null);
     assertThatThrownBy(() -> service.validateForImport(bundle))
             .isInstanceOf(IllegalArgumentException.class)
@@ -179,7 +183,8 @@ class DslDefinitionBundleServiceTest {
             bundle.engineVersion(),
             bundle.exportedAt(),
             List.of(new DefinitionBundleEntry(
-                    new DraftRequest("A", "process", "Published", "v2", "q"), "published")),
+                    new DraftRequest("A", "process", "Published", "v2", "q", null, null),
+                    "published")),
             bundle.digest());
 
     assertThatThrownBy(() -> service.verifyDigest(tampered))
@@ -192,7 +197,8 @@ class DslDefinitionBundleServiceTest {
     DefinitionBundle bundle = new DefinitionBundle(
             StarterConstants.BUNDLE_FORMAT_VERSION, "1.0", "now",
             List.of(new DefinitionBundleEntry(
-                    new DraftRequest("A", "process", "Published", "v1", "q"), "published")),
+                    new DraftRequest("A", "process", "Published", "v1", "q", null, null),
+                    "published")),
             null);
 
     service.verifyDigest(bundle);
@@ -206,7 +212,8 @@ class DslDefinitionBundleServiceTest {
     DefinitionBundle bundle = new DefinitionBundle(
             StarterConstants.BUNDLE_FORMAT_VERSION, "1.0", "now",
             List.of(new DefinitionBundleEntry(
-                    new DraftRequest("A", "process", "Published", "v1", "q"), "published")),
+                    new DraftRequest("A", "process", "Published", "v1", "q", null, null),
+                    "published")),
             null);
 
     assertThatThrownBy(() -> strict.verifyDigest(bundle))
@@ -222,14 +229,18 @@ class DslDefinitionBundleServiceTest {
             StarterConstants.BUNDLE_FORMAT_VERSION, "1.0", "now",
             List.of(
                     new DefinitionBundleEntry(
-                            new DraftRequest("A", "process", "Published", "v1", "q"), "published"),
-                    new DefinitionBundleEntry(
-                            new DraftRequest("B", "transaction", "Published", "v3", "q"),
+                            new DraftRequest("A", "process", "Published", "v1", "q", null, null),
                             "published"),
                     new DefinitionBundleEntry(
-                            new DraftRequest("C", "helper", "Published", "v1", "q"), "published"),
+                            new DraftRequest("B", "transaction", "Published", "v3", "q", null,
+                                    null),
+                            "published"),
                     new DefinitionBundleEntry(
-                            new DraftRequest("", "process", "Published", "v1", "q"), "published")),
+                            new DraftRequest("C", "helper", "Published", "v1", "q", null, null),
+                            "published"),
+                    new DefinitionBundleEntry(
+                            new DraftRequest("", "process", "Published", "v1", "q", null, null),
+                            "published")),
             null);
 
     List<ImportEntryResult> results = service.diffForImport(dir, bundle);
@@ -247,7 +258,7 @@ class DslDefinitionBundleServiceTest {
           throws IOException {
     Path d = dir.resolve(".workbench/published");
     Files.createDirectories(d);
-    DraftRequest req = new DraftRequest(name, type, "Published", version, "q");
+    DraftRequest req = new DraftRequest(name, type, "Published", version, "q", null, null);
     Files.writeString(d.resolve(name + ".json"), mapper.writeValueAsString(req),
             StandardCharsets.UTF_8);
   }
@@ -255,7 +266,7 @@ class DslDefinitionBundleServiceTest {
   private void writeDraft(Path dir, String name, String type, String version) throws IOException {
     Path d = dir.resolve(".workbench/drafts");
     Files.createDirectories(d);
-    DraftRequest req = new DraftRequest(name, type, "Draft", version, "q");
+    DraftRequest req = new DraftRequest(name, type, "Draft", version, "q", null, null);
     Files.writeString(d.resolve(name + ".json"), mapper.writeValueAsString(req),
             StandardCharsets.UTF_8);
   }

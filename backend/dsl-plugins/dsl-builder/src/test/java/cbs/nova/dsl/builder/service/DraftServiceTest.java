@@ -77,19 +77,25 @@ class DraftServiceTest {
   @Test
   void saveWritesDraftMarkerWithoutReloading() throws IOException {
     DraftResponse response = draftService.save("LoanProcess",
-            new DraftRequest("LoanProcess", "process", "Draft", "v1", "q"));
+            new DraftRequest("LoanProcess", "process", "Draft", "v1", "q", "workbench", null));
 
     assertThat(response.status()).isEqualTo("Draft");
     assertThat(response.reloaded()).isFalse();
     assertThat(response.reloadError()).isNull();
     assertThat(response.loadResult().total()).isZero();
-    assertThat(Files.exists(workspace.resolve(".workbench/drafts/LoanProcess.json"))).isTrue();
+    assertThat(response.savedAt()).isNotNull();
+    Path draftFile = workspace.resolve(".workbench/drafts/LoanProcess.json");
+    assertThat(draftFile).exists();
+    assertThat(Files.readString(draftFile)).contains("\"source\" : \"workbench\"");
+    DraftRequest read = draftService.read("LoanProcess");
+    assertThat(read.source()).isEqualTo("workbench");
+    assertThat(read.savedAt()).isEqualTo(response.savedAt());
   }
 
   @Test
   void saveRejectsBlankName() {
     assertThatThrownBy(() -> draftService.save("LoanProcess",
-            new DraftRequest(" ", "process", "Draft", "v1", "q")))
+            new DraftRequest(" ", "process", "Draft", "v1", "q", null, null)))
             .isInstanceOf(BuilderApiException.class)
             .hasMessageContaining("name is required");
   }
@@ -97,10 +103,10 @@ class DraftServiceTest {
   @Test
   void publishWritesPublishedMarkerSnapshotsHistoryAndDeletesDraft() throws IOException {
     draftService.save("LoanProcess",
-            new DraftRequest("LoanProcess", "process", "Draft", "v1", "q"));
+            new DraftRequest("LoanProcess", "process", "Draft", "v1", "q", null, null));
 
     DraftResponse response = draftService.publish("LoanProcess",
-            new DraftRequest("LoanProcess", "process", "Draft", "v2", "q"));
+            new DraftRequest("LoanProcess", "process", "Draft", "v2", "q", null, null));
 
     assertThat(response.status()).isEqualTo("Published");
     assertThat(response.reloaded()).isFalse();
@@ -110,23 +116,23 @@ class DraftServiceTest {
     assertThat(draftService.history("LoanProcess")).isEmpty();
 
     draftService.publish("LoanProcess",
-            new DraftRequest("LoanProcess", "process", "Published", "v3", "q"));
+            new DraftRequest("LoanProcess", "process", "Published", "v3", "q", null, null));
     assertThat(draftService.history("LoanProcess")).hasSize(1);
   }
 
   @Test
   void historyEntryAndReadReturnStoredPayloads() throws IOException {
     draftService.save("LoanProcess",
-            new DraftRequest("LoanProcess", "process", "Draft", "v0", "q"));
+            new DraftRequest("LoanProcess", "process", "Draft", "v0", "q", null, null));
 
     DraftRequest read = draftService.read("LoanProcess");
     assertThat(read.status()).isEqualTo("Draft");
     assertThat(read.version()).isEqualTo("v0");
 
     draftService.publish("LoanProcess",
-            new DraftRequest("LoanProcess", "process", "Draft", "v1", "q"));
+            new DraftRequest("LoanProcess", "process", "Draft", "v1", "q", null, null));
     draftService.publish("LoanProcess",
-            new DraftRequest("LoanProcess", "process", "Published", "v2", "q"));
+            new DraftRequest("LoanProcess", "process", "Published", "v2", "q", null, null));
     String timestamp = draftService.history("LoanProcess").get(0).timestamp();
     DraftRequest entry = draftService.historyEntry("LoanProcess", timestamp);
     assertThat(entry.version()).isEqualTo("v1");
@@ -145,9 +151,9 @@ class DraftServiceTest {
   @Test
   void historyDiffComparesEntryAgainstPublished() throws IOException {
     draftService.publish("LoanProcess",
-            new DraftRequest("LoanProcess", "process", "Published", "v1", "q"));
+            new DraftRequest("LoanProcess", "process", "Published", "v1", "q", null, null));
     draftService.publish("LoanProcess",
-            new DraftRequest("LoanProcess", "process", "Published", "v2", "q"));
+            new DraftRequest("LoanProcess", "process", "Published", "v2", "q", null, null));
 
     String timestamp = draftService.history("LoanProcess").get(0).timestamp();
     HistoryDiffResponse diff = draftService.historyDiff("LoanProcess", timestamp);
@@ -161,9 +167,9 @@ class DraftServiceTest {
   @Test
   void restoreRepublishesHistoricalEntry() throws IOException {
     draftService.publish("LoanProcess",
-            new DraftRequest("LoanProcess", "process", "Published", "v1", "q"));
+            new DraftRequest("LoanProcess", "process", "Published", "v1", "q", null, null));
     draftService.publish("LoanProcess",
-            new DraftRequest("LoanProcess", "process", "Published", "v2", "q"));
+            new DraftRequest("LoanProcess", "process", "Published", "v2", "q", null, null));
     String timestamp = draftService.history("LoanProcess").get(0).timestamp();
 
     DraftResponse restored = draftService.restore("LoanProcess", timestamp);
@@ -179,7 +185,7 @@ class DraftServiceTest {
   @Test
   void deleteRemovesDraftMarker() throws IOException {
     draftService.save("LoanProcess",
-            new DraftRequest("LoanProcess", "process", "Draft", "v1", "q"));
+            new DraftRequest("LoanProcess", "process", "Draft", "v1", "q", null, null));
 
     DraftResponse deleted = draftService.delete("LoanProcess");
 
@@ -190,8 +196,8 @@ class DraftServiceTest {
 
   @Test
   void listReturnsPagedSummaries() throws IOException {
-    draftService.save("A", new DraftRequest("A", "process", "Draft", "v1", "q"));
-    draftService.save("B", new DraftRequest("B", "transaction", "Draft", "v1", "q"));
+    draftService.save("A", new DraftRequest("A", "process", "Draft", "v1", "q", null, null));
+    draftService.save("B", new DraftRequest("B", "transaction", "Draft", "v1", "q", null, null));
 
     var page = draftService.list(50, 0);
 
@@ -201,7 +207,7 @@ class DraftServiceTest {
 
   @Test
   void exportBundleIncludesPublishedMarkers() throws IOException {
-    draftService.publish("A", new DraftRequest("A", "process", "Published", "v1", "q"));
+    draftService.publish("A", new DraftRequest("A", "process", "Published", "v1", "q", null, null));
 
     DefinitionBundle bundle = draftService.exportBundle(false);
 
@@ -216,7 +222,8 @@ class DraftServiceTest {
     DefinitionBundle bundle = new DefinitionBundle(
             1, "1.0", "now",
             List.of(new DefinitionBundleEntry(
-                    new DraftRequest("A", "process", "Draft", "v1", "q"), "published")));
+                    new DraftRequest("A", "process", "Draft", "v1", "q", null, null),
+                    "published")));
 
     ImportBundleResult result = draftService.importBundle(bundle, false);
 
@@ -233,7 +240,8 @@ class DraftServiceTest {
     DefinitionBundle bundle = new DefinitionBundle(
             1, "1.0", "now",
             List.of(new DefinitionBundleEntry(
-                    new DraftRequest("A", "process", "Draft", "v1", "q"), "published")));
+                    new DraftRequest("A", "process", "Draft", "v1", "q", null, null),
+                    "published")));
 
     ImportBundleResult result = draftService.importBundle(bundle, true);
 
@@ -260,16 +268,16 @@ class DraftServiceTest {
     var customDrafts = new DraftService(customProperties, objectMapper, customHistory,
             customBundle);
 
-    customDrafts.save("A", new DraftRequest("A", "process", "Draft", "v1", "q"));
+    customDrafts.save("A", new DraftRequest("A", "process", "Draft", "v1", "q", null, null));
     assertThat(Files.exists(workspace.resolve("custom/drafts/A.json"))).isTrue();
 
-    customDrafts.publish("A", new DraftRequest("A", "process", "Published", "v1", "q"));
+    customDrafts.publish("A", new DraftRequest("A", "process", "Published", "v1", "q", null, null));
     // publish() removes the draft marker and writes the published file.
     assertThat(Files.exists(workspace.resolve("custom/drafts/A.json"))).isFalse();
     assertThat(Files.exists(workspace.resolve("custom/published/A.json"))).isTrue();
 
     // Second publish triggers snapshotBeforePublish against the previously published file.
-    customDrafts.publish("A", new DraftRequest("A", "process", "Published", "v2", "q"));
+    customDrafts.publish("A", new DraftRequest("A", "process", "Published", "v2", "q", null, null));
     assertThat(Files.isDirectory(workspace.resolve("custom/history/A"))).isTrue();
     assertThat(customDrafts.history("A")).hasSize(1);
 
@@ -278,9 +286,11 @@ class DraftServiceTest {
 
     // bundleMaxDefinitions=1 rejects bundles larger than 1 entry.
     DefinitionBundle oversized = new DefinitionBundle(2, "1.0", "now", List.of(
-            new DefinitionBundleEntry(new DraftRequest("A", "process", "Published", "v1", "q"),
+            new DefinitionBundleEntry(
+                    new DraftRequest("A", "process", "Published", "v1", "q", null, null),
                     "published"),
-            new DefinitionBundleEntry(new DraftRequest("B", "process", "Published", "v1", "q"),
+            new DefinitionBundleEntry(
+                    new DraftRequest("B", "process", "Published", "v1", "q", null, null),
                     "published")));
     assertThatThrownBy(() -> customDrafts.importBundle(oversized, false))
             .isInstanceOf(BuilderApiException.class)

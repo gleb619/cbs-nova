@@ -412,4 +412,53 @@ class TransactionBuilderTest {
       }
     };
   }
+
+  @Test
+  void descriptionPropagatesToBuiltObjectAndDescriptor() {
+    var tx = Dsl.transaction("DescribedTx")
+            .input(String.class)
+            .output(Integer.class)
+            .description("A described transaction.")
+            .execute(ctx -> Result.success(42))
+            .build();
+
+    assertThat(tx.description()).isEqualTo("A described transaction.");
+    assertThat(tx.describe().objectDescriptor().description())
+            .isEqualTo("A described transaction.");
+  }
+
+  @Test
+  void defaultExplainUsesBuilderDescriptionWhenNoResourceRegistered() {
+    var tx = Dsl.transaction("DescribedDefaultExplainTx")
+            .description("Default description.")
+            .execute(ctx -> Result.success(null))
+            .build();
+    var ctx = new TransactionRichContext<>(
+            SimpleContext.builder().body("body").mode(ExecutionMode.EXPLAIN).runId("run-desc")
+                    .build());
+
+    var result = tx.effectiveExplain().apply(ctx);
+
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(result.value().description()).isEqualTo("Default description.");
+    assertThat(result.value().mermaid()).isEqualTo(Constants.EMPTY_MARKDOWN);
+  }
+
+  @Test
+  void explainViaSetsDescriptionFromFrontmatter() {
+    var tx = Dsl.transaction("FrontmatterTx")
+            .execute(ctx -> Result.success("exec"))
+            .explainVia("builder-sample.md")
+            .build();
+    var ctx = new TransactionRichContext<>(
+            SimpleContext.builder().body("body").mode(ExecutionMode.EXPLAIN).runId("run-fm")
+                    .build());
+
+    var result = tx.effectiveExplain().apply(ctx);
+
+    assertThat(result.value().description())
+            .isEqualTo("Markdown backing the explainVia builder tests.");
+    assertThat(result.value().mermaid()).contains("# Builder Sample");
+  }
+
 }

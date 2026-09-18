@@ -420,7 +420,7 @@ class DslDefinitionBundleResourceTest {
   private void publish(String name, String version) throws Exception {
     Path dir = sourceDir.resolve(".workbench/published");
     Files.createDirectories(dir);
-    DraftRequest req = new DraftRequest(name, "process", "Published", version, "q");
+    DraftRequest req = new DraftRequest(name, "process", "Published", version, "q", null, null);
     Files.writeString(dir.resolve(name + ".json"), mapper.writeValueAsString(req),
             StandardCharsets.UTF_8);
   }
@@ -428,7 +428,7 @@ class DslDefinitionBundleResourceTest {
   private void draft(String name, String version) throws Exception {
     Path dir = sourceDir.resolve(".workbench/drafts");
     Files.createDirectories(dir);
-    DraftRequest req = new DraftRequest(name, "process", "Draft", version, "q");
+    DraftRequest req = new DraftRequest(name, "process", "Draft", version, "q", null, null);
     Files.writeString(dir.resolve(name + ".json"), mapper.writeValueAsString(req),
             StandardCharsets.UTF_8);
   }

@@ -485,6 +485,98 @@ describe('RunResultPanel', () => {
     expect(wrapper.find('[data-testid="runner-result-tab"]').text()).toContain('{"ok":true}')
   })
 
+  it('defaults to View mode and shows View/Raw toggles when endpoint is explain and description present', () => {
+    const wrapper = mountPanel({
+      endpoint: 'explain',
+      output: { description: '# Hello\n\nworld', mermaidDiagram: 'graph TD; A-->B' },
+      status: 'success',
+    })
+
+    expect(wrapper.find('[data-testid="mode-view"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="mode-raw"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="mode-form"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="mode-json"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="explain-markdown-view"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="explain-markdown-rendered"]').html()).toContain('<h1')
+  })
+
+  it('switches between View and Raw and renders the raw source verbatim', async () => {
+    const md = '# Heading\n\n**bold**'
+    const wrapper = mountPanel({
+      endpoint: 'explain',
+      output: { description: md },
+      status: 'success',
+    })
+
+    await wrapper.find('[data-testid="mode-raw"]').trigger('click')
+    await flushPromises()
+    const pre = wrapper.find('[data-testid="explain-raw-pre"]')
+    expect(pre.exists()).toBe(true)
+    expect(pre.text()).toBe(md)
+
+    await wrapper.find('[data-testid="mode-view"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[data-testid="explain-markdown-view"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="explain-markdown-rendered"]').html()).toContain('<h1')
+  })
+
+  it('falls back to JSON mode in explain endpoint when no description or mermaid is present', () => {
+    const wrapper = mountPanel({
+      endpoint: 'explain',
+      output: { result: { ok: true } },
+      status: 'success',
+    })
+
+    expect(wrapper.find('[data-testid="mode-json"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="mode-form"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="mode-view"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="mode-raw"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="runner-result-tab"]').text()).toContain('{"ok":true}')
+  })
+
+  it('disables the format button in explain mode', async () => {
+    const wrapper = mountPanel({
+      endpoint: 'explain',
+      output: { description: '# x' },
+      status: 'success',
+    })
+
+    expect(wrapper.find('[data-testid="format-result"]').attributes('disabled')).toBeDefined()
+
+    await wrapper.find('[data-testid="mode-raw"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[data-testid="format-result"]').attributes('disabled')).toBeDefined()
+  })
+
+  it('shows the explain report in schema mode for the explain endpoint', async () => {
+    const report = {
+      name: 'demo',
+      description: 'does things',
+      mermaid: 'graph TD; A-->B;',
+      children: [],
+    }
+    const fetchMock = vi.fn().mockResolvedValue(report)
+    const wrapper = mountPanel(
+      {
+        name: 'demo',
+        type: 'Process',
+        endpoint: 'explain',
+        output: { description: '# x' },
+        status: 'success',
+      },
+      fetchMock,
+    )
+    await flushPromises()
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/schemas/demo?mode=explain')
+    const toggle = wrapper.find('[data-testid="mode-schema"]')
+    expect(toggle.exists()).toBe(true)
+
+    await toggle.trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[data-testid="schema-view"]').text()).toContain('"mermaid"')
+  })
+
   it('renders actual output values in Form mode', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       inputSchema: schemaResponse.inputSchema,

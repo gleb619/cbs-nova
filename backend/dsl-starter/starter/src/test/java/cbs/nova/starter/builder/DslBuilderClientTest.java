@@ -100,7 +100,7 @@ class DslBuilderClientTest {
                     MediaType.APPLICATION_JSON));
 
     var response = client.saveDraft("foo",
-            new DraftRequest("foo", "process", "Draft", "1", "q"));
+            new DraftRequest("foo", "process", "Draft", "1", "q", null, null));
 
     assertThat(response.name()).isEqualTo("foo");
     assertThat(response.status()).isEqualTo("Draft");

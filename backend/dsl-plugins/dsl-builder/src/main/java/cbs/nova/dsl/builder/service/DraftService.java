@@ -43,10 +43,13 @@ public class DraftService {
   public DraftResponse save(String name, DraftRequest body) throws IOException {
     requireName(name, body);
     Path dir = workspaceRoot();
-    DraftRequest payload = withStatus(body, "Draft");
+    DraftRequest stamped = new DraftRequest(body.name(), body.type(), body.status(),
+            body.version(), body.taskQueue(), body.source(), System.currentTimeMillis());
+    DraftRequest payload = withStatus(stamped, "Draft");
     Path file = writePayload(dir.resolve(workbench().draftsDir()), payload);
     log.info("[DSL drafts] saved {} to {}", name, file);
-    return new DraftResponse(name, "Draft", file.toString(), false, LoadResult.empty(), null, null);
+    return new DraftResponse(name, "Draft", file.toString(), false, LoadResult.empty(), null, null,
+            payload.savedAt());
   }
 
   public DraftResponse publish(String name, DraftRequest body) throws IOException {
@@ -58,7 +61,7 @@ public class DraftService {
     deleteDraftMarker(dir, name);
     log.info("[DSL drafts] published {} to {}", name, file);
     return new DraftResponse(name, "Published", file.toString(), false, LoadResult.empty(), null,
-            null);
+            null, payload.savedAt());
   }
 
   public List<DefinitionHistoryEntry> history(String name) {
@@ -103,7 +106,7 @@ public class DraftService {
     Path file = writePayload(dir.resolve(workbench().publishedDir()), payload);
     log.info("[DSL drafts] restored {} to published {} from history {}", name, file, timestamp);
     return new DraftResponse(name, "Published", file.toString(), false, LoadResult.empty(), null,
-            null);
+            null, payload.savedAt());
   }
 
   public DraftResponse delete(String name) throws IOException {
@@ -115,7 +118,7 @@ public class DraftService {
     }
     Files.delete(draftFile);
     log.info("[DSL drafts] deleted {} from {}", name, draftFile);
-    return new DraftResponse(name, "Deleted", null, false, LoadResult.empty(), null, null);
+    return new DraftResponse(name, "Deleted", null, false, LoadResult.empty(), null, null, null);
   }
 
   public PageResponse<DraftSummary> list(Integer limit, Integer offset) {
@@ -246,7 +249,9 @@ public class DraftService {
             body.type(),
             status,
             body.version(),
-            body.taskQueue());
+            body.taskQueue(),
+            body.source(),
+            body.savedAt());
   }
 
   private Path writePayload(Path directory, DraftRequest payload) throws IOException {

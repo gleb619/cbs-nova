@@ -232,6 +232,69 @@ describe('useDslWorkbench', () => {
       expect(wb.state.value.isDirty).toBe(false)
       expect(wb.state.value.isSaving).toBe(false)
     })
+
+    it('ships the editor content as source when saving a non-file-backed draft', async () => {
+      const api = getApi()
+      api.getDefinitions.mockResolvedValueOnce([
+        { name: 'c1', type: 'Process' as const, status: 'Draft' as const, version: '1.0' },
+      ])
+      api.saveDraft.mockResolvedValueOnce({ ok: true })
+
+      const wb = useDslWorkbench()
+      await wb.loadConstructs()
+
+      await wb.saveConstruct('some content')
+
+      expect(api.saveDraft).toHaveBeenCalledWith(
+        'c1',
+        expect.objectContaining({ name: 'c1', status: 'Draft', source: 'some content' }),
+      )
+    })
+  })
+
+  describe('autosaveDraft', () => {
+    it('POSTs the manual-save payload plus source without touching dirty or saving state', async () => {
+      const api = getApi()
+      api.getDefinitions.mockResolvedValueOnce([
+        {
+          name: 'c1',
+          type: 'Process' as const,
+          status: 'Draft' as const,
+          version: '1.0',
+          taskQueue: 'q1',
+        },
+      ])
+      api.saveDraft.mockResolvedValueOnce({ savedAt: 123 })
+
+      const wb = useDslWorkbench()
+      await wb.loadConstructs()
+      wb.markDirty()
+
+      const result = await wb.autosaveDraft('autosaved body')
+
+      expect(api.saveDraft).toHaveBeenCalledWith(
+        'c1',
+        expect.objectContaining({
+          name: 'c1',
+          status: 'Draft',
+          version: '1.0',
+          taskQueue: 'q1',
+          source: 'autosaved body',
+        }),
+      )
+      expect(result).toEqual({ savedAt: 123 })
+      expect(wb.state.value.isDirty).toBe(true)
+      expect(wb.state.value.isSaving).toBe(false)
+    })
+
+    it('no-op when no construct is selected', async () => {
+      const api = getApi()
+      const wb = useDslWorkbench()
+
+      await wb.autosaveDraft('body')
+
+      expect(api.saveDraft).not.toHaveBeenCalled()
+    })
   })
 
   describe('saveConstruct file-backed', () => {

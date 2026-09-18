@@ -223,10 +223,10 @@ onUnmounted(() => {
 
 <template>
   <div data-testid="execution-detail" class="p-6 space-y-4">
-    <div v-if="error && !selectedExecution" class="text-sm text-gray-500">
+    <div v-if="error && !selectedExecution" class="text-sm text-ink-muted">
       <ErrorBanner :message="error" @retry="() => loadDetail(id)" />
     </div>
-    <div v-else-if="!selectedExecution" class="text-sm text-gray-500">Loading…</div>
+    <div v-else-if="!selectedExecution" class="text-sm text-ink-muted">Loading…</div>
     <template v-else>
       <!--
         T199: visible while the run is Stale and the backend is being
@@ -265,7 +265,7 @@ onUnmounted(() => {
             :class="
               isLivePollingEnabled
                 ? 'border-primary-300 bg-white text-primary-700 hover:bg-primary-50'
-                : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-100'
+                : 'border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-100'
             "
             @click="onToggleLivePolling(!isLivePollingEnabled)"
           >
@@ -288,7 +288,7 @@ onUnmounted(() => {
             v-if="selectedExecution?.entity"
             type="button"
             data-testid="run-again-button"
-            class="px-3 py-1.5 text-xs font-medium rounded border transition-colors border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
+            class="px-3 py-1.5 text-xs font-medium rounded border transition-colors border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-100"
             @click="runAgain"
           >
             Run again
@@ -300,8 +300,8 @@ onUnmounted(() => {
             class="px-3 py-1.5 text-xs font-medium rounded border transition-colors"
             :class="
               cancelling
-                ? 'border-red-200 bg-red-50 text-red-400 cursor-not-allowed'
-                : 'border-red-300 bg-white text-red-700 hover:bg-red-50'
+                ? 'border-error-200 bg-error-50 text-error-400 cursor-not-allowed'
+                : 'border-error-300 bg-white text-error-700 hover:bg-error-50'
             "
             :disabled="cancelling"
             @click="openCancelModal"
@@ -314,14 +314,14 @@ onUnmounted(() => {
       <ExecutionsExecutionTrace v-if="regularSteps.length > 0" :steps="regularSteps" />
       <ExecutionsCompensationLane :steps="compensationSteps" />
 
-      <div class="bg-white border border-gray-200 rounded-lg">
-        <div class="border-b border-gray-200 flex overflow-x-auto">
+      <div class="bg-white border border-line rounded-lg">
+        <div class="border-b border-line flex overflow-x-auto">
           <button
             v-for="tab in availableTabs"
             :key="tab"
             type="button"
             :class="['px-4 py-2 text-sm font-medium border-b-2',
-                           visibleTab === tab ? 'border-blue-600 text-blue-700' : 'border-transparent text-gray-600 hover:text-gray-900']"
+                           visibleTab === tab ? 'border-accent-500 text-accent-500' : 'border-transparent text-ink-muted hover:text-ink']"
             @click="onTabSelect(tab)"
           >
             {{ tab === 'diagram' ? 'Diagram' : tab === 'payload' ? 'I/O Payload' : tab === 'transactions' ? 'Transactions' : tab[0].toUpperCase() + tab.slice(1) }}

@@ -1,16 +1,23 @@
 package cbs.nova.starter.service.introspection;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.Context;
+import cbs.nova.dsl.DslRuntime;
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.ExecutableDescriptor;
 import cbs.nova.starter.model.DslIntrospectionModels.ConstructSchemaDto;
+import cbs.nova.starter.model.DslIntrospectionModels.ConstructSchemaMode;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.jsonschema.JacksonJsonSchemaGenerator;
+import cbs.nova.dsl.model.ExplainReport;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.converter.DslIntrospectionMapper;
 import cbs.nova.starter.model.DslIntrospectionModels.DefinitionStatus;
@@ -27,16 +34,19 @@ import org.mapstruct.factory.Mappers;
 class DslIntrospectionServiceTest {
 
   private DslIntrospectionService service;
+  private DslRuntime dslRuntime;
 
   @BeforeEach
   void setUp() {
     GlobalManager.globalManager().resetForTests();
     DslIntrospectionMapper mapper = Mappers.getMapper(DslIntrospectionMapper.class);
+    dslRuntime = mock(DslRuntime.class);
     service = new DslIntrospectionService(
             new JacksonJsonSchemaGenerator(),
             mapper,
             new DslDefinitionStatusResolver(DslProperties.builder().build(),
-                    new DslGitStatusResolver(DslProperties.builder().build(), null)));
+                    new DslGitStatusResolver(DslProperties.builder().build(), null)),
+            dslRuntime);
   }
 
   @AfterEach
@@ -142,7 +152,8 @@ class DslIntrospectionServiceTest {
                     .execute(ctx -> Result.success("ok"))
                     .build());
 
-    var dto = service.constructSchema("PSchema").orElseThrow();
+    var dto = (ConstructSchemaDto) service
+            .constructSchema("PSchema", ConstructSchemaMode.PREVIEW).orElseThrow();
 
     assertThat(dto.type()).isEqualTo("process");
     assertThat(dto.inputType()).isEqualTo("String");
@@ -160,7 +171,8 @@ class DslIntrospectionServiceTest {
                     .execute(ctx -> Result.success("ok"))
                     .build());
 
-    var dto = service.constructSchema("TSchema").orElseThrow();
+    var dto = (ConstructSchemaDto) service
+            .constructSchema("TSchema", ConstructSchemaMode.PREVIEW).orElseThrow();
 
     assertThat(dto.type()).isEqualTo("transaction");
     assertThat(dto.inputType()).isEqualTo("Long");
@@ -190,7 +202,8 @@ class DslIntrospectionServiceTest {
       }
     });
 
-    var dto = service.constructSchema("HSchema").orElseThrow();
+    var dto = (ConstructSchemaDto) service
+            .constructSchema("HSchema", ConstructSchemaMode.PREVIEW).orElseThrow();
 
     assertThat(dto.type()).isEqualTo("helper");
     assertThat(dto.inputType()).isEqualTo("String");
@@ -207,7 +220,8 @@ class DslIntrospectionServiceTest {
                     .execute(ctx -> Result.success("ok"))
                     .build());
 
-    var dto = service.constructSchema("FSchema").orElseThrow();
+    var dto = (ConstructSchemaDto) service
+            .constructSchema("FSchema", ConstructSchemaMode.PREVIEW).orElseThrow();
 
     assertThat(dto.type()).isEqualTo("function");
     assertThat(dto.inputSchema()).isNotNull();
@@ -218,6 +232,27 @@ class DslIntrospectionServiceTest {
 
   @Test
   void constructSchemaReturnsEmptyForUnknown() {
-    assertThat(service.constructSchema("NoSuchConstruct")).isEmpty();
+    assertThat(service.constructSchema("NoSuchConstruct", ConstructSchemaMode.PREVIEW)).isEmpty();
+    assertThat(service.constructSchema("NoSuchConstruct", ConstructSchemaMode.EXPLAIN)).isEmpty();
+  }
+
+  @Test
+  void constructSchemaInExplainModeReturnsExplainReport() {
+    GlobalManager.globalManager().registerProcess(
+            Dsl.process("PExplain")
+                    .input(String.class)
+                    .execute(ctx -> Result.success("ok"))
+                    .build());
+    ExplainReport report = ExplainReport.builder()
+            .name("PExplain")
+            .description("does things")
+            .mermaid("graph TD; A-->B;")
+            .build();
+    when(dslRuntime.explain(any(), any())).thenReturn(report);
+
+    Object value = service.constructSchema("PExplain", ConstructSchemaMode.EXPLAIN).orElseThrow();
+
+    assertThat(value).isSameAs(report);
+    verify(dslRuntime).explain(any(), any());
   }
 }

@@ -688,6 +688,18 @@ describe('dsl/schemas/[name].get', () => {
 
     expect(result).toEqual(payload)
   })
+
+  it('forwards the mode query param to the backend', async () => {
+    routerParams = { name: 'LoanDisbursement' }
+    queryValue = { mode: 'explain' }
+
+    await constructSchemaHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledWith(
+      fakeEvent,
+      '/api/dsl/schemas/LoanDisbursement?mode=explain',
+    )
+  })
 })
 
 describe('dsl/transactions/index.get', () => {

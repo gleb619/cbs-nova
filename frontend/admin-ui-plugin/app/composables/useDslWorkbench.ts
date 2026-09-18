@@ -165,6 +165,21 @@ export function useDslWorkbench() {
     return errors
   }
 
+  function buildDraftPayload(
+    name: string,
+    selected: DslConstruct | null,
+    status: string,
+  ): Record<string, unknown> {
+    return {
+      name,
+      type: selected?.type,
+      status,
+      version: selected?.version,
+      taskQueue: selected?.taskQueue,
+      description: selected?.description,
+    }
+  }
+
   async function saveConstruct(content?: string) {
     if (!state.value.selectedName) {
       log.warn('save called with no selection')
@@ -180,13 +195,10 @@ export function useDslWorkbench() {
         return
       }
 
+      const source = selected?.filePath ? undefined : content
       await api.saveDraft(state.value.selectedName, {
-        name: state.value.selectedName,
-        type: selected?.type,
-        status: 'Draft',
-        version: selected?.version,
-        taskQueue: selected?.taskQueue,
-        description: selected?.description,
+        ...buildDraftPayload(state.value.selectedName, selected, 'Draft'),
+        ...(source !== undefined ? { source } : {}),
       })
       if (selected) {
         selected.status = 'Draft'
@@ -204,6 +216,22 @@ export function useDslWorkbench() {
     }
   }
 
+  /**
+   * T401 debounced server autosave. Uses the same payload builder as the
+   * manual save plus the construct body as `source`; unlike `saveConstruct`
+   * it leaves the server dirty flag untouched. Returns the raw API result so
+   * the caller can read the server-echoed `savedAt`.
+   */
+  async function autosaveDraft(source: string): Promise<unknown> {
+    const name = state.value.selectedName
+    if (!name) return undefined
+    const selected = selectedConstruct.value
+    return api.saveDraft(name, {
+      ...buildDraftPayload(name, selected, 'Draft'),
+      source,
+    })
+  }
+
   async function publishConstruct() {
     if (!state.value.selectedName) {
       log.warn('publish called with no selection')
@@ -212,14 +240,10 @@ export function useDslWorkbench() {
     state.value.isSaving = true
     try {
       const selected = selectedConstruct.value
-      const result = await api.publishDraft(state.value.selectedName, {
-        name: state.value.selectedName,
-        type: selected?.type,
-        status: 'Published',
-        version: selected?.version,
-        taskQueue: selected?.taskQueue,
-        description: selected?.description,
-      })
+      const result = await api.publishDraft(
+        state.value.selectedName,
+        buildDraftPayload(state.value.selectedName, selected, 'Published'),
+      )
       const diags = (result as { diagnostics?: CompileDiagnostic[] }).diagnostics
       const reloaded = (result as { reloaded?: boolean }).reloaded === true
 
@@ -294,6 +318,7 @@ export function useDslWorkbench() {
     selectConstruct,
     createConstruct,
     saveConstruct,
+    autosaveDraft,
     validateConstruct,
     publishConstruct,
     deleteConstruct,

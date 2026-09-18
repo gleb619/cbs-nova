@@ -63,7 +63,10 @@ public class DslScheduleService {
   private final ScheduleClient scheduleClient;
   private final ObjectMapper objectMapper;
 
-  /** How long after a missed fire Temporal still catches it up; from {@code cbs.nova.schedule.catchup-window}. */
+  /**
+   * How long after a missed fire Temporal still catches it up; from
+   * {@code cbs.nova.schedule.catchup-window}.
+   */
   private final Duration catchupWindow;
 
   /**

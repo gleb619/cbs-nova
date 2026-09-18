@@ -20,7 +20,7 @@ class ExplainResourceExplainerTest {
   }
 
   @Test
-  void loadsMarkdownIntoReportDescription() {
+  void loadsMarkdownBodyIntoReportMermaidAndFrontmatterIntoDescription() {
     var explain = ExplainResourceExplainer.viaResource("DocSample", "builder-sample.md");
     var ctx = explainContext(Map.of());
 
@@ -29,7 +29,8 @@ class ExplainResourceExplainerTest {
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value().name()).isEqualTo("DocSample");
     assertThat(result.value().mermaid()).contains("# Builder Sample");
-    assertThat(result.value().description()).isEmpty();
+    assertThat(result.value().description())
+            .isEqualTo("Markdown backing the explainVia builder tests.");
   }
 
   @Test

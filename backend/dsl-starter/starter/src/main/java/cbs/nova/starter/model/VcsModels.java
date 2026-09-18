@@ -16,7 +16,9 @@ public final class VcsModels {
           String type,
           String status,
           String version,
-          String taskQueue) {
+          String taskQueue,
+          @JsonInclude(JsonInclude.Include.NON_NULL) String source,
+          @JsonInclude(JsonInclude.Include.NON_NULL) Long savedAt) {
 
   }
 
@@ -27,7 +29,13 @@ public final class VcsModels {
           boolean reloaded,
           LoadResult loadResult,
           @JsonInclude(JsonInclude.Include.NON_NULL) String reloadError,
-          @JsonInclude(JsonInclude.Include.NON_NULL) List<CompileDiagnostic> diagnostics) {
+          @JsonInclude(JsonInclude.Include.NON_NULL) List<CompileDiagnostic> diagnostics,
+          @JsonInclude(JsonInclude.Include.NON_NULL) Long savedAt) {
+
+    public DraftResponse(String name, String status, String location, boolean reloaded,
+            LoadResult loadResult) {
+      this(name, status, location, reloaded, loadResult, null, null, null);
+    }
 
   }
 

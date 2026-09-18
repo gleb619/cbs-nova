@@ -41,6 +41,8 @@ public final class TransactionBuilder<I, O> implements ObjectBuilder<Transaction
   @Nullable
   private Duration heartbeatTimeout;
   @Nullable
+  private String description;
+  @Nullable
   private Function<TransactionContext<I>, Result<?>> previewLogic;
   @Nullable
   private Function<TransactionContext<I>, Result<ExplainReport>> explainLogic;
@@ -80,6 +82,11 @@ public final class TransactionBuilder<I, O> implements ObjectBuilder<Transaction
 
   public TransactionBuilder<I, O> version(@NonNull String version) {
     this.version = version;
+    return this;
+  }
+
+  public TransactionBuilder<I, O> description(@NonNull String description) {
+    this.description = description;
     return this;
   }
 
@@ -158,6 +165,7 @@ public final class TransactionBuilder<I, O> implements ObjectBuilder<Transaction
             .heartbeatTimeout(heartbeatTimeout)
             .previewLogic(resolvedPreview)
             .explainLogic(explain)
+            .description(description)
             .descriptor(effectiveDescriptor)
             .build();
   }
@@ -173,13 +181,16 @@ public final class TransactionBuilder<I, O> implements ObjectBuilder<Transaction
             : () -> defaultDescriptor(
                     name, taskQueue, version, inputType, outputType, parameters,
                     compensationLogic != null, startToCloseTimeout, retryPolicy,
-                    heartbeatTimeout, null);
+                    heartbeatTimeout, description);
   }
 
   private @NonNull Function<TransactionContext<?>, Result<ExplainReport>> defaultExplain() {
     return ctx -> Result.success(
-            ExplainReport.of(name,
-                    GlobalManager.globalManager().resolveExplainContent(name)));
+            ExplainReport.builder()
+                    .name(name)
+                    .description(description != null ? description : "")
+                    .mermaid(GlobalManager.globalManager().resolveExplainContent(name))
+                    .build());
   }
 
   @SuppressWarnings("unchecked")
