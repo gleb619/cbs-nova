@@ -11,7 +11,8 @@ import org.jspecify.annotations.Nullable;
 
 public sealed interface DomainEvent permits
         DomainEvent.RunLifecycleEvent,
-        DomainEvent.DefinitionLifecycleEvent {
+        DomainEvent.DefinitionLifecycleEvent,
+        DomainEvent.PieceNotified {
 
   @JsonProperty("eventType")
   String eventType();
@@ -45,6 +46,7 @@ public sealed interface DomainEvent permits
       @JsonSubTypes.Type(value = DraftSaved.class, name = "DraftSaved"),
       @JsonSubTypes.Type(value = DraftPublished.class, name = "DraftPublished"),
       @JsonSubTypes.Type(value = ReloadFailed.class, name = "ReloadFailed"),
+      @JsonSubTypes.Type(value = PieceNotified.class, name = "PieceNotified"),
   })
   sealed interface RunLifecycleEvent extends DomainEvent permits
           RunStarted, RunCompleted, RunFailed, RunCancelled, RunStale {
@@ -323,6 +325,43 @@ public sealed interface DomainEvent permits
     @Override
     public String aggregateId() {
       return definitionName != null ? definitionName : source != null ? source : "-";
+    }
+  }
+
+  /**
+   * Best-effort notification emitted by the {@code postCheck: notify} hook (T550). Log/event only —
+   * real notification sinks are Epic 3.
+   */
+  record PieceNotified(
+          @JsonProperty("pieceId") @NonNull String pieceId,
+          @JsonProperty("channel") @NonNull String channel,
+          @JsonProperty("occurredAt") @Nullable Instant occurredAt,
+          @JsonProperty("correlationId") @Nullable String correlationId)
+          implements
+            DomainEvent {
+
+    public PieceNotified {
+      if (pieceId.isBlank()) {
+        throw new IllegalArgumentException("pieceId must not be blank");
+      }
+      if (channel.isBlank()) {
+        throw new IllegalArgumentException("channel must not be blank");
+      }
+    }
+
+    @Override
+    public String eventType() {
+      return "PieceNotified";
+    }
+
+    @Override
+    public String aggregateType() {
+      return "piece";
+    }
+
+    @Override
+    public String aggregateId() {
+      return pieceId;
     }
   }
 }

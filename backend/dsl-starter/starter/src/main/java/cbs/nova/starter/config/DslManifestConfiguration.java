@@ -2,6 +2,7 @@ package cbs.nova.starter.config;
 
 import cbs.nova.starter.config.properties.CbsDslManifestProperties;
 import cbs.nova.starter.service.DslAuditService;
+import cbs.nova.starter.service.PieceCheckBlockRegistry;
 import cbs.nova.starter.service.PieceManifestService;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -23,7 +24,9 @@ public class DslManifestConfiguration {
   @Bean
   PieceManifestService pieceManifestService(CbsDslManifestProperties properties,
           ResourceLoader resourceLoader,
-          ObjectProvider<DslAuditService> auditServiceProvider) {
-    return new PieceManifestService(properties, resourceLoader, auditServiceProvider);
+          ObjectProvider<DslAuditService> auditServiceProvider,
+          ObjectProvider<PieceCheckBlockRegistry> blockRegistryProvider) {
+    return new PieceManifestService(properties, resourceLoader, auditServiceProvider,
+            blockRegistryProvider);
   }
 }

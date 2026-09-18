@@ -3,14 +3,18 @@ package cbs.nova.starter.security;
 import static cbs.nova.starter.core.StarterConstants.ACTION_PIECE_GUARD_DENY;
 import static cbs.nova.starter.core.StarterConstants.FORBIDDEN_CODE;
 import static cbs.nova.starter.core.StarterConstants.OUTCOME_FAILURE;
+import static cbs.nova.starter.core.StarterConstants.PIECE_BLOCKED_CODE;
 
 import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.starter.config.properties.CbsDslManifestProperties;
 import cbs.nova.starter.core.StarterConstants;
+import cbs.nova.starter.model.InvariantContext;
 import cbs.nova.starter.model.Piece;
 import cbs.nova.starter.model.PreCheck;
 import cbs.nova.starter.service.CorrelationId;
 import cbs.nova.starter.service.DslAuditService;
+import cbs.nova.starter.service.PieceCheckBlockRegistry;
+import cbs.nova.starter.service.PieceCheckPipeline;
 import cbs.nova.starter.service.PieceManifestService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -93,6 +97,8 @@ public final class PieceGuardFilter extends OncePerRequestFilter {
   private final ObjectProvider<DslAuditService> auditServiceProvider;
   private final ObjectMapper objectMapper;
   private final LongSupplier nanoTime;
+  private final @Nullable PieceCheckPipeline postCheckPipeline;
+  private final @Nullable PieceCheckBlockRegistry blockRegistry;
   private final ConcurrentHashMap<String, Bucket> buckets = new ConcurrentHashMap<>();
 
   public PieceGuardFilter(
@@ -103,6 +109,20 @@ public final class PieceGuardFilter extends OncePerRequestFilter {
           ObjectProvider<DslAuditService> auditServiceProvider,
           ObjectMapper objectMapper,
           LongSupplier nanoTime) {
+    this(manifestService, roleResolver, flagSource, properties, auditServiceProvider,
+            objectMapper, nanoTime, null, null);
+  }
+
+  public PieceGuardFilter(
+          PieceManifestService manifestService,
+          RoleResolver roleResolver,
+          FeatureFlagSource flagSource,
+          CbsDslManifestProperties properties,
+          ObjectProvider<DslAuditService> auditServiceProvider,
+          ObjectMapper objectMapper,
+          LongSupplier nanoTime,
+          @Nullable PieceCheckPipeline postCheckPipeline,
+          @Nullable PieceCheckBlockRegistry blockRegistry) {
     this.manifestService = manifestService;
     this.roleResolver = roleResolver;
     this.flagSource = flagSource;
@@ -110,6 +130,8 @@ public final class PieceGuardFilter extends OncePerRequestFilter {
     this.auditServiceProvider = auditServiceProvider;
     this.objectMapper = objectMapper;
     this.nanoTime = nanoTime;
+    this.postCheckPipeline = postCheckPipeline;
+    this.blockRegistry = blockRegistry;
   }
 
   @Override
@@ -124,6 +146,10 @@ public final class PieceGuardFilter extends OncePerRequestFilter {
       return;
     }
     Piece piece = found.get();
+    if (blockRegistry != null && blockRegistry.isBlocked(piece.id(), principalKey(request))) {
+      denyBlocked(piece, request, response);
+      return;
+    }
     Role caller = roleResolver.resolve(request);
     for (PreCheck check : piece.preCheck()) {
       CheckFailure failure = evaluate(check, request, caller);
@@ -134,7 +160,49 @@ public final class PieceGuardFilter extends OncePerRequestFilter {
     }
     request.setAttribute(PIECE_ID_ATTRIBUTE, piece.id());
     request.setAttribute(PRINCIPAL_ROLE_ATTRIBUTE, caller.name());
+    proceedAndTriggerPostChecks(piece, caller, request, response, filterChain);
+  }
+
+  /**
+   * Runs the rest of the chain and — only when it completes without exception and the response
+   * status indicates success ({@code < 400}) — hands the piece to the post-check pipeline (T550).
+   * Failed executions (handler error, non-2xx/3xx status) never trigger post-checks. The pipeline
+   * submits asynchronously, so the response is never delayed.
+   */
+  private void proceedAndTriggerPostChecks(
+          Piece piece,
+          Role caller,
+          HttpServletRequest request,
+          HttpServletResponse response,
+          FilterChain filterChain) throws ServletException, IOException {
     filterChain.doFilter(request, response);
+    if (postCheckPipeline == null || piece.postCheck().isEmpty()) {
+      return;
+    }
+    int status = response.getStatus();
+    if (status >= 400) {
+      log.debug("skipping postCheck for piece '{}' — response status {}", piece.id(), status);
+      return;
+    }
+    postCheckPipeline.onSuccess(piece, principalKey(request), DslAuditService.currentActor(),
+            correlationId(request),
+            new InvariantContext(piece.id(), caller.name(), request.getMethod(),
+                    request.getRequestURI(), status));
+  }
+
+  private void denyBlocked(
+          Piece piece, HttpServletRequest request, HttpServletResponse response)
+          throws IOException {
+    log.warn("denying {} {} — piece '{}' is blocked by a failed post-check "
+            + "(block-next-execution)", request.getMethod(), request.getRequestURI(), piece.id());
+    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+    response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+    objectMapper.writeValue(response.getOutputStream(),
+            new ErrorResponse(PIECE_BLOCKED_CODE,
+                    "Piece '" + piece.id() + "' is blocked by a failed post-check "
+                            + "(onFailure: block-next-execution) until the block is cleared",
+                    null, null, null, null, null, null,
+                    Map.of("pieceId", piece.id(), "check", "post-check-block")));
   }
 
   private @Nullable CheckFailure evaluate(PreCheck check, HttpServletRequest request, Role caller) {
@@ -217,11 +285,14 @@ public final class PieceGuardFilter extends OncePerRequestFilter {
           HttpServletRequest request,
           HttpServletResponse response,
           FilterChain filterChain) throws ServletException, IOException {
+    Role caller = roleResolver.resolve(request);
     if (FAIL_MODE_AUDIT_ONLY.equals(piece.failMode())) {
       log.warn("pre-check '{}' failed for piece '{}' (failMode=audit-only) — allowing: {}",
               failure.checkType(), piece.id(), failure.detail());
       audit(piece, failure, request);
-      filterChain.doFilter(request, response);
+      request.setAttribute(PIECE_ID_ATTRIBUTE, piece.id());
+      request.setAttribute(PRINCIPAL_ROLE_ATTRIBUTE, caller.name());
+      proceedAndTriggerPostChecks(piece, caller, request, response, filterChain);
       return;
     }
     log.warn("denying {} {} — pre-check '{}' failed for piece '{}': {}",

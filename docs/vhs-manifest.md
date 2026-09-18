@@ -65,9 +65,11 @@ certain helpers may be allowlisted only in preview mode or specific runtime cont
 
 | type | fields | semantics |
 |------|--------|-----------|
-| `audit-write` | `action: <name>` | writes an audit record; action names align with `core/StarterConstants` `ACTION_*` constants |
-| `invariant-assert` | `expr` and/or `description` | asserts a post-condition; semantics defined by T550 |
-| `notify` | `channel: <name>` | emits a best-effort log/event to the named channel |
+| `audit-write` | `action: <name>`, `onFailure` | writes an audit record; action names align with `core/StarterConstants` `ACTION_*` constants |
+| `invariant-assert` | `expr` and/or `description`, `onFailure` | asserts a post-condition over the execution snapshot (named conditions, see below) |
+| `notify` | `channel: <name>`, `onFailure` | emits a best-effort log line + `PieceNotified` domain event to the named channel (real sinks are Epic 3) |
+
+Every hook accepts `onFailure: warn (default) | block-next-execution` (see below).
 
 ## Enforcement semantics (T549)
 
@@ -103,16 +105,71 @@ certain helpers may be allowlisted only in preview mode or specific runtime cont
 - **Activation.** First-class auto-configuration gated on `@ConditionalOnBean(PieceManifestService)`:
   when the manifest subsystem is off the filter is not registered at all.
 
-## `failMode` vs hook `onFailure`
+## Post-check enforcement semantics (T550)
 
-`failMode` governs **pre-checks** only:
+`PieceCheckPipeline` runs a piece's `postCheck[]` hooks after the guarded action completes
+**successfully**:
 
-- `deny` — a failed pre-check rejects the request (default).
-- `audit-only` — a failed pre-check is logged/audited, but the request is still allowed.
+- **Success-only trigger.** `PieceGuardFilter` invokes the pipeline only after the filter chain
+  returns without exception and the response status is `< 400`. Handler errors, 4xx/5xx
+  responses, and pre-check denials under `failMode: deny` trigger nothing. (Under
+  `failMode: audit-only` the request is allowed, so a successful execution still triggers hooks.)
+- **Off the request thread.** Hooks run on a dedicated named-thread pool
+  (`cbs-piece-check-N`, size `cbs.dsl.manifest.post-check.executor-pool-size`, default 2) and
+  never delay the response — the response is already sent by the time hooks run, and hooks can
+  never change the outcome of the execution they observe.
+- **`invariant-assert` expressions.** Deliberately conservative — `expr` is one of a small set
+  of named conditions over the execution snapshot (`InvariantContext`: piece id, principal role,
+  method, path, status), not an expression language:
+  - `success` (default when `expr` is absent/blank) — status `< 400`
+  - `status-2xx` — status in `[200, 300)`
+  - `status-3xx` — status in `[300, 400)`
 
-T550 will add a per-hook `onFailure` policy (`warn` \| `block-next-execution`) that governs
-**post-check** hooks. These two knobs are not the same: `failMode` is about pre-check access
-control, `onFailure` is about what happens when a post-execution hook fails.
+  A violated assertion — or an unrecognized `expr`, which is a failure rather than a pass — is
+  governed by the hook's `onFailure` policy.
+- **`audit-write`** reuses `dsl_audit` (action from the check, outcome `SUCCESS`; the actor is
+  the principal resolved at request time). It is a no-op when no `DslAuditService` bean exists,
+  and inherits the service's fail-safe warn+swallow behavior.
+- **`notify`** is log/event only: an INFO log line plus a best-effort `PieceNotified` domain
+  event on the existing `dsl_events` mechanism (same pattern as `DslReloadHandler`'s
+  best-effort `ReloadFailed` publish). Real notification sinks (Slack/email/webhooks) are
+  Epic 3.
+- **Observability.** Micrometer counters `dsl.piece.postcheck.total` /
+  `dsl.piece.postcheck.failed`, tagged `hook=<type>`; hook-thread logs carry the request's
+  correlation id in the MDC `rid` key (T384).
+
+### Hook failure policies
+
+`onFailure` governs **post-check** hooks (and is not the same knob as `failMode`, which governs
+pre-check access control):
+
+- `warn` (default) — the failure is logged at ERROR with the correlation id and a FAILURE
+  `dsl_audit` row (action `PIECE_POSTCHECK_FAILURE`) is written. Nothing else happens; the
+  already-sent response is unaffected.
+- `block-next-execution` — as `warn`, plus the piece is blocked from further execution:
+  `PieceGuardFilter` consults the block registry **before** evaluating pre-checks and denies
+  with `403`, unified envelope, `code = "PIECE_BLOCKED"`, `context = {pieceId, check:
+  "post-check-block"}` while the block is active.
+
+  Blocks live in an in-memory TTL registry
+  (`cbs.dsl.manifest.post-check.block-ttl`, default 30m; `block-scope: piece` (default — the
+  block is global for the piece) or `principal` (only the principal that tripped it)). They are
+  visible in logs (WARN on raise and on every denied request) and clear three ways: TTL expiry,
+  a **successful manifest reload** (`POST /api/dsl/manifest/reload` — the operator's
+  "reviewed and fixed" signal clears all blocks), and restart.
+
+  In-memory by design, consistent with the guard's in-memory rate-limit buckets: enforcement is
+  single-instance, and a block on one replica does not deny traffic served by another.
+  Multi-replica blocking needs a shared store (Epic 2 distributed follow-up).
+
+### Rollback is out of scope
+
+Rollback/compensation of the executed piece is explicitly **not** attempted: most executions
+(Temporal workflow starts, published definitions) are not transactionally reversible, and DSL
+compensation machinery is unrelated to guard hooks. `block-next-execution` is the strongest
+available corrective, and it is deliberately manual-review-shaped — an operator inspects the
+failure audit rows and logs, fixes the cause, then clears the block via manifest reload (or
+waits out the TTL / restarts).
 
 ## Worked examples
 

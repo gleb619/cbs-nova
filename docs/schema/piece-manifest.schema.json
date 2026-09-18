@@ -160,6 +160,12 @@
         "action": {
           "type": "string",
           "description": "Audit action name, aligned with StarterConstants ACTION_* constants."
+        },
+        "onFailure": {
+          "type": "string",
+          "enum": ["warn", "block-next-execution"],
+          "default": "warn",
+          "description": "Per-hook failure policy: warn logs+audits and moves on; block-next-execution also blocks further executions of the piece (T550)."
         }
       }
     },
@@ -177,6 +183,12 @@
         "description": {
           "type": "string",
           "description": "Human-readable invariant description."
+        },
+        "onFailure": {
+          "type": "string",
+          "enum": ["warn", "block-next-execution"],
+          "default": "warn",
+          "description": "Per-hook failure policy: warn logs+audits and moves on; block-next-execution also blocks further executions of the piece (T550)."
         }
       }
     },
@@ -189,6 +201,12 @@
         "channel": {
           "type": "string",
           "description": "Notification channel name."
+        },
+        "onFailure": {
+          "type": "string",
+          "enum": ["warn", "block-next-execution"],
+          "default": "warn",
+          "description": "Per-hook failure policy: warn logs+audits and moves on; block-next-execution also blocks further executions of the piece (T550)."
         }
       }
     }
