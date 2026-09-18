@@ -17,6 +17,7 @@ import cbs.nova.starter.config.properties.DslRunsProperties;
 import cbs.nova.starter.converter.MapInputConverter;
 import cbs.nova.starter.core.listener.DslExecutionEventBus;
 import cbs.nova.starter.core.pipe.ExplainDslPipe;
+import cbs.nova.starter.core.pipe.HierarchyDslPipe;
 import cbs.nova.starter.core.pipe.PreviewDslPipe;
 import cbs.nova.starter.core.pipe.RunDslPipe;
 import cbs.nova.starter.core.StarterConstants;
@@ -238,7 +239,7 @@ public class TemporalConfiguration {
 
   @Bean
   @ConditionalOnMissingBean
-  ExplainDslPipe explainDslPipe(
+  HierarchyDslPipe hierarchyDslPipe(
           ExternalCallRecorder externalCallRecorder,
           DryRunLoggingContext dryRunLoggingContext,
           DryRunLogBufferRegistry bufferRegistry,
@@ -248,12 +249,19 @@ public class TemporalConfiguration {
           RunScopedFakeConfig runScopedFakeConfig,
           MeterRegistry meterRegistry,
           HierarchyDiagramRenderer diagramRenderer,
-          CbsNovaExplainProperties explainProperties,
           @Qualifier("cbsNovaPreviewDispatchExecutor") ExecutorService dispatchExecutor) {
-    return new ExplainDslPipe(externalCallRecorder, dryRunLoggingContext,
+    return new HierarchyDslPipe(externalCallRecorder, dryRunLoggingContext,
             bufferRegistry, dryRunProperties.log().maxEventsPerRun(), previewProperties,
             fakesProperties, runScopedFakeConfig, meterRegistry, diagramRenderer,
-            explainProperties, dispatchExecutor);
+            dispatchExecutor);
+  }
+
+  @Bean
+  @ConditionalOnMissingBean
+  ExplainDslPipe explainDslPipe(
+          HierarchyDslPipe hierarchyDslPipe,
+          CbsNovaExplainProperties explainProperties) {
+    return new ExplainDslPipe(hierarchyDslPipe, explainProperties);
   }
 
   @Bean
@@ -261,8 +269,9 @@ public class TemporalConfiguration {
   DevDslRuntime devDslRuntime(
           PreviewDslPipe previewDslPipe,
           RunDslPipe runDslPipe,
+          HierarchyDslPipe hierarchyDslPipe,
           ExplainDslPipe explainDslPipe) {
-    return new DevDslRuntime(previewDslPipe, runDslPipe, explainDslPipe);
+    return new DevDslRuntime(previewDslPipe, runDslPipe, hierarchyDslPipe, explainDslPipe);
   }
 
   @Bean(name = "cbsNovaPreviewDispatchExecutor", destroyMethod = "shutdownNow")
