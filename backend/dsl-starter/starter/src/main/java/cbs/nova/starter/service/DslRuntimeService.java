@@ -6,6 +6,7 @@ import cbs.nova.dsl.DslRuntime;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.model.ExplainReport;
 import cbs.nova.dsl.GlobalManager;
+import cbs.nova.dsl.model.HierarchyReport;
 import cbs.nova.dsl.model.PreviewReport;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.DslConfig;
@@ -60,6 +61,22 @@ public class DslRuntimeService {
     }
     return RuntimeOutcome.error(mapper.toErrorResponse(
             mapper.fromPreviewReport(name, runId, report)));
+  }
+
+  public RuntimeOutcome hierarchy(String name, DslRequest request, @Nullable String requestId) {
+    String runId = resolveRunId(requestId);
+    Context<?> ctx = toContext(name, request, ExecutionMode.HIERARCHY, runId);
+    Result<HierarchyReport> result = executeWithMdc(runId, () -> dslRuntime.hierarchy(name, ctx));
+    if (!result.isSuccess() && result.cause() instanceof PreviewTimeoutException cause) {
+      return RuntimeOutcome.error(mapper.toErrorResponse(
+              mapper.fromPreviewTimeoutException(name, runId, cause)));
+    }
+    HierarchyReport report = result.value();
+    if (report != null) {
+      return RuntimeOutcome.ok(report);
+    }
+    return RuntimeOutcome.error(toErrorResponse(name, runId,
+            new IllegalStateException("hierarchy produced no report for " + name)));
   }
 
   public RuntimeOutcome run(String name, DslRequest request, @Nullable String requestId) {

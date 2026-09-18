@@ -81,6 +81,17 @@ public class DslRuntimeHandler {
             () -> respond(service.explain(name, dslRequest, requestId(request))));
   }
 
+  public ServerResponse hierarchy(ServerRequest request) throws ServletException, IOException {
+    String name = request.pathVariable("name");
+    DslRequest dslRequest = request.body(DslRequest.class);
+    List<ValidationError> errors = inputValidator.validate(name, dslRequest.body());
+    if (!errors.isEmpty()) {
+      return validationResponse(errors);
+    }
+    return validationOrExecute(name, dslRequest,
+            () -> respond(service.hierarchy(name, dslRequest, requestId(request))));
+  }
+
   private ServerResponse validationOrExecute(String name, DslRequest request,
           ThrowingResponse action) throws ServletException, IOException {
     List<ValidationError> errors = inputValidator.validate(name, request.body());

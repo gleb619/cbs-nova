@@ -2,6 +2,7 @@ package cbs.nova.starter.config.router;
 
 import cbs.nova.dsl.model.ExplainReport;
 import cbs.nova.dsl.jsonschema.JsonSchemaGenerator;
+import cbs.nova.dsl.model.HierarchyReport;
 import cbs.nova.dsl.model.PreviewReport;
 import cbs.nova.starter.config.properties.CbsNovaCacheProperties;
 import cbs.nova.starter.config.properties.DslRunsProperties;
@@ -72,6 +73,11 @@ public class DslRuntimeRouterConfiguration {
               @ApiResponse(responseCode = "200", description = "Dry-run preview report including AST, execution trace, and captured external calls", content = @Content(mediaType = "application/json", schema = @Schema(implementation = PreviewReport.class))),
               @ApiResponse(responseCode = "422", description = "Input validation or execution failed", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ValidationErrorsResponse.class)))
           })),
+      @RouterOperation(path = "/api/dsl/hierarchy/{name}", beanClass = DslRuntimeHandler.class, beanMethod = "hierarchy", method = RequestMethod.POST, operation = @Operation(operationId = "hierarchyDsl", summary = "Return a structured call-graph report of a DSL process", tags = {
+          "DSL Runtime"}, parameters = @Parameter(name = "name", in = ParameterIn.PATH), responses = {
+              @ApiResponse(responseCode = "200", description = "Hierarchy report", content = @Content(mediaType = "application/json", schema = @Schema(implementation = HierarchyReport.class))),
+              @ApiResponse(responseCode = "422", description = "Input validation or execution failed", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ValidationErrorsResponse.class)))
+          })),
       @RouterOperation(path = "/api/dsl/run/{name}", beanClass = DslRuntimeHandler.class, beanMethod = "run", method = RequestMethod.POST, operation = @Operation(operationId = "runDsl", summary = "Execute a DSL process with full side effects", tags = {
           "DSL Runtime"}, parameters = @Parameter(name = "name", in = ParameterIn.PATH), responses = {
               @ApiResponse(responseCode = "200", description = "Execution result", content = @Content(mediaType = "application/json", schema = @Schema(implementation = Object.class))),
@@ -86,6 +92,7 @@ public class DslRuntimeRouterConfiguration {
   public RouterFunction<ServerResponse> dslRuntimeRouter(DslRuntimeHandler handler) {
     return RouterFunctions.route()
             .POST("/api/dsl/preview/{name}", handler::preview)
+            .POST("/api/dsl/hierarchy/{name}", handler::hierarchy)
             .POST("/api/dsl/run/{name}", handler::run)
             .POST("/api/dsl/explain/{name}", handler::explain)
             .build();
