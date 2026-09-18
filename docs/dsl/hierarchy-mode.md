@@ -153,16 +153,21 @@ Hierarchy → Explain → Preview
 - **Preview** executes the same graph under `ExecutionMode.PREVIEW` and returns a `PreviewReport`
   that includes the actual output value, success flag, and all the same trace/call data.
 
-## Current state and gaps
+## Current state
 
-- `HierarchyReport`, `HierarchyDiagrams`, `HierarchyAccumulator`, and `HierarchyAccumulators` are
-  the renamed versions of the former `ExplainGraph*` classes. The rename is in progress.
-- `HierarchyDslPipe` and `HierarchyReportStage` are being extracted from the old Explain pipe.
-- `ExecutionMode.HIERARCHY` and `DslRuntime.hierarchy()` still need to be added.
-- The REST endpoint `POST /api/dsl/hierarchy/{name}` and the BFF proxy route
-  `frontend/admin-ui-plugin/server/api/v1/dsl/hierarchy/[name].post.ts` still need to be added.
-- `ExplainDslPipe` will be refactored to delegate to `HierarchyDslPipe` and map the result to
-  `ExplainReport`, removing its direct dependency on the accumulator/diagram internals.
+- `HierarchyReport`, `HierarchyDiagrams` (dsl-api) and `HierarchyAccumulator` are the renamed
+  versions of the former `ExplainGraph*` classes; `HierarchyAccumulators`
+  (`starter/core/pipe`) resolves the accumulator from context metadata under
+  `Constants.HIERARCHY_GRAPH_ACCUMULATOR_KEY`.
+- `HierarchyDslPipe` (`starter/core/pipe`) runs the shared collector stage stack and returns
+  `Result<HierarchyReport>`; `HierarchyReportStage` finishes the accumulator into the report and
+  attaches the root Mermaid diagram.
+- `ExecutionMode.HIERARCHY` and `DslRuntime.hierarchy()` are part of the dsl-api contract, and
+  `POST /api/dsl/hierarchy/{name}` is exposed through the REST layer, the BFF proxy route
+  (`frontend/admin-ui-plugin/server/api/v1/dsl/hierarchy/[name].post.ts`), and the admin UI API
+  client.
+- `ExplainDslPipe` delegates to `HierarchyDslPipe` and maps `HierarchyReport` → `ExplainReport`
+  via `ExplainMapper`, applying the budget with `ExplainBudget` (the former `ExplainBudgetStage`).
 
 ## Related docs
 
