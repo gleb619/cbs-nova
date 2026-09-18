@@ -4,23 +4,23 @@ import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.model.ExplainGraphAccumulator;
-import cbs.nova.dsl.model.ExplainGraphReport;
+import cbs.nova.dsl.model.HierarchyAccumulator;
+import cbs.nova.dsl.model.HierarchyReport;
 import cbs.nova.starter.core.PreviewErrorHandler;
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.core.pipe.DslPipeContext;
 import cbs.nova.starter.core.pipe.DslPipeStage;
-import cbs.nova.starter.core.pipe.ExplainGraphAccumulators;
-import cbs.nova.starter.reporting.ExplainDiagramRenderer;
+import cbs.nova.starter.core.pipe.HierarchyAccumulators;
+import cbs.nova.starter.reporting.HierarchyDiagramRenderer;
 import java.util.ArrayList;
 import java.util.List;
 import org.jspecify.annotations.NonNull;
 
-public final class ExplainReportStage implements DslPipeStage {
+public final class HierarchyReportStage implements DslPipeStage {
 
-  private final ExplainDiagramRenderer diagramRenderer;
+  private final HierarchyDiagramRenderer diagramRenderer;
 
-  public ExplainReportStage(ExplainDiagramRenderer diagramRenderer) {
+  public HierarchyReportStage(HierarchyDiagramRenderer diagramRenderer) {
     this.diagramRenderer = diagramRenderer;
   }
 
@@ -28,9 +28,9 @@ public final class ExplainReportStage implements DslPipeStage {
   public @NonNull Result<?> execute(@NonNull DslPipeContext context, @NonNull Next next) {
     next.proceed(context);
     Result<?> dslResult = (Result<?>) context.getAttribute(StarterConstants.DSL_RESULT_ATTRIBUTE);
-    ExplainGraphAccumulator accumulator = ExplainGraphAccumulators.resolve(context)
+    HierarchyAccumulator accumulator = HierarchyAccumulators.resolve(context)
             .orElseThrow(() -> new IllegalStateException(
-                    "ExplainGraphAccumulator is not threaded into the context metadata"));
+                    "HierarchyAccumulator is not threaded into the context metadata"));
 
     GlobalManager gm = GlobalManager.globalManager();
     DslDescriptor dslDesc = gm.describeProcess(context.name())
@@ -48,7 +48,7 @@ public final class ExplainReportStage implements DslPipeStage {
             .hasCompensation(resolveCompensation(gm, context.name(), dslDesc))
             .errors(errors);
 
-    ExplainGraphReport baseReport = accumulator.build(
+    HierarchyReport baseReport = accumulator.build(
             context.name(),
             description,
             gm.describeHelper(context.name()).orElse(null),
@@ -56,7 +56,7 @@ public final class ExplainReportStage implements DslPipeStage {
 
     String mermaidDiagram = diagramRenderer.mermaidDiagram(baseReport);
 
-    ExplainGraphReport report = new ExplainGraphReport(
+    HierarchyReport report = new HierarchyReport(
             baseReport.name(),
             baseReport.description(),
             baseReport.executionTrace(),
