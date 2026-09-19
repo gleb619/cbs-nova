@@ -15,6 +15,7 @@ from .commands.seed import SeedCommand
 from .commands.seed_history import SeedHistoryCommand
 from .commands.services import ServicesCommand
 from .commands.stack import StackCommand
+from .commands.vhs import VhsCommand
 
 
 class CLI:
@@ -77,6 +78,11 @@ class CLI:
         subparsers.add_parser("loadtest", help="Load-test read-only BFF endpoints").set_defaults(
             handler=LoadtestCommand
         )
+
+        # VHS tape management
+        p = subparsers.add_parser("vhs", help="Manage recorded VHS tapes")
+        VhsCommand.register(p)
+        p.set_defaults(handler=VhsCommand)
 
         # Security / OpenAPI
         p = subparsers.add_parser("cve-scan", help="Check pnpm audit against an allowlist")

@@ -18,6 +18,7 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
+import tools.jackson.databind.ObjectMapper;
 
 class VhsRecorderTest {
 
@@ -121,6 +122,11 @@ class VhsRecorderTest {
   @Configuration
   @Import(VhsConfiguration.class)
   static class VhsTestConfig {
+
+    @Bean
+    ObjectMapper objectMapper() {
+      return new ObjectMapper();
+    }
 
     @Bean
     DslExecutionEventBus eventBus() {
