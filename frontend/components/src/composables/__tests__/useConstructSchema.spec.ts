@@ -55,22 +55,44 @@ describe('useConstructSchema', () => {
     expect(schema.value).toBeTruthy()
   })
 
-  it('appends mode=explain and caches separately from preview', async () => {
+  it('fetches schema without a mode query param', async () => {
     fetchMock.mockResolvedValue({ inputSchema: { type: 'object', properties: {} } })
+    mountUseConstructSchema({ name: 'Demo', type: 'Process' })
+    await waitForNextTick()
+    await waitForNextTick()
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/schemas/Demo')
+  })
+
+  it('fetches schema with mode=explain when mode option is explain', async () => {
+    fetchMock.mockResolvedValue({
+      inputSchema: { type: 'object', properties: {} },
+      outputSchema: { type: 'object', properties: { name: { type: 'string' } } },
+      outputType: 'ExplainReport',
+    })
+    const { outputType } = mountUseConstructSchema({
+      name: 'Demo',
+      type: 'Process',
+      mode: 'explain',
+    })
+    await waitForNextTick()
+    await waitForNextTick()
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/schemas/Demo?mode=explain')
+    expect(outputType.value).toBe('ExplainReport')
+  })
+
+  it('does not share cache between preview and explain modes', async () => {
+    fetchMock.mockResolvedValue({
+      inputSchema: { type: 'object', properties: { name: { type: 'string' } } },
+    })
+    mountUseConstructSchema({ name: 'Demo', type: 'Process' })
+    await waitForNextTick()
+    await waitForNextTick()
+    fetchMock.mockClear()
+
     mountUseConstructSchema({ name: 'Demo', type: 'Process', mode: 'explain' })
     await waitForNextTick()
     await waitForNextTick()
     expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/schemas/Demo?mode=explain')
-
-    fetchMock.mockClear()
-    fetchMock.mockResolvedValue({
-      inputSchema: { type: 'object', properties: { x: { type: 'number' } } },
-    })
-    const preview = mountUseConstructSchema({ name: 'Demo', type: 'Process', mode: 'preview' })
-    await waitForNextTick()
-    await waitForNextTick()
-    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/schemas/Demo')
-    expect(preview.schema.value).toBeTruthy()
   })
 
   it('fetches transaction schema when type is Transaction', async () => {

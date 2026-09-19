@@ -4,10 +4,14 @@ import { computed } from 'vue'
 defineOptions({ name: 'ExplainRawView' })
 
 const props = defineProps<{
-  markdown: string | undefined
+  markdown?: string
+  report?: unknown
 }>()
 
-const text = computed(() => props.markdown ?? '')
+const text = computed(() => {
+  if (props.report !== undefined) return JSON.stringify(props.report, null, 2)
+  return props.markdown ?? ''
+})
 </script>
 
 <template>
@@ -21,6 +25,6 @@ const text = computed(() => props.markdown ?? '')
         class="w-full whitespace-pre-wrap break-words"
       >{{ text }}</pre>
     </slot>
-    <p v-else data-testid="explain-raw-empty" class="text-ink-muted text-sm">No markdown source.</p>
+    <p v-else data-testid="explain-raw-empty" class="text-ink-muted text-sm">No report content.</p>
   </div>
 </template>

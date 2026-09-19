@@ -41,6 +41,13 @@ export interface RunnerError {
   code?: string
 }
 
+export interface ExplainReportNode {
+  name: string
+  description: string
+  mermaid: string
+  children: ExplainReportNode[]
+}
+
 export interface PreviewHistoryEntry {
   id: string
   name: string
@@ -57,6 +64,7 @@ export interface RunnerOutput {
   errors?: RunnerError[]
   mermaidDiagram?: string
   description?: string
+  explainReport?: ExplainReportNode
   executionTrace?: string[]
   workflowId?: string
   astTree?: CallNode

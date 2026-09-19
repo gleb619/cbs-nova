@@ -2,7 +2,7 @@
 import { computed, onBeforeUpdate, ref } from 'vue'
 import type { ConstructType } from '../../composables/useConstructSchema'
 import { useExplainHistory } from '../../composables/usePreviewHistory'
-import type { RunnerOutput, RunnerStatus } from '../../types/runner'
+import type { ExplainReportNode, RunnerOutput, RunnerStatus } from '../../types/runner'
 import RunInputPanel from './RunInputPanel.vue'
 import RunResultPanel from './RunResultPanel.vue'
 
@@ -43,17 +43,30 @@ function currentPayload(): unknown {
   return JSON.parse(v)
 }
 
+function asExplainReport(value: unknown): ExplainReportNode | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined
+  const r = value as Record<string, unknown>
+  if (typeof r.name !== 'string') return undefined
+  return {
+    name: r.name,
+    description: typeof r.description === 'string' ? r.description : '',
+    mermaid: typeof r.mermaid === 'string' ? r.mermaid : '',
+    children: Array.isArray(r.children)
+      ? r.children.map(asExplainReport).filter((c): c is ExplainReportNode => c !== undefined)
+      : [],
+  }
+}
+
 function normalizeResponse(response: unknown): RunnerOutput {
   if (response && typeof response === 'object' && !Array.isArray(response)) {
     const r = response as Record<string, unknown>
     const mermaid = (r.mermaid ?? r.mermaidDiagram) as string | undefined
     return {
       ...r,
+      explainReport: asExplainReport(response),
       description: r.description as string | undefined,
       mermaidDiagram: mermaid,
-      result: r.result ??
-        r.body ??
-        r.output ?? { name: r.name, description: r.description, mermaidDiagram: mermaid },
+      result: r.result ?? r.body ?? r.output,
     } as RunnerOutput
   }
   return { result: response }

@@ -1,23 +1,16 @@
 package cbs.nova.starter.service.introspection;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.Context;
-import cbs.nova.dsl.DslRuntime;
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.ExecutableDescriptor;
 import cbs.nova.starter.model.DslIntrospectionModels.ConstructSchemaDto;
 import cbs.nova.starter.model.DslIntrospectionModels.ConstructSchemaMode;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.jsonschema.JacksonJsonSchemaGenerator;
-import cbs.nova.dsl.model.ExplainReport;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.converter.DslIntrospectionMapper;
 import cbs.nova.starter.model.DslIntrospectionModels.DefinitionStatus;
@@ -34,19 +27,16 @@ import org.mapstruct.factory.Mappers;
 class DslIntrospectionServiceTest {
 
   private DslIntrospectionService service;
-  private DslRuntime dslRuntime;
 
   @BeforeEach
   void setUp() {
     GlobalManager.globalManager().resetForTests();
     DslIntrospectionMapper mapper = Mappers.getMapper(DslIntrospectionMapper.class);
-    dslRuntime = mock(DslRuntime.class);
     service = new DslIntrospectionService(
             new JacksonJsonSchemaGenerator(),
             mapper,
             new DslDefinitionStatusResolver(DslProperties.builder().build(),
-                    new DslGitStatusResolver(DslProperties.builder().build(), null)),
-            dslRuntime);
+                    new DslGitStatusResolver(DslProperties.builder().build(), null)));
   }
 
   @AfterEach
@@ -237,22 +227,92 @@ class DslIntrospectionServiceTest {
   }
 
   @Test
-  void constructSchemaInExplainModeReturnsExplainReport() {
+  void constructSchemaInExplainModeReturnsSchemaForProcess() {
     GlobalManager.globalManager().registerProcess(
             Dsl.process("PExplain")
                     .input(String.class)
+                    .output(Integer.class)
                     .execute(ctx -> Result.success("ok"))
                     .build());
-    ExplainReport report = ExplainReport.builder()
-            .name("PExplain")
-            .description("does things")
-            .mermaid("graph TD; A-->B;")
-            .build();
-    when(dslRuntime.explain(any(), any())).thenReturn(report);
 
-    Object value = service.constructSchema("PExplain", ConstructSchemaMode.EXPLAIN).orElseThrow();
+    var dto = service.constructSchema("PExplain", ConstructSchemaMode.EXPLAIN).orElseThrow();
 
-    assertThat(value).isSameAs(report);
-    verify(dslRuntime).explain(any(), any());
+    assertThat(dto.type()).isEqualTo("process");
+    assertThat(dto.inputType()).isEqualTo("String");
+    assertThat(dto.inputSchema()).isNotNull();
+    assertThat(dto.outputSchema()).isNotNull();
+    assertExplainOutputSchema(dto);
+  }
+
+  @Test
+  void constructSchemaInExplainModeReturnsSchemaForTransaction() {
+    GlobalManager.globalManager().registerTransaction(
+            Dsl.transaction("TExplain")
+                    .input(Long.class)
+                    .output(String.class)
+                    .execute(ctx -> Result.success("ok"))
+                    .build());
+
+    var dto = service.constructSchema("TExplain", ConstructSchemaMode.EXPLAIN).orElseThrow();
+
+    assertThat(dto.type()).isEqualTo("transaction");
+    assertThat(dto.inputType()).isEqualTo("Long");
+    assertThat(dto.inputSchema()).isNotNull();
+    assertThat(dto.outputSchema()).isNotNull();
+    assertExplainOutputSchema(dto);
+  }
+
+  @Test
+  void constructSchemaInExplainModeReturnsSchemaForHelper() {
+    GlobalManager.globalManager().registerHelper("HExplain", new Executable<String, Integer>() {
+      @Override
+      public Result<Integer> execute(Context<String> ctx) {
+        return Result.success(1);
+      }
+
+      @Override
+      public ExecutableDescriptor describe() {
+        return new ExecutableDescriptor(
+                "HExplain", "A helper", String.class, Integer.class, false, null, List.of());
+      }
+    });
+
+    var dto = service.constructSchema("HExplain", ConstructSchemaMode.EXPLAIN).orElseThrow();
+
+    assertThat(dto.type()).isEqualTo("helper");
+    assertThat(dto.inputType()).isEqualTo("String");
+    assertThat(dto.inputSchema()).isNotNull();
+    assertThat(dto.outputSchema()).isNotNull();
+    assertExplainOutputSchema(dto);
+  }
+
+  @Test
+  void constructSchemaInExplainModeReturnsSchemaForFunction() {
+    GlobalManager.globalManager().registerFunction(
+            Dsl.function("FExplain")
+                    .parameters(p -> p.string("greeting"))
+                    .execute(ctx -> Result.success("ok"))
+                    .build());
+
+    var dto = service.constructSchema("FExplain", ConstructSchemaMode.EXPLAIN).orElseThrow();
+
+    assertThat(dto.type()).isEqualTo("function");
+    assertThat(dto.inputSchema()).isNotNull();
+    assertThat(dto.inputSchema()).containsKey("properties");
+    assertThat((Map<String, Object>) dto.inputSchema().get("properties"))
+            .containsKey("greeting");
+    assertExplainOutputSchema(dto);
+  }
+
+  private static void assertExplainOutputSchema(ConstructSchemaDto dto) {
+    assertThat(dto.outputType()).isEqualTo("ExplainReport");
+    assertThat(dto.outputSchema()).containsEntry("type", "object");
+    assertThat((Map<String, Object>) dto.outputSchema().get("properties"))
+            .containsKeys("name", "description", "mermaid", "children");
+    Map<String, Object> children = (Map<String, Object>) ((Map<String, Object>) dto
+            .outputSchema().get("properties")).get("children");
+    assertThat(children).containsEntry("type", "array");
+    assertThat((Map<String, Object>) children.get("items"))
+            .containsEntry("$ref", "#/$defs/ExplainReport");
   }
 }

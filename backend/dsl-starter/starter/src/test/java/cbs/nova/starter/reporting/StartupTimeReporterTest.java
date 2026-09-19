@@ -8,6 +8,9 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import cbs.nova.starter.config.properties.CbsStartupReportProperties;
 import java.time.Duration;
+import java.util.Collection;
+import java.util.stream.Collectors;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
@@ -16,6 +19,15 @@ import org.springframework.boot.context.metrics.buffering.BufferingApplicationSt
 import org.springframework.context.support.GenericApplicationContext;
 
 class StartupTimeReporterTest {
+
+  CbsStartupReportProperties cbsStartupReportProperties = new CbsStartupReportProperties(true, 10, 100);
+
+  private StartupTimeReporter startupTimeReporter;
+
+  @BeforeEach
+  void setUp() {
+    startupTimeReporter = new StartupTimeReporter(cbsStartupReportProperties);
+  }
 
   @Test
   void aggregatesStepsByNameAndListsSlowSteps() {
@@ -30,8 +42,11 @@ class StartupTimeReporterTest {
     busyWait(20);
     other.end();
 
-    var lines = StartupTimeReporter.summarize(
-            startup.drainBufferedTimeline(), 10, Duration.ofMillis(50));
+    var lines = startupTimeReporter.summarize(
+            startup.drainBufferedTimeline(), 10, Duration.ofMillis(50))
+        .stream()
+        .flatMap(Collection::stream)
+        .collect(Collectors.toList());;
 
     assertThat(lines.get(0)).startsWith("step=beans.instantiate totalMillis=");
     assertThat(lines).anyMatch(line -> line.startsWith("step=context.refresh totalMillis="));
@@ -46,8 +61,11 @@ class StartupTimeReporterTest {
       startup.start("step-" + i).end();
     }
 
-    var lines = StartupTimeReporter.summarize(
-            startup.drainBufferedTimeline(), 2, Duration.ofDays(1));
+    var lines = startupTimeReporter.summarize(
+            startup.drainBufferedTimeline(), 2, Duration.ofDays(1))
+        .stream()
+        .flatMap(Collection::stream)
+        .toList();
 
     assertThat(lines.stream().filter(line -> line.startsWith("step=")).count()).isEqualTo(2);
   }

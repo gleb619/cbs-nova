@@ -61,6 +61,7 @@
   },
   "dependencies": {
     "marked": "^12.0.0",
+    "mermaid": "^12.0.0",
     "monaco-editor": "^0.56.0",
     "monaco-editor-vue3": "^1.0.5",
     "vue": "^3.4.0"

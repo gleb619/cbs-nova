@@ -2,19 +2,16 @@ package cbs.nova.starter.service;
 
 import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.DslObject;
-import cbs.nova.dsl.DslRuntime;
 import cbs.nova.dsl.ExecutableDescriptor;
 import cbs.nova.dsl.GeneratedClassDescriptor;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.ParameterDescriptor;
 import cbs.nova.dsl.jsonschema.JsonSchemaGenerator;
 import cbs.nova.dsl.model.ExplainReport;
-import cbs.nova.dsl.model.SimpleContext;
-import cbs.nova.dsl.Context;
-import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.transaction.TransactionDslObject;
 import cbs.nova.starter.converter.DslIntrospectionMapper;
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.model.DslIntrospectionModels.ConstructSchemaMode;
 import cbs.nova.starter.model.DslIntrospectionModels.DefinitionMetaDto;
 import cbs.nova.starter.model.DslIntrospectionModels.DefinitionStatus;
@@ -32,6 +29,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -45,7 +43,6 @@ public class DslIntrospectionService {
   private final JsonSchemaGenerator jsonSchemaGenerator;
   private final DslIntrospectionMapper mapper;
   private final DslDefinitionStatusResolver statusResolver;
-  private final DslRuntime dslRuntime;
 
   public NamesResponse processes() {
     return new NamesResponse(GlobalManager.globalManager().processNames());
@@ -124,11 +121,11 @@ public class DslIntrospectionService {
     return Optional.empty();
   }
 
-  public Optional<Object> constructSchema(String name, ConstructSchemaMode mode) {
+  public Optional<ConstructSchemaDto> constructSchema(String name, ConstructSchemaMode mode) {
     if (mode == ConstructSchemaMode.EXPLAIN) {
-      return explainSchema(name).map(report -> (Object) report);
+      return explainSchema(name);
     }
-    return previewSchema(name).map(dto -> (Object) dto);
+    return previewSchema(name);
   }
 
   private Optional<ConstructSchemaDto> previewSchema(String name) {
@@ -139,18 +136,15 @@ public class DslIntrospectionService {
             .or(() -> gm.describeFunction(name).map(this::toSchemaDto));
   }
 
-  private Optional<ExplainReport> explainSchema(String name) {
-    var gm = GlobalManager.globalManager();
-    boolean known = gm.findProcess(name).isPresent()
-            || gm.findTransaction(name).isPresent()
-            || gm.describeHelper(name).isPresent()
-            || gm.describeFunction(name).isPresent();
-    if (!known) {
-      return Optional.empty();
-    }
-    Context<?> ctx = gm.createContext(
-            Map.of(), Map.of(), ExecutionMode.EXPLAIN, SimpleContext.generateRunId());
-    return Optional.of(dslRuntime.explain(name, ctx));
+  private Optional<ConstructSchemaDto> explainSchema(String name) {
+    return previewSchema(name).map(dto -> new ConstructSchemaDto(
+            dto.name(),
+            dto.type(),
+            dto.inputType(),
+            ExplainReport.class.getSimpleName(),
+            dto.description(),
+            dto.inputSchema(),
+            explainReportSchema()));
   }
 
   public List<DefinitionMetaDto> definitions() {
@@ -288,5 +282,27 @@ public class DslIntrospectionService {
       return desc.toLowerCase(Locale.ROOT).contains(description.toLowerCase(Locale.ROOT));
     }
     return true;
+  }
+
+  private Map<String, Object> explainReportSchema() {
+    Map<String, Object> children = Map.of(
+        "type", "array",
+        "items", Map.of("$ref", "#/$defs/ExplainReport"));
+    Map<String, Object> properties = Map.of(
+        "name", Map.of("type", "string"),
+        "description", Map.of("type", "string"),
+        "mermaid", Map.of("type", "string"),
+        "children", children);
+    List<String> required = List.of("name", "description", "mermaid", "children");
+    Map<String, Object> node = new LinkedHashMap<>();
+    node.put("type", "object");
+    node.put("properties", properties);
+    node.put("required", required);
+    return Map.of(
+        "$schema", StarterConstants.JSON_SCHEMA_DRAFT_URI,
+        "$defs", Map.of("ExplainReport", node),
+        "type", "object",
+        "properties", properties,
+        "required", required);
   }
 }

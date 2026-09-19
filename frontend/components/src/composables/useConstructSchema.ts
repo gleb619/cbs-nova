@@ -3,14 +3,13 @@ import type { JsonSchema } from '../types/jsonSchema'
 import { createEmitter } from '../utils/createEmitter'
 
 export type ConstructType = 'Process' | 'Transaction' | 'Helper' | 'Function'
-export type ConstructSchemaMode = 'preview' | 'explain'
+export type SchemaFetchMode = 'preview' | 'explain'
 
 interface SchemaCacheEntry {
   inputSchema: JsonSchema | null
   outputSchema: JsonSchema | null
   inputType: string | null
   outputType: string | null
-  report: unknown | null
 }
 
 const cache = new Map<string, SchemaCacheEntry>()
@@ -89,13 +88,12 @@ export function useConstructSchema({
 }: UseConstructSchemaOptions) {
   const name = ref(toValue(nameRef) ?? '')
   const type = ref(toValue(typeRef))
-  const mode = computed(() => toValue(modeRef) ?? 'preview')
+  const mode = ref(toValue(modeRef))
 
   const inputSchema = ref<JsonSchema | null>(null)
   const outputSchema = ref<JsonSchema | null>(null)
   const inputType = ref<string | null>(null)
   const outputType = ref<string | null>(null)
-  const report = ref<unknown | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
 
@@ -110,12 +108,12 @@ export function useConstructSchema({
   )
 
   function cacheKey() {
-    return `${mode.value}:${type.value ?? 'unknown'}:${name.value}`
+    return `${mode.value ?? 'preview'}:${type.value ?? 'unknown'}:${name.value}`
   }
 
   function endpoint() {
-    const base = `/api/v1/dsl/schemas/${encodeURIComponent(name.value)}`
-    return mode.value === 'preview' ? base : `${base}?mode=${mode.value}`
+    const suffix = mode.value === 'explain' ? '?mode=explain' : ''
+    return `/api/v1/dsl/schemas/${encodeURIComponent(name.value)}${suffix}`
   }
 
   function emptyEntry(): SchemaCacheEntry {
@@ -124,7 +122,6 @@ export function useConstructSchema({
       outputSchema: null,
       inputType: null,
       outputType: null,
-      report: null,
     }
   }
 
@@ -133,7 +130,6 @@ export function useConstructSchema({
     outputSchema.value = entry.outputSchema
     inputType.value = entry.inputType
     outputType.value = entry.outputType
-    report.value = entry.report
     error.value = null
   }
 
@@ -187,9 +183,8 @@ export function useConstructSchema({
           outputSchema: response?.outputSchema ?? null,
           inputType: response?.inputType ?? null,
           outputType: response?.outputType ?? null,
-          report: mode.value === 'explain' ? response : null,
         }
-        if (entry.inputSchema || entry.outputSchema || entry.report) {
+        if (entry.inputSchema || entry.outputSchema) {
           cache.set(key, entry)
         }
         applyEntry(entry)
@@ -233,8 +228,6 @@ export function useConstructSchema({
     outputSchema: computed(() => outputSchema.value),
     inputType: computed(() => inputType.value),
     outputType: computed(() => outputType.value),
-    report: computed(() => report.value),
-    hasReport: computed(() => report.value != null),
     loading: computed(() => loading.value),
     error: computed(() => error.value),
     hasSchema: computed(() => hasUsefulSchema(inputSchema.value)),
@@ -259,5 +252,5 @@ function hasUsefulSchema(s: JsonSchema | null): boolean {
 export interface UseConstructSchemaOptions {
   name: MaybeRefOrGetter<string>
   type?: MaybeRefOrGetter<ConstructType | undefined>
-  mode?: MaybeRefOrGetter<ConstructSchemaMode | undefined>
+  mode?: MaybeRefOrGetter<SchemaFetchMode | undefined>
 }

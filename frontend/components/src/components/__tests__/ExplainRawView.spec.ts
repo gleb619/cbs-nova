@@ -21,6 +21,25 @@ describe('ExplainRawView', () => {
     expect(pre.html()).not.toContain('<h1')
   })
 
+  it('renders a report object as pretty-printed JSON', () => {
+    const report = { name: 'demo', description: 'd', mermaid: 'body', children: [] }
+    const wrapper = mount(ExplainRawView, {
+      props: { report },
+    })
+    const pre = wrapper.find('[data-testid="explain-raw-pre"]')
+    expect(pre.exists()).toBe(true)
+    expect(pre.text()).toBe(JSON.stringify(report, null, 2))
+  })
+
+  it('prefers the report over markdown when both are provided', () => {
+    const wrapper = mount(ExplainRawView, {
+      props: { markdown: '# md', report: { name: 'demo' } },
+    })
+    const pre = wrapper.find('[data-testid="explain-raw-pre"]')
+    expect(pre.text()).toContain('"name": "demo"')
+    expect(pre.text()).not.toContain('# md')
+  })
+
   it('passes the source to the raw slot for custom rendering', () => {
     const wrapper = mount(ExplainRawView, {
       props: { markdown: 'source' },

@@ -36,16 +36,21 @@ public class StartupTimeReporter {
             context.getBeanDefinitionCount(),
             String.join(",", context.getEnvironment().getActiveProfiles()));
     if (context.getApplicationStartup() instanceof BufferingApplicationStartup buffering) {
-      summarize(
+      var lines = summarize(
               buffering.drainBufferedTimeline(),
               properties.topSteps(),
-              Duration.ofMillis(properties.slowThresholdMillis()))
+              Duration.ofMillis(properties.slowThresholdMillis()));
+
+      lines.getFirst()
               .forEach(line -> log.info("STARTUP_REPORT {}", line));
+      lines.getLast()
+              .forEach(line -> log.debug("STARTUP_REPORT {}", line));
     }
   }
 
-  static List<String> summarize(StartupTimeline timeline, int topSteps, Duration slowThreshold) {
-    var lines = new ArrayList<String>();
+  protected List<List<String>> summarize(StartupTimeline timeline, int topSteps, Duration slowThreshold) {
+    var step = new ArrayList<String>();
+    var substep = new ArrayList<String>();
     timeline.getEvents().stream()
             .collect(
                     Collectors.groupingBy(
@@ -54,16 +59,17 @@ public class StartupTimeReporter {
             .entrySet().stream()
             .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
             .limit(topSteps)
-            .forEach(e -> lines.add("step=%s totalMillis=%d".formatted(e.getKey(), e.getValue())));
+            .forEach(e -> step.add("step=%s totalMillis=%d".formatted(e.getKey(), e.getValue())));
+
     timeline.getEvents().stream()
             .filter(event -> event.getDuration().compareTo(slowThreshold) >= 0)
             .sorted(Comparator.comparing(StartupTimeline.TimelineEvent::getDuration).reversed())
             .forEach(
-                    event -> lines.add(
+                    event -> substep.add(
                             "slow=%s millis=%d"
                                     .formatted(
                                             event.getStartupStep().getName(),
                                             event.getDuration().toMillis())));
-    return lines;
+    return List.of(step, substep);
   }
 }

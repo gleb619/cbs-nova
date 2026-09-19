@@ -42,9 +42,13 @@ without re-reading the source. It exists primarily so that:
 
 1. **Entry point.** Explain is invoked with the name of one DSL entity (a Process, in the common
    case) — e.g. `dslRuntime.explain("UnreliableApiSuccess", ...)` or
-   `POST /api/dsl/explain/{name}`. The same report is also exposed through the introspection
-   surface: `GET /api/dsl/schemas/{name}?mode=explain` returns the `ExplainReport` for the
-   construct (the default `mode=preview` keeps returning the input/output JSON schemas).
+   `POST /api/dsl/explain/{name}`. The introspection surface exposes the call's I/O contract:
+   `GET /api/dsl/schemas/{name}?mode=explain` resolves the same construct chain as
+   `mode=preview` (process → transaction → helper → function) and returns a `ConstructSchemaDto`
+   whose input fields match preview (the explain call takes the same body), while `outputType`
+   is `ExplainReport` and `outputSchema` describes the report record shape (recursive
+   `children`). The report itself comes from `dslRuntime.explain(...)` /
+   `POST /api/dsl/explain/{name}`.
 2. **Hierarchy run first.** Explain mode internally runs the entity through
    `ExecutionMode.HIERARCHY`. This produces a `HierarchyReport` graph carrying the call tree,
    external calls, dry-run logs, metrics, and errors for every reachable node.

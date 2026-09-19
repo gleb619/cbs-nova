@@ -40,7 +40,7 @@ const { collapsed, hidden } = useSidebar()
       <span v-if="!collapsed" class="text-white font-bold text-lg truncate">{{ props.title }}</span>
       <span v-else class="text-white font-bold">{{ props.shortTitle }}</span>
     </div>
-    <nav class="flex-1 overflow-y-auto p-2 space-y-1">
+    <nav class="flex-1 overflow-y-auto p-2 space-y-1 overflow-x-hidden">
       <template v-for="item in props.items" :key="item.to">
         <AppNavItem
           v-if="!collapsed"

@@ -34,7 +34,11 @@ type PanelMode = 'form' | 'json' | 'schema' | 'history' | 'view' | 'raw'
 
 const isExplain = computed(() => props.endpoint === 'explain')
 const hasExplainBody = computed(() =>
-  Boolean(props.output?.description || props.output?.mermaidDiagram),
+  Boolean(props.output?.explainReport || props.output?.description || props.output?.mermaidDiagram),
+)
+
+const explainMarkdown = computed(
+  () => props.output?.explainReport?.mermaid || props.output?.description,
 )
 
 function initialMode(): PanelMode {
@@ -45,14 +49,13 @@ function initialMode(): PanelMode {
 const mode = ref<PanelMode>(initialMode())
 const selectedEntryId = ref<string | null>(null)
 
-const { outputSchema, outputType, loading, error, hasOutputSchema, report, hasReport, events } =
-  useConstructSchema({
-    name: () => props.name,
-    type: () => props.type,
-    mode: () => (isExplain.value ? 'explain' : 'preview'),
-  })
+const { outputSchema, outputType, loading, error, hasOutputSchema, events } = useConstructSchema({
+  name: () => props.name,
+  type: () => props.type,
+  mode: () => (props.endpoint === 'explain' ? 'explain' : undefined),
+})
 
-const schemaViewPayload = computed(() => (isExplain.value ? report.value : outputSchema.value))
+const schemaViewPayload = computed(() => outputSchema.value)
 
 const effectiveMode = computed<PanelMode>(() => {
   if (isExplain.value && hasExplainBody.value) {
@@ -143,8 +146,8 @@ const footerStatus = computed(() => {
       return { text: 'History — stored result', type: 'muted' as const }
     return { text: `History — ${props.history.length} run(s)`, type: 'muted' as const }
   }
-  if (effectiveMode.value === 'view') return { text: 'Markdown view', type: 'muted' as const }
-  if (effectiveMode.value === 'raw') return { text: 'Markdown source', type: 'muted' as const }
+  if (effectiveMode.value === 'view') return { text: 'Explain markdown', type: 'muted' as const }
+  if (effectiveMode.value === 'raw') return { text: 'Report JSON', type: 'muted' as const }
   if (effectiveMode.value === 'form') {
     if (loading.value) return { text: 'Loading schema…', type: 'muted' as const }
     if (error.value) return { text: `Schema unavailable: ${error.value}`, type: 'danger' as const }
@@ -152,7 +155,7 @@ const footerStatus = computed(() => {
     return { text: 'Form output', type: 'muted' as const }
   }
   if (effectiveMode.value === 'schema') {
-    return { text: isExplain.value ? 'Explain report' : 'Output schema', type: 'muted' as const }
+    return { text: 'Output schema', type: 'muted' as const }
   }
   return { text: 'Result JSON', type: 'muted' as const }
 })
@@ -204,11 +207,11 @@ onBeforeUpdate(() => {
 
     <div class="flex-1 min-h-0 overflow-hidden">
       <div v-if="effectiveMode === 'view'" class="h-full overflow-auto p-3">
-        <ExplainMarkdownView :markdown="output?.description" />
+        <ExplainMarkdownView :markdown="explainMarkdown" mermaid />
       </div>
 
       <div v-else-if="effectiveMode === 'raw'" class="h-full overflow-auto p-3">
-        <ExplainRawView :markdown="output?.description" />
+        <ExplainRawView :report="output?.explainReport" :markdown="explainMarkdown" />
       </div>
 
       <div v-else-if="effectiveMode === 'json'" class="h-full overflow-auto p-3">
@@ -226,8 +229,8 @@ onBeforeUpdate(() => {
         </div>
         <template v-else>
           <ExplainMarkdownView
-            v-if="output?.description || output?.mermaidDiagram"
-            :markdown="output.description"
+            v-if="output?.explainReport?.mermaid || output?.description || output?.mermaidDiagram"
+            :markdown="explainMarkdown"
           />
           <ResultTab :result="output?.result" />
         </template>
@@ -315,7 +318,7 @@ onBeforeUpdate(() => {
         </div>
 
         <button
-          v-if="hasOutputSchema || (isExplain && hasReport)"
+          v-if="hasOutputSchema"
           type="button"
           class="text-xs px-2 py-1 border border-line hover:bg-surface disabled:opacity-50"
           :class="effectiveMode === 'schema' ? 'bg-accent-500 text-white' : 'text-ink'"

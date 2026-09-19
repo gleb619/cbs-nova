@@ -132,6 +132,27 @@ describe('ExplainTab', () => {
     expect(resultText).toContain('"mermaidDiagram":"g"')
   })
 
+  it('passes the backend ExplainReport through as typed explainReport data', async () => {
+    const report = {
+      name: 'demo',
+      description: 'short summary',
+      mermaid: '# Long-form body',
+      children: [{ name: 'child', description: 'c', mermaid: 'x', children: [] }],
+    }
+    const explain = vi.fn().mockResolvedValue(report)
+    const wrapper = mountTab({}, explain)
+    await wrapper.find('[data-testid="json-textarea"]').setValue('{}')
+    await wrapper
+      .findAll('button')
+      .find((b) => b.text() === 'Run')!
+      .trigger('click')
+    await flushPromises()
+
+    const output = JSON.parse(wrapper.find('[data-testid="runner-result-tab"]').text())
+    expect(output.explainReport).toEqual(report)
+    expect(output.result).toBeUndefined()
+  })
+
   it('surfaces backend errors on failure', async () => {
     const explain = vi.fn().mockRejectedValue({
       data: { errors: [{ message: 'explain failed' }] },

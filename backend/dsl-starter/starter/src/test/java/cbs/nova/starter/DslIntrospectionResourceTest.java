@@ -3,15 +3,11 @@ package cbs.nova.starter;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.DslObject.DslType;
-import cbs.nova.dsl.DslRuntime;
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.ExecutableDescriptor;
 import cbs.nova.dsl.GlobalManager;
@@ -19,7 +15,6 @@ import cbs.nova.dsl.Result;
 import cbs.nova.dsl.jsonschema.JacksonJsonSchemaGenerator;
 import cbs.nova.dsl.function.FunctionDslObject;
 import cbs.nova.dsl.model.Descriptors;
-import cbs.nova.dsl.model.ExplainReport;
 import cbs.nova.starter.config.router.DslIntrospectionRouterConfiguration;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.controller.DslIntrospectionHandler;
@@ -52,16 +47,11 @@ class DslIntrospectionResourceTest {
                     Dsl.process("LoanDisbursement")
                             .execute(ctx -> Result.success("ok")).build());
     DslIntrospectionMapper mapper = Mappers.getMapper(DslIntrospectionMapper.class);
-    DslRuntime dslRuntime = mock(DslRuntime.class);
-    when(dslRuntime.explain(any(), any())).thenReturn(
-            new ExplainReport("LoanDisbursement", "test description", "graph TD; A-->B;",
-                    List.of()));
     DslIntrospectionService service = new DslIntrospectionService(
             new JacksonJsonSchemaGenerator(),
             mapper,
             new DslDefinitionStatusResolver(DslProperties.builder().build(),
-                    new DslGitStatusResolver(DslProperties.builder().build(), null)),
-            dslRuntime);
+                    new DslGitStatusResolver(DslProperties.builder().build(), null)));
     DslIntrospectionHandler handler = new DslIntrospectionHandler(service,
             new HierarchyDiagramRenderer(), new RequestQueryConverter());
     DslIntrospectionRouterConfiguration router = new DslIntrospectionRouterConfiguration();
@@ -345,16 +335,41 @@ class DslIntrospectionResourceTest {
   }
 
   @Test
-  void constructSchemaEndpointReturnsExplainReportForExplainMode() throws Exception {
+  void constructSchemaEndpointReturnsSchemasForExplainMode() throws Exception {
     mockMvc
             .perform(get("/api/dsl/schemas/LoanDisbursement")
                     .param("mode", "explain")
                     .accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.name").value("LoanDisbursement"))
-            .andExpect(jsonPath("$.description").value("test description"))
-            .andExpect(jsonPath("$.mermaid").value("graph TD; A-->B;"))
-            .andExpect(jsonPath("$.children").isArray());
+            .andExpect(jsonPath("$.type").value("process"))
+            .andExpect(jsonPath("$.inputSchema").exists())
+            .andExpect(jsonPath("$.outputType").value("ExplainReport"))
+            .andExpect(jsonPath("$.outputSchema.type").value("object"))
+            .andExpect(jsonPath("$.outputSchema.properties.name.type").value("string"))
+            .andExpect(jsonPath("$.outputSchema.properties.description.type").value("string"))
+            .andExpect(jsonPath("$.outputSchema.properties.mermaid.type").value("string"))
+            .andExpect(jsonPath("$.outputSchema.properties.children.type").value("array"))
+            .andExpect(jsonPath("$.outputSchema.properties.children.items['$ref']")
+                    .value("#/$defs/ExplainReport"));
+  }
+
+  @Test
+  void constructSchemaEndpointReturnsSchemasForFunctionInExplainMode() throws Exception {
+    registerSampleEntities();
+
+    mockMvc
+            .perform(get("/api/dsl/schemas/sampleFunction")
+                    .param("mode", "explain")
+                    .accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.name").value("sampleFunction"))
+            .andExpect(jsonPath("$.type").value("function"))
+            .andExpect(jsonPath("$.inputType").value("String"))
+            .andExpect(jsonPath("$.inputSchema").exists())
+            .andExpect(jsonPath("$.outputType").value("ExplainReport"))
+            .andExpect(jsonPath("$.outputSchema.properties.children.items['$ref']")
+                    .value("#/$defs/ExplainReport"));
   }
 
   @Test
@@ -393,8 +408,6 @@ class DslIntrospectionResourceTest {
     var sampleFunction = FunctionDslObject.builder()
             .name("sampleFunction")
             .executeLogic(ctx -> Result.success("ok"))
-            .explainLogic(ctx -> Result
-                    .success(new ExplainReport("sampleFunction", "test", "", List.of())))
             .descriptor(() -> Descriptors.from("sampleFunction",
                     new ExecutableDescriptor(
                             "sampleFunction",
