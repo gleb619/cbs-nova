@@ -11,6 +11,35 @@ import {
 } from '@nuxt/kit'
 import { resolveRuntimeConfig } from './server/utils/moduleRuntimeConfig'
 
+/**
+ * Parse `BACKEND_FORWARDED_HEADERS` env var as a JSON object. Returns
+ * `undefined` when unset or empty so the merge in `resolveRuntimeConfig`
+ * falls back to whatever default the host / caller provided. Throws on
+ * malformed JSON — fail closed, surfacing the misconfiguration rather
+ * than silently dropping the operator's intent.
+ */
+function parseForwardedHeadersEnv(raw: string | undefined): Record<string, string> | undefined {
+  if (!raw) return undefined
+  const parsed: unknown = JSON.parse(raw)
+  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error(
+      '[admin-ui-plugin] BACKEND_FORWARDED_HEADERS must be a JSON object of ' +
+        '{ inbound: outbound } header-name pairs (e.g. \'{"x-tenant-id":"X-Tenant-Id"}\').',
+    )
+  }
+  const out: Record<string, string> = {}
+  for (const [k, v] of Object.entries(parsed as Record<string, unknown>)) {
+    if (typeof v !== 'string') {
+      throw new Error(
+        `[admin-ui-plugin] BACKEND_FORWARDED_HEADERS.${k} must map to a string ` +
+          `(outbound header name), got ${typeof v}.`,
+      )
+    }
+    out[k] = v
+  }
+  return out
+}
+
 // ---------------------------------------------------------------------------
 // @cbs/admin-ui-plugin
 //
@@ -63,6 +92,17 @@ export interface ModuleOptions {
    * Surfaced as a 504 BACKEND_TIMEOUT when exceeded. Defaults to 10000.
    */
   backendTimeoutMs?: number
+
+  /**
+   * Inbound (lowercase) → outbound (canonical) header-name allowlist for
+   * the BFF → backend pass-through. Extends or trims the default set
+   * declared in `server/utils/backendHeaders.ts`. Default = the same four
+   * entries as before (traceparent, authorization, idempotency-key,
+   * x-correlation-id). Each host deployment can tune this via env
+   * (BACKEND_FORWARDED_HEADERS as a JSON object) or this option without
+   * touching code.
+   */
+  backendForwardedHeaders?: Record<string, string>
 
   /**
    * OIDC issuer URL (server-side only). When unset the BFF auth routes are
@@ -159,6 +199,11 @@ export default defineNuxtModule<ModuleOptions>({
     backendBaseUrl: process.env.BACKEND_BASE_URL ?? 'http://localhost:8090',
     backendApiKey: process.env.BACKEND_API_KEY ?? '',
     backendTimeoutMs: Number(process.env.BACKEND_TIMEOUT_MS ?? 10000),
+    // The default for `backendForwardedHeaders` is the same four entries as
+    // before T562 — declared in server/utils/backendHeaders.ts so the spec
+    // asserting out-of-the-box behaviour has a single source of truth. The
+    // env var accepts a JSON object (e.g. `{"x-tenant-id":"X-Tenant-Id"}`).
+    backendForwardedHeaders: parseForwardedHeadersEnv(process.env.BACKEND_FORWARDED_HEADERS),
     authIssuer: process.env.AUTH_ISSUER ?? '',
     authClientId: process.env.AUTH_CLIENT_ID ?? 'cbs-nova-bff',
     authClientSecret: process.env.AUTH_CLIENT_SECRET ?? '',

@@ -16,6 +16,13 @@ export interface AdminUiRuntimeConfig {
   backendBaseUrl: string
   backendApiKey: string
   backendTimeoutMs: number
+  /**
+   * Inbound (lowercase) → outbound (canonical) header-name allowlist for
+   * the BFF → backend pass-through. `undefined` ⇒ `buildBackendHeaders`
+   * falls back to its built-in default set so out-of-the-box behaviour is
+   * unchanged.
+   */
+  backendForwardedHeaders?: Record<string, string>
   authIssuer: string
   authClientId: string
   authClientSecret: string
@@ -45,6 +52,7 @@ export interface ExistingRuntimeConfig {
   backendBaseUrl?: string
   backendApiKey?: string
   backendTimeoutMs?: number
+  backendForwardedHeaders?: Record<string, string>
   authIssuer?: string
   authClientId?: string
   authClientSecret?: string
@@ -83,6 +91,11 @@ export function resolveRuntimeConfig(
     backendBaseUrl: existing.backendBaseUrl ?? options.backendBaseUrl ?? 'http://localhost:8090',
     backendApiKey: existing.backendApiKey ?? options.backendApiKey ?? '',
     backendTimeoutMs: existing.backendTimeoutMs ?? options.backendTimeoutMs ?? 10000,
+    // No built-in default: `buildBackendHeaders` falls back to its own
+    // DEFAULT_FORWARDED_HEADERS when this is undefined, so omitting the
+    // option keeps the historical four-entry allowlist.
+    backendForwardedHeaders:
+      existing.backendForwardedHeaders ?? options.backendForwardedHeaders,
     authIssuer: existing.authIssuer ?? options.authIssuer ?? '',
     authClientId: existing.authClientId ?? options.authClientId ?? 'cbs-nova-bff',
     authClientSecret: existing.authClientSecret ?? options.authClientSecret ?? '',

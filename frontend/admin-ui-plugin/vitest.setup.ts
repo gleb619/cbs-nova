@@ -60,6 +60,7 @@ const defaultRuntimeConfig = {
   backendBaseUrl: 'http://localhost:8090',
   backendApiKey: '',
   backendTimeoutMs: 10000,
+  backendForwardedHeaders: undefined,
   authIssuer: '',
   authClientId: 'cbs-nova-bff',
   authClientSecret: '',

@@ -37,6 +37,7 @@ const setRuntimeConfig = (overrides: Record<string, unknown> = {}) => {
     backendBaseUrl: 'http://localhost:8090',
     backendApiKey: '',
     backendTimeoutMs: 10000,
+    backendForwardedHeaders: undefined,
     authIssuer: '',
     authClientId: 'cbs-nova-bff',
     authClientSecret: '',
@@ -603,5 +604,54 @@ describe('proxyToBackend', () => {
       { headers: Record<string, string> },
     ]
     expect(opts.headers['Content-Type']).toBeUndefined()
+  })
+
+  describe('configurable forwarded-header allowlist (T562)', () => {
+    it('forwards an extra header added via runtimeConfig.backendForwardedHeaders', async () => {
+      setRuntimeConfig({
+        backendForwardedHeaders: {
+          traceparent: 'traceparent',
+          authorization: 'Authorization',
+          'idempotency-key': 'Idempotency-Key',
+          'x-correlation-id': 'X-Correlation-Id',
+          'x-tenant-id': 'X-Tenant-Id',
+        },
+      })
+      const event = makeEvent({ 'x-tenant-id': 'tenant-42' })
+      ;($fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({})
+
+      await proxyToBackend(event, '/api/foo')
+
+      const [, opts] = ($fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0] as [
+        string,
+        { headers: Record<string, string> },
+      ]
+      expect(opts.headers['X-Tenant-Id']).toBe('tenant-42')
+    })
+
+    it('does NOT forward a default header that has been removed from runtimeConfig.backendForwardedHeaders', async () => {
+      // Same call shape as a host that intentionally narrows the allowlist
+      // — idempotency-key dropped, the rest kept.
+      setRuntimeConfig({
+        backendForwardedHeaders: {
+          traceparent: 'traceparent',
+          authorization: 'Authorization',
+          'x-correlation-id': 'X-Correlation-Id',
+        },
+      })
+      const event = makeEvent({ 'idempotency-key': 'idem-should-not-leak' })
+      ;($fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({})
+
+      await proxyToBackend(event, '/api/foo')
+
+      const [, opts] = ($fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0] as [
+        string,
+        { headers: Record<string, string> },
+      ]
+      expect(opts.headers['Idempotency-Key']).toBeUndefined()
+      // Sanity check: the other three defaults still flow.
+      expect(opts.headers['X-Correlation-Id']).toBeUndefined() // no inbound header
+      expect(opts.headers.traceparent).toBeUndefined() // no inbound header
+    })
   })
 })

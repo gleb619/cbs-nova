@@ -2,18 +2,19 @@ import type { H3Event } from 'h3'
 import { useBackendConfig } from './config'
 
 /**
- * Inbound (lowercase) → outbound (canonical) header-name allowlist for the
- * BFF → backend pass-through. One place to add a forwarded header.
+ * Default inbound (lowercase) → outbound (canonical) header-name allowlist
+ * for the BFF → backend pass-through. Mirrored into
+ * `runtimeConfig.backendForwardedHeaders` so deployments can extend or
+ * trim the set via Nuxt env / module options without a code change. The
+ * same default is used when the runtime-config value is missing or empty,
+ * so out-of-the-box behaviour is unchanged from before T562.
  */
-export const FORWARDED_HEADERS: Record<string, string> = {
+export const DEFAULT_FORWARDED_HEADERS: Record<string, string> = {
   traceparent: 'traceparent',
   authorization: 'Authorization',
   'idempotency-key': 'Idempotency-Key',
   'x-correlation-id': 'X-Correlation-Id',
 }
-
-// follow-up: move this allowlist into runtimeConfig so it can be tuned per
-// environment without a code change. Skipped here to keep this PR small.
 
 /** Array-safe inbound header accessor — unwraps string[] to its first value. */
 function getRequestHeader(event: H3Event, name: string): string | undefined {
@@ -57,7 +58,10 @@ export function buildBackendHeaders(
   const requestId = inboundRequestId || globalThis.crypto.randomUUID()
   headers['X-Request-Id'] = requestId
 
-  for (const [inboundName, outboundName] of Object.entries(FORWARDED_HEADERS)) {
+  const forwardedHeaders =
+    (useRuntimeConfig().backendForwardedHeaders as Record<string, string> | undefined) ??
+    DEFAULT_FORWARDED_HEADERS
+  for (const [inboundName, outboundName] of Object.entries(forwardedHeaders)) {
     const value = getRequestHeader(event, inboundName)
     if (value) headers[outboundName] = value
   }
