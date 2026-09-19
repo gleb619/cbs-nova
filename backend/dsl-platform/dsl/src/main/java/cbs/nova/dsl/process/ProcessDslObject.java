@@ -5,8 +5,8 @@ import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.ParameterDescriptor;
 import cbs.nova.dsl.Result;
-import cbs.nova.dsl.model.ExplainReport;
 import cbs.nova.dsl.transaction.TransactionExecution;
+import cbs.nova.dsl.model.ExplainReport;
 import lombok.Builder;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -30,7 +30,8 @@ public record ProcessDslObject(
         @Nullable BiConsumer<CompensationContext<?>, List<TransactionExecution>> compensationLogic,
         @NonNull Function<ProcessContext<?>, Result<?>> previewLogic,
         @NonNull Function<ProcessContext<?>, Result<ExplainReport>> explainLogic,
-        @NonNull DslDescriptor descriptor) implements DslObject {
+        @NonNull DslDescriptor descriptor,
+        @NonNull List<SignalDescriptor> signals) implements DslObject {
 
   public ProcessDslObject {
     if (description == null || description.isBlank()) {
@@ -41,6 +42,9 @@ public record ProcessDslObject(
     }
     if (outputType == null) {
       outputType = Void.class;
+    }
+    if (signals == null) {
+      signals = List.of();
     }
   }
 

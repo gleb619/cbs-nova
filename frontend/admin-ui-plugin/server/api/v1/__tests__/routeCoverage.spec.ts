@@ -142,6 +142,17 @@ const expectedProxies: readonly ExpectedProxy[] = [
     backendPath: '/api/dsl/explain/{name}',
     bffPath: '/api/v1/dsl/explain/{name}',
   },
+  // DslSignalsRouterConfiguration
+  {
+    method: 'POST',
+    backendPath: '/api/dsl/signals/{runId}',
+    bffPath: '/api/v1/dsl/signals/{runId}',
+  },
+  {
+    method: 'GET',
+    backendPath: '/api/dsl/queries/{runId}',
+    bffPath: '/api/v1/dsl/queries/{runId}',
+  },
   {
     method: 'POST',
     backendPath: '/api/dsl/drafts/{name}/save',

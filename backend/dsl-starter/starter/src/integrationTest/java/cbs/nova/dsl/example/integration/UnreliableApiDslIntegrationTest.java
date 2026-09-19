@@ -277,8 +277,9 @@ class UnreliableApiDslIntegrationTest {
       } else {
         in = (UnreliableApiIn) body;
       }
-      Context<UnreliableApiIn> adapted = SimpleContext.builder().body(in).metadata(ctx.metadata())
-              .mode(ctx.mode()).runId(ctx.runId()).transactionRouting(ctx.transactionRouting())
+      Context<UnreliableApiIn> adapted = SimpleContext.<UnreliableApiIn>builder().body(in)
+              .metadata(ctx.metadata()).mode(ctx.mode()).runId(ctx.runId())
+              .transactionRouting(ctx.transactionRouting())
               .executionListener(ctx.executionListener()).saga(ctx.saga()).build();
       return (Result<Object>) (Result<?>) delegate.execute(adapted);
     }

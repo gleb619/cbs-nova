@@ -27,4 +27,6 @@ public class Constants {
 
   public static final String CORRELATION_ID_METADATA_KEY = "correlationId";
 
+  public static final String SIGNAL_AWAITER_METADATA_KEY = "cbs.nova.dsl.signalAwaiter";
+
 }

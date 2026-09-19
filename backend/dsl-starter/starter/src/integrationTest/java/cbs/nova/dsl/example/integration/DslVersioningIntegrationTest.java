@@ -37,6 +37,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 import tools.jackson.databind.ObjectMapper;
+import java.util.Map;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -222,6 +223,11 @@ class DslVersioningIntegrationTest {
     @Override
     public String getVersion() {
       return "v2";
+    }
+
+    @Override
+    public Map<String, Object> dslSignalState() {
+      return Map.of();
     }
 
     @Override

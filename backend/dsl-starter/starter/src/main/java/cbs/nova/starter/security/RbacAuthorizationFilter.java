@@ -48,7 +48,8 @@ import tools.jackson.databind.ObjectMapper;
 public final class RbacAuthorizationFilter extends OncePerRequestFilter {
 
   private static final List<RouteRule> RULES = List.of(
-          // --- RUNNER: run / preview / explain / cancel ---
+          // --- RUNNER: run / preview / explain / cancel / signals ---
+          new RouteRule(HttpMethod.POST, "/api/dsl/signals/**", Role.RUNNER),
           new RouteRule(HttpMethod.POST, "/api/dsl/preview/**", Role.RUNNER),
           new RouteRule(HttpMethod.POST, "/api/dsl/run/**", Role.RUNNER),
           new RouteRule(HttpMethod.POST, "/api/dsl/explain/**", Role.RUNNER),

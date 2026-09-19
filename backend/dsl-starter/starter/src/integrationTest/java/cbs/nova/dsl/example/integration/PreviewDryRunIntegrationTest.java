@@ -49,8 +49,6 @@ class PreviewDryRunIntegrationTest {
   private DslRuntime dslRuntime;
 
   @Autowired
-
-  @Autowired
   private JdbcTemplate jdbcTemplate;
 
   @Autowired

@@ -83,3 +83,16 @@ pieces:
       - type: audit-write
         action: VHS_TAPE_REPLAY
     failMode: deny
+  - id: dsl-signal-send
+    target:
+      type: api
+      route: POST /api/dsl/signals/{runId}
+    preCheck:
+      - type: role
+        anyOf: [runner, admin]
+      - type: rate-class
+        class: run-mutations
+    postCheck:
+      - type: audit-write
+        action: SIGNAL_SENT
+    failMode: deny

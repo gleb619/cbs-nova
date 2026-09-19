@@ -17,9 +17,16 @@ public record ProcessDescriptor(
         @Nullable Class<?> outputType,
         boolean hasCompensation,
         @Deprecated(forRemoval = true) @NonNull List<String> helperRefs,
-        @Deprecated(forRemoval = true) @NonNull List<String> transactionRefs)
+        @Deprecated(forRemoval = true) @NonNull List<String> transactionRefs,
+        @NonNull List<SignalDescriptor> signals)
         implements
           ObjectDescriptor {
+
+  public ProcessDescriptor {
+    if (signals == null) {
+      signals = List.of();
+    }
+  }
 
   @Override
   public DslType type() {

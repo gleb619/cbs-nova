@@ -19,6 +19,7 @@ import cbs.nova.dsl.transaction.TransactionExecution;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -44,6 +45,7 @@ public final class ProcessBuilder<I, O> implements ObjectBuilder<ProcessDslObjec
   private String description;
   @Nullable
   private Function<ProcessContext<I>, Result<ExplainReport>> explainLogic;
+  private final List<SignalDescriptor> signals = new ArrayList<>();
 
   public ProcessBuilder(@NonNull String name) {
     this.name = name;
@@ -113,6 +115,12 @@ public final class ProcessBuilder<I, O> implements ObjectBuilder<ProcessDslObjec
     return this;
   }
 
+  @SuppressWarnings("unchecked")
+  public <T> ProcessBuilder<I, O> signal(@NonNull String name, @NonNull Class<T> payloadType) {
+    this.signals.add(new SignalDescriptor(name, payloadType));
+    return this;
+  }
+
   @Override
   public @NonNull ProcessDslObject build() {
     if (executeLogic == null) {
@@ -125,7 +133,7 @@ public final class ProcessBuilder<I, O> implements ObjectBuilder<ProcessDslObjec
     var descriptor = defaultDescriptor(
             name, taskQueue, version, inputType, outputType,
             parameters != null ? parameters : List.of(),
-            compensationLogic != null, description);
+            compensationLogic != null, description, List.copyOf(signals));
     var resolvedExecute = rawExecute();
     var explain = rawExplain() != null ? rawExplain() : defaultExplain();
     var resolvedPreview = rawPreview() != null ? rawPreview() : resolvedExecute;
@@ -142,6 +150,7 @@ public final class ProcessBuilder<I, O> implements ObjectBuilder<ProcessDslObjec
             .previewLogic(resolvedPreview)
             .explainLogic(explain)
             .descriptor(descriptor)
+            .signals(List.copyOf(signals))
             .build();
   }
 
@@ -200,7 +209,8 @@ public final class ProcessBuilder<I, O> implements ObjectBuilder<ProcessDslObjec
           @Nullable Class<?> outputType,
           @NonNull List<ParameterDescriptor> parameters,
           boolean hasSideEffects,
-          @Nullable String description) {
+          @Nullable String description,
+          @NonNull List<SignalDescriptor> signals) {
     var objectDescriptor = ProcessDescriptor.builder()
             .name(name)
             .description(description)
@@ -211,6 +221,7 @@ public final class ProcessBuilder<I, O> implements ObjectBuilder<ProcessDslObjec
             .hasCompensation(hasSideEffects)
             .helperRefs(List.of())
             .transactionRefs(List.of())
+            .signals(signals)
             .build();
     return DslDescriptor.builder()
             .objectDescriptor(objectDescriptor)

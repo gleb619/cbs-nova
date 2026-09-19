@@ -397,6 +397,23 @@ public final class GlobalManager {
   public @NonNull Object runProcessWithCompensation(
           @NonNull String runId,
           @NonNull Object input,
+          @NonNull ProcessDslObject process,
+          @NonNull Map<String, Object> extraMetadata) {
+    Map<String, Object> metadata = new HashMap<>(extraMetadata);
+    if (DslConfig.dslConfig().objectGuard().get().active()) {
+      metadata.put(Constants.DSL_DEFINITION_NAME_METADATA_KEY, process.name());
+    }
+    return runProcessWithCompensation(
+            runId,
+            input,
+            ctx -> runProcess(process, ctx),
+            (compCtx, error) -> compensateProcess(process, compCtx, error),
+            metadata);
+  }
+
+  public @NonNull Object runProcessWithCompensation(
+          @NonNull String runId,
+          @NonNull Object input,
           @NonNull ProcessMain main,
           @NonNull ProcessCompensation compensation) {
     return runProcessWithCompensation(runId, input, main, compensation, Map.of());

@@ -216,6 +216,55 @@ function runAgain() {
   })
 }
 
+
+// T567 — signal panel: allow operator to send a named signal to a running
+// Temporal workflow and query its current signal state.
+const signalName = ref('')
+const signalPayload = ref('{}')
+const signalResult = ref<string | null>(null)
+const signalError = ref<string | null>(null)
+const queryResult = ref<Record<string, unknown> | null>(null)
+const signalBusy = ref(false)
+const queryBusy = ref(false)
+
+async function sendSignal() {
+  if (!selectedExecution.value?.id) return
+  signalBusy.value = true
+  signalError.value = null
+  signalResult.value = null
+  try {
+    let payload: unknown
+    try {
+      payload = signalPayload.value.trim() ? JSON.parse(signalPayload.value) : undefined
+    } catch (e) {
+      throw new Error('Payload must be valid JSON')
+    }
+    await $fetch(`/api/v1/dsl/signals/${selectedExecution.value.id}`, {
+      method: 'POST',
+      body: { signalName: signalName.value, payload },
+    })
+    signalResult.value = `Signal "${signalName.value}" sent`
+    await querySignalState()
+  } catch (err) {
+    signalError.value = (err as Error)?.message ?? 'Failed to send signal'
+  } finally {
+    signalBusy.value = false
+  }
+}
+
+async function querySignalState() {
+  if (!selectedExecution.value?.id) return
+  queryBusy.value = true
+  try {
+    const response = await $fetch(`/api/v1/dsl/queries/${selectedExecution.value.id}`)
+    queryResult.value = (response as Record<string, unknown>) ?? null
+  } catch (err) {
+    queryResult.value = null
+  } finally {
+    queryBusy.value = false
+  }
+}
+
 onUnmounted(() => {
   stopPolling()
 })
@@ -358,6 +407,51 @@ onUnmounted(() => {
             v-else-if="visibleTab === 'errors'"
             :errors="selectedExecution.errors"
           />
+        </div>
+      </div>
+
+      <div
+        v-if="isRunning"
+        class="bg-white border border-line rounded-lg p-4 space-y-3"
+        data-testid="signal-panel"
+      >
+        <h3 class="text-sm font-semibold text-ink">Send signal</h3>
+        <div class="flex gap-2">
+          <input
+            v-model="signalName"
+            type="text"
+            placeholder="Signal name"
+            class="flex-1 px-3 py-2 text-sm border rounded border-neutral-300 focus:outline-none focus:ring-2 focus:ring-primary-300"
+          />
+          <button
+            type="button"
+            :disabled="!signalName || signalBusy"
+            class="px-3 py-2 text-xs font-medium rounded border transition-colors border-primary-300 bg-white text-primary-700 hover:bg-primary-50 disabled:opacity-50"
+            @click="querySignalState"
+          >
+            {{ queryBusy ? 'Querying…' : 'Query state' }}
+          </button>
+        </div>
+        <textarea
+          v-model="signalPayload"
+          rows="3"
+          placeholder="Signal payload JSON"
+          class="w-full px-3 py-2 text-sm border rounded border-neutral-300 focus:outline-none focus:ring-2 focus:ring-primary-300 font-mono"
+        />
+        <div class="flex gap-2">
+          <button
+            type="button"
+            :disabled="!signalName || signalBusy"
+            class="px-3 py-2 text-xs font-medium rounded border transition-colors border-primary-300 bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-50"
+            @click="sendSignal"
+          >
+            {{ signalBusy ? 'Sending…' : 'Send signal' }}
+          </button>
+        </div>
+        <p v-if="signalResult" class="text-sm text-success-600" data-testid="signal-result">{{ signalResult }}</p>
+        <p v-if="signalError" class="text-sm text-error-600" data-testid="signal-error">{{ signalError }}</p>
+        <div v-if="queryResult?.signalState" class="bg-neutral-50 border border-line rounded p-2">
+          <pre class="text-xs text-ink-muted overflow-auto">{{ JSON.stringify(queryResult.signalState, null, 2) }}</pre>
         </div>
       </div>
 
