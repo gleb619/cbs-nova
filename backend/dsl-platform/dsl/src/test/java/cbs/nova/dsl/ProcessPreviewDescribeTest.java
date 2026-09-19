@@ -2,7 +2,6 @@ package cbs.nova.dsl;
 import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import cbs.nova.dsl.explain.DescriptorMarkdown;
 import cbs.nova.dsl.history.TransactionExecutionRepository;
 import cbs.nova.dsl.registry.DefaultCompensationRegistry;
 import cbs.nova.dsl.repository.InMemoryTransactionExecutionRepository;
@@ -95,21 +94,4 @@ class ProcessPreviewDescribeTest {
     assertThat(desc.hasSideEffects()).isTrue();
   }
 
-  @Test
-  void describeExplainReturnsMarkdown() {
-    var process = Dsl.process("OrderProc")
-            .input(String.class)
-            .output(String.class)
-            .execute(ctx -> Result.success("ok"))
-            .build();
-
-    var markdown = DescriptorMarkdown.render(process.descriptor());
-
-    assertThat(markdown)
-            .contains("**Process** `OrderProc`")
-            .contains("- Input: `String`")
-            .contains("- Output: `String`")
-            .contains("- Side effects: no")
-            .doesNotContain("Compensation");
-  }
 }

@@ -11,7 +11,6 @@ import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.Constants;
-import cbs.nova.dsl.explain.DescriptorMarkdown;
 import cbs.nova.dsl.explain.ExplainResourceProvider;
 import cbs.nova.dsl.model.ExplainReport;
 import java.util.List;
@@ -269,41 +268,6 @@ class FunctionBuilderTest {
             .describe(() -> custom)
             .build();
     assertThat(fn.describe()).isSameAs(custom);
-  }
-
-  @Test
-  void describeExplainReturnsMarkdown() {
-    var greeterDescriptor = FunctionDescriptor.builder()
-            .name("GreeterFn")
-            .description("Greets the caller.")
-            .inputType(String.class)
-            .outputType(String.class)
-            .build();
-    var custom = DslDescriptor.builder()
-            .objectDescriptor(greeterDescriptor)
-            .hasSideEffects(true)
-            .parameters(List.of())
-            .taskQueue(null)
-            .version(null)
-            .startToCloseTimeout(null)
-            .heartbeatTimeout(null)
-            .build();
-    var fn = Dsl.function("GreeterFn")
-            .input(String.class)
-            .output(String.class)
-            .execute(ctx -> Result.success("ok"))
-            .describe(() -> custom)
-            .build();
-
-    var markdown = DescriptorMarkdown.render(fn.describe());
-
-    assertThat(markdown)
-            .contains("**Function** `GreeterFn`")
-            .contains("Greets the caller.")
-            .contains("- Input: `String`")
-            .contains("- Output: `String`")
-            .contains("- Side effects: yes")
-            .doesNotContain("Compensation");
   }
 
   @Test

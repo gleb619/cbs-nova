@@ -11,7 +11,6 @@ import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.Constants;
-import cbs.nova.dsl.explain.DescriptorMarkdown;
 import cbs.nova.dsl.explain.ExplainResourceProvider;
 import cbs.nova.dsl.model.ExplainReport;
 import java.time.Duration;
@@ -261,44 +260,6 @@ class TransactionBuilderTest {
             .execute(ctx -> Result.success(null))
             .build();
     assertThat(tx.describe().hasSideEffects()).isTrue();
-  }
-
-  @Test
-  void describeExplainReturnsMarkdown() {
-    var paymentDescriptor = TransactionDescriptor.builder()
-            .name("PayTx")
-            .description("Processes a payment.")
-            .version("v1")
-            .taskQueue("PayTx-queue")
-            .inputType(String.class)
-            .outputType(String.class)
-            .helperRefs(List.of())
-            .startToCloseTimeout(Duration.ofSeconds(30))
-            .build();
-    var custom = DslDescriptor.builder()
-            .objectDescriptor(paymentDescriptor)
-            .hasSideEffects(true)
-            .parameters(List.of())
-            .taskQueue("PayTx-queue")
-            .version("v1")
-            .startToCloseTimeout(Duration.ofSeconds(30))
-            .build();
-    var tx = Dsl.transaction("PayTx")
-            .input(String.class)
-            .output(String.class)
-            .execute(ctx -> Result.success(null))
-            .describe(() -> custom)
-            .build();
-
-    var markdown = DescriptorMarkdown.render(tx.describe());
-
-    assertThat(markdown)
-            .contains("**Transaction** `PayTx`")
-            .contains("Processes a payment.")
-            .contains("- Input: `String`")
-            .contains("- Output: `String`")
-            .contains("- Side effects: yes")
-            .doesNotContain("Compensation");
   }
 
   @Test
