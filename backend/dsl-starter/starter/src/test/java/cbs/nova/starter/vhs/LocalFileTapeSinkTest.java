@@ -27,7 +27,8 @@ class LocalFileTapeSinkTest {
   void writesHeaderEventsAndTrailerToFile() throws IOException {
     CbsVhsProperties properties = new CbsVhsProperties(
             true, List.of("*"), CbsVhsProperties.SinkType.local,
-            new CbsVhsProperties.LocalSink(tempDir, 0, 0L));
+            new CbsVhsProperties.LocalSink(tempDir, 0, 0L),
+            new CbsVhsProperties.Scrub(false, List.of(), null, null));
     LocalFileTapeSink sink = new LocalFileTapeSink(properties, objectMapper,
             () -> Instant.parse("2026-09-19T12:00:00Z"));
 
@@ -68,7 +69,8 @@ class LocalFileTapeSinkTest {
   void dropsWritesWhenMaxTapesReached() {
     CbsVhsProperties properties = new CbsVhsProperties(
             true, List.of("*"), CbsVhsProperties.SinkType.local,
-            new CbsVhsProperties.LocalSink(tempDir, 1, 0L));
+            new CbsVhsProperties.LocalSink(tempDir, 1, 0L),
+            new CbsVhsProperties.Scrub(false, List.of(), null, null));
     LocalFileTapeSink sink = new LocalFileTapeSink(properties, objectMapper, Instant::now);
 
     sink.start("run-1", "Ping", null);

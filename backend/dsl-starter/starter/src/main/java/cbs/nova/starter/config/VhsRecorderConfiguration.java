@@ -5,6 +5,7 @@ import cbs.nova.starter.core.listener.DslExecutionEventBus;
 import cbs.nova.starter.vhs.LocalFileTapeSink;
 import cbs.nova.starter.vhs.VhsRecorder;
 import cbs.nova.starter.vhs.VhsTapeSink;
+import cbs.nova.starter.vhs.scrub.VhsScrubber;
 import jakarta.annotation.PostConstruct;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -31,9 +32,16 @@ public class VhsRecorderConfiguration {
   }
 
   @Bean
-  VhsRecorder vhsRecorder(VhsTapeSink sink, CbsVhsProperties properties,
+  VhsScrubber vhsScrubber(CbsVhsProperties properties) {
+    CbsVhsProperties.Scrub scrub = properties.scrub();
+    return new VhsScrubber(scrub.enabled(), scrub.rules(), scrub.maskValue(), scrub.seed());
+  }
+
+  @Bean
+  VhsRecorder vhsRecorder(
+          VhsTapeSink sink, VhsScrubber scrubber, CbsVhsProperties properties,
           DslExecutionEventBus eventBus) {
-    VhsRecorder recorder = new VhsRecorder(sink, properties.recordableRoutes());
+    VhsRecorder recorder = new VhsRecorder(sink, properties.recordableRoutes(), scrubber);
     eventBus.register(recorder);
     return recorder;
   }

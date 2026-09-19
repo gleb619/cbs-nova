@@ -220,3 +220,22 @@ cbs:
         # back to the OTEL_EXPORTER_OTLP_ENDPOINT environment variable; if neither is set,
         # tracing is disabled and a noop OpenTelemetry instance is used.
         endpoint:
+
+# cbs.vhs.scrub.* — record-time scrubbing of VHS tape events (T556). Master switch is OFF by
+# default (scrub.enabled=false), which makes the redactor a reference-equality no-op with zero
+# overhead on the recorder hot path. Enable it and list ordered rules (first match wins); each rule
+# selects a JSON path inside an event's input/output/metadata tree (dot notation + [*] for array
+# elements) and applies one action (remove | mask | fake). Missing paths are skipped silently with a
+# single bounded WARN per path. The seed keeps {original, seed, field} -> same fake for reproducible
+# replay correlation.
+#
+# cbs:
+#   vhs:
+#     scrub:
+#       enabled: false                 # master switch; default false
+#       mask-value: "***REDACTED***"   # value used by action: mask; default ***REDACTED***
+#       seed: "dev-replay-seed-01"     # optional; absent -> random per-tape seed
+#       rules:
+#         - { path: "$.cardNumber",        action: "mask",   pieceId: "mask-sensitive-data" }
+#         - { path: "$.accounts[*].iban",  action: "fake",   pieceId: "mask-sensitive-data" }
+#         - { path: "$.metadata.authorization", action: "remove", pieceId: "mask-sensitive-data" }

@@ -6,6 +6,7 @@ import cbs.nova.starter.core.event.DslExecutionEvent.DslExternalCallEvent;
 import cbs.nova.starter.core.event.DslExecutionEvent.DslRunCompletedEvent;
 import cbs.nova.starter.core.event.DslExecutionEvent.DslRunStartedEvent;
 import cbs.nova.starter.core.listener.DslExecutionListener;
+import cbs.nova.starter.vhs.scrub.VhsScrubber;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
@@ -33,11 +34,20 @@ public final class VhsRecorder implements DslExecutionListener {
   private static final String SCHEMA_VERSION = "1";
 
   private final VhsTapeSink sink;
+  private final VhsScrubber scrubber;
   private final List<String> recordableRoutes;
   private final ConcurrentHashMap<String, RunState> states = new ConcurrentHashMap<>();
 
   public VhsRecorder(@NonNull VhsTapeSink sink, @NonNull List<String> recordableRoutes) {
+    this(sink, recordableRoutes, VhsScrubber.disabled());
+  }
+
+  public VhsRecorder(
+          @NonNull VhsTapeSink sink,
+          @NonNull List<String> recordableRoutes,
+          @Nullable VhsScrubber scrubber) {
     this.sink = sink;
+    this.scrubber = scrubber != null ? scrubber : VhsScrubber.disabled();
     this.recordableRoutes = List.copyOf(recordableRoutes);
   }
 
@@ -70,7 +80,7 @@ public final class VhsRecorder implements DslExecutionListener {
             null,
             new TapeEvent.Timing(format(now), null, null),
             event.correlationId(),
-            metadataWithCid(event.correlationId()));
+            scrubbedMetadata(metadataWithCid(event.correlationId())));
     sink.append(event.runId(), tapeEvent);
   }
 
@@ -92,7 +102,7 @@ public final class VhsRecorder implements DslExecutionListener {
             format(now),
             state.relativeMillis(now),
             new TapeEvent.CallMetadata(callId, event.type(), event.target(), event.operation()),
-            event.payload(),
+            scrubber.scrub("input", event.payload()),
             null,
             new TapeEvent.Timing(format(now), null, null),
             state.correlationId,
@@ -126,7 +136,7 @@ public final class VhsRecorder implements DslExecutionListener {
       sink.append(event.runId(), endEvent);
     }
 
-    Object output = resultOutput(event.result());
+    Object output = scrubber.scrub("output", resultOutput(event.result()));
     TapeEvent completedEvent = new TapeEvent(
             SCHEMA_VERSION,
             state.nextIndex(),
@@ -164,6 +174,11 @@ public final class VhsRecorder implements DslExecutionListener {
       return Map.of();
     }
     return Map.of("cid", correlationId);
+  }
+
+  private Map<String, Object> scrubbedMetadata(Map<String, Object> metadata) {
+    Object scrubbed = scrubber.scrub("metadata", metadata);
+    return scrubbed instanceof Map<?, ?> map ? (Map<String, Object>) map : Map.of();
   }
 
   private static Object resultOutput(@Nullable Result<?> result) {

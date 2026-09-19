@@ -1,5 +1,7 @@
 package cbs.nova.starter.config.properties;
 
+import cbs.nova.starter.vhs.scrub.ScrubRule;
+import cbs.nova.starter.vhs.scrub.VhsScrubber;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import java.nio.file.Path;
@@ -21,12 +23,29 @@ public record CbsVhsProperties(
         @DefaultValue("false") boolean enabled,
         @DefaultValue List<String> recordableRoutes,
         @DefaultValue("local") SinkType sinkType,
-        @Valid @DefaultValue LocalSink local) {
+        @Valid @DefaultValue LocalSink local,
+        @Valid @DefaultValue Scrub scrub) {
 
   public CbsVhsProperties {
     recordableRoutes = recordableRoutes == null ? List.of() : List.copyOf(recordableRoutes);
     sinkType = sinkType == null ? SinkType.local : sinkType;
     local = local == null ? new LocalSink(null, 0, 0L) : local;
+    scrub = scrub == null ? new Scrub(false, List.of(), VhsScrubber.DEFAULT_MASK, null) : scrub;
+  }
+
+  /**
+   * Record-time scrubbing settings ({@code cbs.vhs.scrub.*}).
+   */
+  public record Scrub(
+          @DefaultValue("false") boolean enabled,
+          @DefaultValue List<ScrubRule> rules,
+          @DefaultValue(VhsScrubber.DEFAULT_MASK) String maskValue,
+          String seed) {
+
+    public Scrub {
+      rules = rules == null ? List.of() : List.copyOf(rules);
+      maskValue = maskValue == null || maskValue.isBlank() ? VhsScrubber.DEFAULT_MASK : maskValue;
+    }
   }
 
   /**
