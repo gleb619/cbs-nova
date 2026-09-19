@@ -7,10 +7,10 @@ import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Bridges the platform {@link ObjectGuard} seam to the starter's
- * {@link ManifestObjectGuard}. Registered into {@link cbs.nova.dsl.config.DslConfig} during
- * auto-configuration so every helper/function invocation in the DSL runtime consults the same
- * manifest-based guard as the preview pipes.
+ * Bridges the platform {@link ObjectGuard} seam to the starter's {@link ManifestObjectGuard}.
+ * Registered into {@link cbs.nova.dsl.config.DslConfig} during auto-configuration so every
+ * helper/function invocation in the DSL runtime consults the same manifest-based guard as the
+ * preview pipes.
  */
 public final class ManifestObjectGuardAdapter implements ObjectGuard {
 

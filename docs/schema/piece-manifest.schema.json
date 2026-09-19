@@ -43,6 +43,35 @@
           "enum": ["deny", "audit-only"],
           "default": "deny",
           "description": "Policy when a preCheck fails. deny: reject the request. audit-only: log/audit and allow."
+        },
+        "allow": {
+          "$ref": "#/$defs/objectScope",
+          "description": "T552 object-target grant: allow when the executing definition, invoked object name, or a declared capability matches the scope (all-empty = wildcard)."
+        },
+        "deny": {
+          "$ref": "#/$defs/objectScope",
+          "description": "T552 object-target deny scope; an explicit deny wins over any allow (all-empty = wildcard deny)."
+        }
+      }
+    },
+    "objectScope": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "definitions": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Definition names this scope applies to."
+        },
+        "helpers": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Object (helper) names this scope applies to."
+        },
+        "capabilities": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Capability classes (e.g. network, filesystem) this scope applies to."
         }
       }
     },

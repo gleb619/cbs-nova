@@ -14,9 +14,9 @@ import org.jspecify.annotations.NonNull;
 
 /**
  * Helper interceptor that consults {@link ManifestObjectGuard} before delegating to the next
- * interceptor (usually {@link FakeHelperInterceptor}). A denial short-circuits the helper call
- * with a typed {@link DslCapabilityDeniedException} wrapped in a {@link Result#failure}; an allow
- * passes through unchanged.
+ * interceptor (usually {@link FakeHelperInterceptor}). A denial short-circuits the helper call with
+ * a typed {@link DslCapabilityDeniedException} wrapped in a {@link Result#failure}; an allow passes
+ * through unchanged.
  *
  * <p>
  * The executing definition name is read from context metadata

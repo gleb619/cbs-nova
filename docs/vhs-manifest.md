@@ -53,6 +53,68 @@ Allowlists or guards a DSL object. Required sub-fields: `objectType` (`helper`, 
 `function`) and `objectName` (the object name). This supports the Epic 2 sandboxing idea:
 certain helpers may be allowlisted only in preview mode or specific runtime contexts.
 
+Object pieces carry two optional piece-level grants consumed by the T552 object guard
+(`cbs.nova.starter.security.ManifestObjectGuard`), evaluated against the executing definition:
+
+| field | shape | semantics |
+|-------|-------|-----------|
+| `allow` | `{ definitions: [...], helpers: [...], capabilities: [...] }` | grant access when the executing definition is listed in `definitions`, or the invoked object name is in `helpers`, or any definition-declared capability overlaps `capabilities`. All-empty = wildcard allow. |
+| `deny` | same shape | deny when the scope matches; an explicit deny wins over any allow. All-empty = wildcard deny. |
+
+`capabilities` names capability classes a definition declares (e.g. `network`, `filesystem` —
+what `OutboundUrlValidator` and the file helpers gate today), resolved through the
+`DslCapabilityRegistry` seam; the default registry returns an empty declaration, so scopes key
+off definition names and helper names until a richer registry is plugged in.
+
+## Object-level enforcement semantics (T552)
+
+`ManifestObjectGuard` consults the same `PieceManifestService` snapshot as the API/button guards
+(`findByObject(objectType, objectName)`), so the Epic 2 DSL-sandboxing allowlist is authored once
+and enforced at every entry point:
+
+- **Preview / explain / hierarchy.** A `ManifestObjectGuardHelperInterceptor` wraps the fake
+  helper interceptor in the dispatch stage of `PreviewDslPipe` / `RunDslPipe` /
+  `HierarchyDslPipe`; the pipeline injects the definition name into context metadata
+  (`cbs.nova.dsl.definitionName`) when the guard is active. A denied helper call short-circuits
+  with a typed `DslCapabilityDeniedException`, surfaced through `PreviewErrorHandler` as the
+  unified envelope with `code = "CAPABILITY_DENIED"` and `context` carrying `pieceId`,
+  `objectType`, `objectName`, `reason`, and the correlation id.
+- **Production runs.** The platform `ObjectGuard` seam (`DslConfig.objectGuard()`, default no-op)
+  is bridged to the same guard via `ManifestObjectGuardAdapter`; `HelperManager` consults it for
+  every helper and function invocation from generated Temporal workflows, and the starter pipes
+  check it for process entry (`TemporalDslProcessService` enriches run metadata with the process
+  name the same way). Rollback safety: with the feature flag off the seam stays `NO_OP` and
+  dispatch is byte-for-byte pre-T552.
+- **Decision order.** explicit `deny` piece match → deny; `allow` piece match → allow; object
+  known to the manifest but not allow-listed for this definition → deny; no object piece covers
+  the construct → mode default (below).
+
+### Production default policy (`cbs.dsl.manifest.object-mode`)
+
+- **Preview is always deny-by-default** when enforcement is on: a helper/capability not
+  explicitly allowlisted for the executing definition is rejected with `CAPABILITY_DENIED`.
+- **Production default is `permissive`** (allow + audit): an unlisted invocation proceeds but
+  writes a `dsl_audit` row (action `OBJECT_GUARD_PERMISSIVE`, outcome `SUCCESS`, details carry
+  object/definition/mode identity). This keeps existing published definitions working on upgrade.
+- **`strict` mode** denies-by-default in production too, using the same manifest decision order
+  as preview.
+- **Master feature flag** `cbs.dsl.manifest.object-enforcement.enabled` (default `false`) gates
+  the whole guard; both mode defaults are only reachable when it is on.
+- **Observability.** Denials log at WARN with piece/object/definition identity + correlation id,
+  write a FAILURE `dsl_audit` row (action `OBJECT_GUARD_DENY`), and increment the Micrometer
+  counter `dsl.piece.object.denied` tagged by `type=<objectType>`.
+- **Layering.** This guard does not replace `OutboundUrlValidator` (SSRF) or the file guards:
+  the manifest is the definition-level allowlist layered above them, stricter-wins — same
+  relationship as T549's guard to `RbacAuthorizationFilter`.
+
+### Process / function mapping
+
+Helpers and functions are enforced today (helper via both the preview interceptor and
+`HelperManager`; function via `HelperManager` with `objectType: function`). Process invocation
+is guarded at the pipe entry points (`PreviewDslPipe` / `RunDslPipe` / `HierarchyDslPipe` /
+`TemporalDslProcessService` metadata enrichment), so an `object` piece with
+`objectType: process` + `objectName: <process>` denies or allow-lists process starts the same way.
+
 ## Pre-check types
 
 | type | fields | semantics |
@@ -211,22 +273,22 @@ waits out the TTL / restarts).
   failMode: deny
 ```
 
-### Object piece: allowlist a preview-mode helper
+### Object piece: allowlist a helper for one definition
 
 ```yaml
-- id: preview-sandbox-helper
+- id: order-http-get
   target:
     type: object
     objectType: helper
-    objectName: PreviewSandbox
-  preCheck:
-    - type: role
-      anyOf: [runner, author, admin]
-  postCheck:
-    - type: invariant-assert
-      description: preview helper returned only sandbox-safe types
-  failMode: audit-only
+    objectName: httpGet
+  allow:
+    definitions: [OrderProcess]
+  failMode: deny
 ```
+
+Preview runs of `OrderProcess` may call `httpGet`; any other definition is denied with
+`CAPABILITY_DENIED`. An explicit deny piece scoped to a definition looks the same with `deny:`
+in place of `allow:` (deny wins over allow; an all-empty scope is a wildcard).
 
 ## Schema
 

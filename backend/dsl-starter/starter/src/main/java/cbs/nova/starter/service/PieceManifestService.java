@@ -443,7 +443,6 @@ public class PieceManifestService {
     return checks;
   }
 
-
   @SuppressWarnings("unchecked")
   private ObjectAllow parseObjectAllow(Object raw, String pieceId) {
     if (raw == null) {

@@ -54,7 +54,8 @@ public record CbsDslManifestProperties(
     flags = flags == null ? Map.of() : Map.copyOf(flags);
     rateClasses = rateClasses == null ? Map.of() : Map.copyOf(rateClasses);
     postCheck = postCheck == null ? new PostCheck() : postCheck;
-    objectEnforcement = objectEnforcement == null ? new ObjectEnforcement(false)
+    objectEnforcement = objectEnforcement == null
+            ? new ObjectEnforcement(false)
             : objectEnforcement;
     objectMode = objectMode == null ? ObjectMode.PERMISSIVE : objectMode;
   }

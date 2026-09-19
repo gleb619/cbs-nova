@@ -91,7 +91,6 @@ public class PreviewErrorHandler {
             Map.of("exceptionType", cause.getClass().getName()), entityName);
   }
 
-
   private static @NonNull ErrorResponse capabilityDenied(@NonNull DslCapabilityDeniedException dcd,
           @Nullable String entityName) {
     Map<String, Object> ctx = new HashMap<>();
@@ -189,7 +188,7 @@ public class PreviewErrorHandler {
     return switch (code) {
       case CAPABILITY_DENIED ->
         "Add an object-target manifest piece that allow-lists this helper/capability for the definition; "
-            + "or disable cbs.dsl.manifest.object-enforcement.enabled if this is intentional.";
+                + "or disable cbs.dsl.manifest.object-enforcement.enabled if this is intentional.";
       case DSL_COMPILATION_ERROR ->
         "Check the DSL source for syntax or validation errors; review the referenced entity names.";
       case HELPER_NOT_FOUND ->

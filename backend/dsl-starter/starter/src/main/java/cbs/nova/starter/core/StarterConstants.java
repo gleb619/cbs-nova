@@ -93,7 +93,6 @@ public class StarterConstants {
   public static final String OBJECT_GUARD_DENIED_COUNTER = "dsl.piece.object.denied";
   public static final String OBJECT_TYPE_TAG = "type";
 
-
   // Cancellation reasons
 
   public static final String CANCELLED_REASON = "Cancelled by user";

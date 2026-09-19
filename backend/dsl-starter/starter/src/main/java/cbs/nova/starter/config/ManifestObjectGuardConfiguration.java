@@ -24,8 +24,8 @@ import org.springframework.context.annotation.Bean;
  *
  * <p>
  * The guard ships disabled by default ({@code cbs.dsl.manifest.object-enforcement.enabled=false}):
- * when the feature flag is off the bean is still created but every check returns "allow" so
- * helper dispatch is byte-for-byte identical to pre-T552 behavior.
+ * when the feature flag is off the bean is still created but every check returns "allow" so helper
+ * dispatch is byte-for-byte identical to pre-T552 behavior.
  */
 @AutoConfiguration(after = DslManifestConfiguration.class)
 @ConditionalOnBean(PieceManifestService.class)
@@ -50,8 +50,8 @@ public class ManifestObjectGuardConfiguration {
   }
 
   /**
-   * Registers the manifest guard into the DSL platform runtime so generated Temporal workflows
-   * and any direct helper invocations consult the same allowlist as preview pipes.
+   * Registers the manifest guard into the DSL platform runtime so generated Temporal workflows and
+   * any direct helper invocations consult the same allowlist as preview pipes.
    */
   @Bean
   public ManifestObjectGuardAdapter manifestObjectGuardAdapter(

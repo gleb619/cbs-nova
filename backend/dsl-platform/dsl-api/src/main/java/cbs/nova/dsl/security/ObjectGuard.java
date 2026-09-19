@@ -31,15 +31,13 @@ public interface ObjectGuard {
     }
   };
 
-
   /**
-   * Returns {@code true} when the guard is actively enforcing (i.e. the feature flag is on).
-   * The no-op default returns {@code false}.
+   * Returns {@code true} when the guard is actively enforcing (i.e. the feature flag is on). The
+   * no-op default returns {@code false}.
    */
   default boolean active() {
     return false;
   }
-
 
   /**
    * Evaluates whether the invocation of {@code objectType:objectName} on behalf of

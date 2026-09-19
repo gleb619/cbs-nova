@@ -124,7 +124,6 @@ public class DslConfig implements SingletonSupport {
     return replaceable("jsonSchemaGenerator");
   }
 
-
   public @NonNull Replaceable<ObjectGuard> objectGuard() {
     return replaceable("objectGuard", () -> ObjectGuard.NO_OP);
   }

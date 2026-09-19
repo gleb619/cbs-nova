@@ -421,7 +421,8 @@ public class TemporalDslProcessService {
       if (DslConfig.dslConfig().objectGuard().get().active()) {
         enrichedMetadata.put(StarterConstants.DSL_DEFINITION_NAME_METADATA_KEY, processName);
       }
-      Context<?> ctx = SimpleContext.builder().body(body).metadata(enrichedMetadata).mode(ExecutionMode.RUN)
+      Context<?> ctx = SimpleContext.builder().body(body).metadata(enrichedMetadata)
+              .mode(ExecutionMode.RUN)
               .runId(runId).build()
               .withExecutionTraceCollector(traceCollector);
       traceCollector.start();

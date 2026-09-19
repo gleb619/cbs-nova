@@ -62,7 +62,7 @@ public final class ManifestObjectGuard {
     return properties.objectEnforcement().enabled();
   }
 
-    public @NonNull Optional<Denial> check(
+  public @NonNull Optional<Denial> check(
           @NonNull ExecutionMode mode,
           @Nullable String definitionName,
           @NonNull String objectType,
