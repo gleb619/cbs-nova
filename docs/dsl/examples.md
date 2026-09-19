@@ -427,6 +427,36 @@ String rolloutDate = shifted.as(DateMathOut.class).value();
 
 Comparing current version `2.5.1` against minimum `2.4.0` yields `versionOk=true`. Adding `7` days to `2026-09-07` returns `rolloutDate=2026-09-14`.
 
+## Gating a release with `semver` parse, satisfies, bump, and format
+
+Parse an incoming artifact version, reject it when it falls outside the accepted range, otherwise bump it and stamp a build-metadata release candidate in one release-gate flow.
+
+See `backend/dsl-starter/dsl-examples/src/dsl/ReleasePolicyDsl.java` (input/output models in `backend/dsl-starter/dsl-examples/src/models/ReleasePolicyModels.java`).
+
+```java
+var parsed = ctx.runHelper("semver",
+        new SemverIn("parse", in.incomingVersion(), null, null, null, null, null, null,
+            null, null, null));
+Map<String, Object> components = (Map<String, Object>) parsed.as(SemverOut.class).result();
+
+var check = ctx.runHelper("semver",
+        new SemverIn("satisfies", in.incomingVersion(), null, null, in.requiredRange(), null,
+            null, null, null, null, null));
+boolean rangeSatisfied = (Boolean) check.as(SemverOut.class).result();
+
+var bumped = ctx.runHelper("semver",
+        new SemverIn("bump", in.incomingVersion(), null, null, null, in.bumpType(), null,
+            null, null, null, null));
+String bumpedVersion = (String) bumped.as(SemverOut.class).result();
+
+var candidate = ctx.runHelper("semver",
+        new SemverIn("format", null, null, null, null, null, major, minor, patch + 1, null,
+            in.buildMetadata()));
+String nextCandidate = (String) candidate.as(SemverOut.class).result();
+```
+
+With `incomingVersion` = `1.4.2`, `requiredRange` = `^1.2.0`, `bumpType` = `minor` and `buildMetadata` = `build.42`, the gate passes (`rangeSatisfied=true`) and produces `bumpedVersion=1.5.0` plus `nextCandidate=1.4.3+build.42`. An out-of-range version such as `2.0.0` is rejected with `accepted=false` and no candidate.
+
 ## Building a CSV export from `parseCsv` and `parseYaml` with `formatCsv`
 
 Parse a CSV data file, enrich it from a YAML lookup table, and emit a new RFC 4180 CSV string with `formatCsv`.
