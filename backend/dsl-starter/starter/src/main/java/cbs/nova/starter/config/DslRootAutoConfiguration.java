@@ -42,6 +42,8 @@ import org.springframework.context.annotation.Import;
     SpringHelperConfiguration.class,
     ApiKeyAuthFilterConfiguration.class,
     RateLimitFilterConfiguration.class,
+    RedisRateLimitStoreConfiguration.class,
+    InMemoryRateLimitStoreConfiguration.class,
     RbacFilterConfiguration.class,
     SecurityConfiguration.class,
     ApiKeyAuthMisconfigurationWarning.class,

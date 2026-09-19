@@ -90,6 +90,8 @@ class DslRootAutoConfigurationTest {
             SpringHelperConfiguration.class,
             ApiKeyAuthFilterConfiguration.class,
             RateLimitFilterConfiguration.class,
+            RedisRateLimitStoreConfiguration.class,
+            InMemoryRateLimitStoreConfiguration.class,
             RbacFilterConfiguration.class,
             SecurityConfiguration.class,
             ApiKeyAuthMisconfigurationWarning.class,

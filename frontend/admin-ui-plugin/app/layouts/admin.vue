@@ -7,6 +7,7 @@ import {
   AppSidebarToggle,
   buildDocsBaseUrl,
   DslSavedDraftsWidget,
+  NotificationsWidget,
   useSavedDrafts,
 } from '@cbs/components'
 import { navigateTo, useRoute } from 'nuxt/app'
@@ -118,6 +119,7 @@ const displayName = computed(
         @select="onDraftSelect"
         @refresh="refreshDrafts"
       />
+      <NotificationsWidget />
     </template>
     <template #trailing>
       <div v-if="authEnabled" class="flex items-center gap-3">

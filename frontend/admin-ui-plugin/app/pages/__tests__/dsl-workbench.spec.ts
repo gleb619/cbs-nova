@@ -1325,3 +1325,106 @@ describe('dsl-workbench.vue submit for approval (T568)', () => {
     wrapper.unmount()
   })
 })
+
+describe('dsl-workbench.vue share link action', () => {
+  beforeEach(() => {
+    harness.state.constructs = []
+    harness.state.selectedName = null
+    harness.state.validationErrors = []
+    harness.state.isDirty = false
+    harness.state.isSaving = false
+    harness.state.isLoading = false
+    harness.selectedConstruct.value = null
+    harness.loaders.constructs.value = false
+    useDslWorkbenchMock.mockClear()
+    dslApi.listDrafts.mockReset()
+    dslApi.listDrafts.mockResolvedValue([])
+    window.localStorage.clear()
+  })
+
+  it('exposes a Share Link item in the Actions dropdown', async () => {
+    const wrapper = mountPage()
+    await flushPromises()
+
+    const dropdown = wrapper.findComponent({ name: 'DropdownMenu' })
+    const items = dropdown.props('items') as Array<{
+      label: string
+      value: string
+      disabled?: boolean
+    }>
+    const share = items.find((i) => i.value === 'share-link')
+    expect(share?.label).toBe('Share Link')
+    // Default harness auto-selects 'c1', so the action is enabled.
+    expect(share?.disabled).toBe(false)
+
+    wrapper.unmount()
+  })
+
+  it('disables the Share Link item when no construct is selected', async () => {
+    // Prevent the harness from auto-populating / auto-selecting on mount.
+    harness.loadConstructs.mockImplementationOnce(async () => undefined)
+    harness.state.constructs = []
+    harness.state.selectedName = null
+    harness.selectedConstruct.value = null
+
+    const wrapper = mountPage()
+    await flushPromises()
+
+    const dropdown = wrapper.findComponent({ name: 'DropdownMenu' })
+    const items = dropdown.props('items') as Array<{
+      label: string
+      value: string
+      disabled?: boolean
+    }>
+    const share = items.find((i) => i.value === 'share-link')
+    expect(share?.disabled).toBe(true)
+
+    wrapper.unmount()
+  })
+
+  it('copies a deep-link URL with the selected object and active tab to the clipboard', async () => {
+    window.localStorage.setItem('cbs-nova:body-editor:active-tab', JSON.stringify('preview'))
+
+    const writeText = vi.fn(async () => undefined)
+    const clipboardSpy = vi
+      .spyOn(navigator, 'clipboard', 'get')
+      .mockReturnValue({ writeText } as unknown as Clipboard)
+
+    const wrapper = mountPage()
+    await flushPromises()
+
+    const dropdown = wrapper.findComponent({ name: 'DropdownMenu' })
+    await dropdown.vm.$emit('select', { value: 'share-link' })
+    await flushPromises()
+
+    expect(writeText).toHaveBeenCalledTimes(1)
+    const link = writeText.mock.calls[0]?.[0] as string
+    const parsed = new URL(link)
+    expect(parsed.pathname).toBe(window.location.pathname)
+    expect(parsed.searchParams.get('objectName')).toBe('c1')
+    expect(parsed.searchParams.get('activeTab')).toBe('preview')
+
+    clipboardSpy.mockRestore()
+    wrapper.unmount()
+  })
+
+  it('falls back to the structure tab when localStorage has no record', async () => {
+    const writeText = vi.fn(async () => undefined)
+    const clipboardSpy = vi
+      .spyOn(navigator, 'clipboard', 'get')
+      .mockReturnValue({ writeText } as unknown as Clipboard)
+
+    const wrapper = mountPage()
+    await flushPromises()
+
+    const dropdown = wrapper.findComponent({ name: 'DropdownMenu' })
+    await dropdown.vm.$emit('select', { value: 'share-link' })
+    await flushPromises()
+
+    const link = writeText.mock.calls[0]?.[0] as string
+    expect(new URL(link).searchParams.get('activeTab')).toBe('structure')
+
+    clipboardSpy.mockRestore()
+    wrapper.unmount()
+  })
+})

@@ -35,6 +35,7 @@ import {
   useHelperSearch,
   useSavedDrafts,
 } from '@cbs/components'
+import { useToast } from '@cbs/components/composables'
 import { useEventListener } from '@vueuse/core'
 import { useCookie, useRoute } from 'nuxt/app'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
@@ -386,7 +387,7 @@ async function confirmCreate() {
   closeNewPanel()
 }
 
-type ActionValue = 'refresh' | 'validate' | 'save' | 'publish' | 'submit-approval'
+type ActionValue = 'refresh' | 'validate' | 'save' | 'share-link' | 'publish' | 'submit-approval'
 type HelpersMenuValue = 'objects' | 'helpers' | 'history' | 'diagnostics' | 'tests'
 
 const helpersMenuItems = computed<DropdownMenuItem[]>(() => [
@@ -441,6 +442,11 @@ const actionItems = computed<DropdownMenuItem[]>(() => [
     disabled: !selectedConstruct.value || state.value.isSaving || !state.value.isDirty,
   },
   {
+    label: 'Share Link',
+    value: 'share-link',
+    disabled: !selectedConstruct.value,
+  },
+  {
     label: 'Publish',
     value: 'publish',
     disabled:
@@ -467,6 +473,9 @@ function runAction(item: DropdownMenuItem) {
     case 'save':
       draftSave.save().then(() => refreshDrafts())
       break
+    case 'share-link':
+      void shareLink()
+      break
     case 'publish':
       publishConstruct().then(() => refreshDrafts())
       break
@@ -480,6 +489,48 @@ function runAction(item: DropdownMenuItem) {
           log.error('failed to submit for approval', { error: (err as Error).message })
         })
       break
+  }
+}
+
+// Share Link — builds a deep-link URL for the current selection + open body
+// editor tab and copies it to the clipboard. Active tab is read at click time
+// from the body editor's localStorage (it owns that state and does not emit).
+const toast = useToast()
+
+function readActiveBodyEditorTab(): BodyEditorTab {
+  if (typeof window === 'undefined') return 'structure'
+  try {
+    const raw = window.localStorage.getItem('cbs-nova:body-editor:active-tab')
+    if (!raw) return 'structure'
+    const parsed = JSON.parse(raw) as unknown
+    if (typeof parsed === 'string' && (BODY_EDITOR_TABS as readonly string[]).includes(parsed)) {
+      return parsed as BodyEditorTab
+    }
+  } catch {
+    // fall through to default
+  }
+  return 'structure'
+}
+
+async function shareLink() {
+  const name = state.value.selectedName
+  if (!name) return
+  const tab = readActiveBodyEditorTab()
+  const url = new URL(window.location.href)
+  url.search = ''
+  url.searchParams.set('objectName', name)
+  url.searchParams.set('activeTab', tab)
+  const link = url.toString()
+  try {
+    if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(link)
+    } else {
+      throw new Error('Clipboard API unavailable')
+    }
+    toast.success(`Copied to a clipboard!`)
+  } catch (err) {
+    log.error('failed to copy share link', { error: (err as Error).message })
+    toast.error('Could not copy share link to clipboard.')
   }
 }
 
