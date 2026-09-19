@@ -3,8 +3,9 @@ import { useSidebar } from '../composables/useSidebar'
 import AppMainContent from './AppMainContent.vue'
 import AppMobileDrawer from './AppMobileDrawer.vue'
 import AppNavbar from './AppNavbar.vue'
-import type { NavItem } from './AppSidebar.vue'
 import AppSidebar from './AppSidebar.vue'
+import type { NavItem } from './AppSidebar.vue'
+import AppToastContainer from './AppToastContainer.vue'
 import AppSidebarRestoreHandle from './sidebar/AppSidebarRestoreHandle.vue'
 
 const props = defineProps<{
@@ -56,5 +57,7 @@ const { hidden } = useSidebar()
     </div>
     <!-- Tiny floating tab appears only when the rail is dismissed. -->
     <AppSidebarRestoreHandle v-if="hidden" />
+    <!-- Global toast queue — teleports to <body> so it floats above every layout. -->
+    <AppToastContainer />
   </div>
 </template>
