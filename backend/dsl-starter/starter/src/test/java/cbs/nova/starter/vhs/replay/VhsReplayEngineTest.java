@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
 import cbs.nova.starter.config.properties.CbsVhsReplayProperties;
+import cbs.nova.starter.config.properties.CbsVhsReplayProperties.Faking;
 import cbs.nova.starter.core.event.DslExecutionEvent.DslExternalCallEvent;
 import cbs.nova.starter.core.event.DslExecutionEvent.DslRunCompletedEvent;
 import cbs.nova.starter.core.event.DslExecutionEvent.DslRunStartedEvent;
@@ -218,7 +219,8 @@ class VhsReplayEngineTest {
 
   private static CbsVhsReplayProperties props(boolean compareOutput) {
     return new CbsVhsReplayProperties(false, "dry-run", false,
-            ReplayMode.exact, 1, 1.0, 4, 0, compareOutput, 0, 30000, "http://localhost:8080");
+            ReplayMode.exact, 1, 1.0, 4, 0, compareOutput, 0, 30000, "http://localhost:8080",
+            Faking.disabled());
   }
 
   private VhsReplayEngine engine(VhsCallDriver driver, VhsReplayEngine.Sleeper sleeper) {
@@ -384,7 +386,7 @@ class VhsReplayEngineTest {
 
     CbsVhsReplayProperties prodConfigOnly = new CbsVhsReplayProperties(false,
             "https://prod.example.com", true, ReplayMode.exact, 1, 1.0, 4, 0, false, 0,
-            30000, "http://localhost:8080");
+            30000, "http://localhost:8080", Faking.disabled());
     assertThatThrownBy(() -> VhsCallDrivers.resolve(prodConfigOnly, MAPPER, null))
             .isInstanceOf(VhsReplayException.class)
             .hasMessageContaining("Refusing to replay against production-like target")
@@ -392,7 +394,7 @@ class VhsReplayEngineTest {
 
     CbsVhsReplayProperties prodEnvOnly = new CbsVhsReplayProperties(false,
             "https://prod.example.com", false, ReplayMode.exact, 1, 1.0, 4, 0, false, 0,
-            30000, "http://localhost:8080");
+            30000, "http://localhost:8080", Faking.disabled());
     assertThatThrownBy(() -> VhsCallDrivers.resolve(prodEnvOnly, MAPPER, "1"))
             .isInstanceOf(VhsReplayException.class)
             .hasMessageContaining("Refusing");
@@ -401,7 +403,8 @@ class VhsReplayEngineTest {
             .isInstanceOf(LocalBackendCallDriver.class);
 
     CbsVhsReplayProperties local = new CbsVhsReplayProperties(false, "local", false,
-            ReplayMode.exact, 1, 1.0, 4, 0, false, 0, 30000, "http://localhost:8080");
+            ReplayMode.exact, 1, 1.0, 4, 0, false, 0, 30000, "http://localhost:8080",
+            Faking.disabled());
     assertThat(VhsCallDrivers.resolve(local, MAPPER, null))
             .isInstanceOf(LocalBackendCallDriver.class);
   }

@@ -6,6 +6,8 @@ import cbs.nova.starter.vhs.replay.VhsCallDriver.CallResult;
 import cbs.nova.starter.vhs.replay.VhsReplayReport.CallObservation;
 import cbs.nova.starter.vhs.replay.VhsReplayReport.TapeSummary;
 import cbs.nova.starter.vhs.replay.VhsTapeReader.VhsTape;
+import cbs.nova.starter.vhs.replay.fake.SyntheticIdReplayFaker;
+import cbs.nova.starter.vhs.replay.fake.VhsReplayFaker;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -59,6 +61,7 @@ public final class VhsReplayEngine {
   private final VhsCallDriver driver;
   private final VhsTapeReader tapeReader;
   private final Sleeper sleeper;
+  private final VhsReplayFaker faker;
 
   public VhsReplayEngine(
           @NonNull CbsVhsReplayProperties properties, @NonNull VhsCallDriver driver) {
@@ -70,10 +73,45 @@ public final class VhsReplayEngine {
           @NonNull VhsCallDriver driver,
           @NonNull VhsTapeReader tapeReader,
           @NonNull Sleeper sleeper) {
+    this(properties, driver, tapeReader, sleeper, buildFaker(properties));
+  }
+
+  public VhsReplayEngine(
+          @NonNull CbsVhsReplayProperties properties,
+          @NonNull VhsCallDriver driver,
+          @NonNull VhsTapeReader tapeReader,
+          @NonNull Sleeper sleeper,
+          @NonNull VhsReplayFaker faker) {
     this.properties = properties;
     this.driver = driver;
     this.tapeReader = tapeReader;
     this.sleeper = sleeper;
+    this.faker = faker;
+  }
+
+  /**
+   * Build the replay-time faker from configuration.
+   *
+   * <p>
+   * Effective faking flag: explicit {@code faking.enabled=true} wins; otherwise faking is on by
+   * default for any target other than {@code dry-run} (and off for dry-run). This matches the plan:
+   * "default true for non-dry-run, false for dry-run" with explicit override.
+   */
+  private static VhsReplayFaker buildFaker(CbsVhsReplayProperties properties) {
+    CbsVhsReplayProperties.Faking faking = properties.faking();
+    boolean explicit = faking != null && faking.enabled();
+    boolean nonDryRun = !isDryRunTarget(properties);
+    boolean effective = explicit || (faking != null && !faking.rules().isEmpty() && nonDryRun);
+    return new SyntheticIdReplayFaker(
+            effective,
+            faking == null ? List.of() : faking.rules(),
+            faking == null ? Map.of() : faking.lookupTable(),
+            faking == null ? "vhs-replay" : faking.seed());
+  }
+
+  private static boolean isDryRunTarget(CbsVhsReplayProperties properties) {
+    String t = properties.target() == null ? "" : properties.target().trim().toLowerCase();
+    return t.isEmpty() || "dry-run".equals(t) || "dryrun".equals(t);
   }
 
   /**
@@ -205,7 +243,8 @@ public final class VhsReplayEngine {
         waitedMs += wait;
       }
       long callStartNanos = System.nanoTime();
-      CallResult result = driver.execute(event);
+      TapeEvent dispatched = faker.fake(event);
+      CallResult result = driver.execute(dispatched);
       long latencyMs = (System.nanoTime() - callStartNanos) / MS_IN_NANOS;
       TapeEvent end = callEnds.get(callIdOf(event));
       boolean compared = properties.compareOutput() && end != null && end.output() != null;
