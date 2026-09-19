@@ -12,6 +12,10 @@ You are not alone, focus on your task, ignore other errors. Keep caveman/ultra-b
 
 `docs/architecture-ui.md` drifted from the shipped admin UI:
 
+> **Update 2026-09-19 (idea loop):** since this plan was written, `approvals.vue` (T568) and
+> `promote.vue` (T569) shipped — the registration list is now **11 pages**. Re-count
+> `module.ts` extendPages at execution time; do not trust the 9-page figure below.
+
 1. Line ~55 claims the module "registers pages (Dashboard, Runner, DSL Workbench, Executions)
    via `extendPages`" — actual registration in `frontend/admin-ui-plugin/module.ts:324+` is
    **9 pages**: Dashboard, Runner, Schedules, Activity, Webhooks, Notifications, DSL Workbench,
