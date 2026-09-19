@@ -54,7 +54,7 @@ class DslRootAutoConfigurationTest {
                       "cbs.nova.starter.config.router.DslScheduleRouterConfiguration",
                       "cbs.nova.starter.config.router.DslManifestRouterConfiguration",
                       ManifestObjectGuardConfiguration.class.getName(),
-                      VhsRecorderConfiguration.class.getName());
+                      VhsConfiguration.class.getName());
     }
   }
 
@@ -95,7 +95,7 @@ class DslRootAutoConfigurationTest {
             DslHealthIndicatorConfiguration.class,
             BuilderClientConfiguration.class,
             DslRunRepositoryConfiguration.class,
-            VhsRecorderConfiguration.class);
+            VhsConfiguration.class);
   }
 
   @Test

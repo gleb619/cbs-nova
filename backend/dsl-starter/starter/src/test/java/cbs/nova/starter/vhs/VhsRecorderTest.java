@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
-import cbs.nova.starter.config.VhsRecorderConfiguration;
+import cbs.nova.starter.config.VhsConfiguration;
 import cbs.nova.starter.core.event.DslExecutionEvent;
 import cbs.nova.starter.core.event.DslExecutionEvent.DslExternalCallEvent;
 import cbs.nova.starter.core.event.DslExecutionEvent.DslRunCompletedEvent;
@@ -119,7 +119,7 @@ class VhsRecorderTest {
   }
 
   @Configuration
-  @Import(VhsRecorderConfiguration.class)
+  @Import(VhsConfiguration.class)
   static class VhsTestConfig {
 
     @Bean

@@ -74,6 +74,34 @@ This format is implemented by T555 (VHS recorder).
 - `schema_version` is bumped for **additive, backwards-compatible** changes: adding optional event fields, adding new `event_type` values, or adding new `call_metadata` fields. Readers must ignore unknown fields.
 - Consumers **T555–T560** should pin the `vhs_tape_format_version` they read and write, and reject tapes whose format version is higher than they understand.
 
+## Replay semantics (T557)
+
+T557 implements the replay engine that reads this format back
+(`cbs.nova.starter.vhs.replay`):
+
+- **Strict up-front validation.** `VhsTapeReader` validates the header
+  (`vhs_tape_format_version` major, `schema_version`), checks `event_index`
+  monotonicity starting at 0, and requires a `tape_closed` trailer whose
+  `event_count` matches the actual event lines. Any malformed or truncated tape
+  fails with `VhsReplayException` **before any call executes** — silent partial
+  replay is never allowed.
+- **Modes.** `exact` replays one tape in original order with original
+  `relative_ms` timing deltas (bug reproduction). `load` replays N copies
+  concurrently at a speed multiplier (wait = `relative_ms / speed`), bounded by
+  a concurrency cap and an optional global duration cap (load generation).
+  Load mode with `speed=1.0` and one copy is observationally equivalent to
+  sequential exact replay.
+- **Safe-default target policy.** The default target is `dry-run` (no side
+  effects). The `local` target re-invokes the local backend. Any other
+  (production-like) target is refused unless **both**
+  `cbs.vhs.replay.allow-production=true` and
+  `CBS_VHS_REPLAY_ALLOW_PRODUCTION=1` are set — a two-key guard that cannot be
+  enabled by a single configuration slip. Do not weaken it.
+- **Reports.** Replays produce a `VhsReplayReport` with per-tape
+  success/error counts, per-call latency observations, and (opt-in via
+  `compare-output=true`) output mismatch detection against the recorded
+  `call_end` output.
+
 ## Worked example
 
 A 6-line tape showing a header, run lifecycle, one HTTP call pair, a trace event, and run completion:

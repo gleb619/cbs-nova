@@ -47,7 +47,7 @@ import org.springframework.context.annotation.Import;
     SentryStatusReporter.class,
     DslHealthIndicatorConfiguration.class,
     BuilderClientConfiguration.class,
-    VhsRecorderConfiguration.class,
+    VhsConfiguration.class,
 })
 @EnableConfigurationProperties({DslProperties.class, CbsNovaCacheProperties.class,
     CbsHealthProperties.class})
