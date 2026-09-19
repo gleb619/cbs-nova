@@ -1,12 +1,19 @@
 package cbs.nova.starter.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import cbs.nova.starter.config.properties.CbsSecurityRateLimitProperties;
+import cbs.nova.starter.ratelimit.InMemoryRateLimitStore;
+import cbs.nova.starter.service.ApiKeyStore;
 import cbs.nova.dsl.model.ErrorResponse;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletResponse;
+import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
@@ -21,7 +28,7 @@ class RateLimitFilterTest {
   @Test
   void disabledByDefaultPassesThroughWithoutBehaviorChange() throws Exception {
     RateLimitFilter filter = new RateLimitFilter(disabledProperties(), objectMapper,
-            System::nanoTime);
+            new InMemoryRateLimitStore(System::nanoTime), null);
     MockHttpServletRequest request = post("/api/dsl/run/demo");
     MockHttpServletResponse response = new MockHttpServletResponse();
     CallTracker tracker = new CallTracker();
@@ -36,7 +43,7 @@ class RateLimitFilterTest {
   @Test
   void exemptGetRequestPassesThrough() throws Exception {
     RateLimitFilter filter = new RateLimitFilter(enabledProperties(2, 1.0), objectMapper,
-            System::nanoTime);
+            new InMemoryRateLimitStore(System::nanoTime), null);
     MockHttpServletRequest request = get("/api/dsl/run/demo");
     MockHttpServletResponse response = new MockHttpServletResponse();
     CallTracker tracker = new CallTracker();
@@ -50,7 +57,7 @@ class RateLimitFilterTest {
   @Test
   void exemptActuatorHealthPassesThrough() throws Exception {
     RateLimitFilter filter = new RateLimitFilter(enabledProperties(2, 1.0), objectMapper,
-            System::nanoTime);
+            new InMemoryRateLimitStore(System::nanoTime), null);
     MockHttpServletRequest request = get("/actuator/health");
     MockHttpServletResponse response = new MockHttpServletResponse();
     CallTracker tracker = new CallTracker();
@@ -66,7 +73,7 @@ class RateLimitFilterTest {
     int capacity = 3;
     AtomicLong clock = new AtomicLong(0L);
     RateLimitFilter filter = new RateLimitFilter(enabledProperties(capacity, 1.0), objectMapper,
-            clock::get);
+            new InMemoryRateLimitStore(clock::get), null);
 
     for (int i = 0; i < capacity; i++) {
       assertThat(doPost(filter, "/api/dsl/run/demo", "192.168.1.1")).isTrue();
@@ -79,7 +86,7 @@ class RateLimitFilterTest {
     int capacity = 2;
     AtomicLong clock = new AtomicLong(0L);
     RateLimitFilter filter = new RateLimitFilter(enabledProperties(capacity, 1.0), objectMapper,
-            clock::get);
+            new InMemoryRateLimitStore(clock::get), null);
 
     assertThat(doPost(filter, "/api/dsl/run/demo", "192.168.1.1")).isTrue();
     assertThat(doPost(filter, "/api/dsl/run/demo", "192.168.1.1")).isTrue();
@@ -93,7 +100,7 @@ class RateLimitFilterTest {
   void perIpIsolationOneExhaustedBucketDoesNotAffectOther() throws Exception {
     AtomicLong clock = new AtomicLong(0L);
     RateLimitFilter filter = new RateLimitFilter(enabledProperties(1, 1.0), objectMapper,
-            clock::get);
+            new InMemoryRateLimitStore(clock::get), null);
 
     assertThat(doPost(filter, "/api/dsl/run/demo", "10.0.0.1")).isTrue();
     assertThat(doPost(filter, "/api/dsl/run/demo", "10.0.0.2")).isTrue();
@@ -103,7 +110,7 @@ class RateLimitFilterTest {
   @Test
   void rejectedRequestReturns429WithRetryAfterAndErrorBody() throws Exception {
     RateLimitFilter filter = new RateLimitFilter(enabledProperties(1, 1.0), objectMapper,
-            System::nanoTime);
+            new InMemoryRateLimitStore(System::nanoTime), null);
 
     MockHttpServletRequest first = post("/api/dsl/preview/demo");
     MockHttpServletResponse firstResponse = new MockHttpServletResponse();
@@ -126,7 +133,7 @@ class RateLimitFilterTest {
   @Test
   void xForwardedForFirstIpIsUsedAsBucketKey() throws Exception {
     RateLimitFilter filter = new RateLimitFilter(enabledProperties(1, 1.0), objectMapper,
-            System::nanoTime);
+            new InMemoryRateLimitStore(System::nanoTime), null);
 
     MockHttpServletRequest request = post("/api/dsl/run/demo");
     request.addHeader("X-Forwarded-For", "203.0.113.1, 70.41.3.18, 150.172.238.178");
@@ -141,6 +148,90 @@ class RateLimitFilterTest {
     assertThat(secondResponse.getStatus()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS.value());
   }
 
+  @Test
+  void apiKeyLabelIsUsedAsPrincipal() throws Exception {
+    AtomicLong clock = new AtomicLong(0L);
+    ApiKeyStore apiKeyStore = mock(ApiKeyStore.class);
+    when(apiKeyStore.matches(anyString()))
+            .thenReturn(Optional.of(new ApiKeyStore.StoredKeyMatch(1L, "tenant-a")));
+    RateLimitFilter filter = new RateLimitFilter(enabledProperties(1, 1.0), objectMapper,
+            new InMemoryRateLimitStore(clock::get), apiKeyStore);
+
+    MockHttpServletRequest first = post("/api/dsl/run/demo");
+    first.addHeader("X-Api-Key", "key-a");
+    MockHttpServletResponse firstResponse = new MockHttpServletResponse();
+    filter.doFilterInternal(first, firstResponse, noOpChain());
+    assertThat(firstResponse.getStatus()).isNotEqualTo(HttpStatus.TOO_MANY_REQUESTS.value());
+
+    MockHttpServletRequest second = post("/api/dsl/run/demo");
+    second.addHeader("X-Api-Key", "key-b");
+    MockHttpServletResponse secondResponse = new MockHttpServletResponse();
+    filter.doFilterInternal(second, secondResponse, chainThatFailsIfInvoked());
+    assertThat(secondResponse.getStatus()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS.value());
+  }
+
+  @Test
+  void differentApiKeyLabelsHaveSeparateBuckets() throws Exception {
+    AtomicLong clock = new AtomicLong(0L);
+    ApiKeyStore apiKeyStore = mock(ApiKeyStore.class);
+    when(apiKeyStore.matches("key-a"))
+            .thenReturn(Optional.of(new ApiKeyStore.StoredKeyMatch(1L, "tenant-a")));
+    when(apiKeyStore.matches("key-b"))
+            .thenReturn(Optional.of(new ApiKeyStore.StoredKeyMatch(2L, "tenant-b")));
+    RateLimitFilter filter = new RateLimitFilter(enabledProperties(1, 1.0), objectMapper,
+            new InMemoryRateLimitStore(clock::get), apiKeyStore);
+
+    MockHttpServletRequest first = post("/api/dsl/run/demo");
+    first.addHeader("X-Api-Key", "key-a");
+    MockHttpServletResponse firstResponse = new MockHttpServletResponse();
+    filter.doFilterInternal(first, firstResponse, noOpChain());
+    assertThat(firstResponse.getStatus()).isNotEqualTo(HttpStatus.TOO_MANY_REQUESTS.value());
+
+    MockHttpServletRequest second = post("/api/dsl/run/demo");
+    second.addHeader("X-Api-Key", "key-b");
+    MockHttpServletResponse secondResponse = new MockHttpServletResponse();
+    filter.doFilterInternal(second, secondResponse, noOpChain());
+    assertThat(secondResponse.getStatus()).isNotEqualTo(HttpStatus.TOO_MANY_REQUESTS.value());
+  }
+
+  @Test
+  void jwtSubIsUsedAsPrincipal() throws Exception {
+    AtomicLong clock = new AtomicLong(0L);
+    RateLimitFilter filter = new RateLimitFilter(enabledProperties(1, 1.0), objectMapper,
+            new InMemoryRateLimitStore(clock::get), null);
+
+    String token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9."
+            + "eyJzdWIiOiJ1c2VyLTEyMyIsIm5hbWUiOiJKb2huIERvZSJ9."
+            + "SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c";
+
+    MockHttpServletRequest first = post("/api/dsl/run/demo");
+    first.addHeader("Authorization", "Bearer " + token);
+    MockHttpServletResponse firstResponse = new MockHttpServletResponse();
+    filter.doFilterInternal(first, firstResponse, noOpChain());
+    assertThat(firstResponse.getStatus()).isNotEqualTo(HttpStatus.TOO_MANY_REQUESTS.value());
+
+    MockHttpServletRequest second = post("/api/dsl/run/demo");
+    second.addHeader("Authorization", "Bearer " + token);
+    MockHttpServletResponse secondResponse = new MockHttpServletResponse();
+    filter.doFilterInternal(second, secondResponse, chainThatFailsIfInvoked());
+    assertThat(secondResponse.getStatus()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS.value());
+  }
+
+  @Test
+  void perClassLimitsOverrideGlobalDefaults() throws Exception {
+    AtomicLong clock = new AtomicLong(0L);
+    CbsSecurityRateLimitProperties properties = new CbsSecurityRateLimitProperties(true, "memory",
+            5, 1.0,
+            Map.of("/api/dsl/run/**", new CbsSecurityRateLimitProperties.RateLimitClass(1, 1.0)));
+    RateLimitFilter filter = new RateLimitFilter(properties, objectMapper,
+            new InMemoryRateLimitStore(clock::get), null);
+
+    assertThat(doPost(filter, "/api/dsl/run/demo", "192.168.1.1")).isTrue();
+    assertThat(doPost(filter, "/api/dsl/run/demo", "192.168.1.1")).isFalse();
+
+    assertThat(doPost(filter, "/api/dsl/preview/demo", "192.168.1.1")).isTrue();
+  }
+
   private static boolean doPost(RateLimitFilter filter, String path, String remoteAddr)
           throws Exception {
     MockHttpServletRequest request = post(path);
@@ -151,12 +242,13 @@ class RateLimitFilterTest {
   }
 
   private static CbsSecurityRateLimitProperties disabledProperties() {
-    return new CbsSecurityRateLimitProperties(false, 20, 5.0);
+    return new CbsSecurityRateLimitProperties(false, "memory", 20, 5.0, Map.of());
   }
 
   private static CbsSecurityRateLimitProperties enabledProperties(int capacity,
           double refillPerSecond) {
-    return new CbsSecurityRateLimitProperties(true, capacity, refillPerSecond);
+    return new CbsSecurityRateLimitProperties(true, "memory", capacity, refillPerSecond,
+            Map.of());
   }
 
   private static MockHttpServletRequest post(String path) {

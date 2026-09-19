@@ -61,6 +61,7 @@ dependencies {
   compileOnly libs.openfeign.core
   compileOnly libs.spring.kafka
   implementation libs.spring.boot.starter.data.jdbc
+  compileOnly libs.spring.boot.starter.data.redis
   implementation libs.squigglesql
   implementation libs.spring.boot.starter.oauth2.resource.server
   implementation libs.jackson.databind3
@@ -111,6 +112,7 @@ dependencies {
   testImplementation libs.spring.jdbc
   testImplementation libs.wiremock
   testImplementation libs.spring.kafka
+  testImplementation libs.spring.boot.starter.data.redis
   testImplementation libs.opentelemetry.sdk.testing
 }
 

@@ -1,31 +1,36 @@
 package cbs.nova.starter.web;
 
+import static cbs.nova.starter.core.StarterConstants.API_KEY_HEADER;
 import static cbs.nova.starter.core.StarterConstants.RATE_LIMITED_CODE;
 import static cbs.nova.starter.core.StarterConstants.RATE_LIMITED_MESSAGE;
 import static cbs.nova.starter.core.StarterConstants.RETRY_AFTER_HEADER;
 import static cbs.nova.starter.core.StarterConstants.X_FORWARDED_FOR_HEADER;
 
-import cbs.nova.starter.config.properties.CbsSecurityRateLimitProperties;
-import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.dsl.model.ErrorResponse;
+import cbs.nova.starter.config.properties.CbsSecurityRateLimitProperties;
+import cbs.nova.starter.ratelimit.Consumption;
+import cbs.nova.starter.ratelimit.RateLimit;
+import cbs.nova.starter.ratelimit.RateLimitStore;
+import cbs.nova.starter.service.ApiKeyStore;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.LongSupplier;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.Nullable;
 import org.springframework.http.MediaType;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 @RequiredArgsConstructor
 public final class RateLimitFilter extends OncePerRequestFilter {
-
-  private static final long NANOS_PER_SECOND = 1_000_000_000L;
 
   private static final List<RateLimitRule> RULES = List.of(
           new RateLimitRule("POST", "/api/dsl/run/**"),
@@ -39,8 +44,8 @@ public final class RateLimitFilter extends OncePerRequestFilter {
 
   private final CbsSecurityRateLimitProperties properties;
   private final ObjectMapper objectMapper;
-  private final LongSupplier nanoTime;
-  private final ConcurrentHashMap<String, Bucket> buckets = new ConcurrentHashMap<>();
+  private final RateLimitStore store;
+  private final @Nullable ApiKeyStore apiKeyStore;
   private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
   @Override
@@ -52,7 +57,13 @@ public final class RateLimitFilter extends OncePerRequestFilter {
       filterChain.doFilter(request, response);
       return;
     }
-    Consumption consumption = consume(clientIp(request));
+    String routeClass = matchedRouteClass(request);
+    if (routeClass == null) {
+      filterChain.doFilter(request, response);
+      return;
+    }
+    String key = bucketKey(request, routeClass);
+    Consumption consumption = store.consume(key, effectiveLimit(routeClass));
     if (consumption.allowed()) {
       filterChain.doFilter(request, response);
       return;
@@ -69,10 +80,55 @@ public final class RateLimitFilter extends OncePerRequestFilter {
     if ("GET".equalsIgnoreCase(request.getMethod())) {
       return false;
     }
+    return matchedRouteClass(request) != null;
+  }
+
+  private @Nullable String matchedRouteClass(HttpServletRequest request) {
     String path = request.getRequestURI();
-    return RULES.stream()
-            .anyMatch(rule -> rule.method().equalsIgnoreCase(request.getMethod())
-                    && pathMatcher.match(rule.pattern(), path));
+    String method = request.getMethod();
+    for (RateLimitRule rule : RULES) {
+      if (rule.method().equalsIgnoreCase(method) && pathMatcher.match(rule.pattern(), path)) {
+        return rule.pattern();
+      }
+    }
+    return null;
+  }
+
+  private String bucketKey(HttpServletRequest request, String routeClass) {
+    return principal(request) + "|" + routeClass;
+  }
+
+  private String principal(HttpServletRequest request) {
+    String authorization = request.getHeader("Authorization");
+    if (authorization != null && authorization.startsWith("Bearer ")) {
+      String sub = extractJwtSub(authorization.substring(7).trim());
+      if (sub != null) {
+        return "jwt:" + sub;
+      }
+    }
+    String apiKey = request.getHeader(API_KEY_HEADER);
+    if (apiKey != null && !apiKey.isBlank() && apiKeyStore != null) {
+      Optional<ApiKeyStore.StoredKeyMatch> match = apiKeyStore.matches(apiKey);
+      if (match.isPresent()) {
+        return "apikey:" + match.get().label();
+      }
+    }
+    return "ip:" + clientIp(request);
+  }
+
+  private @Nullable String extractJwtSub(String token) {
+    try {
+      String[] parts = token.split("\\.");
+      if (parts.length != 3) {
+        return null;
+      }
+      String payload = new String(Base64.getUrlDecoder().decode(parts[1]), StandardCharsets.UTF_8);
+      JsonNode node = objectMapper.readTree(payload);
+      JsonNode sub = node.get("sub");
+      return sub != null && !sub.isNull() ? sub.asText() : null;
+    } catch (RuntimeException e) {
+      return null;
+    }
   }
 
   private String clientIp(HttpServletRequest request) {
@@ -85,36 +141,14 @@ public final class RateLimitFilter extends OncePerRequestFilter {
     return request.getRemoteAddr();
   }
 
-  private Consumption consume(String clientIp) {
-    long now = nanoTime.getAsLong();
-    Bucket bucket = buckets.compute(clientIp, (ip, current) -> {
-      Bucket baseline = current == null ? new Bucket(properties.capacity(), now, false) : current;
-      long elapsedNanos = now - baseline.lastRefillNanos();
-      double refill = elapsedNanos * properties.refillPerSecond() / NANOS_PER_SECOND;
-      double tokens = Math.min(properties.capacity(), baseline.tokens() + refill);
-      if (tokens >= 1.0) {
-        return new Bucket(tokens - 1.0, now, true);
-      }
-      return new Bucket(tokens, now, false);
-    });
-    return bucket.toConsumption(properties.refillPerSecond());
+  private RateLimit effectiveLimit(String routeClass) {
+    CbsSecurityRateLimitProperties.RateLimitClass override = properties.classes().get(routeClass);
+    if (override != null) {
+      return new RateLimit(override.capacity(), override.refillPerSecond());
+    }
+    return new RateLimit(properties.capacity(), properties.refillPerSecond());
   }
 
   private record RateLimitRule(String method, String pattern) {
-  }
-
-  private record Bucket(double tokens, long lastRefillNanos, boolean consumed) {
-
-    Consumption toConsumption(double refillPerSecond) {
-      if (consumed) {
-        return new Consumption(true, 0L);
-      }
-      long retryAfterSeconds = Math.max(1L,
-              (long) Math.ceil((1.0 - tokens) / refillPerSecond));
-      return new Consumption(false, retryAfterSeconds);
-    }
-  }
-
-  private record Consumption(boolean allowed, long retryAfterSeconds) {
   }
 }

@@ -1,5 +1,6 @@
 package cbs.nova.starter.config.properties;
 
+import java.util.Map;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 
@@ -11,18 +12,22 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * starter behaves exactly as before. When enabled, only mutating requests to
  * {@code /api/dsl/run/**}, {@code /api/dsl/preview/**}, {@code /api/dsl/explain/**},
  * {@code /api/dsl/reload}, {@code /api/dsl/drafts/**} and {@code /api/executions/&#42;/cancel} are
- * counted against a per-client-IP token bucket. GET requests and actuator/health paths are always
+ * counted against a per-principal token bucket. GET requests and actuator/health paths are always
  * exempt.
  *
  * <p>
- * The bucket is stored in-memory and refilled lazily on each request, so no external runtime
- * dependency is required.
+ * Store selection: {@code store=auto} (default) enables Redis when
+ * {@code cbs.security.ratelimit.enabled=true} and a {@code RedisConnectionFactory} is available;
+ * otherwise it falls back to the in-memory store. {@code store=memory} forces the in-memory store,
+ * and {@code store=redis} forces the Redis store and fails fast if Redis is not reachable.
  */
 @ConfigurationProperties(prefix = "cbs.security.ratelimit")
 public record CbsSecurityRateLimitProperties(
         @DefaultValue("false") boolean enabled,
+        @DefaultValue("auto") String store,
         @DefaultValue("20") int capacity,
-        @DefaultValue("5.0") double refillPerSecond) {
+        @DefaultValue("5.0") double refillPerSecond,
+        @DefaultValue Map<String, RateLimitClass> classes) {
 
   public CbsSecurityRateLimitProperties {
     if (capacity <= 0) {
@@ -30,6 +35,28 @@ public record CbsSecurityRateLimitProperties(
     }
     if (refillPerSecond <= 0) {
       refillPerSecond = 5.0;
+    }
+    if (store == null || store.isBlank()) {
+      store = "auto";
+    } else {
+      store = store.toLowerCase();
+    }
+  }
+
+  /**
+   * Per-route-class token-bucket override.
+   */
+  public record RateLimitClass(
+          @DefaultValue("20") int capacity,
+          @DefaultValue("5.0") double refillPerSecond) {
+
+    public RateLimitClass {
+      if (capacity <= 0) {
+        capacity = 20;
+      }
+      if (refillPerSecond <= 0) {
+        refillPerSecond = 5.0;
+      }
     }
   }
 }
