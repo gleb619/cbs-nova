@@ -169,7 +169,7 @@ export function useDslWorkbench() {
     name: string,
     selected: DslConstruct | null,
     status: string,
-  ): Record<string, unknown> {
+  ): { name: string; type?: string; status?: string; version?: string; taskQueue?: string; description?: string } {
     return {
       name,
       type: selected?.type,

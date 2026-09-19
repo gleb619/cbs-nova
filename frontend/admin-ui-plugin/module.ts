@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
 import {
   addImportsDir,
   addLayout,
@@ -347,6 +348,42 @@ export default defineNuxtModule<ModuleOptions>({
           ? resolve('./dist/server')
           : resolve('./server')
       nitroConfig.scanDirs.push(serverDir)
+
+      // -------------------------------------------------------------
+      // OpenAPI-generated BFF proxy routes (T561). The generated stubs
+      // live in server/api/v1/generated/ (a gitignored build artifact —
+      // regenerate with `pnpm gen:bff-routes` from frontend/). They are
+      // registered here explicitly at their real /api/v1/* paths, and the
+      // generated directory is excluded from Nitro's file scanner so the
+      // stubs are not also mounted under /api/v1/generated/**.
+      // -------------------------------------------------------------
+      const manifestCandidates = [
+        resolve('./dist/server/api/v1/generated/manifest.json'),
+        resolve('./server/api/v1/generated/manifest.json'),
+      ]
+      const manifestPath = manifestCandidates.find((candidate) => existsSync(candidate))
+      if (!manifestPath) {
+        // Fail closed: without the manifest the BFF would silently miss every
+        // generated proxy route. Regenerate from docs/openapi.json.
+        throw new Error(
+          '[admin-ui-plugin] generated BFF route manifest not found — ' +
+            'run `pnpm gen:bff-routes` from frontend/ (docs/openapi.json is the contract).',
+        )
+      }
+      const manifestDir = dirname(manifestPath)
+      const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as {
+        routes: Array<{ method: string; bffPath: string; handler: string }>
+      }
+      nitroConfig.ignore = nitroConfig.ignore || []
+      nitroConfig.ignore.push('**/server/api/v1/generated/**', '**/dist/server/api/v1/generated/**')
+      nitroConfig.handlers = nitroConfig.handlers || []
+      for (const route of manifest.routes) {
+        nitroConfig.handlers.push({
+          route: route.bffPath,
+          method: route.method.toLowerCase() as 'get' | 'post' | 'put' | 'delete',
+          handler: join(manifestDir, route.handler),
+        })
+      }
     })
 
     // -----------------------------------------------------------------------

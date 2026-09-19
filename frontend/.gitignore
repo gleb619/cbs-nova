@@ -8,6 +8,10 @@ admin-ui-plugin/.data
 admin-ui-plugin/dist
 admin-ui-plugin/dist.bak
 admin-ui-plugin/node_modules
+
+# T561 — OpenAPI-generated BFF artifacts (regenerate with `pnpm gen:bff-routes`)
+admin-ui-plugin/server/api/v1/generated/
+admin-ui-plugin/app/composables/generated/
 components/dist
 components/node_modules
 

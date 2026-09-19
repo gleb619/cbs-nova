@@ -20,7 +20,7 @@
     "typecheck": "nuxi typecheck",
     "lint": "biome lint .",
     "test:watch": "vitest",
-    "build:server": "files=$(find server -type f -name '*.ts' ! -name '*.spec.ts') && pnpm exec esbuild $files --outdir=dist/server --platform=node --format=esm --bundle=false && find dist/server -name '*.js' -exec sed -i 's|from \"~/server/utils/httpClient\"|from \"@cbs/admin-ui-plugin/server/utils/httpClient\"|g' {} +"
+    "build:server": "files=$(find server -type f -name '*.ts' ! -name '*.spec.ts' ! -path '*/api/v1/generated/*') && pnpm exec esbuild $files --outdir=dist/server --platform=node --format=esm --bundle=false && find dist/server -name '*.js' -exec sed -i 's|from \"~/server/utils/httpClient\"|from \"@cbs/admin-ui-plugin/server/utils/httpClient\"|g' {} +"
   },
   "dependencies": {
     "@cbs/components": "workspace:*",

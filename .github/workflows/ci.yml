@@ -67,6 +67,16 @@ jobs:
         working-directory: frontend
         run: pnpm check:api-types
 
+      # T561: regenerate the OpenAPI-derived BFF proxy stubs, then verify they
+      # match docs/openapi.json and that the hand-written custom routes are intact.
+      - name: Generate BFF routes
+        working-directory: frontend
+        run: pnpm gen:bff-routes
+
+      - name: Check BFF routes are up to date
+        working-directory: frontend
+        run: pnpm check:bff-routes
+
       - name: Typecheck frontend
         working-directory: frontend
         run: pnpm typecheck

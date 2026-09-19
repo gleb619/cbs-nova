@@ -105,7 +105,7 @@ describe('ConstructExplorer', () => {
 
     expect(wrapper.find('input[type="text"]').exists()).toBe(true)
     expect(
-      (wrapper.find('[data-testid="explorer-search"]').element as HTMLElement).style.display,
+      (wrapper.find('[data-testid="explorer-filter"]').element as HTMLElement).style.display,
     ).toBe('none')
     expect(wrapper.find('[aria-label="Expand constructs"]').exists()).toBe(true)
 

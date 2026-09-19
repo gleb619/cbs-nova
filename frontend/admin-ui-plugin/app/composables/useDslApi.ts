@@ -1,4 +1,5 @@
 import { useClientLogger } from '@cbs/admin-ui-plugin/composables/useClientLogger'
+import type { DefinitionHistoryEntry, HistoryDiffResponse } from '../components/DslHistoryPanel.vue'
 import {
   type DefinitionTestCase,
   type DefinitionTestRunReport,
@@ -10,6 +11,40 @@ import {
   type WebhookDeliveryQuery,
 } from '@cbs/components'
 import { $fetch } from 'ofetch'
+import {
+  createSchedule as bffCreateSchedule,
+  deleteDraft as bffDeleteDraft,
+  deleteSchedule as bffDeleteSchedule,
+  diffPublishHistoryEntry as bffDiffPublishHistoryEntry,
+  explainDsl as bffExplainDsl,
+  exportDefinitions as bffExportDefinitions,
+  importDefinitions as bffImportDefinitions,
+  getProcessDiagram as bffGetProcessDiagram,
+  listCompileDiagnostics as bffListCompileDiagnostics,
+  listDefinitionTests as bffListDefinitionTests,
+  listDefinitions as bffListDefinitions,
+  listDomainEvents as bffListDomainEvents,
+  listDrafts as bffListDrafts,
+  listHelpers as bffListHelpers,
+  listPublishHistory as bffListPublishHistory,
+  listSchedules as bffListSchedules,
+  pauseSchedule as bffPauseSchedule,
+  previewDsl as bffPreviewDsl,
+  publishDraft as bffPublishDraft,
+  readDraft as bffReadDraft,
+  readDslFileByName as bffReadDslFileByName,
+  readPublishHistoryEntry as bffReadPublishHistoryEntry,
+  reload as bffReload,
+  replaceDefinitionTests as bffReplaceDefinitionTests,
+  restorePublishHistory as bffRestorePublishHistory,
+  resumeSchedule as bffResumeSchedule,
+  runDefinitionTests as bffRunDefinitionTests,
+  runDsl as bffRunDsl,
+  saveDraft as bffSaveDraft,
+  searchObjects as bffSearchObjects,
+  writeDslFileByName as bffWriteDslFileByName,
+  type BffRequestInit,
+} from './generated/useBffApi'
 import { extractApiError } from '../utils/extractApiError'
 
 export function useDslApi() {
@@ -18,7 +53,7 @@ export function useDslApi() {
   async function getDefinitions() {
     log.debug('fetching definitions')
     try {
-      const result = await $fetch('/api/v1/dsl/definitions')
+      const result = await bffListDefinitions()
       const list = unwrapList(result)
       log.info('definitions loaded', { count: list.length })
       return result
@@ -37,15 +72,12 @@ export function useDslApi() {
     if (filters.description?.trim()) query.description = filters.description.trim()
 
     log.debug('searching objects', { filters: query })
-    return $fetch('/api/v1/dsl/objects/search', { query })
+    return bffSearchObjects({ query })
   }
 
   async function preview(name: string, body: unknown, metadata?: Record<string, unknown>) {
     log.info('preview request', { name })
-    return $fetch(`/api/v1/dsl/preview/${name}`, {
-      method: 'POST',
-      body: { body, metadata },
-    })
+    return bffPreviewDsl(name, { body: { body, metadata } })
   }
 
   async function run(
@@ -55,19 +87,14 @@ export function useDslApi() {
     headers?: Record<string, string>,
   ) {
     log.info('run request', { name })
-    return $fetch(`/api/v1/dsl/run/${name}`, {
-      method: 'POST',
-      body: { body, metadata },
-      ...(headers ? { headers } : {}),
-    })
+    const init: BffRequestInit = { body: { body, metadata } }
+    if (headers) init.headers = headers
+    return bffRunDsl(name, init)
   }
 
   async function explain(name: string, body: unknown, metadata?: Record<string, unknown>) {
     log.info('explain request', { name })
-    return $fetch(`/api/v1/dsl/explain/${name}`, {
-      method: 'POST',
-      body: { body, metadata },
-    })
+    return bffExplainDsl(name, { body: { body, metadata } })
   }
 
   async function saveDraft(
@@ -83,7 +110,7 @@ export function useDslApi() {
     },
   ) {
     log.info('saveDraft request', { name })
-    return $fetch(`/api/v1/dsl/drafts/${name}/save`, { method: 'POST', body: payload })
+    return bffSaveDraft(name, { body: payload })
   }
 
   async function publishDraft(
@@ -98,78 +125,71 @@ export function useDslApi() {
     },
   ) {
     log.info('publishDraft request', { name })
-    return $fetch(`/api/v1/dsl/drafts/${name}/publish`, { method: 'POST', body: payload })
+    return bffPublishDraft(name, { body: payload })
   }
 
   async function deleteDraft(name: string) {
     log.info('deleteDraft request', { name })
-    return $fetch(`/api/v1/dsl/drafts/${name}/delete`, { method: 'DELETE' })
+    return bffDeleteDraft(name)
   }
 
   async function readDslFile(name: string) {
     log.info('readDslFile request', { name })
-    const result = await $fetch(`/api/v1/dsl/files/by-name/${name}`)
+    const result = await bffReadDslFileByName(name)
     return (result as { content?: string }).content ?? ''
   }
 
   async function writeDslFile(name: string, content: string) {
     log.info('writeDslFile request', { name })
-    return $fetch(`/api/v1/dsl/files/by-name/${name}`, {
-      method: 'POST',
-      body: { content },
-    })
+    return bffWriteDslFileByName(name, { body: { content } })
   }
 
   async function listHelpers() {
     log.info('listHelpers request')
-    return $fetch('/api/v1/dsl/helpers')
+    return bffListHelpers()
   }
 
   async function exportDefinitions(includeDrafts?: boolean) {
     log.info('exportDefinitions request', { includeDrafts })
     const query = includeDrafts ? { include: 'drafts' } : {}
-    return $fetch('/api/v1/dsl/definitions/export', { query })
+    return bffExportDefinitions({ query })
   }
 
   async function importDefinitions(bundle: unknown, dryRun?: boolean) {
     log.info('importDefinitions request', { dryRun })
     const query = dryRun ? { dryRun: 'true' } : {}
-    return $fetch('/api/v1/dsl/definitions/import', {
-      method: 'POST',
-      body: bundle as any,
-      query,
-    })
+    return bffImportDefinitions({ body: bundle, query })
   }
 
   async function listDrafts(): Promise<unknown[]> {
     log.info('listDrafts request')
-    const result = await $fetch('/api/v1/dsl/drafts')
+    const result = await bffListDrafts()
     return unwrapList(result)
   }
 
   async function readDraft(name: string) {
     log.info('readDraft request', { name })
-    return $fetch(`/api/v1/dsl/drafts/${name}`)
+    return bffReadDraft(name)
   }
 
   async function listPublishHistory(name: string) {
     log.info('listPublishHistory request', { name })
-    return $fetch(`/api/v1/dsl/drafts/${name}/history`)
+    return bffListPublishHistory(name) as Promise<DefinitionHistoryEntry[]>
   }
 
   async function restorePublishHistory(name: string, timestamp: string) {
     log.info('restorePublishHistory request', { name, timestamp })
-    return $fetch(`/api/v1/dsl/drafts/${name}/history/${timestamp}/restore`, { method: 'POST' })
+    return bffRestorePublishHistory(name, timestamp)
   }
 
   async function getHistoryEntry(name: string, timestamp: string) {
     log.info('getHistoryEntry request', { name, timestamp })
-    return $fetch(`/api/v1/dsl/drafts/${name}/history/${timestamp}`)
+    return bffReadPublishHistoryEntry(name, timestamp) as Promise<DefinitionHistoryEntry>
   }
 
   async function getHistoryDiff(name: string, timestamp: string) {
     log.info('getHistoryDiff request', { name, timestamp })
-    return $fetch(`/api/v1/dsl/drafts/${name}/history/${timestamp}/diff`)
+    return bffDiffPublishHistoryEntry(name, timestamp) as Promise<HistoryDiffResponse>
   }
 
   async function fetchDiagnostics(params: {
@@ -188,7 +208,7 @@ export function useDslApi() {
     }
     if (params.definition?.trim()) query.definition = params.definition.trim()
     try {
-      return (await $fetch('/api/v1/dsl/diagnostics', { query })) as DiagnosticsPage
+      return (await bffListCompileDiagnostics({ query })) as DiagnosticsPage
     } catch (err) {
       const message = extractApiError(err).message
       log.error('failed to load diagnostics', { error: message })
@@ -208,7 +228,7 @@ export function useDslApi() {
     if (params.correlationId?.trim()) query.correlationId = params.correlationId.trim()
     if (params.since?.trim()) query.since = params.since.trim()
     try {
-      return (await $fetch('/api/v1/dsl/events', { query })) as DomainEventPage
+      return (await bffListDomainEvents({ query })) as DomainEventPage
     } catch (err) {
       const message = extractApiError(err).message
       log.error('failed to load domain events', { error: message })
@@ -226,6 +246,8 @@ export function useDslApi() {
     }
     if (params.subscriptionId?.trim()) query.subscriptionId = params.subscriptionId.trim()
     try {
+      // Not covered by docs/openapi.json yet — this endpoint predates the
+      // springdoc webhooks spec, so the call stays hand-written here.
       return (await $fetch('/api/v1/dsl/webhooks/deliveries', { query })) as WebhookDeliveryPage
     } catch (err) {
       const message = extractApiError(err).message
@@ -237,7 +259,7 @@ export function useDslApi() {
   async function fetchDefinitionTests(name: string): Promise<DefinitionTestCase[]> {
     log.info('fetchDefinitionTests request', { name })
     try {
-      const result = await $fetch(`/api/v1/dsl/definitions/${name}/tests`)
+      const result = await bffListDefinitionTests(name)
       return unwrapList(result) as DefinitionTestCase[]
     } catch (err) {
       const message = extractApiError(err).message
@@ -249,11 +271,10 @@ export function useDslApi() {
   async function saveDefinitionTests(name: string, cases: DefinitionTestCase[]): Promise<unknown> {
     log.info('saveDefinitionTests request', { name, count: cases.length })
     try {
-      return await $fetch(`/api/v1/dsl/definitions/${name}/tests`, {
-        method: 'PUT',
-        // ofetch's body union excludes arrays; the backend expects the raw
-        // JSON array of cases, so cast past the request-body typing.
-        body: cases as unknown as Record<string, unknown>,
+      return await bffReplaceDefinitionTests(name, {
+        // The backend expects the raw JSON array of cases; cast past the
+        // generated client's unknown-body typing.
+        body: cases,
       })
     } catch (err) {
       const message = extractApiError(err).message
@@ -269,10 +290,7 @@ export function useDslApi() {
     log.info('runDefinitionTests request', { name, cases: caseNames?.length ?? 0 })
     try {
       const query = caseNames?.length ? { case: caseNames } : {}
-      return (await $fetch(`/api/v1/dsl/definitions/${name}/tests/run`, {
-        method: 'POST',
-        query,
-      })) as DefinitionTestRunReport
+      return (await bffRunDefinitionTests(name, { query })) as DefinitionTestRunReport
     } catch (err) {
       const message = extractApiError(err).message
       log.error('failed to run definition tests', { error: message })
@@ -288,22 +306,22 @@ export function useDslApi() {
 
   async function reload() {
     log.info('reload request')
-    return $fetch('/api/v1/dsl/reload', { method: 'POST' })
+    return bffReload()
   }
 
   async function listSchedules() {
     log.info('listSchedules request')
-    return $fetch('/api/v1/dsl/schedules')
+    return bffListSchedules()
   }
 
   async function createSchedule(payload: Record<string, unknown>) {
     log.info('createSchedule request', { definition: payload.definition })
-    return $fetch('/api/v1/dsl/schedules', { method: 'POST', body: payload })
+    return bffCreateSchedule({ body: payload })
   }
 
   async function deleteSchedule(definition: string) {
     log.info('deleteSchedule request', { definition })
-    return $fetch(`/api/v1/dsl/schedules/${definition}`, { method: 'DELETE' })
+    return bffDeleteSchedule(definition)
   }
 
   async function getProcessDiagram(
@@ -311,23 +329,17 @@ export function useDslApi() {
     format: 'mermaid' | 'plantuml' | 'bpmn' = 'mermaid',
   ) {
     log.info('process diagram request', { name, format })
-    return $fetch(`/api/v1/dsl/processes/${name}/diagram`, { query: { format } })
+    return bffGetProcessDiagram(name, { query: { format } })
   }
 
   async function pauseSchedule(definition: string, reason?: string) {
     log.info('pauseSchedule request', { definition })
-    return $fetch(`/api/v1/dsl/schedules/${definition}/pause`, {
-      method: 'POST',
-      body: reason ? { reason } : undefined,
-    })
+    return bffPauseSchedule(definition, { body: reason ? { reason } : undefined })
   }
 
   async function resumeSchedule(definition: string, reason?: string) {
     log.info('resumeSchedule request', { definition })
-    return $fetch(`/api/v1/dsl/schedules/${definition}/resume`, {
-      method: 'POST',
-      body: reason ? { reason } : undefined,
-    })
+    return bffResumeSchedule(definition, { body: reason ? { reason } : undefined })
   }
 
   return {

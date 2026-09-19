@@ -19,8 +19,8 @@ vi.mock('h3', async (importOriginal) => {
   }
 })
 
-const listHandler = (await import('../index.get')).default
-const readHandler = (await import('../[name]/index.get')).default
+const listHandler = (await import('../../../generated/routes/dsl/drafts.get')).default
+const readHandler = (await import('../../../generated/routes/dsl/drafts/[name].get')).default
 
 const fakeEvent = {} as Parameters<typeof proxyToBackendMock>[0]
 

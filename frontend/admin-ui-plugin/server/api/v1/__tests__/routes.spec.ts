@@ -45,64 +45,64 @@ vi.mock('h3', async (importOriginal) => {
 
 // Import after the mock + globals are in place.
 const healthHandler = (await import('../health.get')).default
-const definitionsHandler = (await import('../dsl/definitions.get')).default
-const reloadHandler = (await import('../dsl/reload.post')).default
+const definitionsHandler = (await import('../generated/routes/dsl/definitions.get')).default
+const reloadHandler = (await import('../generated/routes/dsl/reload.post')).default
 const manifestGuardHandler = (await import('../dsl/manifest/guard.get')).default
 const auditHandler = (await import('../dsl/audit.get')).default
 const eventsHandler = (await import('../dsl/events.get')).default
-const runHandler = (await import('../dsl/run/[name].post')).default
-const previewHandler = (await import('../dsl/preview/[name].post')).default
-const explainHandler = (await import('../dsl/explain/[name].post')).default
+const runHandler = (await import('../generated/routes/dsl/run/[name].post')).default
+const previewHandler = (await import('../generated/routes/dsl/preview/[name].post')).default
+const explainHandler = (await import('../generated/routes/dsl/explain/[name].post')).default
 const executionsIndexHandler = (await import('../executions/index.get')).default
-const executionsStatsHandler = (await import('../executions/stats.get')).default
-const executionsTimeseriesHandler = (await import('../executions/stats/timeseries.get')).default
-const executionsIdHandler = (await import('../executions/[id].get')).default
-const executionsTransactionsHandler = (await import('../executions/[id]/transactions.get')).default
-const executionsCancelHandler = (await import('../executions/[id]/cancel.post')).default
+const executionsStatsHandler = (await import('../generated/routes/executions/stats.get')).default
+const executionsTimeseriesHandler = (await import('../generated/routes/executions/stats/timeseries.get')).default
+const executionsIdHandler = (await import('../generated/routes/executions/[id].get')).default
+const executionsTransactionsHandler = (await import('../generated/routes/executions/[id]/transactions.get')).default
+const executionsCancelHandler = (await import('../generated/routes/executions/[id]/cancel.post')).default
 const executionsExportHandler = (await import('../executions/export.get')).default
 const infoHandler = (await import('../info.get')).default
-const saveDraftHandler = (await import('../dsl/drafts/[name]/save.post')).default
-const publishDraftHandler = (await import('../dsl/drafts/[name]/publish.post')).default
+const saveDraftHandler = (await import('../generated/routes/dsl/drafts/[name]/save.post')).default
+const publishDraftHandler = (await import('../generated/routes/dsl/drafts/[name]/publish.post')).default
 const deleteDraftHandler = (await import('../dsl/drafts/[name]/delete.delete')).default
-const listHistoryHandler = (await import('../dsl/drafts/[name]/history/index.get')).default
+const listHistoryHandler = (await import('../generated/routes/dsl/drafts/[name]/history.get')).default
 const restoreHistoryHandler = (
-  await import('../dsl/drafts/[name]/history/[timestamp]/restore.post')
+  await import('../generated/routes/dsl/drafts/[name]/history/[timestamp]/restore.post')
 ).default
-const historyEntryHandler = (await import('../dsl/drafts/[name]/history/[timestamp]/index.get'))
+const historyEntryHandler = (await import('../generated/routes/dsl/drafts/[name]/history/[timestamp].get'))
   .default
-const historyDiffHandler = (await import('../dsl/drafts/[name]/history/[timestamp]/diff.get'))
+const historyDiffHandler = (await import('../generated/routes/dsl/drafts/[name]/history/[timestamp]/diff.get'))
   .default
-const helpersIndexHandler = (await import('../dsl/helpers/index.get')).default
-const processesIndexHandler = (await import('../dsl/processes/index.get')).default
-const processDetailHandler = (await import('../dsl/processes/[name].get')).default
-const transactionsIndexHandler = (await import('../dsl/transactions/index.get')).default
-const transactionDetailHandler = (await import('../dsl/transactions/[name].get')).default
-const constructBodyHandler = (await import('../dsl/constructs/[name].get')).default
+const helpersIndexHandler = (await import('../generated/routes/dsl/helpers.get')).default
+const processesIndexHandler = (await import('../generated/routes/dsl/processes.get')).default
+const processDetailHandler = (await import('../generated/routes/dsl/processes/[name].get')).default
+const transactionsIndexHandler = (await import('../generated/routes/dsl/transactions.get')).default
+const transactionDetailHandler = (await import('../generated/routes/dsl/transactions/[name].get')).default
+const constructBodyHandler = (await import('../generated/routes/dsl/constructs/[name].get')).default
 const constructSchemaHandler = (await import('../dsl/schemas/[name].get')).default
 const processDiagramHandler = (await import('../dsl/processes/[name]/diagram.get')).default
-const schedulesIndexHandler = (await import('../dsl/schedules/index.get')).default
-const schedulesCreateHandler = (await import('../dsl/schedules/index.post')).default
-const schedulesDeleteHandler = (await import('../dsl/schedules/[definition].delete')).default
-const schedulesPauseHandler = (await import('../dsl/schedules/[definition]/pause.post')).default
-const schedulesResumeHandler = (await import('../dsl/schedules/[definition]/resume.post')).default
-const listApiKeysHandler = (await import('../dsl/auth/keys/index.get')).default
+const schedulesIndexHandler = (await import('../generated/routes/dsl/schedules.get')).default
+const schedulesCreateHandler = (await import('../generated/routes/dsl/schedules.post')).default
+const schedulesDeleteHandler = (await import('../generated/routes/dsl/schedules/[definition].delete')).default
+const schedulesPauseHandler = (await import('../generated/routes/dsl/schedules/[definition]/pause.post')).default
+const schedulesResumeHandler = (await import('../generated/routes/dsl/schedules/[definition]/resume.post')).default
+const listApiKeysHandler = (await import('../generated/routes/dsl/auth/keys.get')).default
 const createApiKeyHandler = (await import('../dsl/auth/keys/index.post')).default
-const revokeApiKeyHandler = (await import('../dsl/auth/keys/[id]/index.delete')).default
+const revokeApiKeyHandler = (await import('../generated/routes/dsl/auth/keys/[id].delete')).default
 const exportDefinitionsHandler = (await import('../dsl/definitions/export.get')).default
 const importDefinitionsHandler = (await import('../dsl/definitions/import.post')).default
-const listDefinitionTestsHandler = (await import('../dsl/definitions/[name]/tests/index.get'))
+const listDefinitionTestsHandler = (await import('../generated/routes/dsl/definitions/[name]/tests.get'))
   .default
-const replaceDefinitionTestsHandler = (await import('../dsl/definitions/[name]/tests/index.put'))
+const replaceDefinitionTestsHandler = (await import('../generated/routes/dsl/definitions/[name]/tests.put'))
   .default
 const runDefinitionTestsHandler = (await import('../dsl/definitions/[name]/tests/run.post')).default
-const listDslFilesHandler = (await import('../dsl/files/index.get')).default
-const readDslFileByNameHandler = (await import('../dsl/files/by-name/[name].get')).default
-const writeDslFileByNameHandler = (await import('../dsl/files/by-name/[name].post')).default
+const listDslFilesHandler = (await import('../generated/routes/dsl/files.get')).default
+const readDslFileByNameHandler = (await import('../generated/routes/dsl/files/by-name/[name].get')).default
+const writeDslFileByNameHandler = (await import('../generated/routes/dsl/files/by-name/[name].post')).default
 const readDslFilePathHandler = (await import('../dsl/files/[...path].get')).default
 const writeDslFilePathHandler = (await import('../dsl/files/[...path].post')).default
-const bulkWriteDslFilesHandler = (await import('../dsl/files/bulk.post')).default
-const flushDslFilesHandler = (await import('../dsl/files/flush.post')).default
-const dslFileStatusHandler = (await import('../dsl/files/status.get')).default
+const bulkWriteDslFilesHandler = (await import('../generated/routes/dsl/files/bulk.post')).default
+const flushDslFilesHandler = (await import('../generated/routes/dsl/files/flush.post')).default
+const dslFileStatusHandler = (await import('../generated/routes/dsl/files/status.get')).default
 
 // Minimal H3Event stub. The route handlers only pass this through to
 // proxyToBackend, which is mocked, so a plain object is sufficient.

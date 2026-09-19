@@ -24,6 +24,8 @@
     "sbom": "node scripts/sbom-merge.mjs",
     "gen:api-types": "node scripts/gen-api-types.mjs",
     "check:api-types": "node scripts/gen-api-types.mjs --check",
+    "gen:bff-routes": "node scripts/gen-bff-routes.mjs",
+    "check:bff-routes": "node scripts/gen-bff-routes.mjs --check",
     "audit:prod": "pnpm audit --prod --audit-level high"
   },
   "devDependencies": {

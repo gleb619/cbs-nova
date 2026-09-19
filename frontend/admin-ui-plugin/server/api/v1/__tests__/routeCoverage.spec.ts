@@ -1,4 +1,4 @@
-import { readdirSync, statSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { dirname, join, relative, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
@@ -42,9 +42,12 @@ type ExpectedProxy = {
 //     - DslDiagnosticsRouterConfiguration.java
 //     - ApiKeyAdminRouterConfiguration.java
 //
-// When a new backend route is added under `/api/dsl/*` or `/api/executions*`,
-// add a matching entry here AND a Nitro proxy file under server/api/v1/.
-// This drift-guard fails CI when one is added without the other.
+// T561: plain-proxy entries are GENERATED from docs/openapi.json
+// (`pnpm gen:bff-routes` → server/api/v1/generated/) — adding a backend route
+// to a *RouterConfiguration and regenerating is enough; the drift guard below
+// verifies the generated manifest covers every entry. Entries whose BFF route
+// does more than plain proxying (query rewrites, SSE, CSV export, ...) stay
+// explicit files and must keep an entry here.
 const expectedProxies: readonly ExpectedProxy[] = [
   // DslIntrospectionRouterConfiguration
   {
@@ -183,6 +186,11 @@ const expectedProxies: readonly ExpectedProxy[] = [
     method: 'GET',
     backendPath: '/api/dsl/drafts/{name}',
     bffPath: '/api/v1/dsl/drafts/{name}',
+  },
+  {
+    method: 'POST',
+    backendPath: '/api/dsl/hierarchy/{name}',
+    bffPath: '/api/v1/dsl/hierarchy/{name}',
   },
   // DslScheduleRouterConfiguration
   {
@@ -361,9 +369,25 @@ type DiscoveredRoute = {
 }
 
 function discoverRoutes(dir: string): DiscoveredRoute[] {
+  const out: DiscoveredRoute[] = discoverRouteFiles(dir)
+  // T561: merge the OpenAPI-generated stubs (mounted by module.ts via
+  // server/api/v1/generated/manifest.json) so they count as discovered routes.
+  const manifestPath = join(apiDir, 'generated', 'manifest.json')
+  if (existsSync(manifestPath)) {
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as {
+      routes: Array<{ method: Method; bffPath: string; handler: string }>
+    }
+    for (const route of manifest.routes) {
+      out.push({ method: route.method, bffPath: route.bffPath, relFile: join('generated', route.handler) })
+    }
+  }
+  return out
+}
+
+function discoverRouteFiles(dir: string): DiscoveredRoute[] {
   const out: DiscoveredRoute[] = []
   for (const entry of readdirSync(dir)) {
-    if (entry === '__tests__') continue
+    if (entry === '__tests__' || entry === 'generated') continue
     const full = join(dir, entry)
     if (statSync(full).isDirectory()) {
       out.push(...discoverRoutes(full))
