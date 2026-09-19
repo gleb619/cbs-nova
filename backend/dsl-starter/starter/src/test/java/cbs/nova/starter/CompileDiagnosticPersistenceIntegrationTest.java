@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 
 import cbs.nova.dsl.utils.DefinitionLoader;
 import cbs.nova.dsl.GlobalManager;
+import cbs.nova.starter.builder.DslBuilderClient;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.controller.DslDiagnosticsHandler;
 import cbs.nova.starter.controller.DslReloadHandler;
@@ -64,7 +65,12 @@ class CompileDiagnosticPersistenceIntegrationTest {
     Path badDir = createTemporaryDslSourceDirWithManyErrors();
     try {
       DslProperties props = DslProperties.builder().sourceDir(badDir.toString()).build();
-      DslReloadHandler handler = new DslReloadHandler(props, loader, null, null, null,
+      // T570: reload requires a DslBuilderClient — the local-compile fake surfaces real javac
+      // diagnostics for the broken sources.
+      DslBuilderClient client = mock(DslBuilderClient.class);
+      BuilderClientTestSupport.stubLocalCompile(client);
+      DslReloadHandler handler = new DslReloadHandler(props, loader, null, null,
+              BuilderClientTestSupport.providerOf(client),
               providerOf(repository), null, null);
 
       ServerResponse response = handler.reload(reloadRequest());
@@ -94,7 +100,10 @@ class CompileDiagnosticPersistenceIntegrationTest {
     Path badDir = createTemporaryBrokenDslSourceDir();
     try {
       DslProperties props = DslProperties.builder().sourceDir(badDir.toString()).build();
-      DslReloadHandler handler = new DslReloadHandler(props, loader, null, null, null,
+      DslBuilderClient client = mock(DslBuilderClient.class);
+      BuilderClientTestSupport.stubLocalCompile(client);
+      DslReloadHandler handler = new DslReloadHandler(props, loader, null, null,
+              BuilderClientTestSupport.providerOf(client),
               providerOf(throwingRepository), null, null);
 
       ServerResponse response = handler.reload(reloadRequest());

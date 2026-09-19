@@ -128,3 +128,8 @@ tasks.named('test') {
 processIntegrationTestResources {
   duplicatesStrategy = DuplicatesStrategy.INCLUDE
 }
+
+// T570: integration tests reuse the unit-test support fixtures (e.g. BuilderClientTestSupport,
+// the local-compile stand-in for the dsl-builder service until T601 lands a testcontainer).
+sourceSets.integrationTest.compileClasspath += sourceSets.test.output
+sourceSets.integrationTest.runtimeClasspath += sourceSets.test.output

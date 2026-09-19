@@ -3,6 +3,7 @@ package cbs.nova.starter;
 import cbs.nova.starter.cache.PreviewResultCacheTestSupport;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 
 import cbs.nova.dsl.CallKind;
 import cbs.nova.dsl.CallNode;
@@ -12,6 +13,7 @@ import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.model.LoadResult;
 import cbs.nova.dsl.model.PreviewReport;
 import cbs.nova.dsl.utils.DefinitionLoader;
+import cbs.nova.starter.builder.DslBuilderClient;
 import cbs.nova.starter.config.router.DslReloadRouterConfiguration;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.controller.DslReloadHandler;
@@ -68,8 +70,15 @@ class DslReloadResourceTest {
   }
 
   private void setSourceDir(String value) {
-    resource = new DslReloadHandler(dslProperties(value), loader, null, null, null, null, null,
-            null);
+    // T570: reload now requires a DslBuilderClient — stand in the local-compile fake builder.
+    resource = new DslReloadHandler(dslProperties(value), loader, null, null,
+            BuilderClientTestSupport.providerOf(localCompileClient()), null, null, null);
+  }
+
+  private static DslBuilderClient localCompileClient() {
+    DslBuilderClient client = mock(DslBuilderClient.class);
+    BuilderClientTestSupport.stubLocalCompile(client);
+    return client;
   }
 
   private static ServerRequest reloadRequest() {
@@ -254,7 +263,8 @@ class DslReloadResourceTest {
     try {
       var audit = AuditTestSupport.h2();
       var handler = new DslReloadHandler(dslProperties(sourceDir.toString()), loader, null,
-              AuditTestSupport.providerOf(audit.service()), null, null, null, null);
+              AuditTestSupport.providerOf(audit.service()),
+              BuilderClientTestSupport.providerOf(localCompileClient()), null, null, null);
 
       ServerResponse response = handler.reload(reloadRequest());
 
@@ -300,7 +310,8 @@ class DslReloadResourceTest {
       var handler = new DslReloadHandler(
               dslProperties(sourceDir.toString()),
               loader,
-              constantProvider(cache), null, null, null, null, null);
+              constantProvider(cache), null,
+              BuilderClientTestSupport.providerOf(localCompileClient()), null, null, null);
 
       ServerResponse response = handler.reload(reloadRequest());
       assertThat(response.statusCode().value()).isEqualTo(200);
@@ -324,7 +335,8 @@ class DslReloadResourceTest {
       var handler = new DslReloadHandler(
               dslProperties(badDir.toString()),
               loader,
-              constantProvider(cache), null, null, null, null, null);
+              constantProvider(cache), null,
+              BuilderClientTestSupport.providerOf(localCompileClient()), null, null, null);
 
       ServerResponse response = handler.reload(reloadRequest());
       assertThat(response.statusCode().value()).isEqualTo(500);
@@ -343,7 +355,8 @@ class DslReloadResourceTest {
       var handler = new DslReloadHandler(
               dslProperties(sourceDir.toString()),
               loader,
-              null, null, null, null, null, null);
+              null, null,
+              BuilderClientTestSupport.providerOf(localCompileClient()), null, null, null);
 
       ServerResponse response = handler.reload(reloadRequest());
       assertThat(response.statusCode().value()).isEqualTo(200);
@@ -399,7 +412,8 @@ class DslReloadResourceTest {
 
       var sharedHandler = new DslReloadHandler(
               dslProperties(sourceDir.toString()),
-              gated, null, null, null, null, null, null);
+              gated, null, null,
+              BuilderClientTestSupport.providerOf(localCompileClient()), null, null, null);
 
       ExecutorService pool = Executors.newFixedThreadPool(2);
       try {

@@ -2,6 +2,7 @@ package cbs.nova.starter;
 
 import static java.nio.charset.StandardCharsets.*;
 import static cbs.nova.starter.BuilderClientTestSupport.providerOf;
+import static cbs.nova.starter.BuilderClientTestSupport.stubLocalCompile;
 import static cbs.nova.starter.BuilderClientTestSupport.stubSuccessfulCompile;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -382,8 +383,20 @@ class DslDraftResourceTest {
   void publishSurfacesCompileDiagnosticsWhenReloadFails() throws Exception {
     Files.writeString(sourceDir.resolve("Broken.java"),
             "this is not valid Java at all; { class Broken { ???");
+    // T570: reload requires a DslBuilderClient — the local-compile fake surfaces compile
+    // diagnostics for the broken source; the handler-level builder provider stays null so the
+    // publish itself still writes locally.
+    DslBuilderClient reloadClient = mock(DslBuilderClient.class);
+    stubLocalCompile(reloadClient);
+    DslDraftHandler localHandler = new DslDraftHandler(props,
+            new DslReloadHandler(props, new DefinitionLoader(), null, null,
+                    BuilderClientTestSupport.providerOf(reloadClient), null, null, null),
+            new DslDefinitionHistoryService(props, mapper), mapper,
+            new DslDefinitionBundleService(mapper, Optional.empty(),
+                    DslProperties.bundleServiceDefaults()),
+            null, null, null, null, null);
 
-    ServerResponse response = handler.publish(postRequest("/api/dsl/drafts/foo/publish"));
+    ServerResponse response = localHandler.publish(postRequest("/api/dsl/drafts/foo/publish"));
     assertThat(response.statusCode().value()).isEqualTo(200);
 
     Object entity = ((EntityResponse<?>) response)
@@ -393,8 +406,9 @@ class DslDraftResourceTest {
     assertThat(draft.reloaded()).isFalse();
     assertThat(draft.reloadError()).isNotBlank();
     assertThat(draft.diagnostics()).isNotEmpty();
-    assertThat(draft.diagnostics().get(0).file()).contains("Broken.java");
-    assertThat(draft.diagnostics().get(0).message()).isNotBlank();
+    // Diagnostics arrive from the dsl-builder as plain message strings (T570), so the file
+    // context is embedded in the message rather than a structured field.
+    assertThat(draft.diagnostics().get(0).message()).contains("Broken.java");
     assertThat(draft.diagnostics().get(0).severity()).isEqualTo("error");
   }
 
@@ -911,9 +925,12 @@ class DslDraftResourceTest {
     GlobalManager.globalManager().resetForTests();
     try {
       var audit = AuditTestSupport.h2();
+      // T570: reload requires a DslBuilderClient for the publish-triggered reload to succeed.
+      DslBuilderClient reloadClient = mock(DslBuilderClient.class);
+      stubLocalCompile(reloadClient);
       DslDraftHandler audited = new DslDraftHandler(props,
-              new DslReloadHandler(props, new DefinitionLoader(), null, null, null, null, null,
-                      null),
+              new DslReloadHandler(props, new DefinitionLoader(), null, null,
+                      BuilderClientTestSupport.providerOf(reloadClient), null, null, null),
               new DslDefinitionHistoryService(props, mapper), mapper,
               new DslDefinitionBundleService(mapper, Optional.empty(),
                       DslProperties.bundleServiceDefaults()),

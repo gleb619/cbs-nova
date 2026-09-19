@@ -51,8 +51,11 @@ class DslReloadDiagnosticsTest {
   }
 
   private void setSourceDir(String value) {
-    resource = new DslReloadHandler(dslProperties(value), loader, null, null, null, null, null,
-            null);
+    // T570: reload now requires a DslBuilderClient — stand in the local-compile fake builder.
+    DslBuilderClient client = mock(DslBuilderClient.class);
+    BuilderClientTestSupport.stubLocalCompile(client);
+    resource = new DslReloadHandler(dslProperties(value), loader, null, null,
+            BuilderClientTestSupport.providerOf(client), null, null, null);
   }
 
   private static ServerRequest reloadRequest() {
@@ -73,8 +76,9 @@ class DslReloadDiagnosticsTest {
       var diagnostics = node.path("diagnostics");
       assertThat(diagnostics.isArray()).isTrue();
       assertThat(diagnostics.size()).isPositive();
-      assertThat(diagnostics.get(0).path("file").asString()).contains("Broken.java");
-      assertThat(diagnostics.get(0).path("line").canConvertToLong()).isTrue();
+      // T570: diagnostics now arrive from the dsl-builder as plain message strings, so the
+      // file/line context is embedded in the message rather than structured fields.
+      assertThat(diagnostics.get(0).path("message").asString()).contains("Broken.java");
       assertThat(diagnostics.get(0).path("message").asString()).isNotBlank();
       assertThat(diagnostics.get(0).path("severity").asString()).isEqualTo("error");
     } finally {
@@ -83,15 +87,22 @@ class DslReloadDiagnosticsTest {
   }
 
   @Test
-  void failedReloadDiagnosticsIncludeJavacCode() throws Exception {
+  void failedReloadDiagnosticsPassThroughBuilderMessages() throws Exception {
     Path badDir = createTemporaryBrokenDslSourceDir();
     try {
-      setSourceDir(badDir.toString());
+      DslBuilderClient client = mock(DslBuilderClient.class);
+      when(client.compile(any(CompileRequest.class)))
+              .thenReturn(new CompileResult("c-9", false, List.of(),
+                      List.of("Broken.java:1: error: builder rejected source"), 3));
+      resource = new DslReloadHandler(dslProperties(badDir.toString()), loader, null, null,
+              BuilderClientTestSupport.providerOf(client), null, null, null);
+
       ServerResponse response = resource.reload(reloadRequest());
 
       var node = mapper.readTree(renderBody(response));
       var first = node.path("diagnostics").get(0);
-      assertThat(first.path("code").asText()).startsWith("compiler.");
+      assertThat(first.path("message").asText())
+              .isEqualTo("Broken.java:1: error: builder rejected source");
     } finally {
       deleteRecursively(badDir);
     }

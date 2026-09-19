@@ -31,7 +31,6 @@ import cbs.nova.starter.persistence.CompileDiagnosticRecordRepository;
 import cbs.nova.starter.events.DomainEvent;
 import cbs.nova.starter.service.DomainEventPublisher;
 import cbs.nova.starter.service.DslAuditService;
-import cbs.nova.starter.service.JavaSourceCompiler;
 import cbs.nova.starter.service.PreviewResultCache;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -71,10 +70,11 @@ import org.springframework.web.servlet.function.ServerResponse;
  * candidate. If compilation or staging throws, the previously-loaded registry keeps serving
  * requests — the runtime is never bricked.
  *
- * <h2>Compilation</h2> When the DSL builder client is enabled ({@code csb.dsl.builder-client
- * .enabled}, on by default) sources are compiled remotely by the dsl-builder service and the
- * generated classes are downloaded as a zip. When disabled, sources are compiled in-process with
- * javac via {@link JavaSourceCompiler}.
+ * <h2>Compilation</h2> Sources are always compiled remotely by the dsl-builder service (via the
+ * {@link DslBuilderClient} bean, gated by {@code csb.dsl.builder-client .enabled}, on by default)
+ * and the generated classes are downloaded as a zip. The builder client is mandatory: if the bean
+ * is absent, reload fails fast with an {@link IllegalStateException} instead of degrading to an
+ * in-process compile.
  *
  * <h2>Concurrency</h2> A {@link ReentrantLock} serializes overlapping reload calls. Policy: the
  * second (and any further) concurrent caller <em>waits</em> for the first to complete and then runs
@@ -97,7 +97,6 @@ public class DslReloadHandler {
   private final ObjectProvider<DomainEventPublisher> eventPublisherProvider;
   private final ObjectProvider<GlobalManagerReplacedListener> globalManagerReplacedListeners;
   private final ReentrantLock reloadLock = new ReentrantLock();
-  private final JavaSourceCompiler javaSourceCompiler = new JavaSourceCompiler();
 
   /**
    * Reloads DSL definitions from the configured source directory using a dedicated classloader and
@@ -216,13 +215,14 @@ public class DslReloadHandler {
     }
   }
 
-  // TODO: use a `dsl-builder` instead
-  @Deprecated(forRemoval = true)
   private void compileSources(Path sourceDir, Path outputDir) throws IOException {
     var builder = builderClient();
     if (builder == null) {
-      javaSourceCompiler.compile(sourceDir, outputDir);
-      return;
+      throw new IllegalStateException(
+              "DSL reload requires a DslBuilderClient bean but none is available; in-process"
+                      + " javac compilation was removed (T570). Enable"
+                      + " csb.dsl.builder-client.enabled (default) and ensure the dsl-builder"
+                      + " service is configured.");
     }
     var sources = collectSources(sourceDir);
     if (sources.isEmpty()) {

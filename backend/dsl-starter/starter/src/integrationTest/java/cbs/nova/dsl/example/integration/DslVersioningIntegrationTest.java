@@ -1,12 +1,15 @@
 package cbs.nova.dsl.example.integration;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 
 import cbs.nova.config.HelperInstanceResolverConfig;
 import cbs.nova.dsl.utils.DefinitionLoader;
 import cbs.nova.dsl.GeneratedClassProvider;
+import cbs.nova.starter.builder.DslBuilderClient;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.controller.DslReloadHandler;
+import cbs.nova.starter.BuilderClientTestSupport;
 import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.GeneratedClassDescriptor;
 import cbs.nova.dsl.GlobalManager;
@@ -174,7 +177,12 @@ class DslVersioningIntegrationTest {
 
     Path v2Dir = Path.of("src/integrationTest/resources/dsl-versioning-v2");
     var v2Props = DslProperties.builder().sourceDir(v2Dir.toString()).build();
-    new DslReloadHandler(v2Props, new DefinitionLoader(), null, null, null, null, null, null)
+    // T570: reload requires a live DslBuilderClient — the local-compile fake builder stands in
+    // for the dsl-builder service until T601 provides a testcontainer.
+    DslBuilderClient builderClient = mock(DslBuilderClient.class);
+    BuilderClientTestSupport.stubLocalCompile(builderClient);
+    new DslReloadHandler(v2Props, new DefinitionLoader(), null, null,
+            BuilderClientTestSupport.providerOf(builderClient), null, null, null)
             .reloadDefinitions();
 
     assertThat(GlobalManager.globalManager().findProcess("VersionProbe").orElseThrow().version())

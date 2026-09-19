@@ -239,9 +239,11 @@ These codes are produced by the semantic validator and are stable across release
 ### Syntax-error codes
 
 When the underlying Java compiler rejects DSL source, the raw javac code (for example
-`compiler.err.cannot.find.symbol`) is passed through on `CompileDiagnostic.code`. These
-identifiers are JDK-versioned: they are stable enough to branch on in practice, but they are not a
-formal compatibility contract.
+`compiler.err.cannot.find.symbol`) is passed through on `CompileDiagnostic.code` when the
+compiler reports it. These identifiers are JDK-versioned: they are stable enough to branch on in
+practice, but they are not a formal compatibility contract. When compilation runs remotely via
+the dsl-builder service (the only compile path since the in-process javac fallback was removed,
+T570), diagnostics arrive as plain message strings and `code` may be null.
 
 ## Complete loan disbursement example
 
