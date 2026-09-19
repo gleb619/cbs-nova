@@ -25,6 +25,7 @@ import cbs.nova.dsl.transaction.TransactionDslObject;
 import cbs.nova.dsl.transaction.TransactionInvoker;
 import cbs.nova.dsl.transaction.TransactionManager;
 import cbs.nova.dsl.transaction.TransactionRouting;
+import cbs.nova.dsl.utils.Strings;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 
@@ -510,22 +511,9 @@ public final class GlobalManager {
   public @NonNull String resolveExplainContent(@NonNull String name) {
     return explainResourceRegistry.describeByName(name)
             .or(() -> explainResourceRegistry.describeByFilename(name + ".md"))
-            .or(() -> explainResourceRegistry.describeByFilename(toKebabCase(name) + ".md"))
+            .or(() -> explainResourceRegistry.describeByFilename(Strings.toKebabCase(name) + ".md"))
             .map(ExplainResource::content)
             .orElse(Constants.EMPTY_MARKDOWN);
   }
 
-  // TODO: move to some util class instead
-  @Deprecated(forRemoval = true)
-  private static @NonNull String toKebabCase(@NonNull String name) {
-    var kebab = new StringBuilder(name.length() + 4);
-    for (int i = 0; i < name.length(); i++) {
-      var c = name.charAt(i);
-      if (i > 0 && Character.isUpperCase(c) && Character.isLetter(name.charAt(i - 1))) {
-        kebab.append('-');
-      }
-      kebab.append(Character.toLowerCase(c));
-    }
-    return kebab.toString();
-  }
 }
