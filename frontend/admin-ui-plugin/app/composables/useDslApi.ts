@@ -75,9 +75,16 @@ export function useDslApi() {
     return bffSearchObjects({ query })
   }
 
-  async function preview(name: string, body: unknown, metadata?: Record<string, unknown>) {
+  async function preview(
+    name: string,
+    body: unknown,
+    metadata?: Record<string, unknown>,
+    headers?: Record<string, string>,
+  ) {
     log.info('preview request', { name })
-    return bffPreviewDsl(name, { body: { body, metadata } })
+    const init: BffRequestInit = { body: { body, metadata } }
+    if (headers) init.headers = headers
+    return bffPreviewDsl(name, init)
   }
 
   async function run(
@@ -92,9 +99,16 @@ export function useDslApi() {
     return bffRunDsl(name, init)
   }
 
-  async function explain(name: string, body: unknown, metadata?: Record<string, unknown>) {
+  async function explain(
+    name: string,
+    body: unknown,
+    metadata?: Record<string, unknown>,
+    headers?: Record<string, string>,
+  ) {
     log.info('explain request', { name })
-    return bffExplainDsl(name, { body: { body, metadata } })
+    const init: BffRequestInit = { body: { body, metadata } }
+    if (headers) init.headers = headers
+    return bffExplainDsl(name, init)
   }
 
   async function saveDraft(

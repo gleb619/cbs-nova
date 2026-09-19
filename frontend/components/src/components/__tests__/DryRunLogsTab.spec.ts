@@ -136,6 +136,46 @@ describe('DryRunLogsTab', () => {
     expect(wrapper.text()).toContain('2 logs')
   })
 
+  it('prefers live streamed lines while a run is in flight', () => {
+    const wrapper = mountDryRunLogsTab({
+      logs: [
+        {
+          timestamp: '2026-07-19T10:00:00Z',
+          level: 'INFO',
+          logger: 'com.cbs.Preview',
+          message: 'Final inline log',
+        },
+      ],
+      liveLogs: [
+        {
+          timestamp: '2026-07-19T09:59:59Z',
+          level: 'INFO',
+          logger: '',
+          message: 'Live streamed log',
+        },
+      ],
+    })
+
+    expect(wrapper.text()).toContain('Live streamed log')
+    expect(wrapper.text()).not.toContain('Final inline log')
+  })
+
+  it('falls back to inline logs when liveLogs is empty (SSE unavailable)', () => {
+    const wrapper = mountDryRunLogsTab({
+      logs: [
+        {
+          timestamp: '2026-07-19T10:00:00Z',
+          level: 'INFO',
+          logger: 'com.cbs.Preview',
+          message: 'Final inline log',
+        },
+      ],
+      liveLogs: [],
+    })
+
+    expect(wrapper.text()).toContain('Final inline log')
+  })
+
   it('stamps data-testid on the root, list, rows, count, and copy-all button', () => {
     const wrapper = mountDryRunLogsTab({
       logs: [

@@ -14,11 +14,13 @@ public final class DryRunLogBuffer {
   private final int maxEventsPerRun;
   private final Deque<DryRunLogEvent> events;
 
-  public void add(@NonNull ILoggingEvent event, @NonNull String runId) {
+  public @NonNull DryRunLogEvent add(@NonNull ILoggingEvent event, @NonNull String runId) {
     if (events.size() >= maxEventsPerRun) {
       events.pollFirst();
     }
-    events.offerLast(toEvent(event, runId));
+    DryRunLogEvent logEvent = toEvent(event, runId);
+    events.offerLast(logEvent);
+    return logEvent;
   }
 
   public @NonNull List<DryRunLogEvent> drain() {

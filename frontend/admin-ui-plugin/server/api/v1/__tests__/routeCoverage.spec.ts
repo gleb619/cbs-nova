@@ -255,6 +255,12 @@ const expectedProxies: readonly ExpectedProxy[] = [
     backendPath: '/api/dsl/events',
     bffPath: '/api/v1/dsl/events',
   },
+  // DryRunLogSseController (T563) — live dry-run log SSE stream
+  {
+    method: 'GET',
+    backendPath: '/api/dsl/dry-run/{traceId}/logs',
+    bffPath: '/api/v1/dsl/dry-run/{traceId}/logs',
+  },
 
   // DslFileRouterConfiguration
   {

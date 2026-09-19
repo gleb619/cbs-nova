@@ -5,12 +5,14 @@ import cbs.nova.starter.config.properties.CbsNovaCacheProperties;
 import cbs.nova.starter.config.properties.DryRunProperties;
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.logging.DryRunLogBufferRegistry;
+import cbs.nova.starter.logging.DryRunLogEventPublisher;
 import cbs.nova.starter.logging.DryRunLogbackAppender;
 import cbs.nova.starter.logging.MdcDryRunLoggingContext;
 import cbs.nova.starter.logging.ThreadLocalDryRunLoggingContext;
 import ch.qos.logback.classic.Logger;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -50,8 +52,10 @@ public class DryRunLoggingConfiguration {
   @ConditionalOnMissingBean(DryRunLogbackAppender.class)
   public DryRunLogbackAppender dryRunLogbackAppender(
           DryRunLoggingContext dryRunLoggingContext,
-          DryRunLogBufferRegistry bufferRegistry) {
-    var appender = new DryRunLogbackAppender(dryRunLoggingContext, bufferRegistry);
+          DryRunLogBufferRegistry bufferRegistry,
+          ObjectProvider<DryRunLogEventPublisher> publishers) {
+    var appender = new DryRunLogbackAppender(dryRunLoggingContext, bufferRegistry,
+            publishers.getIfAvailable());
     appender.setName("DRY_RUN");
     return appender;
   }

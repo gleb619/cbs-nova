@@ -12,6 +12,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingDeque;
@@ -149,5 +150,46 @@ class DryRunLogbackAppenderTest {
     context.clearRunId();
 
     assertThat(registry.get(runId)).isNull();
+  }
+
+  @Test
+  void bufferedEventIsPublishedToSsePublisher() {
+    String runId = "run-live";
+    registerBuffer(runId);
+    List<DryRunLogEvent> published = new ArrayList<>();
+    DryRunLogbackAppender publishingAppender = new DryRunLogbackAppender(
+            context, registry, (rid, event) -> published.add(event));
+    publishingAppender.setContext(logger.getLoggerContext());
+    publishingAppender.start();
+    logger.addAppender(publishingAppender);
+    try {
+      context.runWithRunId(runId, () -> logger.info("live line"));
+    } finally {
+      logger.detachAppender(publishingAppender);
+      publishingAppender.stop();
+    }
+
+    // The class-level appender also adds to the same buffer; assert only the publisher side.
+    assertThat(published).hasSize(1);
+    assertThat(published.getFirst().message()).isEqualTo("live line");
+    assertThat(published.getFirst().runId()).isEqualTo(runId);
+  }
+
+  @Test
+  void eventWithoutRegisteredBufferIsNotPublished() {
+    List<DryRunLogEvent> published = new ArrayList<>();
+    DryRunLogbackAppender publishingAppender = new DryRunLogbackAppender(
+            context, registry, (rid, event) -> published.add(event));
+    publishingAppender.setContext(logger.getLoggerContext());
+    publishingAppender.start();
+    logger.addAppender(publishingAppender);
+    try {
+      context.runWithRunId("run-orphan", () -> logger.info("orphan line"));
+    } finally {
+      logger.detachAppender(publishingAppender);
+      publishingAppender.stop();
+    }
+
+    assertThat(published).isEmpty();
   }
 }

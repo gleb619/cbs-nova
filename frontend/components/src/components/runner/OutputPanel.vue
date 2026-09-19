@@ -11,6 +11,8 @@ const props = defineProps<{
   status: RunnerStatus
   lastRunOutput?: unknown
   baselineOutput?: RunnerOutput | null
+  /** Live dry-run log lines streamed while a preview/explain runs. */
+  liveLogs?: RunnerOutput['dryRunLogs']
 }>()
 
 const emit = defineEmits<(e: 'clear-baseline') => void>()
@@ -88,7 +90,11 @@ function onClearBaseline() {
       <ErrorsTab v-else-if="activeTab === 'errors'" :errors="props.output?.errors" />
       <CallTreeTab v-else-if="activeTab === 'callTree'" :tree="props.output?.astTree" />
       <ExternalCallsTab v-else-if="activeTab === 'externalCalls'" :tree="props.output?.astTree" />
-      <DryRunLogsTab v-else-if="activeTab === 'dryRunLogs'" :logs="props.output?.dryRunLogs" />
+      <DryRunLogsTab
+        v-else-if="activeTab === 'dryRunLogs'"
+        :logs="props.output?.dryRunLogs"
+        :live-logs="props.liveLogs"
+      />
       <div
         v-else-if="activeTab === 'diff' && showPreviewDiff"
         class="flex flex-col gap-3"

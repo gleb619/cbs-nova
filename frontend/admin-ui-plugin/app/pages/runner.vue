@@ -26,6 +26,7 @@ const {
   output,
   baselineOutput,
   showConfirmModal,
+  liveLogs,
   selectDefinition,
   setMode,
   submit,
@@ -231,6 +232,7 @@ onMounted(() => {
           :mode="mode"
           :status="status"
           :baseline-output="baselineOutput"
+          :live-logs="liveLogs"
           @clear-baseline="clearBaseline"
         />
       </section>

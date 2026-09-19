@@ -5,9 +5,16 @@ import type { RunnerOutput } from '../../types/runner'
 
 const props = defineProps<{
   logs?: RunnerOutput['dryRunLogs']
+  /** Live lines streamed over SSE while the preview/explain runs. */
+  liveLogs?: RunnerOutput['dryRunLogs']
 }>()
 
-const list = computed(() => props.logs ?? [])
+// Live streamed lines win while a run is in flight; once the final response
+// arrives the caller clears `liveLogs` and the inline logs take over (this is
+// also the fallback when SSE is unavailable — no blank panel).
+const list = computed(() =>
+  props.liveLogs && props.liveLogs.length > 0 ? props.liveLogs : (props.logs ?? []),
+)
 
 const levelClass = (level: string) => {
   switch (level) {

@@ -2,6 +2,7 @@ import { useClientLogger } from '@cbs/admin-ui-plugin/composables/useClientLogge
 import { useDslApi } from '@cbs/admin-ui-plugin/composables/useDslApi'
 import { ref } from 'vue'
 import { extractApiError } from '../utils/extractApiError'
+import { useDryRunLogStream, type DryRunLogLine } from './useDryRunLogStream'
 import type { CallNode, RunnerMode, RunnerOutput, RunnerStatus } from '~/types'
 
 const selectedDefinition = ref<string | null>(null)
@@ -11,9 +12,13 @@ const formData = ref<Record<string, unknown>>({})
 const output = ref<RunnerOutput | null>(null)
 const baselineOutput = ref<RunnerOutput | null>(null)
 const showConfirmModal = ref(false)
+/** Live dry-run log lines streamed over SSE while a preview/explain runs. */
+const liveLogs = ref<DryRunLogLine[]>([])
 
 export function useRunner() {
   const log = useClientLogger('runtime')
+  const logStream = useDryRunLogStream()
+  logStream.onLogLine((line) => liveLogs.value.push(line))
 
   function selectDefinition(name: string | null) {
     selectedDefinition.value = name
@@ -30,6 +35,8 @@ export function useRunner() {
     output.value = null
     status.value = 'idle'
     baselineOutput.value = null
+    logStream.close()
+    liveLogs.value = []
   }
 
   async function submit() {
@@ -46,18 +53,27 @@ export function useRunner() {
     log.info('submit started', { name, mode: mode.value })
 
     const api = useDslApi()
+    const streamLogs = mode.value === 'preview' || mode.value === 'explain'
+    // The trace id doubles as X-Request-Id on the request, which the backend
+    // uses as the dry-run run id — so the log SSE stream can be keyed by it.
+    const traceId = streamLogs ? globalThis.crypto.randomUUID() : null
+    if (traceId) {
+      liveLogs.value = []
+      logStream.connect(traceId)
+    }
     try {
       const payload = formData.value
+      const traceHeaders = traceId ? { 'X-Request-Id': traceId } : undefined
       let response: unknown
       if (mode.value === 'preview') {
-        response = await api.preview(name, payload)
+        response = await api.preview(name, payload, undefined, traceHeaders)
       } else if (mode.value === 'run') {
         const idempotencyKey = globalThis.crypto.randomUUID()
         response = await api.run(name, payload, undefined, {
           'Idempotency-Key': idempotencyKey,
         })
       } else {
-        response = await api.explain(name, payload)
+        response = await api.explain(name, payload, undefined, traceHeaders)
       }
 
       output.value = normalizeResponse(response)
@@ -71,6 +87,13 @@ export function useRunner() {
         mode: mode.value,
         error: extractApiError(err).message,
       })
+    } finally {
+      // The final response carries the full inline logs — after this point
+      // they replace the live stream (also the SSE-unavailable fallback).
+      if (traceId) {
+        logStream.close()
+        liveLogs.value = []
+      }
     }
   }
 
@@ -246,6 +269,8 @@ export function useRunner() {
     output,
     baselineOutput,
     showConfirmModal,
+    liveLogs,
+    logStreamStatus: logStream.status,
     selectDefinition,
     setMode,
     submit,
