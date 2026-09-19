@@ -13,10 +13,6 @@ public class Constants {
 
   public static final String EMPTY_MARKDOWN = "<!-- NONE -->";
 
-  // TODO: instead add some app.yml setting
-  @Deprecated(forRemoval = true)
-  public static final int DEFAULT_BUDGET_CHARS = 4_000;
-
   public static final String EXPLAIN_BUDGET_CHARS_KEY = "explain.budgetChars";
 
   public static final String HIERARCHY_GRAPH_ACCUMULATOR_KEY = "hierarchy.graphAccumulator";

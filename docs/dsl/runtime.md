@@ -108,7 +108,7 @@ is a simple 3-field record: `name`, markdown `description` (budget-bounded), and
 `GlobalManager` no longer carries a flat explain entry point; the starter runs explain through
 the pipe/stage pathway (`ExplainDslPipe` → `ExplainReportStage` / `ExplainBudgetStage`), which
 dispatches to the entity's `explainLogic` and assembles a full `ExplainGraphReport`. The budget
-(default `Constants.DEFAULT_BUDGET_CHARS` = 4000) is
+(default `CbsNovaExplainProperties.budgetChars` = 4000) is
 carried by the context metadata under `Constants.EXPLAIN_BUDGET_CHARS_KEY` and bounds the textual
 payload (description + diagram); implementations truncate rather than exceed it (read it via
 `cbs.nova.dsl.explain.ExplainBudget.of(ctx)`). The descriptor-based fallback report is composed by

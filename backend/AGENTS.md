@@ -130,7 +130,7 @@ Prefer `codegraph_*` over grep.
   `DslConfig.dslConfig().expressionEvaluator().replace(...)`; user-defined bean wins. See `docs/architecture-backend.md`.
 - **Explain support**: `ExplainSupport<IN, OUT>` (dsl-api) produces `ExplainReport` (name, markdown, mermaid)
   via single-arg `explain(ctx)`; the budget is carried by context metadata under
-  `Constants.EXPLAIN_BUDGET_CHARS_KEY` (default `Constants.DEFAULT_BUDGET_CHARS` = 4000), read via
+  `Constants.EXPLAIN_BUDGET_CHARS_KEY` (default `CbsNovaExplainProperties.budgetChars` = 4000), read via
   `cbs.nova.dsl.explain.ExplainBudget.of(ctx)`. DslObject explain logic is a ready, typed
   `Function<XContext<?>, Result<ExplainReport>>` (builder `.explain(...)`); with no explicit explain,
   `Executable.default explain()` composes a descriptor-based markdown report (never executeLogic).

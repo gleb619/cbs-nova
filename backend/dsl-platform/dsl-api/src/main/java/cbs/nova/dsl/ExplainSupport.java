@@ -10,9 +10,9 @@ import org.jspecify.annotations.NonNull;
  * <p>
  * The textual budget (description plus any diagram) is carried by the context metadata under
  * {@value cbs.nova.dsl.config.Constants#EXPLAIN_BUDGET_CHARS_KEY}; implementations must truncate
- * rather than exceed it, falling back to
- * {@value cbs.nova.dsl.config.Constants#DEFAULT_BUDGET_CHARS} when the metadata is absent or
- * invalid.
+ * rather than exceed it, falling back to {@code 4000} (the default of
+ * {@code CbsNovaExplainProperties.budgetChars} in the starter module) when the metadata is absent
+ * or invalid.
  * </p>
  */
 @FunctionalInterface
