@@ -366,6 +366,12 @@ export default defineNuxtModule<ModuleOptions>({
           meta: { layout: 'cbs-admin', pad: true },
         },
         {
+          name: 'cbs-admin-promote',
+          path: `${prefix}/promote`,
+          file: resolve('./app/pages/promote.vue'),
+          meta: { layout: 'cbs-admin', pad: true },
+        },
+        {
           name: 'cbs-admin-dsl-workbench',
           path: `${prefix}/dsl-workbench`,
           file: resolve('./app/pages/dsl-workbench.vue'),

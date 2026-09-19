@@ -1,6 +1,7 @@
 package cbs.nova.starter.config.properties;
 
 import jakarta.validation.Valid;
+import java.util.Map;
 import lombok.Builder;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
@@ -37,7 +38,8 @@ public record DslProperties(
         @Valid @DefaultValue Git git,
         @Valid @DefaultValue FileBuffer fileBuffer,
         @Valid @DefaultValue Bundles bundles,
-        @Valid @DefaultValue Approval approval) {
+        @Valid @DefaultValue Approval approval,
+        @Valid @DefaultValue Promotion promotion) {
 
   public DslProperties {
     workbenchWorkspaceRoot = workbenchWorkspaceRoot == null
@@ -53,6 +55,7 @@ public record DslProperties(
     fileBuffer = fileBuffer == null ? new FileBuffer(1000, 3600L) : fileBuffer;
     bundles = bundles == null ? new Bundles(false) : bundles;
     approval = approval == null ? new Approval(false) : approval;
+    promotion = promotion == null ? new Promotion(Map.of()) : promotion;
   }
 
   /**
@@ -232,6 +235,31 @@ public record DslProperties(
 
     public Approval {
       required = required == null ? false : required;
+    }
+  }
+
+  /**
+   * Environment promotion (T569): named environment workbench directories that bundles can be
+   * promoted between. Each environment maps to a filesystem root holding the standard
+   * {@code .workbench/published} marker layout; relative {@code basePath} values resolve against
+   * {@code cbs.dsl.source-dir}. Empty by default — the promote endpoints report
+   * {@code ENV_NOT_FOUND} until at least one environment is configured.
+   */
+  @Builder
+  public record Promotion(
+          @Valid @DefaultValue Map<String, Environment> environments) {
+
+    public Promotion {
+      environments = environments == null ? Map.of() : Map.copyOf(environments);
+    }
+
+    @Builder
+    public record Environment(
+            @DefaultValue("") String basePath) {
+
+      public Environment {
+        basePath = basePath == null ? "" : basePath;
+      }
     }
   }
 

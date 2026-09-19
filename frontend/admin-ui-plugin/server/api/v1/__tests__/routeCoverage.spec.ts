@@ -224,6 +224,22 @@ const expectedProxies: readonly ExpectedProxy[] = [
     backendPath: '/api/dsl/hierarchy/{name}',
     bffPath: '/api/v1/dsl/hierarchy/{name}',
   },
+  // DslPromoteRouterConfiguration (T569 environment promotion)
+  {
+    method: 'GET',
+    backendPath: '/api/dsl/promote/environments',
+    bffPath: '/api/v1/dsl/promote/environments',
+  },
+  {
+    method: 'GET',
+    backendPath: '/api/dsl/promote/definitions',
+    bffPath: '/api/v1/dsl/promote/definitions',
+  },
+  {
+    method: 'POST',
+    backendPath: '/api/dsl/promote',
+    bffPath: '/api/v1/dsl/promote',
+  },
   // DslScheduleRouterConfiguration
   {
     method: 'GET',

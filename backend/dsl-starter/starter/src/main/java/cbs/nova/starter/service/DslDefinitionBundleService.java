@@ -48,12 +48,24 @@ public class DslDefinitionBundleService {
    * source code. The corresponding {@code .java} files must be deployed separately.
    */
   public DefinitionBundle export(Path dir, boolean includeDrafts) {
+    return exportSelected(dir, includeDrafts, null);
+  }
+
+  /**
+   * Like {@link #export(Path, boolean)} but restricted to the given definition names. A
+   * {@code null} or empty {@code names} list exports everything. The returned bundle carries a
+   * freshly computed digest over the selected (sorted) entries, so the digest always matches the
+   * exported content.
+   */
+  public DefinitionBundle exportSelected(Path dir, boolean includeDrafts, List<String> names) {
     Map<String, DefinitionBundleEntry> entries = new LinkedHashMap<>();
     readInto(entries, dir.resolve(WORKBENCH_PUBLISHED_DIR), "published");
     if (includeDrafts) {
       readInto(entries, dir.resolve(WORKBENCH_DRAFTS_DIR), "draft");
     }
     List<DefinitionBundleEntry> sorted = entries.values().stream()
+            .filter(e -> names == null || names.isEmpty()
+                    || names.contains(e.definition().name()))
             .sorted(Comparator.comparing(e -> e.definition().name()))
             .toList();
     String digest = computeDigest(sorted);
@@ -146,6 +158,63 @@ public class DslDefinitionBundleService {
   }
 
   /**
+   * Writes the bundle's published markers into the target environment's
+   * {@code .workbench/published} directory, overwriting existing markers with the same name.
+   * Per-entry failures are reported as {@code failed} results and do not abort the remaining
+   * entries; callers run {@link #verifyApplied} afterwards to prove the target state matches the
+   * bundle digest.
+   */
+  public List<ImportEntryResult> applyToTarget(Path targetDir, DefinitionBundle bundle) {
+    List<ImportEntryResult> results = new ArrayList<>();
+    Path publishedDir = targetDir.resolve(WORKBENCH_PUBLISHED_DIR);
+    for (DefinitionBundleEntry entry : bundle.definitions()) {
+      DraftRequest payload = entry == null ? null : entry.definition();
+      if (payload == null || payload.name() == null || payload.name().isBlank()) {
+        results.add(new ImportEntryResult("?", "skipped", "invalid entry: missing or blank name"));
+        continue;
+      }
+      try {
+        DraftRequest published = new DraftRequest(payload.name(), payload.type(), "Published",
+                payload.version(), payload.taskQueue(), payload.source(), payload.savedAt());
+        Files.createDirectories(publishedDir);
+        Path file = publishedDir.resolve(safeFileName(published.name()) + JSON_SUFFIX);
+        String json = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(published);
+        Files.writeString(file, json, StandardCharsets.UTF_8);
+        results.add(new ImportEntryResult(published.name(), "published", null));
+      } catch (Exception e) {
+        results.add(
+                new ImportEntryResult(payload.name(), "failed", String.valueOf(e.getMessage())));
+      }
+    }
+    return results;
+  }
+
+  /**
+   * Re-reads the promoted definitions from the target environment and verifies their digest matches
+   * the bundle. The comparison normalizes the {@code source} label to {@code published} on both
+   * sides so bundles that included drafts still verify. Throws {@link IllegalArgumentException}
+   * with code {@code BUNDLE_DIGEST_MISMATCH} when the target state does not reproduce the bundle
+   * content.
+   */
+  public void verifyApplied(Path targetDir, DefinitionBundle bundle) {
+    List<String> names = bundle.definitions().stream()
+            .filter(e -> e != null && e.definition() != null && e.definition().name() != null)
+            .map(e -> e.definition().name())
+            .toList();
+    DefinitionBundle reexported = exportSelected(targetDir, false, names);
+    List<DefinitionBundleEntry> expected = bundle.definitions().stream()
+            .map(e -> new DefinitionBundleEntry(e.definition(), "published"))
+            .toList();
+    String expectedDigest = computeDigest(expected);
+    String recomputed = computeDigest(reexported.definitions());
+    if (!expectedDigest.equals(recomputed)) {
+      throw new IllegalArgumentException("BUNDLE_DIGEST_MISMATCH: promoted definitions on target"
+              + " do not match bundle digest (expected " + expectedDigest
+              + ", recomputed " + recomputed + ")");
+    }
+  }
+
+  /**
    * Validates that a bundle can be imported by this engine version. Throws
    * {@link IllegalArgumentException} for any structural or format mismatch; these are mapped to
    * {@code 400 Bad Request} by the shared exception handler.
@@ -212,5 +281,6 @@ public class DslDefinitionBundleService {
     return name.replaceAll("[^A-Za-z0-9._-]", "_");
   }
 
-  // follow-up: HMAC signature over digest (cbs.dsl.bundles.signing-key)
+  // follow-up: HMAC signature over digest (cbs.dsl.bundles.signing-key) — flagged for T569;
+  // skipped deliberately: exceeds the ~30-line stretch budget, no signing-key infra exists yet.
 }

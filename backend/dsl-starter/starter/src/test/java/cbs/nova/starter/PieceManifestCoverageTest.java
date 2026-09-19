@@ -82,6 +82,9 @@ class PieceManifestCoverageTest {
           "POST /api/dsl/manifest/reload",
           // Definition import — synonym for definitions bundle, covered by dsl-reload runtime piece
           "POST /api/dsl/definitions/import",
+          // Environment promotion — control-plane bundle move between workbench directories,
+          // recorded in dsl_audit (PROMOTION); T625 manifest piece pending
+          "POST /api/dsl/promote",
           // Definition test suite replace — workbench-internal mutation; T622 will add the manifest
           // piece
           "PUT /api/dsl/definitions/{name}/tests",

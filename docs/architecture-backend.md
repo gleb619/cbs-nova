@@ -79,6 +79,32 @@ Temporal server (`temporal:7233`) and Temporal UI (`localhost:8233`).
 
 See [Working with DSL examples](dsl/examples.md) for the build/run flow.
 
+### Environment promotion (T569)
+
+`POST /api/dsl/promote` (with `?dryRun=true` for preview) moves a bundle of published definition
+markers from one configured environment workbench directory to another over the shared
+filesystem. Environments are named directory roots:
+
+```yaml
+cbs:
+  dsl:
+    promotion:
+      environments:
+        dev:
+          base-path: /srv/dsl/dev      # relative paths resolve against cbs.dsl.source-dir
+        staging:
+          base-path: /srv/dsl/staging
+```
+
+The flow reuses the T398 bundle machinery (`DslDefinitionBundleService.exportSelected`,
+`verifyDigest`, `diffForImport`): preview classifies each definition as
+created/updated/unchanged/skipped against the target; apply snapshots target history, writes the
+published markers, then re-exports the target and fails with `BUNDLE_DIGEST_MISMATCH` unless the
+digests match. Applying requires `Role.OPERATOR` (RBAC) and records a `PROMOTION` row in
+`dsl_audit` with actor, source, target and definition names. The admin UI exposes the workflow on
+the **Promote** page (`/promote`). Cross-host promotion over HTTP and rollback are follow-ups;
+HMAC bundle signing is flagged for `cbs.dsl.bundles.signing-key`.
+
 ## Runtime layers
 
 Generated code talks to one facade — `GlobalManager.getInstance()` — which delegates to three layers:

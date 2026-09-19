@@ -15,6 +15,10 @@ import {
   type NotificationRulePage,
   type NotificationTestPayload,
   type NotificationTestResult,
+  type PromotionDefinition,
+  type PromotionEnvironment,
+  type PromotionRequest,
+  type PromoteResult,
   unwrapList,
   type WebhookDeliveryPage,
   type WebhookDeliveryQuery,
@@ -501,6 +505,33 @@ export function useDslApi() {
     return bffResumeSchedule(definition, { body: reason ? { reason } : undefined })
   }
 
+  async function fetchPromotionEnvironments(): Promise<PromotionEnvironment[]> {
+    log.info('fetchPromotionEnvironments request')
+    // Not covered by docs/openapi.json yet — hand-written like the
+    // webhook deliveries call above.
+    return (await $fetch('/api/v1/dsl/promote/environments')) as PromotionEnvironment[]
+  }
+
+  async function fetchPromotionDefinitions(env: string): Promise<PromotionDefinition[]> {
+    log.info('fetchPromotionDefinitions request', { env })
+    return (await $fetch('/api/v1/dsl/promote/definitions', {
+      query: { env },
+    })) as PromotionDefinition[]
+  }
+
+  async function promoteDefinitions(
+    payload: PromotionRequest,
+    dryRun: boolean,
+  ): Promise<PromoteResult> {
+    log.info('promoteDefinitions request', { ...payload, dryRun })
+    const query = dryRun ? { dryRun: 'true' } : undefined
+    return (await $fetch('/api/v1/dsl/promote', {
+      method: 'POST',
+      body: payload,
+      query,
+    })) as PromoteResult
+  }
+
   return {
     getDefinitions,
     listHelpers,
@@ -547,6 +578,9 @@ export function useDslApi() {
     deleteSchedule,
     pauseSchedule,
     resumeSchedule,
+    fetchPromotionEnvironments,
+    fetchPromotionDefinitions,
+    promoteDefinitions,
     getProcessDiagram,
   }
 }

@@ -70,6 +70,7 @@ class RbacAuthorizationFilterTest {
       "POST,   /api/dsl/files/by-name/foo",
       "POST,   /api/dsl/files/bulk",
       "POST,   /api/dsl/definitions/import",
+      "POST,   /api/dsl/promote",
       "POST,   /api/dsl/schedules",
       "DELETE, /api/dsl/schedules/foo",
       "POST,   /api/dsl/auth/keys",
@@ -109,6 +110,10 @@ class RbacAuthorizationFilterTest {
       "DELETE, /api/dsl/drafts/foo,  RUNNER,   false",
       "POST, /api/dsl/definitions/import, AUTHOR, true",
       "POST, /api/dsl/definitions/import, RUNNER, false",
+      // OPERATOR promotion routes (T569) — AUTHOR denied
+      "POST, /api/dsl/promote, OPERATOR, true",
+      "POST, /api/dsl/promote, AUTHOR,   false",
+      "POST, /api/dsl/promote, RUNNER,   false",
       // OPERATOR routes — AUTHOR denied
       "POST,   /api/dsl/schedules,    OPERATOR, true",
       "POST,   /api/dsl/schedules,    AUTHOR,   false",

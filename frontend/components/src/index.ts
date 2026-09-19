@@ -31,6 +31,7 @@ export { default as DslNotificationRuleList } from './components/dsl/Notificatio
 export { default as DslPlainConstructList } from './components/dsl/PlainConstructList.vue'
 export { default as DslPlainConstructListSkeleton } from './components/dsl/PlainConstructListSkeleton.vue'
 export { default as DslProblemsPanel } from './components/dsl/ProblemsPanel.vue'
+export { default as DslPromotionDiffTable } from './components/dsl/PromotionDiffTable.vue'
 export { default as DslReferencePicker } from './components/dsl/ReferencePicker.vue'
 export { default as DslSavedDraftsList } from './components/dsl/SavedDraftsList.vue'
 export { default as DslSavedDraftsWidget } from './components/dsl/SavedDraftsWidget.vue'
