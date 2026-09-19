@@ -64,6 +64,10 @@ Present on `call_start` / `call_end` events:
 | `finished_at` | ISO-8601 \| null | Event or call finish time; `null` until finished. |
 | `duration_ms` | integer \| null | Elapsed milliseconds; `null` until finished. |
 
+## Implementation note
+
+This format is implemented by T555 (VHS recorder).
+
 ## Versioning policy
 
 - `vhs_tape_format_version` is bumped only for **breaking** structural changes: removing the header line, renaming a required field, changing the line-oriented format, or removing an existing event field.

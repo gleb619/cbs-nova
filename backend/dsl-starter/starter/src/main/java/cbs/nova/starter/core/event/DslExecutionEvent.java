@@ -10,7 +10,7 @@ public sealed interface DslExecutionEvent
         DslExecutionEvent.DslExternalCallEvent {
 
   record DslExternalCallEvent(
-          @NonNull String runId,
+          @Nullable String runId,
           @NonNull String type,
           @NonNull String target,
           @NonNull String operation,
@@ -23,7 +23,8 @@ public sealed interface DslExecutionEvent
           @NonNull String runId,
           @NonNull String name,
           @NonNull ExecutionMode mode,
-          @Nullable Result<?> result)
+          @Nullable Result<?> result,
+          @Nullable String correlationId)
           implements
             DslExecutionEvent {
   }
@@ -31,7 +32,8 @@ public sealed interface DslExecutionEvent
   record DslRunStartedEvent(
           @NonNull String runId,
           @NonNull String name,
-          @NonNull ExecutionMode mode)
+          @NonNull ExecutionMode mode,
+          @Nullable String correlationId)
           implements
             DslExecutionEvent {
   }

@@ -1,25 +1,25 @@
 package cbs.nova.starter.config;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+import cbs.nova.starter.config.properties.CbsHealthProperties;
+import cbs.nova.starter.config.properties.CbsNovaCacheProperties;
 import cbs.nova.starter.config.properties.CbsNovaFakesProperties;
 import cbs.nova.starter.config.properties.CbsNovaPreviewProperties;
 import cbs.nova.starter.config.router.DslRouterConfiguration;
 import cbs.nova.starter.security.ProductionSecurityPostureValidator;
 import cbs.nova.starter.security.SecurityPostureReporter;
 import cbs.nova.starter.webhook.WebhookConfiguration;
-
-import static org.assertj.core.api.Assertions.assertThat;
-
-import org.junit.jupiter.api.Test;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.context.annotation.Import;
-import org.springframework.core.annotation.AnnotationUtils;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Set;
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.Import;
+import org.springframework.core.annotation.AnnotationUtils;
 
 /**
  * Verifies the starter's auto-configuration split: the root auto-configuration aggregates the bulk
@@ -53,7 +53,8 @@ class DslRootAutoConfigurationTest {
                       "cbs.nova.starter.config.router.DslDiagnosticsRouterConfiguration",
                       "cbs.nova.starter.config.router.DslScheduleRouterConfiguration",
                       "cbs.nova.starter.config.router.DslManifestRouterConfiguration",
-                      ManifestObjectGuardConfiguration.class.getName());
+                      ManifestObjectGuardConfiguration.class.getName(),
+                      VhsRecorderConfiguration.class.getName());
     }
   }
 
@@ -77,23 +78,24 @@ class DslRootAutoConfigurationTest {
             PreviewMetricsConfiguration.class,
             DslRouterConfiguration.class,
             WebhookConfiguration.class,
+            DslRunRetentionConfiguration.class,
+            DslRunReconciliationConfiguration.class,
+            DslMaintenanceConfiguration.class,
             DslErrorHandlingConfiguration.class,
             SpringHelperConfiguration.class,
             ApiKeyAuthFilterConfiguration.class,
             RateLimitFilterConfiguration.class,
             RbacFilterConfiguration.class,
-            DslRunRetentionConfiguration.class,
-            DslRunReconciliationConfiguration.class,
-            DslMaintenanceConfiguration.class,
-            DslRunRepositoryConfiguration.class,
             SecurityConfiguration.class,
             ApiKeyAuthMisconfigurationWarning.class,
             ProductionSecurityPostureValidator.class,
             SecurityPostureReporter.class,
+            ExplainBudgetStageWarmupConfiguration.class,
             SentryStatusReporter.class,
             DslHealthIndicatorConfiguration.class,
-            ExplainBudgetStageWarmupConfiguration.class,
-            BuilderClientConfiguration.class);
+            BuilderClientConfiguration.class,
+            DslRunRepositoryConfiguration.class,
+            VhsRecorderConfiguration.class);
   }
 
   @Test

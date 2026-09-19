@@ -1,11 +1,12 @@
 package cbs.nova.starter.core.stage;
 
-import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
+import cbs.nova.dsl.model.SimpleContext;
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.core.event.DslExecutionEvent;
 import cbs.nova.starter.core.event.DslExecutionEvent.DslRunCompletedEvent;
 import cbs.nova.starter.core.event.DslExecutionEvent.DslRunStartedEvent;
@@ -15,6 +16,7 @@ import cbs.nova.starter.core.pipe.DslPipeContext;
 import cbs.nova.starter.core.pipe.DslPipeStage;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 class DslExecutionEventStageTest {
@@ -104,5 +106,25 @@ class DslExecutionEventStageTest {
     Result<?> stageResult = throwingStage.execute(pipeContext, next);
 
     assertThat(stageResult).isSameAs(success);
+  }
+
+  @Test
+  void correlationIdFromContextMetadataIsPropagatedToEvents() {
+    SimpleContext ctx = SimpleContext.builder("body")
+            .mode(ExecutionMode.RUN)
+            .runId("run-corr")
+            .metadata(Map.of(StarterConstants.CORRELATION_ID_METADATA_KEY, "corr-123"))
+            .build();
+    DslPipeContext context = DslPipeContext.of("Ping", ctx, ExecutionMode.RUN, "run-corr");
+
+    stage.execute(context, c -> Result.success("ok"));
+
+    assertThat(captured).hasSize(2);
+    assertThat(captured.get(0))
+            .isInstanceOfSatisfying(DslRunStartedEvent.class,
+                    started -> assertThat(started.correlationId()).isEqualTo("corr-123"));
+    assertThat(captured.get(1))
+            .isInstanceOfSatisfying(DslRunCompletedEvent.class,
+                    completed -> assertThat(completed.correlationId()).isEqualTo("corr-123"));
   }
 }

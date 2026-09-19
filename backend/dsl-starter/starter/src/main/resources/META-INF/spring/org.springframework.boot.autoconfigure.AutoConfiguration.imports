@@ -7,3 +7,4 @@ cbs.nova.starter.config.router.DslDiagnosticsRouterConfiguration
 cbs.nova.starter.config.router.DslScheduleRouterConfiguration
 cbs.nova.starter.config.router.DslManifestRouterConfiguration
 cbs.nova.starter.config.ManifestObjectGuardConfiguration
+cbs.nova.starter.config.VhsRecorderConfiguration
