@@ -7,6 +7,7 @@ import cbs.nova.starter.config.properties.CbsNovaCacheProperties;
 import cbs.nova.starter.config.properties.CbsNovaFakesProperties;
 import cbs.nova.starter.config.properties.CbsNovaPreviewProperties;
 import cbs.nova.starter.config.router.DslRouterConfiguration;
+import cbs.nova.starter.notification.NotificationConfiguration;
 import cbs.nova.starter.security.ProductionSecurityPostureValidator;
 import cbs.nova.starter.security.SecurityPostureReporter;
 import cbs.nova.starter.webhook.WebhookConfiguration;
@@ -54,7 +55,8 @@ class DslRootAutoConfigurationTest {
                       "cbs.nova.starter.config.router.DslScheduleRouterConfiguration",
                       "cbs.nova.starter.config.router.DslManifestRouterConfiguration",
                       ManifestObjectGuardConfiguration.class.getName(),
-                      VhsConfiguration.class.getName());
+                      VhsConfiguration.class.getName(),
+                      "cbs.nova.starter.config.router.NotificationRouterConfiguration");
     }
   }
 
@@ -95,7 +97,8 @@ class DslRootAutoConfigurationTest {
             DslHealthIndicatorConfiguration.class,
             BuilderClientConfiguration.class,
             DslRunRepositoryConfiguration.class,
-            VhsConfiguration.class);
+            VhsConfiguration.class,
+            NotificationConfiguration.class);
   }
 
   @Test

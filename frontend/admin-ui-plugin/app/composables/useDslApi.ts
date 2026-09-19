@@ -1,11 +1,19 @@
 import { useClientLogger } from '@cbs/admin-ui-plugin/composables/useClientLogger'
 import type { DefinitionHistoryEntry, HistoryDiffResponse } from '../components/DslHistoryPanel.vue'
 import {
+  type CreateNotificationRulePayload,
   type DefinitionTestCase,
   type DefinitionTestRunReport,
   type DiagnosticsPage,
   type DomainEventPage,
   type DomainEventQuery,
+  type NotificationChannel,
+  type NotificationFireLogPage,
+  type NotificationFireLogQuery,
+  type NotificationRule,
+  type NotificationRulePage,
+  type NotificationTestPayload,
+  type NotificationTestResult,
   unwrapList,
   type WebhookDeliveryPage,
   type WebhookDeliveryQuery,
@@ -270,6 +278,101 @@ export function useDslApi() {
     }
   }
 
+  async function fetchNotificationRules(params?: {
+    offset?: number
+    limit?: number
+  }): Promise<NotificationRulePage> {
+    log.info('fetchNotificationRules request', { ...params })
+    const query: Record<string, string> = {}
+    if (params?.offset !== undefined) query.offset = String(params.offset)
+    if (params?.limit !== undefined) query.limit = String(params.limit)
+    try {
+      // Not covered by docs/openapi.json yet — hand-written like the
+      // webhook deliveries call above.
+      return (await $fetch('/api/v1/dsl/notifications/rules', { query })) as NotificationRulePage
+    } catch (err) {
+      const message = extractApiError(err).message
+      log.error('failed to load notification rules', { error: message })
+      throw new Error(message)
+    }
+  }
+
+  async function createNotificationRule(
+    payload: CreateNotificationRulePayload,
+  ): Promise<NotificationRule> {
+    log.info('createNotificationRule request', { name: payload.name })
+    return (await $fetch('/api/v1/dsl/notifications/rules', {
+      method: 'POST',
+      body: payload,
+    })) as NotificationRule
+  }
+
+  async function fetchNotificationRule(id: number | string): Promise<NotificationRule> {
+    log.info('fetchNotificationRule request', { id })
+    return (await $fetch(`/api/v1/dsl/notifications/rules/${id}`)) as NotificationRule
+  }
+
+  async function updateNotificationRule(
+    id: number | string,
+    payload: CreateNotificationRulePayload,
+  ): Promise<NotificationRule> {
+    log.info('updateNotificationRule request', { id })
+    return (await $fetch(`/api/v1/dsl/notifications/rules/${id}`, {
+      method: 'PUT',
+      body: payload,
+    })) as NotificationRule
+  }
+
+  async function deleteNotificationRule(id: number | string): Promise<unknown> {
+    log.info('deleteNotificationRule request', { id })
+    return await $fetch(`/api/v1/dsl/notifications/rules/${id}`, { method: 'DELETE' })
+  }
+
+  async function setNotificationRuleEnabled(
+    id: number | string,
+    enabled: boolean,
+  ): Promise<NotificationRule> {
+    log.info('setNotificationRuleEnabled request', { id, enabled })
+    return (await $fetch(`/api/v1/dsl/notifications/rules/${id}/enabled`, {
+      method: 'POST',
+      body: { enabled },
+    })) as NotificationRule
+  }
+
+  async function fetchNotificationChannels(): Promise<NotificationChannel[]> {
+    log.info('fetchNotificationChannels request')
+    const result = await $fetch('/api/v1/dsl/notifications/channels')
+    return unwrapList<NotificationChannel>(result)
+  }
+
+  async function fetchNotificationFireLog(
+    params: NotificationFireLogQuery,
+  ): Promise<NotificationFireLogPage> {
+    log.info('fetchNotificationFireLog request', { ...params })
+    const query: Record<string, string> = {
+      limit: String(params.limit),
+      offset: String(params.offset),
+    }
+    if (params.ruleId?.trim()) query.ruleId = params.ruleId.trim()
+    try {
+      return (await $fetch('/api/v1/dsl/notifications/fire-log', { query })) as NotificationFireLogPage
+    } catch (err) {
+      const message = extractApiError(err).message
+      log.error('failed to load notification fire log', { error: message })
+      throw new Error(message)
+    }
+  }
+
+  async function testNotificationRules(
+    payload: NotificationTestPayload,
+  ): Promise<NotificationTestResult> {
+    log.info('testNotificationRules request', { eventType: payload.eventType })
+    return (await $fetch('/api/v1/dsl/notifications/test', {
+      method: 'POST',
+      body: payload,
+    })) as NotificationTestResult
+  }
+
   async function fetchDefinitionTests(name: string): Promise<DefinitionTestCase[]> {
     log.info('fetchDefinitionTests request', { name })
     try {
@@ -382,6 +485,15 @@ export function useDslApi() {
     runDefinitionTests,
     fetchDiagnostics,
     fetchWebhookDeliveries,
+    fetchNotificationRules,
+    createNotificationRule,
+    fetchNotificationRule,
+    updateNotificationRule,
+    deleteNotificationRule,
+    setNotificationRuleEnabled,
+    fetchNotificationChannels,
+    fetchNotificationFireLog,
+    testNotificationRules,
     validateConstruct,
     reload,
     listSchedules,

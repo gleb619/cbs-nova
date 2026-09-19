@@ -78,6 +78,33 @@ public class WebhookDispatcher {
     return Collections.unmodifiableMap(outcomes);
   }
 
+  /**
+   * Rule-based delivery path (T565): delivers {@code payload} to an explicit {@code url} with an
+   * optional HMAC {@code secret} and the given {@code X-Cbs-Event} header value, WITHOUT touching
+   * the static {@code cbs.nova.dsl.webhooks.subscriptions} list. Shares the transport with the
+   * static path (signing, https enforcement, bounded retries) but never writes into
+   * {@code dsl_webhook_deliveries} — callers audit the returned result themselves.
+   */
+  public WebhookDeliveryResult dispatchTo(String url, @Nullable String secret, String eventType,
+          Object payload) {
+    Instant deliveryStarted = Instant.now();
+    byte[] body;
+    try {
+      body = objectMapper.writeValueAsBytes(payload);
+    } catch (Exception ex) {
+      log.warn("Failed to serialize notification payload for {}", url, ex);
+      return new WebhookDeliveryResult("serialization_failed", 0, ex.getMessage(), 0L);
+    }
+
+    if (!isUrlAllowed(url)) {
+      log.warn("Rejecting notification delivery to non-https URL: {}", url);
+      return new WebhookDeliveryResult("rejected", 0,
+              "Non-https URL not allowed: " + truncate(url), 0L);
+    }
+
+    return sendWithRetries(url, secret, eventType, body, deliveryStarted);
+  }
+
   private boolean matches(WebhookSubscription subscription, String processName, String status) {
     if (!matchesPattern(processName, subscription.definitionPattern())) {
       return false;
@@ -117,26 +144,36 @@ public class WebhookDispatcher {
       return;
     }
 
+    WebhookDeliveryResult result = sendWithRetries(url, subscription.secret(),
+            StarterConstants.WEBHOOK_EVENT_RUN_COMPLETED, body, deliveryStarted);
+    recordOutcome(subscription, result.status(), result.attempts(), result.error(),
+            result.durationMs());
+  }
+
+  /**
+   * Shared retry loop used by both the static subscription path and the rule-based
+   * {@link #dispatchTo} path. {@code eventType} becomes the {@code X-Cbs-Event} header.
+   */
+  private WebhookDeliveryResult sendWithRetries(String url, @Nullable String secret,
+          String eventType, byte[] body, Instant deliveryStarted) {
     int maxAttempts = Math.max(1, properties.getMaxRetries());
     int lastStatus = -1;
     @Nullable
     String lastError = null;
 
     for (int attempt = 1; attempt <= maxAttempts; attempt++) {
-      HttpRequest request = buildRequest(subscription, body);
+      HttpRequest request = buildRequest(url, secret, eventType, body);
       try {
         HttpResponse<Void> response = httpClient.send(request,
                 HttpResponse.BodyHandlers.discarding());
         lastStatus = response.statusCode();
         if (isSuccess(lastStatus)) {
-          recordOutcome(subscription, String.valueOf(lastStatus), attempt, null,
+          return new WebhookDeliveryResult(String.valueOf(lastStatus), attempt, null,
                   durationMs(deliveryStarted));
-          return;
         }
         if (isTerminalClientError(lastStatus)) {
-          recordOutcome(subscription, String.valueOf(lastStatus), attempt, null,
+          return new WebhookDeliveryResult(String.valueOf(lastStatus), attempt, null,
                   durationMs(deliveryStarted));
-          return;
         }
         if (attempt < maxAttempts) {
           sleep(backoffForAttempt(attempt));
@@ -148,13 +185,12 @@ public class WebhookDispatcher {
         }
       } catch (InterruptedException ex) {
         Thread.currentThread().interrupt();
-        recordOutcome(subscription, "interrupted", attempt, ex.getMessage(),
+        return new WebhookDeliveryResult("interrupted", attempt, ex.getMessage(),
                 durationMs(deliveryStarted));
-        return;
       }
     }
 
-    recordOutcome(subscription,
+    return new WebhookDeliveryResult(
             lastStatus >= 0 ? String.valueOf(lastStatus) : "failed",
             maxAttempts,
             lastError,
@@ -174,18 +210,16 @@ public class WebhookDispatcher {
     }
   }
 
-  private HttpRequest buildRequest(WebhookSubscription subscription, byte[] body) {
-    String url = subscription.url();
+  private HttpRequest buildRequest(String url, @Nullable String secret, String eventType,
+          byte[] body) {
     HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create(url))
             .header("Content-Type", "application/json")
             .header(StarterConstants.WEBHOOK_TIMESTAMP_HEADER,
                     String.valueOf(Instant.now().getEpochSecond()))
-            .header(StarterConstants.WEBHOOK_EVENT_HEADER,
-                    StarterConstants.WEBHOOK_EVENT_RUN_COMPLETED)
+            .header(StarterConstants.WEBHOOK_EVENT_HEADER, eventType)
             .timeout(properties.getTimeout())
             .POST(HttpRequest.BodyPublishers.ofByteArray(body));
 
-    String secret = subscription.secret();
     if (secret != null && !secret.isBlank()) {
       String signature = computeSignature(secret, body);
       if (signature != null) {

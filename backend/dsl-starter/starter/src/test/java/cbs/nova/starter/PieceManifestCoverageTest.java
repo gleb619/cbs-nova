@@ -102,7 +102,15 @@ class PieceManifestCoverageTest {
           "POST /api/dsl/auth/keys",
           "DELETE /api/dsl/auth/keys/{id}",
           // VHS load-test — operational tool, not a production data path; T560
-          "POST /api/v1/vhs/loadtest");
+          "POST /api/v1/vhs/loadtest",
+          // Notification rule CRUD — control-plane rule config; T565 follow-up manifest piece
+          // pending
+          "POST /api/dsl/notifications/rules",
+          "PUT /api/dsl/notifications/rules/{id}",
+          "DELETE /api/dsl/notifications/rules/{id}",
+          "POST /api/dsl/notifications/rules/{id}/enabled",
+          // Notification rule synthetic test run — read-only match check, nothing persisted
+          "POST /api/dsl/notifications/test");
 
   private static final Pattern ROUTE_INVOCATION = Pattern.compile(
           "\\.(?:POST|PUT|DELETE)\\(\\s*\"([^\"]+)\"");

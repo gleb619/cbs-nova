@@ -1,5 +1,6 @@
 package cbs.nova.starter.service;
 
+import java.util.stream.Stream;
 import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.ObjectProvider;
 
@@ -35,5 +36,15 @@ public final class EmptyObjectProvider<T> implements ObjectProvider<T> {
   @Override
   public @Nullable T getIfUnique() {
     return null;
+  }
+
+  @Override
+  public Stream<T> stream() {
+    return Stream.empty();
+  }
+
+  @Override
+  public Stream<T> orderedStream() {
+    return Stream.empty();
   }
 }

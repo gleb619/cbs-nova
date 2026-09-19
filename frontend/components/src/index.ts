@@ -27,6 +27,7 @@ export { default as DslHelperSearchPanel } from './components/dsl/HelperSearchPa
 export { default as DslInputMappingGrid } from './components/dsl/InputMappingGrid.vue'
 export { default as DslMetadataPanel } from './components/dsl/MetadataPanel.vue'
 export type { EditorMarker } from './components/dsl/MonacoEditor.vue'
+export { default as DslNotificationRuleList } from './components/dsl/NotificationRuleList.vue'
 export { default as DslPlainConstructList } from './components/dsl/PlainConstructList.vue'
 export { default as DslPlainConstructListSkeleton } from './components/dsl/PlainConstructListSkeleton.vue'
 export { default as DslProblemsPanel } from './components/dsl/ProblemsPanel.vue'

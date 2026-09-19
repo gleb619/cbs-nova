@@ -14,6 +14,8 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.SqlParameterValue;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
 
 @RequiredArgsConstructor
 public class DslEventRepository {
@@ -32,7 +34,8 @@ public class DslEventRepository {
 
   private final NamedParameterJdbcTemplate jdbcTemplate;
 
-  public void insert(DslEventEntity row) {
+  /** Inserts one event row and returns the generated {@code dsl_events.id}. */
+  public long insert(DslEventEntity row) {
     Objects.requireNonNull(row, "row");
     var params = new MapSqlParameterSource()
             .addValue("eventType", row.eventType())
@@ -42,13 +45,19 @@ public class DslEventRepository {
             .addValue("payload", new SqlParameterValue(Types.OTHER, row.payloadJson()))
             .addValue("schemaVersion", row.schemaVersion())
             .addValue("createdAt", Timestamp.from(row.createdAt()));
+    KeyHolder keyHolder = new GeneratedKeyHolder();
     jdbcTemplate.update("""
             INSERT INTO dsl_events
                     (event_type, aggregate_type, aggregate_id, correlation_id,
                      payload, schema_version, created_at)
             VALUES (:eventType, :aggregateType, :aggregateId, :correlationId,
                     :payload, :schemaVersion, :createdAt)
-            """, params);
+            """, params, keyHolder, new String[]{"id"});
+    Number key = keyHolder.getKey();
+    if (key == null) {
+      throw new IllegalStateException("Insert into dsl_events returned no generated key");
+    }
+    return key.longValue();
   }
 
   public DslEventSearchResult search(

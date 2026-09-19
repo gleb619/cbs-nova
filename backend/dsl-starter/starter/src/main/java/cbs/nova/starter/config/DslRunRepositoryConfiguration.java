@@ -3,6 +3,7 @@ package cbs.nova.starter.config;
 import cbs.nova.dsl.history.DslRunRepository;
 import cbs.nova.dsl.history.TransactionExecutionRepository;
 import cbs.nova.starter.config.properties.DslRunPersistenceProperties;
+import cbs.nova.starter.events.DomainEventListener;
 import cbs.nova.starter.converter.DslAuditMapper;
 import cbs.nova.starter.converter.DslRunMapper;
 import cbs.nova.starter.converter.TransactionExecutionMapper;
@@ -159,8 +160,8 @@ public class DslRunRepositoryConfiguration {
   @Bean
   @ConditionalOnBean(DslEventRepository.class)
   public DomainEventPublisher domainEventPublisher(DslEventRepository repository,
-          ObjectMapper objectMapper) {
-    return new DomainEventPublisher(repository, objectMapper);
+          ObjectMapper objectMapper, ObjectProvider<DomainEventListener> listeners) {
+    return new DomainEventPublisher(repository, objectMapper, listeners);
   }
 
   // --- T410: rotatable API keys -------------------------------------------------

@@ -7,6 +7,7 @@ import cbs.nova.starter.security.ProductionSecurityPostureValidator;
 import cbs.nova.starter.security.SecurityPostureReporter;
 import cbs.nova.starter.webhook.WebhookConfiguration;
 import cbs.nova.starter.config.properties.DslProperties;
+import cbs.nova.starter.notification.NotificationConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration;
@@ -48,6 +49,7 @@ import org.springframework.context.annotation.Import;
     DslHealthIndicatorConfiguration.class,
     BuilderClientConfiguration.class,
     VhsConfiguration.class,
+    NotificationConfiguration.class,
 })
 @EnableConfigurationProperties({DslProperties.class, CbsNovaCacheProperties.class,
     CbsHealthProperties.class})

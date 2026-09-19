@@ -8,3 +8,4 @@ cbs.nova.starter.config.router.DslScheduleRouterConfiguration
 cbs.nova.starter.config.router.DslManifestRouterConfiguration
 cbs.nova.starter.config.ManifestObjectGuardConfiguration
 cbs.nova.starter.config.VhsConfiguration
+cbs.nova.starter.config.router.NotificationRouterConfiguration

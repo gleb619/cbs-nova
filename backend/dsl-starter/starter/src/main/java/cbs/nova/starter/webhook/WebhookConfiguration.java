@@ -3,7 +3,7 @@ package cbs.nova.starter.webhook;
 import java.net.http.HttpClient;
 import java.util.Optional;
 import java.util.concurrent.ThreadPoolExecutor;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -12,13 +12,12 @@ import tools.jackson.databind.ObjectMapper;
 
 @Configuration
 @EnableConfigurationProperties(WebhookProperties.class)
-@ConditionalOnProperty(prefix = "cbs.webhook", name = "enabled", havingValue = "true")
 public class WebhookConfiguration {
 
   @Bean
   WebhookDispatcher webhookDispatcher(WebhookProperties properties, ObjectMapper objectMapper,
           ThreadPoolTaskExecutor cbsNovaWebhookDeliveryExecutor,
-          HttpClient webhookHttpClient,
+          @Qualifier("webhookHttpClient") HttpClient webhookHttpClient,
           Optional<WebhookDeliveryRecordRepository> deliveryRecordRepository) {
     return new WebhookDispatcher(properties, objectMapper, cbsNovaWebhookDeliveryExecutor,
             webhookHttpClient, deliveryRecordRepository);

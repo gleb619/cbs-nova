@@ -243,6 +243,52 @@ const expectedProxies: readonly ExpectedProxy[] = [
     backendPath: '/api/dsl/webhooks/deliveries',
     bffPath: '/api/v1/dsl/webhooks/deliveries',
   },
+  // NotificationRuleRouterConfiguration (T565)
+  {
+    method: 'GET',
+    backendPath: '/api/dsl/notifications/rules',
+    bffPath: '/api/v1/dsl/notifications/rules',
+  },
+  {
+    method: 'POST',
+    backendPath: '/api/dsl/notifications/rules',
+    bffPath: '/api/v1/dsl/notifications/rules',
+  },
+  {
+    method: 'GET',
+    backendPath: '/api/dsl/notifications/rules/{id}',
+    bffPath: '/api/v1/dsl/notifications/rules/{id}',
+  },
+  {
+    method: 'PUT',
+    backendPath: '/api/dsl/notifications/rules/{id}',
+    bffPath: '/api/v1/dsl/notifications/rules/{id}',
+  },
+  {
+    method: 'DELETE',
+    backendPath: '/api/dsl/notifications/rules/{id}',
+    bffPath: '/api/v1/dsl/notifications/rules/{id}',
+  },
+  {
+    method: 'POST',
+    backendPath: '/api/dsl/notifications/rules/{id}/enabled',
+    bffPath: '/api/v1/dsl/notifications/rules/{id}/enabled',
+  },
+  {
+    method: 'GET',
+    backendPath: '/api/dsl/notifications/channels',
+    bffPath: '/api/v1/dsl/notifications/channels',
+  },
+  {
+    method: 'GET',
+    backendPath: '/api/dsl/notifications/fire-log',
+    bffPath: '/api/v1/dsl/notifications/fire-log',
+  },
+  {
+    method: 'POST',
+    backendPath: '/api/dsl/notifications/test',
+    bffPath: '/api/v1/dsl/notifications/test',
+  },
   // DslDiagnosticsRouterConfiguration
   {
     method: 'GET',

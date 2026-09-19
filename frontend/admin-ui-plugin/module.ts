@@ -354,6 +354,12 @@ export default defineNuxtModule<ModuleOptions>({
           meta: { layout: 'cbs-admin', pad: true },
         },
         {
+          name: 'cbs-admin-notifications',
+          path: `${prefix}/notifications`,
+          file: resolve('./app/pages/notifications.vue'),
+          meta: { layout: 'cbs-admin', pad: true },
+        },
+        {
           name: 'cbs-admin-dsl-workbench',
           path: `${prefix}/dsl-workbench`,
           file: resolve('./app/pages/dsl-workbench.vue'),
