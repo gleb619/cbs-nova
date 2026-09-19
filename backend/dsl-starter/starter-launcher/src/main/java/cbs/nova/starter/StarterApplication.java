@@ -36,7 +36,7 @@ public class StarterApplication {
   }
 
   private static int bufferCapacity() {
-    //TODO: add ENV support, move magic code to a `cbs.nova.starter.core.StarterConstants`
+    // TODO: add ENV support, move magic code to a `cbs.nova.starter.core.StarterConstants`
     return Integer.getInteger("cbs.startup.buffer.capacity", DEFAULT_STARTUP_BUFFER_CAPACITY);
   }
 }

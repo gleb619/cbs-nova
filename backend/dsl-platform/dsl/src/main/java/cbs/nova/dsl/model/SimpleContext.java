@@ -112,9 +112,8 @@ public final class SimpleContext<T> implements Context<T> {
 
   @Override
   public @NonNull BeanResolver beanResolver() {
-    // TODO: we always must work with a `DslConfig.dslConfig().beanResolver()` as a field, so
-    // beanResolver cant be null
-    @Deprecated
+    // GlobalManager.createContext() never sets beanResolver, so fall back to the DslConfig
+    // singleton registered by DslConfiguration.registerBeanResolver().
     BeanResolver resolver = beanResolver != null
             ? beanResolver
             : DslConfig.dslConfig().beanResolver().get();

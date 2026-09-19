@@ -27,8 +27,8 @@ public class RedisRateLimitStoreConfiguration {
         RedisConnectionFactory factory = redisConnectionFactoryProvider.getIfAvailable();
         if (factory == null) {
           throw new IllegalStateException(
-              "cbs.security.ratelimit.store=redis requires a RedisConnectionFactory; "
-              + "configure spring.data.redis.* or add spring-boot-starter-data-redis");
+                  "cbs.security.ratelimit.store=redis requires a RedisConnectionFactory; "
+                          + "configure spring.data.redis.* or add spring-boot-starter-data-redis");
         }
         return createRedisStore(factory, true);
       }
