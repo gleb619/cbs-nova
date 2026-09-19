@@ -26,6 +26,8 @@ import cbs.nova.dsl.model.CompileDiagnostic;
 import cbs.nova.starter.model.CompileDiagnosticSource;
 import cbs.nova.starter.model.PageResponse;
 import cbs.nova.dsl.model.ErrorResponse;
+import cbs.nova.starter.security.Role;
+import cbs.nova.starter.security.RoleResolver;
 import cbs.nova.starter.service.DslAuditService;
 import cbs.nova.starter.persistence.CompileDiagnosticRecordRepository;
 import cbs.nova.starter.events.DomainEvent;
@@ -75,6 +77,7 @@ public class DslDraftHandler {
   private final ObjectProvider<DslBuilderClient> builderClientProvider;
   private final ObjectProvider<CompileDiagnosticRecordRepository> compileDiagnosticRepositoryProvider;
   private final ObjectProvider<DomainEventPublisher> eventPublisherProvider;
+  private final ObjectProvider<RoleResolver> roleResolverProvider;
 
   public ServerResponse save(ServerRequest request) throws IOException {
     String name = request.pathVariable("name");
@@ -137,6 +140,30 @@ public class DslDraftHandler {
               new ErrorResponse("INVALID_REQUEST", "name is required", name, null, null, null, null,
                       null, null));
     }
+    var dir = ensureConfigured(name);
+    if (dir.isError()) {
+      audit(request, ACTION_DEFINITION_PUBLISH, name, StarterConstants.OUTCOME_FAILURE,
+              Map.of("error", "drafts directory not configured"));
+      return dir.response();
+    }
+    if (dslProperties.approval().required() && !resolveRole(request).satisfies(Role.OPERATOR)) {
+      audit(request, ACTION_DEFINITION_PUBLISH, name, StarterConstants.OUTCOME_FAILURE,
+              Map.of("error", "publish requires approval"));
+      return error(HttpStatus.FORBIDDEN,
+              new ErrorResponse(StarterConstants.FORBIDDEN_CODE, "publish requires approval",
+                      name, null, null, null, null, null, null));
+    }
+    return publishPayload(request, name, body);
+  }
+
+  /**
+   * The publish flow itself (write published marker / delegate to the builder, snapshot history,
+   * reload, audit, domain event) — shared by {@link #publish} and the T568 change-request approve
+   * path, which replays an approved snapshot instead of the request body. Performs NO approval-gate
+   * check: gating is the caller's responsibility.
+   */
+  public ServerResponse publishPayload(ServerRequest request, String name, DraftRequest body)
+          throws IOException {
     var dir = ensureConfigured(name);
     if (dir.isError()) {
       audit(request, ACTION_DEFINITION_PUBLISH, name, StarterConstants.OUTCOME_FAILURE,
@@ -629,6 +656,20 @@ public class DslDraftHandler {
 
   private DslBuilderClient builderClient() {
     return builderClientProvider == null ? null : builderClientProvider.getIfAvailable();
+  }
+
+  /**
+   * Caller role for the T568 approval gate: the same shared {@link RoleResolver} the RBAC filter
+   * uses (falling back to the default claim when no bean is available, e.g. in bare test contexts).
+   */
+  private Role resolveRole(ServerRequest request) {
+    RoleResolver resolver = roleResolverProvider == null
+            ? null
+            : roleResolverProvider.getIfAvailable();
+    if (resolver == null) {
+      resolver = new RoleResolver(StarterConstants.DEFAULT_CLAIM_NAME);
+    }
+    return resolver.resolve(request.servletRequest());
   }
 
   private static String bundleTarget(DefinitionBundle bundle) {

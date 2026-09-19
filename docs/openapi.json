@@ -52,6 +52,47 @@
         },
         "type": "object"
       },
+      "ChangeRequest": {
+        "properties": {
+          "approvedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "approvedBy": {
+            "type": "string"
+          },
+          "comment": {
+            "type": "string"
+          },
+          "definitionName": {
+            "type": "string"
+          },
+          "draftContent": {
+            "type": "string"
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "requestedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "requestedBy": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "PENDING",
+              "APPROVED",
+              "REJECTED",
+              "SUPERSEDED"
+            ],
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "CompileDiagnostic": {
         "properties": {
           "code": {
@@ -972,6 +1013,116 @@
         ]
       }
     },
+    "/api/dsl/change-requests": {
+      "get": {
+        "operationId": "listChangeRequests",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "definitionName"
+          },
+          {
+            "in": "query",
+            "name": "status"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ChangeRequest"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Change requests matching the filters"
+          }
+        },
+        "summary": "List DSL publish change requests, optionally filtered by definition name and status",
+        "tags": [
+          "DSL Admin"
+        ]
+      }
+    },
+    "/api/dsl/change-requests/{id}/approve": {
+      "post": {
+        "operationId": "approveChangeRequest",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeRequest"
+                }
+              }
+            },
+            "description": "Change request approved; publish triggered"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unknown change request id"
+          }
+        },
+        "summary": "Approve a pending change request, triggering the DSL publish",
+        "tags": [
+          "DSL Admin"
+        ]
+      }
+    },
+    "/api/dsl/change-requests/{id}/reject": {
+      "post": {
+        "operationId": "rejectChangeRequest",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeRequest"
+                }
+              }
+            },
+            "description": "Change request rejected"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unknown change request id"
+          }
+        },
+        "summary": "Reject a pending change request with a required comment",
+        "tags": [
+          "DSL Admin"
+        ]
+      }
+    },
     "/api/dsl/constructs/{name}": {
       "get": {
         "operationId": "getConstructBody",
@@ -1324,6 +1475,44 @@
           }
         },
         "summary": "Read a single Workbench draft payload",
+        "tags": [
+          "DSL Admin"
+        ]
+      }
+    },
+    "/api/dsl/drafts/{name}/change-request": {
+      "post": {
+        "operationId": "submitChangeRequest",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeRequest"
+                }
+              }
+            },
+            "description": "Change request created for the current draft"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No draft found for the given name"
+          }
+        },
+        "summary": "Submit the current draft of a definition for publish approval",
         "tags": [
           "DSL Admin"
         ]

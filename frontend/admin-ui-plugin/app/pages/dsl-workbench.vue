@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useClientLogger } from '@cbs/admin-ui-plugin/composables/useClientLogger'
+import { useApprovals } from '@cbs/admin-ui-plugin/composables/useApprovals'
 import { useDraftDirty } from '@cbs/admin-ui-plugin/composables/useDraftDirty'
 import { useDraftSave } from '@cbs/admin-ui-plugin/composables/useDraftSave'
 import { useDslApi } from '@cbs/admin-ui-plugin/composables/useDslApi'
@@ -46,6 +47,8 @@ import { buildHelperSnippet } from '../utils/helperSnippet'
 
 const workbench = useDslWorkbench()
 const route = useRoute()
+// T568 — change-request approvals for the selected draft (submit + pending badge).
+const { items: approvalItems, load: loadApprovals, submit: submitApproval } = useApprovals()
 // T551 — defense-in-depth button guard: the backend resolves the verdict server-side
 // (PieceGuardFilter stays the real gate); this only disables the Publish action when denied.
 const { allowed: guardAllowed } = useManifestGuard()
@@ -65,6 +68,13 @@ const {
 
 const displayConstructs = computed(() => state.value.constructs as DslConstruct[])
 const displayValidationErrors = computed(() => state.value.validationErrors as ValidationError[])
+
+// T568 — true when the selected construct has a PENDING change request.
+const selectedPendingApproval = computed(() => {
+  const name = state.value.selectedName
+  if (!name) return false
+  return approvalItems.value.some((r) => r.definitionName === name && r.status === 'PENDING')
+})
 
 const draftDirty = useDraftDirty()
 
@@ -376,7 +386,7 @@ async function confirmCreate() {
   closeNewPanel()
 }
 
-type ActionValue = 'refresh' | 'validate' | 'save' | 'publish'
+type ActionValue = 'refresh' | 'validate' | 'save' | 'publish' | 'submit-approval'
 type HelpersMenuValue = 'objects' | 'helpers' | 'history' | 'diagnostics' | 'tests'
 
 const helpersMenuItems = computed<DropdownMenuItem[]>(() => [
@@ -437,6 +447,12 @@ const actionItems = computed<DropdownMenuItem[]>(() => [
       !selectedConstruct.value || state.value.isSaving || !guardAllowed('workbench-publish'),
     variant: 'primary',
   },
+  {
+    label: 'Submit for approval',
+    value: 'submit-approval',
+    disabled:
+      !selectedConstruct.value || state.value.isSaving || !guardAllowed('workbench-approve'),
+  },
 ])
 
 function runAction(item: DropdownMenuItem) {
@@ -453,6 +469,16 @@ function runAction(item: DropdownMenuItem) {
       break
     case 'publish':
       publishConstruct().then(() => refreshDrafts())
+      break
+    case 'submit-approval':
+      submitApproval(state.value.selectedName ?? '')
+        .then(() => {
+          refreshDrafts()
+          loadApprovals()
+        })
+        .catch((err: unknown) => {
+          log.error('failed to submit for approval', { error: (err as Error).message })
+        })
       break
   }
 }
@@ -503,6 +529,7 @@ onMounted(async () => {
 
   await loadConstructs()
   syncSelectionEffects()
+  void loadApprovals()
 
   if (objectName) {
     safeSelectConstruct(String(objectName))
@@ -539,6 +566,13 @@ onBeforeUnmount(() => {
         <h1 class="text-lg font-semibold text-ink">DSL Workbench</h1>
         <span v-if="selectedConstruct" class="text-sm text-ink-muted">
           / {{ selectedConstruct.name }}
+        </span>
+        <span
+          v-if="selectedPendingApproval"
+          class="px-2 py-0.5 text-xs font-medium rounded-full border border-warning-300 bg-warning-100 text-warning-800"
+          data-testid="workbench-pending-approval"
+        >
+          Pending approval
         </span>
       </div>
       <div class="ml-auto flex items-center gap-3">

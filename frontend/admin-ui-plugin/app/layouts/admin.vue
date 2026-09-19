@@ -67,6 +67,12 @@ const navItems = computed(() => [
     isActive: route.path === '/notifications',
   },
   {
+    to: '/approvals',
+    label: 'Approvals',
+    icon: '✅',
+    isActive: route.path === '/approvals',
+  },
+  {
     to: '/executions',
     label: 'Executions',
     icon: '📋',

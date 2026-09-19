@@ -46,6 +46,13 @@ public class StarterConstants {
   public static final String ACTION_TESTS_RUN = "TESTS_RUN";
   public static final String ACTION_DEFINITION_RELOAD = "DEFINITION_RELOAD";
 
+  // Change-request approval gate (T568)
+
+  public static final String ACTION_CHANGE_REQUEST_CREATE = "CHANGE_REQUEST_CREATE";
+  public static final String ACTION_CHANGE_REQUEST_APPROVE = "CHANGE_REQUEST_APPROVE";
+  public static final String ACTION_CHANGE_REQUEST_REJECT = "CHANGE_REQUEST_REJECT";
+  public static final int CHANGE_REQUEST_COMMENT_MAX_LENGTH = 1024;
+
   public static final String ACTION_MANIFEST_RELOAD = "MANIFEST_RELOAD";
   public static final String ACTION_PIECE_GUARD_DENY = "PIECE_GUARD_DENY";
   public static final String ACTION_PIECE_POSTCHECK_FAILURE = "PIECE_POSTCHECK_FAILURE";

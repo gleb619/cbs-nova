@@ -62,6 +62,11 @@ public final class RbacAuthorizationFilter extends OncePerRequestFilter {
           new RouteRule(HttpMethod.POST, "/api/dsl/drafts/*/publish", Role.AUTHOR),
           new RouteRule(HttpMethod.POST, "/api/dsl/drafts/*/history/*/restore", Role.AUTHOR),
           new RouteRule(HttpMethod.DELETE, "/api/dsl/drafts/*", Role.AUTHOR),
+          // --- AUTHOR: change-request approval gate (T568) ---
+          new RouteRule(HttpMethod.POST, "/api/dsl/drafts/*/change-request", Role.AUTHOR),
+          new RouteRule(HttpMethod.GET, "/api/dsl/change-requests", Role.VIEWER),
+          new RouteRule(HttpMethod.POST, "/api/dsl/change-requests/*/approve", Role.AUTHOR),
+          new RouteRule(HttpMethod.POST, "/api/dsl/change-requests/*/reject", Role.AUTHOR),
           new RouteRule(HttpMethod.POST, "/api/dsl/files/**", Role.AUTHOR),
           new RouteRule(HttpMethod.POST, "/api/dsl/definitions/import", Role.AUTHOR),
           // --- OPERATOR: schedule CRUD ---

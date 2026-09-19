@@ -51,7 +51,11 @@ class PieceManifestServiceTest {
             .hasValueSatisfying(p -> assertThat(p.id()).isEqualTo("execution-cancel"));
 
     assertThat(service.byTarget(new Target.ButtonTarget("workbench-publish-btn")))
-            .hasSize(1).extracting(Piece::id).containsExactly("workbench-publish");
+            .extracting(Piece::id).contains("workbench-publish");
+    assertThat(service.find("workbench-approve")).isPresent().hasValueSatisfying(p -> {
+      assertThat(p.target()).isEqualTo(new Target.ButtonTarget("workbench-approve-btn"));
+      assertThat(p.failMode()).isEqualTo("deny");
+    });
     assertThat(service.byTarget(new Target.ObjectTarget("helper", "PreviewSandbox")))
             .hasSize(1).extracting(Piece::id).containsExactly("preview-sandbox-helper");
   }

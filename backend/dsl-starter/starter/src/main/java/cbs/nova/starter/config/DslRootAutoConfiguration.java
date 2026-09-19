@@ -3,6 +3,7 @@ package cbs.nova.starter.config;
 import cbs.nova.starter.config.properties.CbsHealthProperties;
 import cbs.nova.starter.config.properties.CbsNovaCacheProperties;
 import cbs.nova.starter.config.properties.MqEventProperties;
+import cbs.nova.starter.approval.ChangeRequestConfiguration;
 import cbs.nova.starter.config.router.DslRouterConfiguration;
 import cbs.nova.starter.security.ProductionSecurityPostureValidator;
 import cbs.nova.starter.security.SecurityPostureReporter;
@@ -53,6 +54,7 @@ import org.springframework.context.annotation.Import;
     VhsConfiguration.class,
     NotificationConfiguration.class,
     MqEventConfiguration.class,
+    ChangeRequestConfiguration.class,
 })
 @EnableConfigurationProperties({DslProperties.class, CbsNovaCacheProperties.class,
     CbsHealthProperties.class, MqEventProperties.class})

@@ -73,7 +73,11 @@ class RbacAuthorizationFilterTest {
       "POST,   /api/dsl/schedules",
       "DELETE, /api/dsl/schedules/foo",
       "POST,   /api/dsl/auth/keys",
-      "DELETE, /api/dsl/auth/keys/1"
+      "DELETE, /api/dsl/auth/keys/1",
+      // T568 change-request approval gate
+      "POST,   /api/dsl/drafts/foo/change-request",
+      "POST,   /api/dsl/change-requests/1/approve",
+      "POST,   /api/dsl/change-requests/1/reject"
   })
   void adminPassesEveryProtectedRoute(String method, String path) throws Exception {
     authenticateAs("admin", Role.ADMIN);
@@ -115,6 +119,15 @@ class RbacAuthorizationFilterTest {
       "POST,   /api/dsl/auth/keys,    AUTHOR,   false",
       "DELETE, /api/dsl/auth/keys/1,  OPERATOR, true",
       "DELETE, /api/dsl/auth/keys/1,  AUTHOR,   false",
+      // T568 change-request approval gate — AUTHOR routes, RUNNER denied, OPERATOR passes
+      "POST, /api/dsl/drafts/foo/change-request, AUTHOR,   true",
+      "POST, /api/dsl/drafts/foo/change-request, RUNNER,   false",
+      "GET,  /api/dsl/change-requests,           VIEWER,   true",
+      "POST, /api/dsl/change-requests/1/approve, AUTHOR,   true",
+      "POST, /api/dsl/change-requests/1/approve, OPERATOR, true",
+      "POST, /api/dsl/change-requests/1/approve, RUNNER,   false",
+      "POST, /api/dsl/change-requests/1/reject,  AUTHOR,   true",
+      "POST, /api/dsl/change-requests/1/reject,  RUNNER,   false",
   })
   void routeRoleMatrixIsEnforced(String method, String path, String roleName,
           String shouldPass) throws Exception {
@@ -158,7 +171,8 @@ class RbacAuthorizationFilterTest {
       "GET, /api/dsl/files/by-name/foo",
       "GET, /api/dsl/files/some/path.dsl",
       "GET, /api/webhooks/deliveries",
-      "GET, /api/dsl/webhooks/deliveries"
+      "GET, /api/dsl/webhooks/deliveries",
+      "GET, /api/dsl/change-requests"
   })
   void viewerPassesEveryGet(String method, String path) throws Exception {
     // No authentication at all → resolver returns VIEWER
@@ -253,6 +267,15 @@ class RbacAuthorizationFilterTest {
     assertThat(filter.requiredRole(req("POST", "/api/dsl/auth/keys"))).isEqualTo(Role.OPERATOR);
     assertThat(filter.requiredRole(req("DELETE", "/api/dsl/auth/keys/1")))
             .isEqualTo(Role.OPERATOR);
+    // T568 change-request approval gate
+    assertThat(filter.requiredRole(req("POST", "/api/dsl/drafts/foo/change-request")))
+            .isEqualTo(Role.AUTHOR);
+    assertThat(filter.requiredRole(req("GET", "/api/dsl/change-requests")))
+            .isEqualTo(Role.VIEWER);
+    assertThat(filter.requiredRole(req("POST", "/api/dsl/change-requests/1/approve")))
+            .isEqualTo(Role.AUTHOR);
+    assertThat(filter.requiredRole(req("POST", "/api/dsl/change-requests/1/reject")))
+            .isEqualTo(Role.AUTHOR);
     // reads
     assertThat(filter.requiredRole(req("GET", "/api/dsl/processes"))).isEqualTo(Role.VIEWER);
     assertThat(filter.requiredRole(req("GET", "/api/executions"))).isEqualTo(Role.VIEWER);

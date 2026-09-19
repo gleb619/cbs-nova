@@ -2,6 +2,7 @@ import { useClientLogger } from '@cbs/admin-ui-plugin/composables/useClientLogge
 import type { DefinitionHistoryEntry, HistoryDiffResponse } from '../components/DslHistoryPanel.vue'
 import {
   type CreateNotificationRulePayload,
+  type ChangeRequest,
   type DefinitionTestCase,
   type DefinitionTestRunReport,
   type DiagnosticsPage,
@@ -20,6 +21,7 @@ import {
 } from '@cbs/components'
 import { $fetch } from 'ofetch'
 import {
+  approveChangeRequest as bffApproveChangeRequest,
   createSchedule as bffCreateSchedule,
   deleteDraft as bffDeleteDraft,
   deleteSchedule as bffDeleteSchedule,
@@ -29,6 +31,7 @@ import {
   importDefinitions as bffImportDefinitions,
   getProcessDiagram as bffGetProcessDiagram,
   listCompileDiagnostics as bffListCompileDiagnostics,
+  listChangeRequests as bffListChangeRequests,
   listDefinitionTests as bffListDefinitionTests,
   listDefinitions as bffListDefinitions,
   listDomainEvents as bffListDomainEvents,
@@ -42,6 +45,7 @@ import {
   readDraft as bffReadDraft,
   readDslFileByName as bffReadDslFileByName,
   readPublishHistoryEntry as bffReadPublishHistoryEntry,
+  rejectChangeRequest as bffRejectChangeRequest,
   reload as bffReload,
   replaceDefinitionTests as bffReplaceDefinitionTests,
   restorePublishHistory as bffRestorePublishHistory,
@@ -50,6 +54,7 @@ import {
   runDsl as bffRunDsl,
   saveDraft as bffSaveDraft,
   searchObjects as bffSearchObjects,
+  submitChangeRequest as bffSubmitChangeRequest,
   writeDslFileByName as bffWriteDslFileByName,
   type BffRequestInit,
 } from './generated/useBffApi'
@@ -355,7 +360,9 @@ export function useDslApi() {
     }
     if (params.ruleId?.trim()) query.ruleId = params.ruleId.trim()
     try {
-      return (await $fetch('/api/v1/dsl/notifications/fire-log', { query })) as NotificationFireLogPage
+      return (await $fetch('/api/v1/dsl/notifications/fire-log', {
+        query,
+      })) as NotificationFireLogPage
     } catch (err) {
       const message = extractApiError(err).message
       log.error('failed to load notification fire log', { error: message })
@@ -371,6 +378,41 @@ export function useDslApi() {
       method: 'POST',
       body: payload,
     })) as NotificationTestResult
+  }
+
+  async function fetchChangeRequests(params?: {
+    definitionName?: string
+    status?: string
+  }): Promise<ChangeRequest[]> {
+    log.info('fetchChangeRequests request', { ...params })
+    const query: Record<string, string> = {}
+    if (params?.definitionName?.trim()) query.definitionName = params.definitionName.trim()
+    if (params?.status?.trim()) query.status = params.status.trim()
+    try {
+      const result = await bffListChangeRequests({ query })
+      return unwrapList<ChangeRequest>(result)
+    } catch (err) {
+      const message = extractApiError(err).message
+      log.error('failed to load change requests', { error: message })
+      throw new Error(message)
+    }
+  }
+
+  async function submitChangeRequest(name: string): Promise<ChangeRequest> {
+    log.info('submitChangeRequest request', { name })
+    return (await bffSubmitChangeRequest(name)) as ChangeRequest
+  }
+
+  async function approveChangeRequest(id: number, comment?: string): Promise<ChangeRequest> {
+    log.info('approveChangeRequest request', { id })
+    return (await bffApproveChangeRequest(String(id), {
+      body: comment ? { comment } : {},
+    })) as ChangeRequest
+  }
+
+  async function rejectChangeRequest(id: number, comment: string): Promise<ChangeRequest> {
+    log.info('rejectChangeRequest request', { id })
+    return (await bffRejectChangeRequest(String(id), { body: { comment } })) as ChangeRequest
   }
 
   async function fetchDefinitionTests(name: string): Promise<DefinitionTestCase[]> {
@@ -494,6 +536,10 @@ export function useDslApi() {
     fetchNotificationChannels,
     fetchNotificationFireLog,
     testNotificationRules,
+    fetchChangeRequests,
+    submitChangeRequest,
+    approveChangeRequest,
+    rejectChangeRequest,
     validateConstruct,
     reload,
     listSchedules,

@@ -60,6 +60,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/dsl/change-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List DSL publish change requests, optionally filtered by definition name and status */
+        get: operations["listChangeRequests"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/dsl/change-requests/{id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve a pending change request, triggering the DSL publish */
+        post: operations["approveChangeRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/dsl/change-requests/{id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reject a pending change request with a required comment */
+        post: operations["rejectChangeRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/dsl/constructs/{name}": {
         parameters: {
             query?: never;
@@ -210,6 +261,23 @@ export interface paths {
         post?: never;
         /** Delete a Workbench draft construct */
         delete: operations["deleteDraft"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/dsl/drafts/{name}/change-request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit the current draft of a definition for publish approval */
+        post: operations["submitChangeRequest"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -870,6 +938,21 @@ export interface components {
             output?: unknown;
             success?: boolean;
         };
+        ChangeRequest: {
+            /** Format: date-time */
+            approvedAt?: string;
+            approvedBy?: string;
+            comment?: string;
+            definitionName?: string;
+            draftContent?: string;
+            /** Format: int64 */
+            id?: number;
+            /** Format: date-time */
+            requestedAt?: string;
+            requestedBy?: string;
+            /** @enum {string} */
+            status?: "PENDING" | "APPROVED" | "REJECTED" | "SUPERSEDED";
+        };
         CompileDiagnostic: {
             code?: string;
             /** Format: int64 */
@@ -1279,6 +1362,91 @@ export interface operations {
             };
         };
     };
+    listChangeRequests: {
+        parameters: {
+            query?: {
+                definitionName?: string;
+                status?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Change requests matching the filters */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChangeRequest"][];
+                };
+            };
+        };
+    };
+    approveChangeRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Change request approved; publish triggered */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChangeRequest"];
+                };
+            };
+            /** @description Unknown change request id */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    rejectChangeRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Change request rejected */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChangeRequest"];
+                };
+            };
+            /** @description Unknown change request id */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     getConstructBody: {
         parameters: {
             query?: never;
@@ -1580,6 +1748,37 @@ export interface operations {
             };
             /** @description Source directory not configured or not found */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    submitChangeRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Change request created for the current draft */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChangeRequest"];
+                };
+            };
+            /** @description No draft found for the given name */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

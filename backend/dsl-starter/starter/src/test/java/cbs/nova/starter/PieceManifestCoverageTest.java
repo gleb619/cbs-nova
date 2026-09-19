@@ -110,7 +110,12 @@ class PieceManifestCoverageTest {
           "DELETE /api/dsl/notifications/rules/{id}",
           "POST /api/dsl/notifications/rules/{id}/enabled",
           // Notification rule synthetic test run — read-only match check, nothing persisted
-          "POST /api/dsl/notifications/test");
+          "POST /api/dsl/notifications/test",
+          // Change-request submit/approve/reject — the T568 approval gate itself; the approve
+          // path delegates to workbench-publish, manifest piece T626 pending
+          "POST /api/dsl/drafts/{name}/change-request",
+          "POST /api/dsl/change-requests/{id}/approve",
+          "POST /api/dsl/change-requests/{id}/reject");
 
   private static final Pattern ROUTE_INVOCATION = Pattern.compile(
           "\\.(?:POST|PUT|DELETE)\\(\\s*\"([^\"]+)\"");

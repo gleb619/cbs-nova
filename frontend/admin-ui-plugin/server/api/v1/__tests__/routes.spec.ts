@@ -55,49 +55,80 @@ const previewHandler = (await import('../generated/routes/dsl/preview/[name].pos
 const explainHandler = (await import('../generated/routes/dsl/explain/[name].post')).default
 const executionsIndexHandler = (await import('../executions/index.get')).default
 const executionsStatsHandler = (await import('../generated/routes/executions/stats.get')).default
-const executionsTimeseriesHandler = (await import('../generated/routes/executions/stats/timeseries.get')).default
+const executionsTimeseriesHandler = (
+  await import('../generated/routes/executions/stats/timeseries.get')
+).default
 const executionsIdHandler = (await import('../generated/routes/executions/[id].get')).default
-const executionsTransactionsHandler = (await import('../generated/routes/executions/[id]/transactions.get')).default
-const executionsCancelHandler = (await import('../generated/routes/executions/[id]/cancel.post')).default
+const executionsTransactionsHandler = (
+  await import('../generated/routes/executions/[id]/transactions.get')
+).default
+const executionsCancelHandler = (await import('../generated/routes/executions/[id]/cancel.post'))
+  .default
 const executionsExportHandler = (await import('../executions/export.get')).default
 const infoHandler = (await import('../info.get')).default
 const saveDraftHandler = (await import('../generated/routes/dsl/drafts/[name]/save.post')).default
-const publishDraftHandler = (await import('../generated/routes/dsl/drafts/[name]/publish.post')).default
+const publishDraftHandler = (await import('../generated/routes/dsl/drafts/[name]/publish.post'))
+  .default
+const submitChangeRequestHandler = (
+  await import('../generated/routes/dsl/drafts/[name]/change-request.post')
+).default
+const listChangeRequestsHandler = (await import('../dsl/change-requests/index.get')).default
+const approveChangeRequestHandler = (
+  await import('../generated/routes/dsl/change-requests/[id]/approve.post')
+).default
+const rejectChangeRequestHandler = (
+  await import('../generated/routes/dsl/change-requests/[id]/reject.post')
+).default
 const deleteDraftHandler = (await import('../dsl/drafts/[name]/delete.delete')).default
-const listHistoryHandler = (await import('../generated/routes/dsl/drafts/[name]/history.get')).default
+const listHistoryHandler = (await import('../generated/routes/dsl/drafts/[name]/history.get'))
+  .default
 const restoreHistoryHandler = (
   await import('../generated/routes/dsl/drafts/[name]/history/[timestamp]/restore.post')
 ).default
-const historyEntryHandler = (await import('../generated/routes/dsl/drafts/[name]/history/[timestamp].get'))
-  .default
-const historyDiffHandler = (await import('../generated/routes/dsl/drafts/[name]/history/[timestamp]/diff.get'))
-  .default
+const historyEntryHandler = (
+  await import('../generated/routes/dsl/drafts/[name]/history/[timestamp].get')
+).default
+const historyDiffHandler = (
+  await import('../generated/routes/dsl/drafts/[name]/history/[timestamp]/diff.get')
+).default
 const helpersIndexHandler = (await import('../generated/routes/dsl/helpers.get')).default
 const processesIndexHandler = (await import('../generated/routes/dsl/processes.get')).default
 const processDetailHandler = (await import('../generated/routes/dsl/processes/[name].get')).default
 const transactionsIndexHandler = (await import('../generated/routes/dsl/transactions.get')).default
-const transactionDetailHandler = (await import('../generated/routes/dsl/transactions/[name].get')).default
+const transactionDetailHandler = (await import('../generated/routes/dsl/transactions/[name].get'))
+  .default
 const constructBodyHandler = (await import('../generated/routes/dsl/constructs/[name].get')).default
 const constructSchemaHandler = (await import('../dsl/schemas/[name].get')).default
 const processDiagramHandler = (await import('../dsl/processes/[name]/diagram.get')).default
 const schedulesIndexHandler = (await import('../generated/routes/dsl/schedules.get')).default
 const schedulesCreateHandler = (await import('../generated/routes/dsl/schedules.post')).default
-const schedulesDeleteHandler = (await import('../generated/routes/dsl/schedules/[definition].delete')).default
-const schedulesPauseHandler = (await import('../generated/routes/dsl/schedules/[definition]/pause.post')).default
-const schedulesResumeHandler = (await import('../generated/routes/dsl/schedules/[definition]/resume.post')).default
+const schedulesDeleteHandler = (
+  await import('../generated/routes/dsl/schedules/[definition].delete')
+).default
+const schedulesPauseHandler = (
+  await import('../generated/routes/dsl/schedules/[definition]/pause.post')
+).default
+const schedulesResumeHandler = (
+  await import('../generated/routes/dsl/schedules/[definition]/resume.post')
+).default
 const listApiKeysHandler = (await import('../generated/routes/dsl/auth/keys.get')).default
 const createApiKeyHandler = (await import('../dsl/auth/keys/index.post')).default
 const revokeApiKeyHandler = (await import('../generated/routes/dsl/auth/keys/[id].delete')).default
 const exportDefinitionsHandler = (await import('../dsl/definitions/export.get')).default
 const importDefinitionsHandler = (await import('../dsl/definitions/import.post')).default
-const listDefinitionTestsHandler = (await import('../generated/routes/dsl/definitions/[name]/tests.get'))
-  .default
-const replaceDefinitionTestsHandler = (await import('../generated/routes/dsl/definitions/[name]/tests.put'))
-  .default
+const listDefinitionTestsHandler = (
+  await import('../generated/routes/dsl/definitions/[name]/tests.get')
+).default
+const replaceDefinitionTestsHandler = (
+  await import('../generated/routes/dsl/definitions/[name]/tests.put')
+).default
 const runDefinitionTestsHandler = (await import('../dsl/definitions/[name]/tests/run.post')).default
 const listDslFilesHandler = (await import('../generated/routes/dsl/files.get')).default
-const readDslFileByNameHandler = (await import('../generated/routes/dsl/files/by-name/[name].get')).default
-const writeDslFileByNameHandler = (await import('../generated/routes/dsl/files/by-name/[name].post')).default
+const readDslFileByNameHandler = (await import('../generated/routes/dsl/files/by-name/[name].get'))
+  .default
+const writeDslFileByNameHandler = (
+  await import('../generated/routes/dsl/files/by-name/[name].post')
+).default
 const readDslFilePathHandler = (await import('../dsl/files/[...path].get')).default
 const writeDslFilePathHandler = (await import('../dsl/files/[...path].post')).default
 const bulkWriteDslFilesHandler = (await import('../generated/routes/dsl/files/bulk.post')).default
@@ -483,6 +514,79 @@ describe('dsl/drafts/[name]/publish.post', () => {
       method: 'POST',
       body: { name: 'DraftOne', type: 'Process', version: 'v2' },
     })
+  })
+})
+
+describe('dsl/drafts/[name]/change-request.post (T568)', () => {
+  it('interpolates the :name router param and POSTs without a body', async () => {
+    routerParams = { name: 'DraftOne' }
+
+    await submitChangeRequestHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(
+      fakeEvent,
+      '/api/dsl/drafts/DraftOne/change-request',
+      { method: 'POST' },
+    )
+  })
+})
+
+describe('dsl/change-requests/index.get (T568)', () => {
+  it('GETs /api/dsl/change-requests with no query by default', async () => {
+    await listChangeRequestsHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/change-requests')
+    expect(proxyToBackendMock.mock.calls[0][2]).toBeUndefined()
+  })
+
+  it('forwards the definitionName and status query params', async () => {
+    queryValue = { definitionName: 'LoanDsl', status: 'PENDING' }
+
+    await listChangeRequestsHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/change-requests', {
+      query: { definitionName: 'LoanDsl', status: 'PENDING' },
+    })
+  })
+})
+
+describe('dsl/change-requests/[id]/approve.post (T568)', () => {
+  it('interpolates the :id router param and forwards readBody() as body', async () => {
+    routerParams = { id: '42' }
+    bodyValue = { comment: 'looks good' }
+
+    await approveChangeRequestHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(
+      fakeEvent,
+      '/api/dsl/change-requests/42/approve',
+      {
+        method: 'POST',
+        body: { comment: 'looks good' },
+      },
+    )
+  })
+})
+
+describe('dsl/change-requests/[id]/reject.post (T568)', () => {
+  it('interpolates the :id router param and forwards readBody() as body', async () => {
+    routerParams = { id: '42' }
+    bodyValue = { comment: 'breaking change' }
+
+    await rejectChangeRequestHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(
+      fakeEvent,
+      '/api/dsl/change-requests/42/reject',
+      {
+        method: 'POST',
+        body: { comment: 'breaking change' },
+      },
+    )
   })
 })
 

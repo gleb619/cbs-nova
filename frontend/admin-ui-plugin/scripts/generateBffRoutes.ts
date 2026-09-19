@@ -121,6 +121,10 @@ const EXCLUDED_OPERATIONS: Record<string, { reason: string; handRoute: string }>
     reason: 'query-param allowlist (offset/limit/definition)',
     handRoute: 'dsl/diagnostics.get.ts',
   },
+  listChangeRequests: {
+    reason: 'query-param allowlist (definitionName/status)',
+    handRoute: 'dsl/change-requests/index.get.ts',
+  },
   listDomainEvents: {
     reason: 'query-param allowlist (offset/limit/type/aggregate*/correlationId/since)',
     handRoute: 'dsl/events.get.ts',
@@ -171,6 +175,8 @@ const BODY_OPERATIONS = new Set([
   'createSchedule',
   'pauseSchedule',
   'resumeSchedule',
+  'approveChangeRequest',
+  'rejectChangeRequest',
 ])
 
 /**
@@ -178,7 +184,10 @@ const BODY_OPERATIONS = new Set([
  * (kept so the generated call shape matches the behavior asserted by the
  * existing route unit tests).
  */
-const EXPLICIT_METHOD_GET_OPERATIONS = new Set(['readPublishHistoryEntry', 'diffPublishHistoryEntry'])
+const EXPLICIT_METHOD_GET_OPERATIONS = new Set([
+  'readPublishHistoryEntry',
+  'diffPublishHistoryEntry',
+])
 
 // ---------------------------------------------------------------------------
 // Path helpers
@@ -226,7 +235,9 @@ function buildOperations(specPath: string): Array<{ spec: BffRouteSpec; method: 
   }
   const doc = JSON.parse(readFileSync(specPath, 'utf8')) as OpenApiDoc
   if (!doc.paths || typeof doc.paths !== 'object') {
-    throw new Error(`[gen:bff-routes] ${specPath} has no "paths" object — not a valid OpenAPI document`)
+    throw new Error(
+      `[gen:bff-routes] ${specPath} has no "paths" object — not a valid OpenAPI document`,
+    )
   }
 
   const operations: Array<{ spec: BffRouteSpec; method: Method }> = []
@@ -262,7 +273,8 @@ function buildOperations(specPath: string): Array<{ spec: BffRouteSpec; method: 
 
 function emitStub(spec: BffRouteSpec): string {
   const hasBody = BODY_OPERATIONS.has(spec.operationId)
-  const explicitMethod = spec.method !== 'GET' || EXPLICIT_METHOD_GET_OPERATIONS.has(spec.operationId)
+  const explicitMethod =
+    spec.method !== 'GET' || EXPLICIT_METHOD_GET_OPERATIONS.has(spec.operationId)
   const literal = JSON.stringify({ ...spec, hasBody, explicitMethod }, null, 2)
   return (
     banner() +

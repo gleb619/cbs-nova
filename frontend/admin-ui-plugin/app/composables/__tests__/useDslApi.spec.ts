@@ -552,4 +552,85 @@ describe('useDslApi', () => {
     })
     expect(result).toEqual({ ok: true })
   })
+
+  it('fetchChangeRequests GETs /api/v1/dsl/change-requests without filters by default', async () => {
+    fetchMock.mockResolvedValueOnce([])
+    const api = useDslApi()
+
+    const result = await api.fetchChangeRequests()
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/change-requests', { query: {} })
+    expect(result).toEqual([])
+  })
+
+  it('fetchChangeRequests forwards trimmed definitionName and status filters', async () => {
+    fetchMock.mockResolvedValueOnce([])
+    const api = useDslApi()
+
+    await api.fetchChangeRequests({ definitionName: 'LoanDsl', status: 'PENDING' })
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/change-requests', {
+      query: { definitionName: 'LoanDsl', status: 'PENDING' },
+    })
+  })
+
+  it('fetchChangeRequests omits blank filters from the query', async () => {
+    fetchMock.mockResolvedValueOnce([])
+    const api = useDslApi()
+
+    await api.fetchChangeRequests({ definitionName: '  ', status: 'APPROVED' })
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/change-requests', {
+      query: { status: 'APPROVED' },
+    })
+  })
+
+  it('submitChangeRequest POSTs to /api/v1/dsl/drafts/{name}/change-request', async () => {
+    const created = { id: 1, definitionName: 'LoanDsl', status: 'PENDING' }
+    fetchMock.mockResolvedValueOnce(created)
+    const api = useDslApi()
+
+    const result = await api.submitChangeRequest('LoanDsl')
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/drafts/LoanDsl/change-request', {
+      method: 'POST',
+    })
+    expect(result).toEqual(created)
+  })
+
+  it('approveChangeRequest POSTs an empty body without a comment', async () => {
+    fetchMock.mockResolvedValueOnce({ id: 1, status: 'APPROVED' })
+    const api = useDslApi()
+
+    await api.approveChangeRequest(42)
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/change-requests/42/approve', {
+      method: 'POST',
+      body: {},
+    })
+  })
+
+  it('approveChangeRequest POSTs the comment when provided', async () => {
+    fetchMock.mockResolvedValueOnce({ id: 42, status: 'APPROVED' })
+    const api = useDslApi()
+
+    await api.approveChangeRequest(42, 'looks good')
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/change-requests/42/approve', {
+      method: 'POST',
+      body: { comment: 'looks good' },
+    })
+  })
+
+  it('rejectChangeRequest POSTs the required comment', async () => {
+    fetchMock.mockResolvedValueOnce({ id: 42, status: 'REJECTED' })
+    const api = useDslApi()
+
+    await api.rejectChangeRequest(42, 'breaking change')
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/change-requests/42/reject', {
+      method: 'POST',
+      body: { comment: 'breaking change' },
+    })
+  })
 })

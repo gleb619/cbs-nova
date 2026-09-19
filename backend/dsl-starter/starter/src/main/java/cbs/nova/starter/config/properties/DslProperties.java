@@ -36,7 +36,8 @@ public record DslProperties(
         @Valid @DefaultValue Files files,
         @Valid @DefaultValue Git git,
         @Valid @DefaultValue FileBuffer fileBuffer,
-        @Valid @DefaultValue Bundles bundles) {
+        @Valid @DefaultValue Bundles bundles,
+        @Valid @DefaultValue Approval approval) {
 
   public DslProperties {
     workbenchWorkspaceRoot = workbenchWorkspaceRoot == null
@@ -51,6 +52,7 @@ public record DslProperties(
     git = git == null ? new Git(true, null, 5) : git;
     fileBuffer = fileBuffer == null ? new FileBuffer(1000, 3600L) : fileBuffer;
     bundles = bundles == null ? new Bundles(false) : bundles;
+    approval = approval == null ? new Approval(false) : approval;
   }
 
   /**
@@ -211,6 +213,25 @@ public record DslProperties(
     public FileBuffer {
       maxEntries = maxEntries == null ? 1000 : maxEntries;
       expireAfterWriteSeconds = expireAfterWriteSeconds == null ? 3600L : expireAfterWriteSeconds;
+    }
+  }
+
+  /**
+   * Change-request approval gate (T568). When {@code cbs.dsl.approval.required=true}, direct
+   * publish via {@code POST /api/dsl/drafts/{name}/publish} is limited to OPERATOR-and-above
+   * callers; lower ranks must go through the change-request flow ({@code POST
+   * /api/dsl/drafts/{name}/change-request} → approve). OFF by default: existing deployments see
+   * zero behaviour change.
+   *
+   * @param required
+   *          whether the publish approval gate is enforced.
+   */
+  @Builder
+  public record Approval(
+          @DefaultValue("false") Boolean required) {
+
+    public Approval {
+      required = required == null ? false : required;
     }
   }
 

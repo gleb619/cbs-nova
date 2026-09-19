@@ -198,6 +198,27 @@ const expectedProxies: readonly ExpectedProxy[] = [
     backendPath: '/api/dsl/drafts/{name}',
     bffPath: '/api/v1/dsl/drafts/{name}',
   },
+  // ChangeRequestRouterConfiguration (T568)
+  {
+    method: 'POST',
+    backendPath: '/api/dsl/drafts/{name}/change-request',
+    bffPath: '/api/v1/dsl/drafts/{name}/change-request',
+  },
+  {
+    method: 'GET',
+    backendPath: '/api/dsl/change-requests',
+    bffPath: '/api/v1/dsl/change-requests',
+  },
+  {
+    method: 'POST',
+    backendPath: '/api/dsl/change-requests/{id}/approve',
+    bffPath: '/api/v1/dsl/change-requests/{id}/approve',
+  },
+  {
+    method: 'POST',
+    backendPath: '/api/dsl/change-requests/{id}/reject',
+    bffPath: '/api/v1/dsl/change-requests/{id}/reject',
+  },
   {
     method: 'POST',
     backendPath: '/api/dsl/hierarchy/{name}',
@@ -441,7 +462,11 @@ function discoverRoutes(dir: string): DiscoveredRoute[] {
       routes: Array<{ method: Method; bffPath: string; handler: string }>
     }
     for (const route of manifest.routes) {
-      out.push({ method: route.method, bffPath: route.bffPath, relFile: join('generated', route.handler) })
+      out.push({
+        method: route.method,
+        bffPath: route.bffPath,
+        relFile: join('generated', route.handler),
+      })
     }
   }
   return out

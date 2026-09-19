@@ -1,3 +1,4 @@
+export * from './approvals'
 export * from './buildInfo'
 export * from './dashboard'
 export * from './dsl'

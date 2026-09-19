@@ -2,6 +2,7 @@ package cbs.nova.starter.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import cbs.nova.starter.approval.ChangeRequestConfiguration;
 import cbs.nova.starter.config.properties.CbsHealthProperties;
 import cbs.nova.starter.config.properties.CbsNovaCacheProperties;
 import cbs.nova.starter.config.properties.CbsNovaFakesProperties;
@@ -57,7 +58,8 @@ class DslRootAutoConfigurationTest {
                       "cbs.nova.starter.config.router.DslManifestRouterConfiguration",
                       ManifestObjectGuardConfiguration.class.getName(),
                       VhsConfiguration.class.getName(),
-                      "cbs.nova.starter.config.router.NotificationRouterConfiguration");
+                      "cbs.nova.starter.config.router.NotificationRouterConfiguration",
+                      "cbs.nova.starter.config.router.ChangeRequestRouterConfiguration");
     }
   }
 
@@ -100,7 +102,8 @@ class DslRootAutoConfigurationTest {
             DslRunRepositoryConfiguration.class,
             VhsConfiguration.class,
             NotificationConfiguration.class,
-            MqEventConfiguration.class);
+            MqEventConfiguration.class,
+            ChangeRequestConfiguration.class);
   }
 
   @Test

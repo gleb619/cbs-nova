@@ -43,6 +43,15 @@ pieces:
         channel: workbench
     failMode: deny
 
+  - id: workbench-approve
+    target:
+      type: button
+      uiKey: workbench-approve-btn
+    preCheck:
+      - type: role
+        anyOf: [author, operator, admin]
+    failMode: deny
+
   - id: preview-sandbox-helper
     target:
       type: object

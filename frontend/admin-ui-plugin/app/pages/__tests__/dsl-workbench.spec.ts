@@ -63,7 +63,13 @@ interface WorkbenchApiShape {
   onClean: (handler: () => void) => () => void
 }
 
-const { dslApi, useDslApiMock, useDslWorkbenchMock } = vi.hoisted(() => {
+interface ApprovalsHarnessShape {
+  items: { value: unknown[] }
+  load: ReturnType<typeof vi.fn>
+  submit: ReturnType<typeof vi.fn>
+}
+
+const { dslApi, useDslApiMock, useDslWorkbenchMock, useApprovalsMock } = vi.hoisted(() => {
   const api = {
     getDefinitions: vi.fn(),
     preview: vi.fn(),
@@ -100,10 +106,19 @@ const { dslApi, useDslApiMock, useDslWorkbenchMock } = vi.hoisted(() => {
     }
     return harness
   })
+  const useApprovalsMockFn = vi.fn(() => {
+    const approvals = (globalThis as unknown as { __approvalsHarness?: ApprovalsHarnessShape })
+      .__approvalsHarness
+    if (!approvals) {
+      throw new Error('approvals harness not installed yet')
+    }
+    return approvals
+  })
   return {
     dslApi: api,
     useDslApiMock: vi.fn(() => api),
     useDslWorkbenchMock: useDslWorkbenchMockFn,
+    useApprovalsMock: useApprovalsMockFn,
   }
 })
 
@@ -194,8 +209,24 @@ const harness: WorkbenchApiShape = (() => {
 ;(globalThis as unknown as { __dslWorkbenchHarness?: WorkbenchApiShape }).__dslWorkbenchHarness =
   harness
 
+const approvalsHarness: ApprovalsHarnessShape = (() => {
+  const vue = require('vue') as typeof import('vue')
+  return {
+    items: vue.ref<unknown[]>([]),
+    load: vi.fn(async () => undefined),
+    submit: vi.fn(async () => undefined),
+  }
+})()
+
+;(globalThis as unknown as { __approvalsHarness?: ApprovalsHarnessShape }).__approvalsHarness =
+  approvalsHarness
+
 vi.mock('@cbs/admin-ui-plugin/composables/useDslApi', () => ({
   useDslApi: useDslApiMock,
+}))
+
+vi.mock('@cbs/admin-ui-plugin/composables/useApprovals', () => ({
+  useApprovals: useApprovalsMock,
 }))
 
 vi.mock('@cbs/admin-ui-plugin/composables/useDslWorkbench', () => ({
@@ -1212,6 +1243,84 @@ describe('dsl-workbench.vue definition tests panel', () => {
 
     expect(dslApi.fetchDefinitionTests).toHaveBeenCalledTimes(2)
     expect(dslApi.fetchDefinitionTests).toHaveBeenLastCalledWith('c2')
+
+    wrapper.unmount()
+  })
+})
+
+describe('dsl-workbench.vue submit for approval (T568)', () => {
+  beforeEach(() => {
+    harness.state.constructs = []
+    harness.state.selectedName = null
+    harness.state.validationErrors = []
+    harness.state.isDirty = false
+    harness.state.isSaving = false
+    harness.state.isLoading = false
+    harness.selectedConstruct.value = null
+    harness.loaders.constructs.value = false
+    useDslWorkbenchMock.mockClear()
+    dslApi.listDrafts.mockReset()
+    dslApi.listDrafts.mockResolvedValue([])
+    approvalsHarness.items.value = []
+    approvalsHarness.load.mockClear()
+    approvalsHarness.submit.mockReset()
+    approvalsHarness.submit.mockResolvedValue(undefined)
+  })
+
+  it('offers a Submit for approval action next to Publish', async () => {
+    const wrapper = mountPage()
+    await flushPromises()
+
+    // The Actions dropdown is the first DropdownMenu on the page.
+    const dropdown = wrapper.findComponent({ name: 'DropdownMenu' })
+    const items = dropdown.props('items') as Array<{ label: string; value: string }>
+    const submitItem = items.find((i) => i.value === 'submit-approval')
+    expect(submitItem?.label).toBe('Submit for approval')
+
+    wrapper.unmount()
+  })
+
+  it('submits the selected construct when the action runs and reloads approvals', async () => {
+    const wrapper = mountPage()
+    await flushPromises()
+
+    const dropdown = wrapper.findComponent({ name: 'DropdownMenu' })
+    await dropdown.vm.$emit('select', { value: 'submit-approval' })
+    await flushPromises()
+
+    expect(approvalsHarness.submit).toHaveBeenCalledTimes(1)
+    expect(approvalsHarness.submit).toHaveBeenCalledWith('c1')
+    // Approvals list refreshes after a successful submission.
+    expect(approvalsHarness.load).toHaveBeenCalled()
+
+    wrapper.unmount()
+  })
+
+  it('loads change requests on mount', async () => {
+    const wrapper = mountPage()
+    await flushPromises()
+
+    expect(approvalsHarness.load).toHaveBeenCalled()
+
+    wrapper.unmount()
+  })
+
+  it('shows the Pending approval badge only for a PENDING request on the selected construct', async () => {
+    approvalsHarness.items.value = [{ definitionName: 'c2', status: 'PENDING' }]
+
+    const wrapper = mountPage()
+    await flushPromises()
+
+    // Default selection is c1 — no pending request for it.
+    expect(wrapper.find('[data-testid="workbench-pending-approval"]').exists()).toBe(false)
+
+    approvalsHarness.items.value = [
+      { definitionName: 'c1', status: 'PENDING' },
+      { definitionName: 'c2', status: 'APPROVED' },
+    ]
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="workbench-pending-approval"]').exists()).toBe(true)
 
     wrapper.unmount()
   })
