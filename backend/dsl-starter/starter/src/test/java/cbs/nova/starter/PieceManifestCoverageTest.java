@@ -100,7 +100,9 @@ class PieceManifestCoverageTest {
           "POST /api/dsl/files/{*path}",
           // API key admin — separate admin path; T625 manifest piece pending
           "POST /api/dsl/auth/keys",
-          "DELETE /api/dsl/auth/keys/{id}");
+          "DELETE /api/dsl/auth/keys/{id}",
+          // VHS load-test — operational tool, not a production data path; T560
+          "POST /api/v1/vhs/loadtest");
 
   private static final Pattern ROUTE_INVOCATION = Pattern.compile(
           "\\.(?:POST|PUT|DELETE)\\(\\s*\"([^\"]+)\"");

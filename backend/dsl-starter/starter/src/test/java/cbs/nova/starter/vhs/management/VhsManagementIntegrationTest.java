@@ -62,7 +62,7 @@ class VhsManagementIntegrationTest {
     LocalFileTapeStore store = new LocalFileTapeStore(properties, objectMapper);
     ObjectProvider<VhsReplayJob> replayProvider = mock(ObjectProvider.class);
     VhsManagementService service = new VhsManagementService(store, replayProvider);
-    VhsManagementHandler handler = new VhsManagementHandler(service, objectMapper);
+    VhsManagementHandler handler = new VhsManagementHandler(service, null, objectMapper);
     VhsManagementRouterConfiguration router = new VhsManagementRouterConfiguration();
 
     AnnotationConfigApplicationContext adviceContext = new AnnotationConfigApplicationContext();

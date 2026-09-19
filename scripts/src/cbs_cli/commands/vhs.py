@@ -1,5 +1,6 @@
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -27,6 +28,8 @@ class VhsCommand:
             return self._delete(args)
         if action == "replay":
             return self._replay(args)
+        if action == "loadtest":
+            return self._loadtest(args)
         Printer.fail("unknown vhs subcommand")
         return 1
 
@@ -57,6 +60,14 @@ class VhsCommand:
         p.add_argument("--speed", type=float, default=1.0, help="Replay speed multiplier")
         p.add_argument("--concurrency", type=int, default=1, help="Load replay concurrency")
         p.add_argument("--copies", type=int, default=1, help="Load replay copies")
+
+        p = sub.add_parser("loadtest", help="Run a VHS load test against multiple tapes")
+        p.add_argument("--url", help="VHS API base URL (default: BFF_BASE_URL/BACKEND_BASE_URL)")
+        p.add_argument("--tapes", default="**/*.vhs.jsonl", help="Glob pattern for tape files")
+        p.add_argument("--target", default="dry-run", help="Replay target (dry-run|local)")
+        p.add_argument("--speed", type=float, default=1.0, help="Replay speed multiplier")
+        p.add_argument("--concurrency", type=int, default=4, help="Concurrency cap")
+        p.add_argument("--duration", type=int, default=0, help="Duration cap in seconds (0=no cap)")
 
     def _resolve_base_url(self, args: argparse.Namespace) -> str:
         raw = getattr(args, "url", None) or self._first_env(*self.BASE_ENV_VARS)
@@ -181,6 +192,101 @@ class VhsCommand:
             return 1
         print(result.stdout)
         return 0
+
+    def _loadtest(self, args: argparse.Namespace) -> int:
+        target = args.target
+        speed = args.speed
+        concurrency = args.concurrency
+        duration = args.duration
+        tapes = args.tapes
+
+        # Production guard: warn loudly
+        is_production = target not in ("dry-run", "dryrun", "local", "")
+        if is_production:
+            allow_config = os.environ.get("CBS_VHS_REPLAY_ALLOW_PRODUCTION", "")
+            allow_env = os.environ.get("CBS_VHS_REPLAY_ALLOW_PRODUCTION", "")
+            if not (allow_config and allow_env):
+                Printer.fail(
+                    f"Refusing load-test against production-like target '{target}'. "
+                    "Set BOTH cbs.vhs.replay.allow-production=true AND "
+                    "CBS_VHS_REPLAY_ALLOW_PRODUCTION=1"
+                )
+                return 1
+
+        Printer.header(
+            f"VHS load-test: target={target} speed={speed} concurrency={concurrency} "
+            f"duration={duration}s tapes={tapes}"
+        )
+
+        body = json.dumps({
+            "tapes": tapes,
+            "target": target,
+            "speed": speed,
+            "concurrency": concurrency,
+            "duration": duration * 1000 if duration else 0,
+        })
+        url = f"{self.base_url}/api/v1/vhs/loadtest"
+        result = Runner.run(
+            ["curl", "--silent", "--show-error", "--fail", "--max-time", "300", "-X", "POST",
+             "-H", "Content-Type: application/json", "-d", body, url],
+            capture=True,
+            check=False,
+        )
+        if result.returncode != 0:
+            Printer.fail("load-test request failed")
+            if result.stdout:
+                print(result.stdout)
+            return 1
+
+        try:
+            report = json.loads(result.stdout)
+        except json.JSONDecodeError:
+            print(result.stdout)
+            return 0
+
+        self._print_loadtest_report(report)
+        return 0
+
+    @staticmethod
+    def _print_loadtest_report(report: Dict[str, Any]) -> None:
+        target = report.get("target", "?")
+        tapes_loaded = report.get("tapesLoaded", 0)
+        total_calls = report.get("totalCalls", 0)
+        successful = report.get("successfulCalls", 0)
+        failed = report.get("failedCalls", 0)
+        wall_ms = report.get("wallClockMs", 0)
+
+        print(f"\n  target: {target}  tapes: {tapes_loaded}  "
+              f"calls: {total_calls}  success: {successful}  failed: {failed}  "
+              f"wall: {wall_ms}ms")
+
+        summaries = report.get("tapeSummaries", [])
+        if not summaries:
+            print("  No per-tape summaries.")
+            return
+
+        headers = ["tape", "calls", "succ", "fail", "p50", "p95", "p99", "err%", "total"]
+        rows = []
+        for s in summaries:
+            rows.append((
+                str(s.get("tapeName", "?"))[:40],
+                str(s.get("totalCalls", 0)),
+                str(s.get("successfulCalls", 0)),
+                str(s.get("failedCalls", 0)),
+                f"{s.get('p50Ms', 0)}ms",
+                f"{s.get('p95Ms', 0)}ms",
+                f"{s.get('p99Ms', 0)}ms",
+                f"{s.get('errorRatePct', 0):.1f}%",
+                str(s.get("totalCalls", 0)),
+            ))
+
+        widths = [max(len(headers[i]), max((len(r[i]) for r in rows), default=0)) for i in range(len(headers))]
+        print()
+        print("  " + "  ".join(headers[i].ljust(widths[i]) for i in range(len(headers))))
+        print("  " + "  ".join("-" * widths[i] for i in range(len(headers))))
+        for row in rows:
+            print("  " + "  ".join(row[i].ljust(widths[i]) for i in range(len(headers))))
+        print()
 
     def _resolve_run_id(self, identifier: str) -> Optional[str]:
         if "/" in identifier or identifier.endswith(".vhs.jsonl"):

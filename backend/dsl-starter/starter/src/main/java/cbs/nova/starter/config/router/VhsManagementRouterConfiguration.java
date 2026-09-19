@@ -2,11 +2,15 @@ package cbs.nova.starter.config.router;
 
 import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.starter.config.VhsConfiguration;
+import cbs.nova.starter.config.properties.CbsVhsReplayProperties;
 import cbs.nova.starter.controller.VhsManagementHandler;
+import cbs.nova.starter.core.listener.DslExecutionEventBus;
 import cbs.nova.starter.model.PageResponse;
+import cbs.nova.starter.vhs.loadtest.VhsLoadTest;
 import cbs.nova.starter.vhs.management.ReplayRunResponse;
 import cbs.nova.starter.vhs.management.TapeSummary;
 import cbs.nova.starter.vhs.management.VhsManagementService;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
@@ -16,6 +20,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import java.util.Map;
 import org.springdoc.core.annotations.RouterOperation;
 import org.springdoc.core.annotations.RouterOperations;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -41,8 +46,16 @@ public class VhsManagementRouterConfiguration {
 
   @Bean
   VhsManagementHandler vhsManagementHandler(VhsManagementService service,
-          ObjectMapper objectMapper) {
-    return new VhsManagementHandler(service, objectMapper);
+          ObjectProvider<VhsLoadTest> loadTestProvider, ObjectMapper objectMapper) {
+    return new VhsManagementHandler(service, loadTestProvider.getIfAvailable(), objectMapper);
+  }
+
+  @Bean
+  @ConditionalOnBean({cbs.nova.starter.vhs.management.VhsTapeStore.class,
+      cbs.nova.starter.vhs.replay.VhsReplayEngine.class})
+  VhsLoadTest vhsLoadTest(io.micrometer.core.instrument.MeterRegistry meterRegistry,
+          CbsVhsReplayProperties replayProperties) {
+    return new VhsLoadTest(meterRegistry, replayProperties);
   }
 
   @Bean
@@ -65,6 +78,12 @@ public class VhsManagementRouterConfiguration {
               @ApiResponse(responseCode = "202", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ReplayRunResponse.class))),
               @ApiResponse(responseCode = "404", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
               @ApiResponse(responseCode = "503", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+          })),
+      @RouterOperation(path = "/api/v1/vhs/loadtest", beanClass = VhsManagementHandler.class, beanMethod = "loadtest", method = RequestMethod.POST, operation = @Operation(operationId = "vhsLoadTest", summary = "Run a VHS load test against multiple tapes", tags = {
+          "VHS Tapes"}, responses = {
+              @ApiResponse(responseCode = "200", content = @Content(mediaType = "application/json")),
+              @ApiResponse(responseCode = "400", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+              @ApiResponse(responseCode = "503", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
           }))
   })
   public RouterFunction<ServerResponse> vhsManagementRouter(VhsManagementHandler handler) {
@@ -73,6 +92,7 @@ public class VhsManagementRouterConfiguration {
             .GET("/api/v1/vhs/tapes/{runId}", handler::download)
             .DELETE("/api/v1/vhs/tapes/{runId}", handler::delete)
             .POST("/api/v1/vhs/tapes/{runId}/replay", handler::replay)
+            .POST("/api/v1/vhs/loadtest", handler::loadtest)
             .build();
   }
 }

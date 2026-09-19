@@ -432,6 +432,14 @@ public class StarterConstants {
 
   public static final String OPERATION_BATCH = "BATCH";
 
+  // VHS load-test metric names + tag keys
+
+  public static final String VHS_REPLAY_DURATION_TIMER = "dsl.vhs.replay.duration";
+  public static final String VHS_REPLAY_CALLS_COUNTER = "dsl.vhs.replay.calls";
+  public static final String VHS_TARGET_TAG = "target";
+  public static final String VHS_TAPE_TAG = "tape";
+  public static final String VHS_PROCESS_TAG = "process";
+
   // Metric helper supported types (MetricHelper)
 
   public static final Set<String> METRIC_TYPES = Set.of("counter", "gauge", "timer", "summary");

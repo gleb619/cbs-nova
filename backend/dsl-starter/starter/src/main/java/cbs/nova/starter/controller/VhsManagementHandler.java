@@ -4,6 +4,10 @@ import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.starter.controller.Pagination;
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.model.PageResponse;
+import cbs.nova.starter.vhs.loadtest.VhsLoadTest;
+import cbs.nova.starter.vhs.loadtest.VhsLoadTestException;
+import cbs.nova.starter.vhs.loadtest.VhsLoadTestReport;
+import cbs.nova.starter.vhs.loadtest.VhsLoadTestRequest;
 import cbs.nova.starter.vhs.management.ReplayRunRequest;
 import cbs.nova.starter.vhs.management.ReplayRunResponse;
 import cbs.nova.starter.vhs.management.TapeSummary;
@@ -18,6 +22,7 @@ import java.util.Optional;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.servlet.function.ServerRequest;
@@ -40,6 +45,8 @@ public class VhsManagementHandler {
   static final String CONTENT_TYPE_X_JSONL = "application/x-jsonl";
 
   private final VhsManagementService service;
+  @Nullable
+  private final VhsLoadTest loadTest;
   private final ObjectMapper objectMapper;
 
   @NonNull
@@ -108,6 +115,43 @@ public class VhsManagementHandler {
     return ServerResponse.status(status)
             .contentType(MediaType.APPLICATION_JSON)
             .body(r);
+  }
+
+  @NonNull
+  public ServerResponse loadtest(ServerRequest request) throws IOException {
+    if (loadTest == null) {
+      return ServerResponse.status(HttpStatus.SERVICE_UNAVAILABLE)
+              .contentType(MediaType.APPLICATION_JSON)
+              .body(Map.of("error",
+                      "VHS load-test is not enabled (cbs.vhs.replay.enabled must be true)"));
+    }
+
+    VhsLoadTestRequest body = parse(request, VhsLoadTestRequest.class);
+    if (body == null) {
+      body = new VhsLoadTestRequest(null, null, null, null, null);
+    }
+
+    String tapes = body.tapes() != null ? body.tapes() : "**/*.vhs.jsonl";
+    String target = body.target() != null ? body.target() : "dry-run";
+    double speed = body.speed() != null ? body.speed() : 1.0;
+    int concurrency = body.concurrency() != null ? body.concurrency() : 4;
+    long duration = body.duration() != null ? body.duration() : 0;
+
+    log.warn("[VHS load-test] request: target={} speed={} concurrency={} duration={} tapes={}",
+            target, speed, concurrency, duration, tapes);
+
+    try {
+      VhsLoadTestReport report = loadTest.run(tapes, target, speed, concurrency, duration);
+      return ServerResponse.ok()
+              .contentType(MediaType.APPLICATION_JSON)
+              .body(report);
+    } catch (VhsLoadTestException ex) {
+      log.warn("[VHS load-test] failed: {}", ex.getMessage());
+      return ServerResponse.status(HttpStatus.BAD_REQUEST)
+              .contentType(MediaType.APPLICATION_JSON)
+              .body(new ErrorResponse("VHS_LOAD_TEST_ERROR", ex.getMessage(), null, null, null,
+                      null, null, null, null));
+    }
   }
 
   private <T> T parse(ServerRequest request, Class<T> type) throws IOException {
