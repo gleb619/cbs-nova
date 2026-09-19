@@ -2,11 +2,13 @@ package cbs.nova.starter.config;
 
 import cbs.nova.starter.config.properties.CbsHealthProperties;
 import cbs.nova.starter.config.properties.CbsNovaCacheProperties;
+import cbs.nova.starter.config.properties.MqEventProperties;
 import cbs.nova.starter.config.router.DslRouterConfiguration;
 import cbs.nova.starter.security.ProductionSecurityPostureValidator;
 import cbs.nova.starter.security.SecurityPostureReporter;
 import cbs.nova.starter.webhook.WebhookConfiguration;
 import cbs.nova.starter.config.properties.DslProperties;
+import cbs.nova.starter.events.mq.MqEventConfiguration;
 import cbs.nova.starter.notification.NotificationConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
@@ -50,8 +52,9 @@ import org.springframework.context.annotation.Import;
     BuilderClientConfiguration.class,
     VhsConfiguration.class,
     NotificationConfiguration.class,
+    MqEventConfiguration.class,
 })
 @EnableConfigurationProperties({DslProperties.class, CbsNovaCacheProperties.class,
-    CbsHealthProperties.class})
+    CbsHealthProperties.class, MqEventProperties.class})
 public class DslRootAutoConfiguration {
 }

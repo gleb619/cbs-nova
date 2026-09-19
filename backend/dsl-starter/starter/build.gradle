@@ -60,6 +60,7 @@ dependencies {
   compileOnly libs.springdoc.openapi.starter.webmvc.ui
   compileOnly libs.openfeign.core
   compileOnly libs.spring.kafka
+  compileOnly libs.spring.boot.starter.amqp
   implementation libs.spring.boot.starter.data.jdbc
   compileOnly libs.spring.boot.starter.data.redis
   implementation libs.squigglesql
@@ -105,6 +106,7 @@ dependencies {
   testImplementation libs.testcontainers.core
   testImplementation libs.testcontainers.junit.jupiter
   testImplementation libs.testcontainers.postgresql
+  testImplementation libs.testcontainers.rabbitmq
   testImplementation libs.keycloak.admin.client
   testImplementation libs.h2
   testImplementation libs.rest.assured
@@ -112,8 +114,15 @@ dependencies {
   testImplementation libs.spring.jdbc
   testImplementation libs.wiremock
   testImplementation libs.spring.kafka
+  testImplementation libs.spring.boot.starter.amqp
   testImplementation libs.spring.boot.starter.data.redis
   testImplementation libs.opentelemetry.sdk.testing
+}
+
+// T566: the suite has grown past 2400 tests (incl. RabbitMQ testcontainers); without an
+// explicit heap the forked JVM OOMs mid-suite and cascades unrelated failures.
+tasks.named('test') {
+  maxHeapSize = '2g'
 }
 
 processIntegrationTestResources {

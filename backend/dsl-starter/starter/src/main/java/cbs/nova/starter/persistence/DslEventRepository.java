@@ -1,5 +1,7 @@
 package cbs.nova.starter.persistence;
 
+import static cbs.nova.starter.core.StarterConstants.DSL_EVENT_COLUMNS;
+
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.entity.DslEventEntity;
 import java.sql.Timestamp;
@@ -11,8 +13,8 @@ import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.RowMapper;
-import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.SqlParameterValue;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
@@ -58,6 +60,36 @@ public class DslEventRepository {
       throw new IllegalStateException("Insert into dsl_events returned no generated key");
     }
     return key.longValue();
+  }
+
+  /**
+   * Returns up to {@code limit} rows that have not yet been successfully published to the MQ sink.
+   */
+  public List<DslEventEntity> findUnpublished(int limit) {
+    if (limit <= 0) {
+      throw new IllegalArgumentException("limit must be positive, was " + limit);
+    }
+    var params = new MapSqlParameterSource()
+            .addValue("limit", limit);
+    return jdbcTemplate.query("""
+            SELECT %s FROM dsl_events
+            WHERE mq_published = false
+            ORDER BY id ASC
+            LIMIT :limit
+            """.formatted(COLUMNS), params, ROW_MAPPER);
+  }
+
+  /**
+   * Marks the row as successfully published to the MQ sink.
+   */
+  public void markPublished(long id) {
+    var params = new MapSqlParameterSource().addValue("id", id);
+    int updated = jdbcTemplate.update(
+            "UPDATE dsl_events SET mq_published = true WHERE id = :id", params);
+    if (updated == 0) {
+      throw new IllegalStateException(
+              "Marking dsl_events row published had no effect for id " + id);
+    }
   }
 
   public DslEventSearchResult search(

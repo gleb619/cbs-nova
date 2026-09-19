@@ -11,6 +11,7 @@ import cbs.nova.dsl.history.DslRunStatus;
 import cbs.nova.starter.entity.DslEventEntity;
 import cbs.nova.starter.events.DomainEvent;
 import cbs.nova.starter.events.DomainEventListener;
+import cbs.nova.starter.events.sink.DomainEventSink;
 import cbs.nova.starter.persistence.DslEventRepository;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
@@ -31,7 +32,8 @@ class DomainEventPublisherTest {
 
   private final DslEventRepository repository = mock(DslEventRepository.class);
   private final DomainEventPublisher publisher = new DomainEventPublisher(repository,
-          new ObjectMapper(), EmptyObjectProvider.of(DomainEventListener.class));
+          new ObjectMapper(), EmptyObjectProvider.of(DomainEventListener.class),
+          EmptyObjectProvider.of(DomainEventSink.class));
 
   @Test
   void runStartedSerializesWithFrozenFieldNames() {

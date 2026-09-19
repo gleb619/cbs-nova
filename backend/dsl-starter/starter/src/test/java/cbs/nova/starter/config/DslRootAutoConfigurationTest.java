@@ -7,6 +7,7 @@ import cbs.nova.starter.config.properties.CbsNovaCacheProperties;
 import cbs.nova.starter.config.properties.CbsNovaFakesProperties;
 import cbs.nova.starter.config.properties.CbsNovaPreviewProperties;
 import cbs.nova.starter.config.router.DslRouterConfiguration;
+import cbs.nova.starter.events.mq.MqEventConfiguration;
 import cbs.nova.starter.notification.NotificationConfiguration;
 import cbs.nova.starter.security.ProductionSecurityPostureValidator;
 import cbs.nova.starter.security.SecurityPostureReporter;
@@ -98,7 +99,8 @@ class DslRootAutoConfigurationTest {
             BuilderClientConfiguration.class,
             DslRunRepositoryConfiguration.class,
             VhsConfiguration.class,
-            NotificationConfiguration.class);
+            NotificationConfiguration.class,
+            MqEventConfiguration.class);
   }
 
   @Test

@@ -6,6 +6,10 @@ dsl:
     enabled: false
 
 cbs:
+  nova:
+    events:
+      mq:
+        enabled: false
   dsl:
     source-dir: dsl-examples
 
@@ -33,6 +37,9 @@ logging:
     level: "%5p [rid=%X{rid:-} cid=%X{cid:-}]"
 
 management:
+  health:
+    rabbit:
+      enabled: false
   endpoints:
     web:
       exposure:
