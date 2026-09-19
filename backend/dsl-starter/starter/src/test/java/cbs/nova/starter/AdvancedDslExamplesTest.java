@@ -230,6 +230,9 @@ class AdvancedDslExamplesTest {
       if (helperClass == InterpolateHelper.class) {
         return new InterpolateHelper();
       }
+      if (helperClass == MetricHelper.class) {
+        return new MetricHelper(null);
+      }
 
       throw new IllegalStateException("Cannot instantiate helper " + helperClass.getName());
     };

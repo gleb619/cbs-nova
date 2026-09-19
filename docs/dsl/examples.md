@@ -21,7 +21,7 @@ backend/dsl-starter/dsl-examples/src/
 │   ├── PricingFunctionsDsl.java
 │   ├── SimpleGreetingDsl.java
 │   ├── SimpleValidationDsl.java
-│   └── ... (run `ls backend/dsl-starter/dsl-examples/src/dsl/` for the current set — 22 files)
+│   └── ... (run `ls backend/dsl-starter/dsl-examples/src/dsl/` for the current set — 27 files)
 └── models/                   # Typed records (@Json / Avaje Jsonb) shared by the DSL sources
     └── ... (one `*Models.java` per process/transaction that declares typed I/O)
 ```
@@ -552,6 +552,32 @@ With `in.payerReference()` = `IBAN-DE8937` the result is `IB#######37`. If `keep
 reaches the value length, the keeps are clamped so at least one code point always stays masked —
 the helper never returns the value unmasked. Use `mode="fixed"` (with an optional `width`,
 default 8) when the output length must not depend on the input at all.
+
+## Emitting Micrometer metrics with `metric` counter and timer
+
+Emit a Micrometer counter and timer from within a process to demonstrate observability wiring.
+The counter tracks total orders processed, tagged by category; the timer records the processing
+duration in milliseconds with the same category tag.
+
+See `backend/dsl-starter/dsl-examples/src/dsl/OrderMetricsDsl.java` (input/output models in
+`backend/dsl-starter/dsl-examples/src/models/OrderMetricsModels.java`).
+
+```java
+var counter = ctx.runHelper("metric",
+        new MetricIn("counter", "orders.processed", Map.of("category", in.productCategory()),
+            null, 1L, null));
+MetricOut counterOut = counter.as(MetricOut.class);
+
+var timer = ctx.runHelper("metric",
+        new MetricIn("timer", "orders.processing.duration", Map.of("category", in.productCategory()),
+            null, null, processingTimeMs));
+MetricOut timerOut = timer.as(MetricOut.class);
+```
+
+With `productCategory` = `"electronics"` and a 5ms processing time, the counter increments
+`orders.processed` (tags: `category=electronics`) by 1 and records 5ms into the
+`orders.processing.duration` timer. When no `MeterRegistry` bean is present, both calls validate
+and return `emitted=false` as a no-op.
 
 ## Sharing pure pricing logic across a Process and a Transaction with `Function`
 
