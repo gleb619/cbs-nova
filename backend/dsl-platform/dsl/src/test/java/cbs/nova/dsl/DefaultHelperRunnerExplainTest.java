@@ -29,7 +29,7 @@ class DefaultHelperRunnerExplainTest {
               explainCalled.set(true);
               assertThat(ctx.mode()).isEqualTo(ExecutionMode.EXPLAIN);
               return Result.success(ExplainReport.builder().name("explainFn").description("explain")
-                      .mermaid("").build());
+                      .markdown("").build());
             })
             .build());
 
@@ -39,7 +39,7 @@ class DefaultHelperRunnerExplainTest {
 
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value()).isEqualTo(
-            ExplainReport.builder().name("explainFn").description("explain").mermaid("").build());
+            ExplainReport.builder().name("explainFn").description("explain").markdown("").build());
     assertThat(explainCalled.get()).isTrue();
     assertThat(executeCalled.get()).isFalse();
   }
@@ -66,7 +66,7 @@ class DefaultHelperRunnerExplainTest {
     assertThat(result.value()).isInstanceOf(ExplainReport.class);
     var report = (ExplainReport) result.value();
     assertThat(report.name()).isEqualTo("fallbackFn");
-    assertThat(report.mermaid()).isEqualTo(cbs.nova.dsl.config.Constants.EMPTY_MARKDOWN);
+    assertThat(report.markdown()).isEqualTo(cbs.nova.dsl.config.Constants.EMPTY_MARKDOWN);
     assertThat(report.description()).isEmpty();
   }
 
@@ -78,7 +78,7 @@ class DefaultHelperRunnerExplainTest {
             .output(String.class)
             .execute(ctx -> Result.success("run"))
             .explain(ctx -> Result.success(ExplainReport.builder().name("runFn")
-                    .description("explain").mermaid("").build()))
+                    .description("explain").markdown("").build()))
             .build());
 
     var ctx = SimpleContext.builder().body("input").mode(ExecutionMode.RUN).runId("run-mode-fn")

@@ -24,7 +24,7 @@ function mountTab(
     >()
     .mockResolvedValue({
       description: 'explain ok',
-      mermaid: 'graph TD',
+      markdown: 'graph TD',
     } as unknown as RunnerOutput as unknown as RunnerOutput),
   fetchMock = vi.fn().mockResolvedValue({}),
 ) {
@@ -99,7 +99,7 @@ describe('ExplainTab', () => {
   it('calls the explain prop and shows done on success', async () => {
     const explain = vi.fn().mockResolvedValue({
       description: 'explain ok',
-      mermaid: 'graph TD',
+      markdown: 'graph TD',
     } as unknown as RunnerOutput)
     const wrapper = mountTab({}, explain)
     await wrapper.find('[data-testid="json-textarea"]').setValue('{"a":1}')
@@ -119,7 +119,7 @@ describe('ExplainTab', () => {
   it('normalizes backend mermaid field to mermaidDiagram', async () => {
     const explain = vi
       .fn()
-      .mockResolvedValue({ description: 'd', mermaid: 'g' } as unknown as RunnerOutput)
+      .mockResolvedValue({ description: 'd', markdown: 'g' } as unknown as RunnerOutput)
     const wrapper = mountTab({}, explain)
     await wrapper.find('[data-testid="json-textarea"]').setValue('{}')
     await wrapper
@@ -136,8 +136,8 @@ describe('ExplainTab', () => {
     const report = {
       name: 'demo',
       description: 'short summary',
-      mermaid: '# Long-form body',
-      children: [{ name: 'child', description: 'c', mermaid: 'x', children: [] }],
+      markdown: '# Long-form body',
+      children: [{ name: 'child', description: 'c', markdown: 'x', children: [] }],
     }
     const explain = vi.fn().mockResolvedValue(report)
     const wrapper = mountTab({}, explain)

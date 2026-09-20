@@ -15,17 +15,17 @@ class ExplainBudgetTest {
   private static final Encoding ENCODING = Encodings.newDefaultEncodingRegistry()
           .getEncoding(EncodingType.CL100K_BASE);
 
-  private ExplainReport reportWith(String description, String mermaid) {
-    return reportWith("Test", description, mermaid, List.of());
+  private ExplainReport reportWith(String description, String markdown) {
+    return reportWith("Test", description, markdown, List.of());
   }
 
-  private ExplainReport reportWith(String name, String description, String mermaid) {
-    return reportWith(name, description, mermaid, List.of());
+  private ExplainReport reportWith(String name, String description, String markdown) {
+    return reportWith(name, description, markdown, List.of());
   }
 
-  private ExplainReport reportWith(String name, String description, String mermaid,
+  private ExplainReport reportWith(String name, String description, String markdown,
           List<ExplainReport> children) {
-    return new ExplainReport(name, description, mermaid, children);
+    return new ExplainReport(name, description, markdown, children);
   }
 
   @Test
@@ -35,7 +35,7 @@ class ExplainBudgetTest {
     ExplainReport bounded = ExplainBudget.apply(report, 100, 128, 256, 4096);
 
     assertThat(bounded.description()).isEqualTo("short description");
-    assertThat(bounded.mermaid()).isEqualTo("graph TD; A-->B");
+    assertThat(bounded.markdown()).isEqualTo("graph TD; A-->B");
   }
 
   @Test
@@ -45,7 +45,7 @@ class ExplainBudgetTest {
     ExplainReport bounded = ExplainBudget.apply(report, 20, 128, 256, 4096);
 
     assertThat(bounded.description()).isEqualTo("this is a long descr");
-    assertThat(bounded.mermaid()).isEmpty();
+    assertThat(bounded.markdown()).isEmpty();
   }
 
   @Test
@@ -55,7 +55,7 @@ class ExplainBudgetTest {
     ExplainReport bounded = ExplainBudget.apply(report, 10, 128, 256, 4096);
 
     assertThat(bounded.description()).isEqualTo("descriptio");
-    assertThat(bounded.mermaid()).isEmpty();
+    assertThat(bounded.markdown()).isEmpty();
   }
 
   @Test
@@ -65,7 +65,7 @@ class ExplainBudgetTest {
     ExplainReport bounded = ExplainBudget.apply(report, 0, 128, 256, 4096);
 
     assertThat(bounded.description()).isEmpty();
-    assertThat(bounded.mermaid()).isEmpty();
+    assertThat(bounded.markdown()).isEmpty();
   }
 
   @Test
@@ -75,7 +75,7 @@ class ExplainBudgetTest {
     ExplainReport bounded = ExplainBudget.apply(report, -5, 128, 256, 4096);
 
     assertThat(bounded.description()).isEmpty();
-    assertThat(bounded.mermaid()).isEmpty();
+    assertThat(bounded.markdown()).isEmpty();
   }
 
   @Test
@@ -101,10 +101,10 @@ class ExplainBudgetTest {
 
     assertThat(ENCODING.countTokens(bounded.name())).isLessThanOrEqualTo(5);
     assertThat(ENCODING.countTokens(bounded.description())).isLessThanOrEqualTo(10);
-    assertThat(ENCODING.countTokens(bounded.mermaid())).isLessThanOrEqualTo(8);
+    assertThat(ENCODING.countTokens(bounded.markdown())).isLessThanOrEqualTo(8);
     assertThat(bounded.name()).isNotEqualTo(report.name());
     assertThat(bounded.description()).isNotEqualTo(report.description());
-    assertThat(bounded.mermaid()).isNotEqualTo(report.mermaid());
+    assertThat(bounded.markdown()).isNotEqualTo(report.markdown());
   }
 
   @Test
@@ -115,7 +115,7 @@ class ExplainBudgetTest {
 
     assertThat(bounded.name()).isEqualTo("short name");
     assertThat(bounded.description()).isEqualTo("short description");
-    assertThat(bounded.mermaid()).isEqualTo("graph TD; A-->B");
+    assertThat(bounded.markdown()).isEqualTo("graph TD; A-->B");
   }
 
   @Test
@@ -126,7 +126,7 @@ class ExplainBudgetTest {
 
     assertThat(bounded.name()).isEmpty();
     assertThat(bounded.description()).isEmpty();
-    assertThat(bounded.mermaid()).isEmpty();
+    assertThat(bounded.markdown()).isEmpty();
   }
 
   @Test
@@ -137,7 +137,7 @@ class ExplainBudgetTest {
 
     assertThat(bounded.name()).isEmpty();
     assertThat(bounded.description()).isEmpty();
-    assertThat(bounded.mermaid()).isEmpty();
+    assertThat(bounded.markdown()).isEmpty();
   }
 
   @Test
@@ -155,6 +155,6 @@ class ExplainBudgetTest {
     ExplainReport clampedChild = bounded.children().get(0);
     assertThat(ENCODING.countTokens(clampedChild.description())).isLessThanOrEqualTo(5);
     assertThat(clampedChild.description()).isNotEqualTo(child.description());
-    assertThat(clampedChild.mermaid()).isEqualTo("graph TD; one --> two");
+    assertThat(clampedChild.markdown()).isEqualTo("graph TD; one --> two");
   }
 }

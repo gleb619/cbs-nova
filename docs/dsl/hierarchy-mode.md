@@ -78,7 +78,7 @@ public record HierarchyReport(
     @NonNull List<HierarchyReport> children,
     @Nullable String mermaidDiagram) {
 
-  public @NonNull String toMermaid() { return HierarchyDiagrams.mermaid(this); }
+  public @NonNull String toMermaid() { return HierarchyDiagrams.markdown(this); }
   public @NonNull String toPlantUml() { return HierarchyDiagrams.plantUml(this); }
   public @NonNull String toBpmn() { return HierarchyDiagrams.bpmn(this); }
 }

@@ -1108,7 +1108,7 @@ export interface components {
         ExplainReport: {
             children?: components["schemas"]["ExplainReport"][];
             description?: string;
-            mermaid?: string;
+            markdown?: string;
             name?: string;
         };
         HelperSearchResult: {

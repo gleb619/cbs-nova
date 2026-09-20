@@ -43,6 +43,7 @@ class DefaultTransactionRunnerTest {
               executeCalled.set(true);
               return Result.success("ok-T");
             })
+            .preview(ctx -> Result.success("preview-walk"))
             .build();
     var ctx = SimpleContext.builder().body("in").mode(ExecutionMode.EXPLAIN).runId("r2").build();
     var result = runner.run(tx, ctx);
@@ -51,7 +52,7 @@ class DefaultTransactionRunnerTest {
     assertThat(result.value()).isInstanceOf(ExplainReport.class);
     var report = (ExplainReport) result.value();
     assertThat(report.name()).isEqualTo("T");
-    assertThat(report.mermaid()).isEqualTo(cbs.nova.dsl.config.Constants.EMPTY_MARKDOWN);
+    assertThat(report.markdown()).isEqualTo(cbs.nova.dsl.config.Constants.EMPTY_MARKDOWN);
     assertThat(report.description()).isEmpty();
   }
 
@@ -99,11 +100,12 @@ class DefaultTransactionRunnerTest {
               executeCalled.set(true);
               return Result.success("execute-result");
             })
+            .preview(ctx -> Result.success("preview-walk"))
             .explain(ctx -> {
               explainCalled.set(true);
               assertThat(ctx.mode()).isEqualTo(ExecutionMode.EXPLAIN);
               return Result.success(ExplainReport.builder().name("ExplainT")
-                      .description("explain-result").mermaid("").build());
+                      .description("explain-result").markdown("").build());
             })
             .build();
     var ctx = SimpleContext.builder().body("in").mode(ExecutionMode.EXPLAIN).runId("r5").build();
@@ -112,7 +114,7 @@ class DefaultTransactionRunnerTest {
     assertThat(executeCalled.get()).isFalse();
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value()).isEqualTo(ExplainReport.builder().name("ExplainT")
-            .description("explain-result").mermaid("").build());
+            .description("explain-result").markdown("").build());
   }
 
   @Test
@@ -132,7 +134,7 @@ class DefaultTransactionRunnerTest {
     assertThat(result.value()).isInstanceOf(ExplainReport.class);
     var report = (ExplainReport) result.value();
     assertThat(report.name()).isEqualTo("ExplainFallbackT");
-    assertThat(report.mermaid()).isEqualTo(cbs.nova.dsl.config.Constants.EMPTY_MARKDOWN);
+    assertThat(report.markdown()).isEqualTo(cbs.nova.dsl.config.Constants.EMPTY_MARKDOWN);
     assertThat(report.description()).isEmpty();
   }
 

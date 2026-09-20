@@ -141,7 +141,7 @@ class PreviewReportTest {
 
   @Test
   void previewReportIsNotEqualToExplainReportWithSharedFields() {
-    var explain = ExplainReport.builder().name("n").description("d").mermaid("").build();
+    var explain = ExplainReport.builder().name("n").description("d").markdown("").build();
 
     var preview = new PreviewReport(
             "n",

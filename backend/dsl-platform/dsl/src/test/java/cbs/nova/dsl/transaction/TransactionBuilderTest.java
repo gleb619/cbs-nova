@@ -141,14 +141,14 @@ class TransactionBuilderTest {
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value()).isNotNull();
     assertThat(result.value().name()).isEqualTo("NoExplainTx");
-    assertThat(result.value().mermaid()).isEqualTo(Constants.EMPTY_MARKDOWN);
+    assertThat(result.value().markdown()).isEqualTo(Constants.EMPTY_MARKDOWN);
     assertThat(result.value().description()).isEmpty();
 
   }
 
   @Test
   void effectiveExplainReturnsExplainWhenSet() {
-    var report = ExplainReport.builder().name("WithExplainTx").description("explain").mermaid("")
+    var report = ExplainReport.builder().name("WithExplainTx").description("explain").markdown("")
             .build();
     var tx = Dsl.transaction("WithExplainTx")
             .execute(ctx -> Result.success("exec"))
@@ -172,7 +172,7 @@ class TransactionBuilderTest {
 
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value().name()).isEqualTo("DocTx");
-    assertThat(result.value().mermaid()).contains("# Builder Sample");
+    assertThat(result.value().markdown()).contains("# Builder Sample");
   }
 
   @Test
@@ -188,7 +188,7 @@ class TransactionBuilderTest {
 
     var result = tx.effectiveExplain().apply(ctx);
 
-    assertThat(result.value().mermaid())
+    assertThat(result.value().markdown())
             .contains("# Builder Sample")
             .hasSizeGreaterThan(5);
   }
@@ -283,7 +283,7 @@ class TransactionBuilderTest {
       var result = tx.effectiveExplain().apply(ctx);
 
       assertThat(result.isSuccess()).isTrue();
-      assertThat(result.value().mermaid()).isEqualTo("# Tx By Name");
+      assertThat(result.value().markdown()).isEqualTo("# Tx By Name");
     } finally {
       gm.resetForTests();
     }
@@ -305,7 +305,7 @@ class TransactionBuilderTest {
       var result = tx.effectiveExplain().apply(ctx);
 
       assertThat(result.isSuccess()).isTrue();
-      assertThat(result.value().mermaid()).isEqualTo("# Tx Filename");
+      assertThat(result.value().markdown()).isEqualTo("# Tx Filename");
     } finally {
       gm.resetForTests();
     }
@@ -328,7 +328,7 @@ class TransactionBuilderTest {
 
       var result = tx.effectiveExplain().apply(ctx);
 
-      assertThat(result.value().mermaid()).isEqualTo("# Name Wins");
+      assertThat(result.value().markdown()).isEqualTo("# Name Wins");
     } finally {
       gm.resetForTests();
     }
@@ -345,7 +345,7 @@ class TransactionBuilderTest {
 
     var result = tx.effectiveExplain().apply(ctx);
 
-    assertThat(result.value().mermaid()).isEqualTo(Constants.EMPTY_MARKDOWN);
+    assertThat(result.value().markdown()).isEqualTo(Constants.EMPTY_MARKDOWN);
     assertThat(result.value().description()).isEmpty();
   }
 
@@ -402,7 +402,7 @@ class TransactionBuilderTest {
 
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value().description()).isEqualTo("Default description.");
-    assertThat(result.value().mermaid()).isEqualTo(Constants.EMPTY_MARKDOWN);
+    assertThat(result.value().markdown()).isEqualTo(Constants.EMPTY_MARKDOWN);
   }
 
   @Test
@@ -419,7 +419,7 @@ class TransactionBuilderTest {
 
     assertThat(result.value().description())
             .isEqualTo("Markdown backing the explainVia builder tests.");
-    assertThat(result.value().mermaid()).contains("# Builder Sample");
+    assertThat(result.value().markdown()).contains("# Builder Sample");
   }
 
 }

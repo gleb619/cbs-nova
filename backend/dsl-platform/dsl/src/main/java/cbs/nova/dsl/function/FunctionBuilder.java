@@ -135,8 +135,11 @@ public final class FunctionBuilder<I, O> implements ObjectBuilder<FunctionDslObj
 
   private @NonNull Function<FunctionContext<?>, Result<ExplainReport>> defaultExplain() {
     return ctx -> Result.success(
-            ExplainReport.of(name,
-                    GlobalManager.globalManager().resolveExplainContent(name)));
+        ExplainReport.builder()
+            .name(name)
+            .description(GlobalManager.globalManager().description(name).orElse(Constants.EMPTY_MARKDOWN))
+            .markdown(GlobalManager.globalManager().resolveExplainContent(name))
+            .build());
   }
 
   @SuppressWarnings("unchecked")

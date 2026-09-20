@@ -406,10 +406,8 @@ export default defineNuxtModule<ModuleOptions>({
       nitroConfig.scanDirs = nitroConfig.scanDirs || []
       // Use pre-built JS server routes when the plugin is installed as a package,
       // otherwise use the workspace TypeScript sources for local development.
-      const serverDir =
-        !nuxt.options.dev && existsSync(resolve('./dist/server'))
-          ? resolve('./dist/server')
-          : resolve('./server')
+      const useDistServer = !nuxt.options.dev && existsSync(resolve('./dist/server'))
+      const serverDir = useDistServer ? resolve('./dist/server') : resolve('./server')
       nitroConfig.scanDirs.push(serverDir)
 
       // -------------------------------------------------------------
@@ -420,10 +418,9 @@ export default defineNuxtModule<ModuleOptions>({
       // generated directory is excluded from Nitro's file scanner so the
       // stubs are not also mounted under /api/v1/generated/**.
       // -------------------------------------------------------------
-      const manifestCandidates = [
-        resolve('./dist/server/api/v1/generated/manifest.json'),
-        resolve('./server/api/v1/generated/manifest.json'),
-      ]
+      const manifestCandidates = useDistServer
+        ? [resolve('./dist/server/api/v1/generated/manifest.json')]
+        : [resolve('./server/api/v1/generated/manifest.json')]
       const manifestPath = manifestCandidates.find((candidate) => existsSync(candidate))
       if (!manifestPath) {
         // Fail closed: without the manifest the BFF would silently miss every
@@ -441,12 +438,28 @@ export default defineNuxtModule<ModuleOptions>({
       nitroConfig.ignore.push('**/server/api/v1/generated/**', '**/dist/server/api/v1/generated/**')
       nitroConfig.handlers = nitroConfig.handlers || []
       for (const route of manifest.routes) {
+        // Programmatic handlers are used verbatim by Nitro — the [name] → :name
+        // conversion only exists in the file scanner. OpenAPI `{param}` syntax
+        // would register as a literal segment and every param route would 404,
+        // so convert to radix3 `:param` here. The manifest itself keeps `{param}`.
+        const nitroRoute = route.bffPath.replace(/\{(\w+)\}/g, ':$1')
+        // dist/ holds the compiled stubs (`.js`); the source manifest still
+        // references the TypeScript filenames.
+        const handler = useDistServer ? route.handler.replace(/\.ts$/, '.js') : route.handler
         nitroConfig.handlers.push({
-          route: route.bffPath,
+          route: nitroRoute,
           method: route.method.toLowerCase() as 'get' | 'post' | 'put' | 'delete',
-          handler: join(manifestDir, route.handler),
+          handler: join(manifestDir, handler),
         })
       }
+
+      // The generated stubs import `~/server/utils/proxyFromManifest`, but `~`
+      // resolves to the host rootDir in a consuming app (and in dist/), not the
+      // plugin directory. Pin a deterministic alias so the import resolves.
+      nitroConfig.alias = nitroConfig.alias || {}
+      nitroConfig.alias['~/server/utils/proxyFromManifest'] = resolve(
+        './server/utils/proxyFromManifest.ts',
+      )
     })
 
     // -----------------------------------------------------------------------

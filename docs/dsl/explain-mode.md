@@ -84,9 +84,9 @@ rendering) live in a companion `ExplainReports` utility so the record itself doe
 algorithmic logic:
 
 ```java
-public record ExplainReport(String name, String description, String mermaid,
+public record ExplainReport(String name, String description, String markdown,
         List<ExplainReport> children) {
-  ExplainReport(String name, String description, String mermaid); // children = List.of()
+  ExplainReport(String name, String description, String markdown); // children = List.of()
   ExplainReport withChildren(List<ExplainReport> children);
   ExplainReport addChild(ExplainReport child);
 }
@@ -97,7 +97,7 @@ public final class ExplainReports {
 }
 ```
 
-`ExplainReports.merge` still operates on one node's own `description`/`mermaid` — it never looks
+`ExplainReports.merge` still operates on one node's own `description`/`markdown` — it never looks
 past `children`. `toMarkdown` is the graph-level operation: it walks `root` and `children`
 breadth-first, accumulating visited nodes in a `LinkedHashMap<String, ExplainReport>` keyed by name.
 That map is simultaneously the traversal order (insertion order = call order) and the cycle guard

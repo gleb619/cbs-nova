@@ -308,7 +308,7 @@ class DslIntrospectionServiceTest {
     assertThat(dto.outputType()).isEqualTo("ExplainReport");
     assertThat(dto.outputSchema()).containsEntry("type", "object");
     assertThat((Map<String, Object>) dto.outputSchema().get("properties"))
-            .containsKeys("name", "description", "mermaid", "children");
+            .containsKeys("name", "description", "markdown", "children");
     Map<String, Object> children = (Map<String, Object>) ((Map<String, Object>) dto
             .outputSchema().get("properties")).get("children");
     assertThat(children).containsEntry("type", "array");

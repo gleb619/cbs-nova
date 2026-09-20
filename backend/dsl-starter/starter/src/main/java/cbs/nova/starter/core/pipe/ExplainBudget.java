@@ -27,13 +27,13 @@ public final class ExplainBudget {
           int mermaidMaxTokens) {
     ExplainReport clamped = clampReport(report, new HashSet<>(),
             nameMaxTokens, descriptionMaxTokens, mermaidMaxTokens);
-    String mermaid = clamped.mermaid();
+    String markdown = clamped.markdown();
     int budget = Math.max(budgetChars, 0);
     int descriptionLimit = Math.min(clamped.description().length(), budget);
     String truncatedDescription = clamped.description().substring(0, descriptionLimit);
     int remainingBudget = Math.max(budget - truncatedDescription.length(), 0);
-    int mermaidLimit = Math.min(mermaid.length(), remainingBudget);
-    String truncatedMermaid = mermaid.substring(0, mermaidLimit);
+    int mermaidLimit = Math.min(markdown.length(), remainingBudget);
+    String truncatedMermaid = markdown.substring(0, mermaidLimit);
     return new ExplainReport(
             clamped.name(),
             truncatedDescription,
@@ -66,7 +66,7 @@ public final class ExplainBudget {
     return new ExplainReport(
             clamp(report.name(), nameMaxTokens),
             clamp(report.description(), descriptionMaxTokens),
-            clamp(report.mermaid(), mermaidMaxTokens),
+            clamp(report.markdown(), mermaidMaxTokens),
             children);
   }
 

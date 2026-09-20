@@ -1,8 +1,5 @@
 package cbs.nova.dsl;
 
-import static cbs.nova.dsl.config.Constants.CURRENT_OBJECT_NAME;
-
-import cbs.nova.dsl.model.ExplainReport;
 import org.jspecify.annotations.NonNull;
 
 /**
@@ -20,14 +17,4 @@ public interface ExplainSupport<IN, OUT> {
 
   @NonNull
   OUT explain(@NonNull Context<IN> ctx);
-
-  default ExplainReport createReport(Context<IN> ctx) {
-    // TODO: made a refactoring in
-    // `backend/dsl-starter/starter/src/main/java/cbs/nova/starter/DevDslRuntime.java`
-    // pipes, on execution, we have a new context object with a current name of object(e.g.
-    // process/helper/transaction, etc, e.g.)
-    String currentObjectName = ctx.metadata(CURRENT_OBJECT_NAME);
-    return ExplainReport.empty(currentObjectName);
-  }
-
 }

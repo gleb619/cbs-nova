@@ -29,7 +29,7 @@ public final class ExplainResourceExplainer {
       return Result.success(ExplainReport.builder()
               .name(name)
               .description(description)
-              .mermaid(parsed.body())
+              .markdown(parsed.body())
               .build());
     };
   }

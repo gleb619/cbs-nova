@@ -348,7 +348,7 @@ class DslIntrospectionResourceTest {
             .andExpect(jsonPath("$.outputSchema.type").value("object"))
             .andExpect(jsonPath("$.outputSchema.properties.name.type").value("string"))
             .andExpect(jsonPath("$.outputSchema.properties.description.type").value("string"))
-            .andExpect(jsonPath("$.outputSchema.properties.mermaid.type").value("string"))
+            .andExpect(jsonPath("$.outputSchema.properties.markdown.type").value("string"))
             .andExpect(jsonPath("$.outputSchema.properties.children.type").value("array"))
             .andExpect(jsonPath("$.outputSchema.properties.children.items['$ref']")
                     .value("#/$defs/ExplainReport"));

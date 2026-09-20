@@ -11,7 +11,6 @@ List<DslObject> define() {
       .description("A transaction that expects temporary failures. It calls the unreliable API helper and retries up to 4 times with exponential backoff. If all retries fail, it runs compensation logic.")
       .explainVia("unreliable-api-tx-resilient.md")
       .execute(ctx -> {
-        UnreliableApiInDsl in = ctx.body();
         var r = ctx.runHelper("unreliableApi");
         if (!r.isSuccess()) {
           return Result.failure(r.cause());
@@ -33,7 +32,6 @@ List<DslObject> define() {
       .startToCloseTimeout(Duration.ofSeconds(5))
       .retryPolicy(new RetryPolicy(1, Duration.ofMillis(100), 1.0))
       .execute(ctx -> {
-        UnreliableApiInDsl in = ctx.body();
         var r = ctx.runHelper("unreliableApi");
         if (!r.isSuccess()) {
           return Result.failure(r.cause());

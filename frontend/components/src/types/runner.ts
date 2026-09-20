@@ -44,7 +44,7 @@ export interface RunnerError {
 export interface ExplainReportNode {
   name: string
   description: string
-  mermaid: string
+  markdown: string
   children: ExplainReportNode[]
 }
 

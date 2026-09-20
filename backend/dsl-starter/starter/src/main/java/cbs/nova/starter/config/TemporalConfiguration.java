@@ -265,7 +265,7 @@ public class TemporalConfiguration {
   ExplainDslPipe explainDslPipe(
           HierarchyDslPipe hierarchyDslPipe,
           CbsNovaExplainProperties explainProperties) {
-    return new ExplainDslPipe(hierarchyDslPipe, explainProperties);
+    return new ExplainDslPipe(explainProperties);
   }
 
   @Bean

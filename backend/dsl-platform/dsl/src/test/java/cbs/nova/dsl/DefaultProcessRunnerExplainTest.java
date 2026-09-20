@@ -2,7 +2,6 @@ package cbs.nova.dsl;
 import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import cbs.nova.dsl.config.Constants;
 import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.history.TransactionExecutionRepository;
 import cbs.nova.dsl.model.ExplainReport;
@@ -12,7 +11,6 @@ import cbs.nova.dsl.registry.DefaultCompensationRegistry;
 import cbs.nova.dsl.repository.InMemoryTransactionExecutionRepository;
 import cbs.nova.dsl.runner.DefaultProcessRunner;
 import cbs.nova.dsl.runner.ProcessCompensationHandler;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.Test;
 
@@ -36,9 +34,7 @@ class DefaultProcessRunnerExplainTest {
               executed.set(true);
               return Result.success("ok");
             })
-            .preview(ctx -> {
-              throw new AssertionError("preview logic should not run in explain mode");
-            })
+            .preview(ctx -> Result.success("preview-walk"))
             .build();
     var ctx = SimpleContext.builder().body("input").mode(ExecutionMode.EXPLAIN).runId("run-explain")
             .build();
@@ -50,7 +46,7 @@ class DefaultProcessRunnerExplainTest {
     assertThat(result.value()).isInstanceOf(ExplainReport.class);
     var report = (ExplainReport) result.value();
     assertThat(report.name()).isEqualTo("P");
-    assertThat(report.mermaid()).isEqualTo(cbs.nova.dsl.config.Constants.EMPTY_MARKDOWN);
+    assertThat(report.markdown()).isEqualTo(cbs.nova.dsl.config.Constants.EMPTY_MARKDOWN);
     assertThat(report.description()).isEmpty();
   }
 
@@ -65,11 +61,12 @@ class DefaultProcessRunnerExplainTest {
               executeCalled.set(true);
               return Result.success("execute");
             })
+            .preview(ctx -> Result.success("preview-walk"))
             .explain(ctx -> {
               explainCalled.set(true);
               assertThat(ctx.mode()).isEqualTo(ExecutionMode.EXPLAIN);
               return Result.success(
-                      ExplainReport.builder().name("P").description("explain").mermaid("").build());
+                      ExplainReport.builder().name("P").description("explain").markdown("").build());
             })
             .build();
     var ctx = SimpleContext.builder().body("input").mode(ExecutionMode.EXPLAIN)
@@ -81,7 +78,7 @@ class DefaultProcessRunnerExplainTest {
     assertThat(executeCalled.get()).isFalse();
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value()).isEqualTo(
-            ExplainReport.builder().name("P").description("explain").mermaid("").build());
+            ExplainReport.builder().name("P").description("explain").markdown("").build());
   }
 
   @Test

@@ -27,7 +27,6 @@ import cbs.nova.starter.core.listener.DslExecutionEventBus;
 import cbs.nova.starter.core.recorder.ExternalCallRecorder;
 import cbs.nova.starter.logging.DryRunLogBufferRegistry;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import cbs.nova.starter.logging.DryRunLogbackAppender;
 import cbs.nova.starter.logging.ThreadLocalDryRunLoggingContext;
 import cbs.nova.starter.reporting.HierarchyDiagramRenderer;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
@@ -163,28 +162,6 @@ class InterceptorThreadingTest {
     assertThat(runResult.value()).isEqualTo("real-http-result");
     // No fake record(...) on the run recorder: scoped config is separate per pipe.
     verify(runRec, never()).record(anyString(), anyString(), anyString(), any());
-  }
-
-  @Test
-  void explainPipeThreadsInterceptorViaContextWithoutThreadLocal() {
-    var runScopedFakeConfig = new RunScopedFakeConfig(Caffeine.newBuilder().build());
-    var recorder = mock(ExternalCallRecorder.class);
-    runScopedFakeConfig.register("run-explain",
-            FakeConfig.of(new FakeEntry("helper", "dbCall", "faked-db")));
-
-    var hierarchyPipe = new HierarchyDslPipe(recorder, dryRunLoggingContext,
-            bufferRegistry, defaultMaxEventsPerRun(), previewProperties,
-            new CbsNovaFakesProperties(false, null), runScopedFakeConfig,
-            new SimpleMeterRegistry(), new HierarchyDiagramRenderer(), null);
-    var explainPipe = new ExplainDslPipe(hierarchyPipe,
-            new CbsNovaExplainProperties(4000, "explain/", 128, 256, 4096));
-
-    Context<?> ctx = SimpleContext.builder("payload").mode(ExecutionMode.EXPLAIN)
-            .runId("run-explain").build();
-    Result<ExplainReport> result = explainPipe.execute("dbCall", ctx);
-
-    assertThat(result.isSuccess()).isTrue();
-    verify(recorder).record(eq("helper"), eq("dbCall"), eq("execute"), eq("faked-db"));
   }
 
   @Test

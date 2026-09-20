@@ -28,7 +28,7 @@ class ExplainResourceExplainerTest {
 
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value().name()).isEqualTo("DocSample");
-    assertThat(result.value().mermaid()).contains("# Builder Sample");
+    assertThat(result.value().markdown()).contains("# Builder Sample");
     assertThat(result.value().description())
             .isEqualTo("Markdown backing the explainVia builder tests.");
   }
@@ -40,7 +40,7 @@ class ExplainResourceExplainerTest {
     var result = explain.apply(explainContext(Map.of()));
 
     assertThat(result.isSuccess()).isTrue();
-    assertThat(result.value().mermaid()).contains("# Builder Sample");
+    assertThat(result.value().markdown()).contains("# Builder Sample");
   }
 
   @Test
@@ -62,7 +62,7 @@ class ExplainResourceExplainerTest {
 
     var result = explain.apply(bounded);
 
-    assertThat(result.value().mermaid())
+    assertThat(result.value().markdown())
             .contains("# Builder Sample")
             .hasSizeGreaterThan(10);
   }
@@ -80,7 +80,7 @@ class ExplainResourceExplainerTest {
 
     var result = explain.apply(explainContext(Map.of()));
 
-    assertThat(result.value().mermaid()).isEqualTo("REPLACED-CONTENT");
+    assertThat(result.value().markdown()).isEqualTo("REPLACED-CONTENT");
   }
 
   @Test
@@ -98,7 +98,7 @@ class ExplainResourceExplainerTest {
 
     var result = explain.apply(ctx);
 
-    assertThat(result.value().mermaid()).isEqualTo("CONTEXT-LOCAL-CONTENT");
+    assertThat(result.value().markdown()).isEqualTo("CONTEXT-LOCAL-CONTENT");
   }
 
   private Context<?> explainContext(Map<String, Object> metadata) {

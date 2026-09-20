@@ -162,7 +162,7 @@ describe('BodyEditor', () => {
   it('calls the explain callback and displays the description', async () => {
     const explain = vi.fn().mockResolvedValue({
       description: 'Test flow',
-      mermaid: 'graph TD',
+      markdown: 'graph TD',
     })
     const wrapper = mountBodyEditor({ construct, explain })
 

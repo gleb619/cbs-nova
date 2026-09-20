@@ -14,7 +14,7 @@ import org.jspecify.annotations.NonNull;
  * Field semantics:
  * <ul>
  * <li>{@code description} — short summary, typically the YAML frontmatter description.</li>
- * <li>{@code mermaid} — full markdown body of the explain resource (the long-form content, rendered
+ * <li>{@code markdown} — full markdown body of the explain resource (the long-form content, rendered
  * or diagrammed downstream).</li>
  * </ul>
  */
@@ -22,45 +22,41 @@ import org.jspecify.annotations.NonNull;
 public record ExplainReport(
         @NonNull String name,
         @NonNull String description,
-        @NonNull String mermaid,
+        @NonNull String markdown,
         @NonNull List<ExplainReport> children) {
 
   public ExplainReport {
     description = description == null ? "" : description;
-    mermaid = mermaid == null ? "" : mermaid;
+    markdown = markdown == null ? "" : markdown;
     children = children == null ? List.of() : List.copyOf(children);
   }
 
-  public static @NonNull ExplainReport of(@NonNull String name, @NonNull String mermaid) {
-    return ExplainReport.builder().name(name).mermaid(mermaid).build();
-  }
-
-  public static @NonNull ExplainReport of(@NonNull String mermaid) {
-    return ExplainReport.builder().mermaid(mermaid).build();
-  }
-
-  public static ExplainReport empty(String name) {
-    return ExplainReport.builder().name(name).build();
+  public static @NonNull ExplainReport of(@NonNull String markdown) {
+    return ExplainReport.builder().markdown(markdown).build();
   }
 
   public @NonNull ExplainReport withInfo(@NonNull String name, @NonNull String description) {
     return ExplainReport.builder()
-        .name(name)
-        .description(description)
-        .mermaid(mermaid())
-        .children(new ArrayList<>(children()))
-        .build();
+            .name(name)
+            .description(description)
+            .markdown(markdown())
+            .children(new ArrayList<>(children()))
+            .build();
   }
 
+  //TODO: add usage in source code, not only in test ones
+  @Deprecated(forRemoval = true)
   public @NonNull ExplainReport withChildren(@NonNull List<ExplainReport> children) {
     return ExplainReport.builder()
             .name(name)
             .description(description)
-            .mermaid(mermaid)
+            .markdown(markdown)
             .children(children)
             .build();
   }
 
+  //TODO: add usage in source code, not only in test ones
+  @Deprecated(forRemoval = true)
   public @NonNull ExplainReport addChild(@NonNull ExplainReport child) {
     var next = new ArrayList<>(children);
     next.add(child);

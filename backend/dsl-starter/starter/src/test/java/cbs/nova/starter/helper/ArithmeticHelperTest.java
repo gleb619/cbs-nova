@@ -259,7 +259,7 @@ class ArithmeticHelperTest {
             .contains("linear interpolation")
             .contains("Hyndman-Fan type 7")
             .contains("p=95.0");
-    assertThat(report.mermaid()).contains("graph TD", "percentile");
+    assertThat(report.markdown()).contains("graph TD", "percentile");
   }
 
   @Test
@@ -277,8 +277,8 @@ class ArithmeticHelperTest {
     assertThat(sum.description()).contains("double sum");
     assertThat(stddev.description()).contains("sample standard deviation");
     assertThat(sum.description()).isNotEqualTo(stddev.description());
-    assertThat(sum.mermaid()).contains("sum");
-    assertThat(stddev.mermaid()).contains("stddev");
+    assertThat(sum.markdown()).contains("sum");
+    assertThat(stddev.markdown()).contains("stddev");
   }
 
   @Test
@@ -313,8 +313,8 @@ class ArithmeticHelperTest {
     var report = helper.explain(ctx);
 
     assertThat(report.description()).contains("percentile");
-    assertThat(report.mermaid()).isNotEmpty();
-    assertThat(report.description().length() + report.mermaid().length()).isGreaterThan(50);
+    assertThat(report.markdown()).isNotEmpty();
+    assertThat(report.description().length() + report.markdown().length()).isGreaterThan(50);
   }
 
   private Result<ArithmeticOut> execute(ArithmeticIn input) {

@@ -3,6 +3,7 @@ package cbs.nova.dsl.runner;
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
+import cbs.nova.dsl.model.ExplainReport;
 import cbs.nova.dsl.exception.DslExecutionException;
 import cbs.nova.dsl.history.TransactionExecutionRepository;
 import cbs.nova.dsl.listener.ChainedExecutionListener;
@@ -86,7 +87,9 @@ public final class DefaultProcessRunner implements ProcessRunner {
   }
 
   private Result<?> runExplainMode(ProcessDslObject process, ProcessRichContext<?> richCtx) {
-    return process.explainLogic().apply(richCtx);
+    Result<ExplainReport> own = process.explainLogic().apply(richCtx);
+    return ExplainWalker.withChildren(richCtx, own,
+            walkCtx -> process.previewLogic().apply(new ProcessRichContext<>(walkCtx)));
   }
 
   private Result<?> runPreviewMode(ProcessDslObject process, ProcessRichContext<?> richCtx) {

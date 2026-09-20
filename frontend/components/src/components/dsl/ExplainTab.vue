@@ -50,7 +50,7 @@ function asExplainReport(value: unknown): ExplainReportNode | undefined {
   return {
     name: r.name,
     description: typeof r.description === 'string' ? r.description : '',
-    mermaid: typeof r.mermaid === 'string' ? r.mermaid : '',
+    markdown: typeof r.markdown === 'string' ? r.markdown : '',
     children: Array.isArray(r.children)
       ? r.children.map(asExplainReport).filter((c): c is ExplainReportNode => c !== undefined)
       : [],
@@ -60,12 +60,12 @@ function asExplainReport(value: unknown): ExplainReportNode | undefined {
 function normalizeResponse(response: unknown): RunnerOutput {
   if (response && typeof response === 'object' && !Array.isArray(response)) {
     const r = response as Record<string, unknown>
-    const mermaid = (r.mermaid ?? r.mermaidDiagram) as string | undefined
+    const markdown = (r.markdown ?? r.mermaidDiagram) as string | undefined
     return {
       ...r,
       explainReport: asExplainReport(response),
       description: r.description as string | undefined,
-      mermaidDiagram: mermaid,
+      mermaidDiagram: markdown,
       result: r.result ?? r.body ?? r.output,
     } as RunnerOutput
   }

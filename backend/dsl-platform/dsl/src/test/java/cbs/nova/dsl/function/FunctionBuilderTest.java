@@ -112,13 +112,13 @@ class FunctionBuilderTest {
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value()).isNotNull();
     assertThat(result.value().name()).isEqualTo("NoExplainFn");
-    assertThat(result.value().mermaid()).isEqualTo(Constants.EMPTY_MARKDOWN);
+    assertThat(result.value().markdown()).isEqualTo(Constants.EMPTY_MARKDOWN);
     assertThat(result.value().description()).isEmpty();
   }
 
   @Test
   void effectiveExplainReturnsExplainWhenSet() {
-    var report = ExplainReport.builder().name("WithExplainFn").description("explain").mermaid("")
+    var report = ExplainReport.builder().name("WithExplainFn").description("explain").markdown("")
             .build();
     var fn = Dsl.function("WithExplainFn")
             .execute(ctx -> Result.success("exec"))
@@ -142,7 +142,7 @@ class FunctionBuilderTest {
 
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value().name()).isEqualTo("DocFn");
-    assertThat(result.value().mermaid()).contains("# Builder Sample");
+    assertThat(result.value().markdown()).contains("# Builder Sample");
   }
 
   @Test
@@ -158,7 +158,7 @@ class FunctionBuilderTest {
     var result = fn.effectiveExplain().apply(ctx);
 
     assertThat(result.isSuccess()).isTrue();
-    assertThat(result.value().mermaid()).contains("# Builder Sample");
+    assertThat(result.value().markdown()).contains("# Builder Sample");
   }
 
   @Test
@@ -174,7 +174,7 @@ class FunctionBuilderTest {
 
     var result = fn.effectiveExplain().apply(ctx);
 
-    assertThat(result.value().mermaid())
+    assertThat(result.value().markdown())
             .contains("# Builder Sample")
             .hasSizeGreaterThan(10);
   }
@@ -203,7 +203,7 @@ class FunctionBuilderTest {
             .execute(ctx -> Result.success("exec"))
             .explainVia("builder-sample.md")
             .explain(ctx -> Result.success(ExplainReport.builder().name("DocFnCleared")
-                    .description("code").mermaid("").build()))
+                    .description("code").markdown("").build()))
             .build();
     var ctx = new FunctionRichContext<>(
             SimpleContext.builder().body("body").mode(ExecutionMode.EXPLAIN)
@@ -291,7 +291,7 @@ class FunctionBuilderTest {
       var result = fn.effectiveExplain().apply(ctx);
 
       assertThat(result.isSuccess()).isTrue();
-      assertThat(result.value().mermaid()).isEqualTo("# By Name Body");
+      assertThat(result.value().markdown()).isEqualTo("# By Name Body");
     } finally {
       gm.resetForTests();
     }
@@ -313,7 +313,7 @@ class FunctionBuilderTest {
       var result = fn.effectiveExplain().apply(ctx);
 
       assertThat(result.isSuccess()).isTrue();
-      assertThat(result.value().mermaid()).isEqualTo("# Filename Body");
+      assertThat(result.value().markdown()).isEqualTo("# Filename Body");
     } finally {
       gm.resetForTests();
     }
@@ -336,7 +336,7 @@ class FunctionBuilderTest {
 
       var result = fn.effectiveExplain().apply(ctx);
 
-      assertThat(result.value().mermaid()).isEqualTo("# Name Wins");
+      assertThat(result.value().markdown()).isEqualTo("# Name Wins");
     } finally {
       gm.resetForTests();
     }
@@ -353,7 +353,7 @@ class FunctionBuilderTest {
 
     var result = fn.effectiveExplain().apply(ctx);
 
-    assertThat(result.value().mermaid()).isEqualTo(Constants.EMPTY_MARKDOWN);
+    assertThat(result.value().markdown()).isEqualTo(Constants.EMPTY_MARKDOWN);
     assertThat(result.value().description()).isEmpty();
   }
 

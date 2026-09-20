@@ -22,7 +22,7 @@ describe('ExplainRawView', () => {
   })
 
   it('renders a report object as pretty-printed JSON', () => {
-    const report = { name: 'demo', description: 'd', mermaid: 'body', children: [] }
+    const report = { name: 'demo', description: 'd', markdown: 'body', children: [] }
     const wrapper = mount(ExplainRawView, {
       props: { report },
     })

@@ -122,7 +122,8 @@ public final class ProcessRichContext<T> implements ProcessContext<T> {
   public @NonNull Result<?> runHelper(@NonNull String name, @NonNull Map<String, Object> input) {
     Result<?> result = GlobalManager.globalManager().runHelper(name,
             SimpleContext.builder().body(input).metadata(delegate.metadata()).mode(delegate.mode())
-                    .runId(delegate.runId()).build());
+                    .runId(delegate.runId())
+                    .executionListener(delegate.executionListener()).build());
     trace("called helper: " + name);
     return result;
   }
@@ -131,7 +132,8 @@ public final class ProcessRichContext<T> implements ProcessContext<T> {
   public @NonNull Result<?> runHelper(@NonNull String name, @NonNull MapInput input) {
     Result<?> result = GlobalManager.globalManager().runHelper(name,
             SimpleContext.builder().body(input).metadata(delegate.metadata()).mode(delegate.mode())
-                    .runId(delegate.runId()).build());
+                    .runId(delegate.runId())
+                    .executionListener(delegate.executionListener()).build());
     trace("called helper: " + name);
     return result;
   }
@@ -148,7 +150,8 @@ public final class ProcessRichContext<T> implements ProcessContext<T> {
     }
     Result<?> result = GlobalManager.globalManager().runHelper(name,
             SimpleContext.builder().body(input).metadata(delegate.metadata()).mode(delegate.mode())
-                    .runId(delegate.runId()).build());
+                    .runId(delegate.runId())
+                    .executionListener(delegate.executionListener()).build());
     trace("called helper: " + name);
     return result;
   }

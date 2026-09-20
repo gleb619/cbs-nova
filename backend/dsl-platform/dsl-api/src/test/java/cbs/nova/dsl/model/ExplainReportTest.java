@@ -10,32 +10,32 @@ class ExplainReportTest {
 
   @Test
   void mergeCombinesDescriptionsAndDiagrams() {
-    var left = ExplainReport.builder().name("n").description("left-desc").mermaid("left-diagram")
+    var left = ExplainReport.builder().name("n").description("left-desc").markdown("left-diagram")
             .build();
-    var right = ExplainReport.builder().name("n").description("right-desc").mermaid("right-diagram")
+    var right = ExplainReport.builder().name("n").description("right-desc").markdown("right-diagram")
             .build();
     var merged = ExplainReports.merge(left, right);
     assertThat(merged.name()).isEqualTo("n");
     assertThat(merged.description()).contains("left-desc").contains("right-desc");
-    assertThat(merged.mermaid()).contains("left-diagram").contains("right-diagram");
+    assertThat(merged.markdown()).contains("left-diagram").contains("right-diagram");
   }
 
   @Test
   void mergeIgnoresNonePlaceholderDescription() {
-    var left = ExplainReport.builder().name("n").description("left-desc").mermaid("left-diagram")
+    var left = ExplainReport.builder().name("n").description("left-desc").markdown("left-diagram")
             .build();
     var right = ExplainReport.builder().name("n").description(EMPTY_MARKDOWN)
-            .mermaid("right-diagram").build();
+            .markdown("right-diagram").build();
     var merged = ExplainReports.merge(left, right);
     assertThat(merged.description()).isEqualTo("left-desc");
-    assertThat(merged.mermaid()).contains("left-diagram").contains("right-diagram");
+    assertThat(merged.markdown()).contains("left-diagram").contains("right-diagram");
   }
 
   @Test
   void mergeKeepsSecondDescriptionWhenFirstIsNone() {
-    var left = ExplainReport.builder().name("n").description(EMPTY_MARKDOWN).mermaid("left-diagram")
+    var left = ExplainReport.builder().name("n").description(EMPTY_MARKDOWN).markdown("left-diagram")
             .build();
-    var right = ExplainReport.builder().name("n").description("right-desc").mermaid("right-diagram")
+    var right = ExplainReport.builder().name("n").description("right-desc").markdown("right-diagram")
             .build();
     var merged = ExplainReports.merge(left, right);
     assertThat(merged.description()).isEqualTo("right-desc");
@@ -43,14 +43,14 @@ class ExplainReportTest {
 
   @Test
   void noArgChildrenDefaultsToEmpty() {
-    var report = ExplainReport.builder().name("n").description("desc").mermaid("").build();
+    var report = ExplainReport.builder().name("n").description("desc").markdown("").build();
     assertThat(report.children()).isEmpty();
   }
 
   @Test
   void addChildAppendsWithoutMutatingOriginal() {
-    var parent = ExplainReport.builder().name("parent").description("p-desc").mermaid("").build();
-    var child = ExplainReport.builder().name("child").description("c-desc").mermaid("").build();
+    var parent = ExplainReport.builder().name("parent").description("p-desc").markdown("").build();
+    var child = ExplainReport.builder().name("child").description("c-desc").markdown("").build();
     var withChild = parent.addChild(child);
     assertThat(parent.children()).isEmpty();
     assertThat(withChild.children()).containsExactly(child);
@@ -58,12 +58,12 @@ class ExplainReportTest {
 
   @Test
   void mergeCombinesChildrenByNameInsteadOfDuplicating() {
-    var sharedLeft = ExplainReport.builder().name("shared").description("left").mermaid("").build();
-    var sharedRight = ExplainReport.builder().name("shared").description("right").mermaid("")
+    var sharedLeft = ExplainReport.builder().name("shared").description("left").markdown("").build();
+    var sharedRight = ExplainReport.builder().name("shared").description("right").markdown("")
             .build();
-    var left = ExplainReport.builder().name("n").description("l").mermaid("").build()
+    var left = ExplainReport.builder().name("n").description("l").markdown("").build()
             .withChildren(List.of(sharedLeft));
-    var right = ExplainReport.builder().name("n").description("r").mermaid("").build()
+    var right = ExplainReport.builder().name("n").description("r").markdown("").build()
             .withChildren(List.of(sharedRight));
     var merged = ExplainReports.merge(left, right);
     assertThat(merged.children()).hasSize(1);
@@ -73,10 +73,10 @@ class ExplainReportTest {
   @Test
   void toMarkdownWalksGraphInCallOrderAndDedupesByName() {
     var helper = ExplainReport.builder().name("helper").description("helper-desc")
-            .mermaid("graph TD\n  H").build();
-    var shared = ExplainReport.builder().name("shared").description("shared-desc").mermaid("")
+            .markdown("graph TD\n  H").build();
+    var shared = ExplainReport.builder().name("shared").description("shared-desc").markdown("")
             .build().addChild(helper);
-    var root = ExplainReport.builder().name("root").description("root-desc").mermaid("").build()
+    var root = ExplainReport.builder().name("root").description("root-desc").markdown("").build()
             .withChildren(List.of(shared, shared));
 
     var markdown = ExplainReports.toMarkdown(root, 10_000);
@@ -92,11 +92,11 @@ class ExplainReportTest {
 
   @Test
   void toMarkdownStopsAtWholeNodeBoundaryAndReportsOmittedCount() {
-    var child1 = ExplainReport.builder().name("child1").description("d".repeat(20)).mermaid("")
+    var child1 = ExplainReport.builder().name("child1").description("d".repeat(20)).markdown("")
             .build();
-    var child2 = ExplainReport.builder().name("child2").description("d".repeat(20)).mermaid("")
+    var child2 = ExplainReport.builder().name("child2").description("d".repeat(20)).markdown("")
             .build();
-    var root = ExplainReport.builder().name("root").description("root-desc").mermaid("").build()
+    var root = ExplainReport.builder().name("root").description("root-desc").markdown("").build()
             .withChildren(List.of(child1, child2));
 
     var rootSectionLength = "## root\n\nroot-desc".length();
@@ -109,7 +109,7 @@ class ExplainReportTest {
 
   @Test
   void toMarkdownWithNoOmissionsHasNoTrailingMarker() {
-    var report = ExplainReport.builder().name("n").description("desc").mermaid("").build();
+    var report = ExplainReport.builder().name("n").description("desc").markdown("").build();
     assertThat(ExplainReports.toMarkdown(report, 1000)).doesNotContain("omitted");
   }
 }

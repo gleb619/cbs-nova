@@ -30,7 +30,7 @@ class ExplainSupportTest {
     var report = executable.explain(ctx);
 
     assertThat(report.description()).isEqualTo("Greets the caller.");
-    assertThat(report.mermaid()).isEmpty();
+    assertThat(report.markdown()).isEmpty();
     assertThat(report.name()).isNotBlank();
   }
 
@@ -83,13 +83,13 @@ class ExplainSupportTest {
 
   @Test
   void explainReportMergeCombinesDescriptionsAndDiagrams() {
-    var left = ExplainReport.builder().name("n").description("left-desc").mermaid("left-diagram")
+    var left = ExplainReport.builder().name("n").description("left-desc").markdown("left-diagram")
             .build();
-    var right = ExplainReport.builder().name("n").description("right-desc").mermaid("right-diagram")
+    var right = ExplainReport.builder().name("n").description("right-desc").markdown("right-diagram")
             .build();
     var merged = ExplainReports.merge(left, right);
     assertThat(merged.description()).contains("left-desc").contains("right-desc");
-    assertThat(merged.mermaid()).contains("left-diagram").contains("right-diagram");
+    assertThat(merged.markdown()).contains("left-diagram").contains("right-diagram");
   }
 
   private static final class NamedExecutable implements Executable<String, String> {

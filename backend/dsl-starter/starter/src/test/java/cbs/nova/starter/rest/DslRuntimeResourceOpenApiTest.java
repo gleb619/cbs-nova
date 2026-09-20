@@ -49,7 +49,7 @@ class DslRuntimeResourceOpenApiTest {
     JsonNode explainReport = assertSchemaExists(schemas, "ExplainReport");
     assertHasProperty(explainReport, "name");
     assertHasProperty(explainReport, "description");
-    assertHasProperty(explainReport, "mermaid");
+    assertHasProperty(explainReport, "markdown");
 
     JsonNode callNode = assertSchemaExists(schemas, "CallNode");
     assertHasProperty(callNode, "name");

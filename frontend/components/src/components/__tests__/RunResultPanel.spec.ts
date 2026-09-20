@@ -467,7 +467,7 @@ describe('RunResultPanel', () => {
         properties: {
           name: { type: 'string' },
           description: { type: 'string' },
-          mermaid: { type: 'string' },
+          markdown: { type: 'string' },
           children: { type: 'array' },
         },
       },
@@ -546,7 +546,7 @@ describe('RunResultPanel', () => {
         explainReport: {
           name: 'demo',
           description: 'short summary',
-          mermaid: '# Hello\n\nworld',
+          markdown: '# Hello\n\nworld',
           children: [],
         },
       },
@@ -571,7 +571,7 @@ describe('RunResultPanel', () => {
         explainReport: {
           name: 'demo',
           description: 'd',
-          mermaid: '## Flow\n\n```mermaid\ngraph TD; A-->B\n```\n',
+          markdown: '## Flow\n\n```mermaid\ngraph TD; A-->B\n```\n',
           children: [],
         },
       },
@@ -595,7 +595,7 @@ describe('RunResultPanel', () => {
         explainReport: {
           name: 'demo',
           description: 'd',
-          mermaid: '```mermaid\ngraph TD; broken\n```\n',
+          markdown: '```mermaid\ngraph TD; broken\n```\n',
           children: [],
         },
       },
@@ -614,8 +614,8 @@ describe('RunResultPanel', () => {
     const report = {
       name: 'demo',
       description: 'd',
-      mermaid: '# Body',
-      children: [{ name: 'child', description: 'c', mermaid: 'x', children: [] }],
+      markdown: '# Body',
+      children: [{ name: 'child', description: 'c', markdown: 'x', children: [] }],
     }
     const wrapper = mountPanel({
       endpoint: 'explain',

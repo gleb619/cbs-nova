@@ -26,7 +26,7 @@ public final class ExplainReports {
     return new ExplainReport(
             left.name(),
             joinMarkdown(left.description(), right.description()),
-            joinMermaid(left.mermaid(), right.mermaid()),
+            joinMermaid(left.markdown(), right.markdown()),
             mergeChildren(left.children(), right.children()));
   }
 
@@ -61,10 +61,10 @@ public final class ExplainReports {
   }
 
   private static @NonNull String section(@NonNull ExplainReport node) {
-    return node.mermaid().isEmpty()
+    return node.markdown().isEmpty()
             ? "## " + node.name() + "\n\n" + node.description()
             : "## " + node.name() + "\n\n" + node.description() + "\n\n```mermaid\n"
-                    + node.mermaid() + "\n```";
+              + node.markdown() + "\n```";
   }
 
   private static @NonNull List<ExplainReport> mergeChildren(

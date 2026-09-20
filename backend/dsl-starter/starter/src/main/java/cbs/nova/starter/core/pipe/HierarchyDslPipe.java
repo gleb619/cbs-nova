@@ -2,6 +2,7 @@ package cbs.nova.starter.core.pipe;
 
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Result;
+import cbs.nova.dsl.config.Constants;
 import cbs.nova.dsl.helper.HelperInterceptor;
 import cbs.nova.dsl.logging.DryRunLoggingContext;
 import cbs.nova.dsl.model.HierarchyAccumulator;
@@ -45,6 +46,7 @@ public final class HierarchyDslPipe implements DslExecutionPipe<HierarchyReport>
   /**
    * Legacy constructor used by tests that do not exercise object-level enforcement.
    */
+  //TODO: remove constructor, update related tests
   public HierarchyDslPipe(
           ExternalCallRecorder recorder,
           DryRunLoggingContext dryRunLoggingContext,
@@ -69,7 +71,7 @@ public final class HierarchyDslPipe implements DslExecutionPipe<HierarchyReport>
             ? new ManifestObjectGuardHelperInterceptor(objectGuard, fakeInterceptor)
             : fakeInterceptor;
     Context<?> hierarchyCtx = ctx.withMetadata(
-            cbs.nova.dsl.config.Constants.HIERARCHY_GRAPH_ACCUMULATOR_KEY,
+            Constants.HIERARCHY_GRAPH_ACCUMULATOR_KEY,
             new HierarchyAccumulator());
     return DslExecutionPipeline.<HierarchyReport>builder()
             .stage(new HierarchyReportStage(diagramRenderer))

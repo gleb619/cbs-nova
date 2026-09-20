@@ -35,7 +35,7 @@ type PanelMode = 'form' | 'json' | 'schema' | 'history' | 'view' | 'raw'
 const isExplain = computed(() => props.endpoint === 'explain')
 
 const explainMarkdown = computed(
-  () => props.output?.explainReport?.mermaid || props.output?.description,
+  () => props.output?.explainReport?.markdown || props.output?.description,
 )
 
 function initialMode(): PanelMode {
@@ -225,7 +225,7 @@ onBeforeUpdate(() => {
         </div>
         <template v-else>
           <ExplainMarkdownView
-            v-if="output?.explainReport?.mermaid || output?.description || output?.mermaidDiagram"
+            v-if="output?.explainReport?.markdown || output?.description || output?.mermaidDiagram"
             :markdown="explainMarkdown"
           />
           <ResultTab :result="output?.result" />

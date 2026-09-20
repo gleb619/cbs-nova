@@ -110,6 +110,7 @@ public final class FunctionRichContext<T> implements FunctionContext<T> {
   public @NonNull Result<?> runHelper(@NonNull String name, @NonNull Map<String, Object> input) {
     Result<?> result = GlobalManager.globalManager().runHelper(name,
             SimpleContext.builder().body(input).mode(delegate.mode()).runId(delegate.runId())
+                    .executionListener(delegate.executionListener())
                     .build());
     trace("called helper: " + name);
     return result;
@@ -119,6 +120,7 @@ public final class FunctionRichContext<T> implements FunctionContext<T> {
   public @NonNull Result<?> runHelper(@NonNull String name, @NonNull MapInput input) {
     Result<?> result = GlobalManager.globalManager().runHelper(name,
             SimpleContext.builder().body(input).mode(delegate.mode()).runId(delegate.runId())
+                    .executionListener(delegate.executionListener())
                     .build());
     trace("called helper: " + name);
     return result;

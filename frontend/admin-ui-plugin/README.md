@@ -225,6 +225,18 @@ In production the same plugin is consumed via `modules: ['@cbs/admin-ui-plugin']
 inside a host Nuxt app — there is no separate "plugin dev server" requirement
 for downstream consumers.
 
+### Building the server bundle for packaging
+
+`pnpm build:server` (from `frontend/admin-ui-plugin/`) compiles `server/` to
+`dist/server/` so host apps can consume the BFF without transpiling. It also
+ships the OpenAPI-generated BFF stubs (`server/api/v1/generated/`) and copies
+their `manifest.json` into `dist/server/api/v1/generated/`.
+
+That generated directory is a **gitignored build artifact** — on a fresh clone
+run `pnpm gen:bff-routes` from `frontend/` **before** `pnpm build:server`, or
+the manifest copy step fails and the packaged plugin misses every generated
+proxy route.
+
 ## Host-app example
 
 The reference consumer is `app/ui` at the repository root. Its `nuxt.config.ts`

@@ -69,8 +69,8 @@ class DevDslRuntimeTest {
           previewProperties, new CbsNovaFakesProperties(false, null),
           new RunScopedFakeConfig(Caffeine.newBuilder().build()),
           new SimpleMeterRegistry(), new HierarchyDiagramRenderer(), null);
-  private final ExplainDslPipe explainPipe = new ExplainDslPipe(hierarchyPipe,
-          new CbsNovaExplainProperties(4000, "explain/", 128, 256, 4096));
+  private final ExplainDslPipe explainPipe = new ExplainDslPipe(
+      new CbsNovaExplainProperties(4000, "explain/", 128, 256, 4096));
   private final DevDslRuntime runtime = new DevDslRuntime(previewPipe, runPipe, hierarchyPipe,
           explainPipe);
 
@@ -134,8 +134,8 @@ class DevDslRuntimeTest {
     var ctx = SimpleContext.builder("input").mode(ExecutionMode.EXPLAIN).build();
     var report = runtime.explain("Ping", ctx);
     assertThat(report.name()).isEqualTo("Ping");
-    assertThat(report.description()).startsWith("Process: Ping");
-    assertThat(report.mermaid()).isNotBlank();
+    assertThat(report.description()).isEqualTo("Process: Ping");
+    assertThat(report.markdown()).isNotBlank();
     assertThat(report.children()).isEmpty();
   }
 
@@ -172,7 +172,7 @@ class DevDslRuntimeTest {
   }
 
   @Test
-  void explainDescriptionReflectsEntityKind() {
+  void explainReturnsReportPerEntity() {
     GlobalManager.globalManager()
             .registerTransaction(Dsl.transaction("EchoTx")
                     .execute(ctx -> Result.success("echo")).build());
@@ -181,8 +181,8 @@ class DevDslRuntimeTest {
     var processReport = runtime.explain("Ping", ctx);
     var transactionReport = runtime.explain("EchoTx", ctx);
 
-    assertThat(processReport.description()).startsWith("Process: Ping");
-    assertThat(transactionReport.description()).startsWith("Transaction: EchoTx");
+    assertThat(processReport.name()).isEqualTo("Ping");
+    assertThat(transactionReport.name()).isEqualTo("EchoTx");
   }
 
   @Test
@@ -197,7 +197,7 @@ class DevDslRuntimeTest {
   }
 
   @Test
-  void explainTracksExternalCallsInDiagram() {
+  void explainDoesNotRunExecuteLogic() {
     GlobalManager.globalManager()
             .registerProcess(Dsl.process("TrackedProcess")
                     .execute(ctx -> {
@@ -211,7 +211,7 @@ class DevDslRuntimeTest {
     var report = runtime.explain("TrackedProcess", ctx);
 
     assertThat(report.name()).isEqualTo("TrackedProcess");
-    assertThat(report.mermaid()).contains("TrackedProcess");
+    assertThat(report.description()).isEqualTo("Process: TrackedProcess");
   }
 
   @Test

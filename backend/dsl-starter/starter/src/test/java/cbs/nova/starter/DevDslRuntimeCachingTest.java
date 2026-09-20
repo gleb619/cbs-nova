@@ -6,11 +6,8 @@ import cbs.nova.starter.cache.PreviewResultCacheTestSupport;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.Dsl;
-import cbs.nova.dsl.DslDescriptor;
-import cbs.nova.dsl.DslObject.DslType;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.GlobalManager;
-import cbs.nova.dsl.ParameterDescriptor;
 import cbs.nova.dsl.Result;
 import cbs.nova.starter.service.PreviewResultCache;
 import cbs.nova.starter.config.properties.CbsNovaFakesProperties;
@@ -39,7 +36,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 
-import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 class DevDslRuntimeCachingTest {
@@ -86,8 +82,8 @@ class DevDslRuntimeCachingTest {
             previewProperties, new CbsNovaFakesProperties(false, null),
             new RunScopedFakeConfig(Caffeine.newBuilder().build()),
             new SimpleMeterRegistry(), new HierarchyDiagramRenderer(), null);
-    ExplainDslPipe explainPipe = new ExplainDslPipe(hierarchyPipe,
-            new CbsNovaExplainProperties(4000, "explain/", 128, 256, 4096));
+    ExplainDslPipe explainPipe = new ExplainDslPipe(
+        new CbsNovaExplainProperties(4000, "explain/", 128, 256, 4096));
     runtime = new DevDslRuntime(previewPipe, runPipe, hierarchyPipe, explainPipe);
 
     Logger root = (Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);

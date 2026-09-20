@@ -31,9 +31,14 @@ public final class DefaultHelperRunner implements HelperRunner {
     Result<?> result = null;
     try {
       var cast = (Executable<Object, Object>) helper.get();
-      result = ctx.mode() == ExecutionMode.PREVIEW || ctx.mode() == ExecutionMode.HIERARCHY
-              ? cast.preview((Context<Object>) ctx)
-              : cast.execute((Context<Object>) ctx);
+      result = switch (ctx.mode()) {
+        case EXPLAIN -> {
+          var explained = cast.explain((Context<Object>) ctx);
+          yield Result.success(explained.withInfo(name, explained.description()));
+        }
+        case PREVIEW, HIERARCHY -> cast.preview((Context<Object>) ctx);
+        default -> cast.execute((Context<Object>) ctx);
+      };
       return result;
     } catch (Exception ex) {
       String message = ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName();

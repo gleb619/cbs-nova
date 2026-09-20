@@ -291,9 +291,9 @@ public class DslIntrospectionService {
     Map<String, Object> properties = Map.of(
             "name", Map.of("type", "string"),
             "description", Map.of("type", "string"),
-            "mermaid", Map.of("type", "string"),
+            "markdown", Map.of("type", "string"),
             "children", children);
-    List<String> required = List.of("name", "description", "mermaid", "children");
+    List<String> required = List.of("name", "description", "markdown", "children");
     Map<String, Object> node = new LinkedHashMap<>();
     node.put("type", "object");
     node.put("properties", properties);

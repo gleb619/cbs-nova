@@ -69,8 +69,8 @@ class DevDslRuntimeErrorHandlingTest {
           previewProperties, new CbsNovaFakesProperties(false, null),
           new RunScopedFakeConfig(Caffeine.newBuilder().build()),
           new SimpleMeterRegistry(), new HierarchyDiagramRenderer(), null);
-  private final ExplainDslPipe explainPipe = new ExplainDslPipe(hierarchyPipe,
-          new CbsNovaExplainProperties(4000, "explain/", 128, 256, 4096));
+  private final ExplainDslPipe explainPipe = new ExplainDslPipe(
+      new CbsNovaExplainProperties(4000, "explain/", 128, 256, 4096));
   private final DevDslRuntime runtime = new DevDslRuntime(previewPipe, runPipe, hierarchyPipe,
           explainPipe);
 

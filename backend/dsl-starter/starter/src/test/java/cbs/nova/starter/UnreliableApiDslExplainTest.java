@@ -72,7 +72,7 @@ class UnreliableApiDslExplainTest {
       var result = tx.effectiveExplain().apply(ctx);
 
       assertThat(result.isSuccess()).as("explain success for %s", name).isTrue();
-      assertThat(result.value().mermaid())
+      assertThat(result.value().markdown())
               .as("explain body for %s", name)
               .contains("# " + name);
       assertThat(result.value().description()).isNotBlank();
@@ -90,7 +90,7 @@ class UnreliableApiDslExplainTest {
       var result = process.explainLogic().apply(ctx);
 
       assertThat(result.isSuccess()).as("explain success for %s", name).isTrue();
-      assertThat(result.value().mermaid())
+      assertThat(result.value().markdown())
               .as("explain body for %s", name)
               .contains("# " + name)
               .contains("```mermaid");
@@ -108,8 +108,8 @@ class UnreliableApiDslExplainTest {
     var result = process.explainLogic().apply(ctx);
 
     assertThat(result.isSuccess()).isTrue();
-    assertThat(result.value().mermaid()).contains("# UnreliableApiUncaught");
-    assertThat(result.value().mermaid()).doesNotContain("```mermaid");
+    assertThat(result.value().markdown()).contains("# UnreliableApiUncaught");
+    assertThat(result.value().markdown()).doesNotContain("```mermaid");
     assertThat(result.value().description()).isNotBlank();
   }
 
@@ -125,7 +125,7 @@ class UnreliableApiDslExplainTest {
             .contains("unreliable")
             .contains("CONSECUTIVE")
             .contains("RANDOM")
-            .contains("```mermaid");
+            .contains("```markdown");
   }
 
   private static HelperInstanceResolver typedHelperResolver() {

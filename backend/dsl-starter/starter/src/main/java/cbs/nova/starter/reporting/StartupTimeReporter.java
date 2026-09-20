@@ -31,7 +31,7 @@ public class StartupTimeReporter {
     }
     var context = event.getApplicationContext();
     log.info(
-            "STARTUP_REPORT totalMillis={} beans={} profiles={};",
+            "STARTUP_REPORT totalMillis={}, beans={}, profiles={};",
             event.getTimeTaken().toMillis(),
             context.getBeanDefinitionCount(),
             String.join(",", context.getEnvironment().getActiveProfiles()));

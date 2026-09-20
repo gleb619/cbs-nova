@@ -164,7 +164,7 @@ public final class ProcessBuilder<I, O> implements ObjectBuilder<ProcessDslObjec
             ExplainReport.builder()
                     .name(name)
                     .description(description != null ? description : "")
-                    .mermaid(GlobalManager.globalManager().resolveExplainContent(name))
+                    .markdown(GlobalManager.globalManager().resolveExplainContent(name))
                     .build());
   }
 

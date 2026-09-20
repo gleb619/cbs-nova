@@ -145,7 +145,7 @@ Prefer `codegraph_*` over grep.
   `core/pipe/ExplainBudget`); helpers override `explain` for mode/arg-specific reports
   (see `MathHelper`). Starter builds a full 14-field `HierarchyReport` (package `cbs.nova.dsl.model/` —
   graph-shaped: `children`, `hasCompensation`, self-rendering `toMermaid()`/`toPlantUml()`/`toBpmn()`);
-  `ExplainDslPipe` maps it to the simple `ExplainReport` (name, description, per-node mermaid, children)
+  `ExplainDslPipe` maps it to the simple `ExplainReport` (name, description, per-node markdown, children)
   and applies the budget. Stage contributions
   (`astTree`, `executionTrace`, `externalCalls`, `callCounts`, `dryRunLogs`, `metrics`, `errors`,
   `hasCompensation`) are accumulated in a typed `HierarchyAccumulator` (dsl-api) threaded via

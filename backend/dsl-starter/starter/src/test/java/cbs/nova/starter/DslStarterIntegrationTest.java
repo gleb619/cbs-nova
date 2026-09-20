@@ -24,7 +24,6 @@ import cbs.nova.starter.core.pipe.RunScopedFakeConfig;
 import cbs.nova.starter.core.recorder.RunIdKeyedExternalCallRecorder;
 import cbs.nova.starter.logging.ThreadLocalDryRunLoggingContext;
 import cbs.nova.starter.logging.DryRunLogBufferRegistry;
-import cbs.nova.starter.logging.DryRunLogbackAppender;
 import cbs.nova.starter.logging.LoggingExecutionListener;
 import cbs.nova.starter.reporting.HierarchyDiagramRenderer;
 import cbs.nova.starter.service.DslRuntimeService;
@@ -80,8 +79,8 @@ class DslStarterIntegrationTest {
             new CbsNovaFakesProperties(false, null),
             new RunScopedFakeConfig(Caffeine.newBuilder().build()),
             new SimpleMeterRegistry(), new HierarchyDiagramRenderer(), null);
-    var explainPipe = new ExplainDslPipe(hierarchyPipe,
-            new CbsNovaExplainProperties(4000, "explain/", 128, 256, 4096));
+    var explainPipe = new ExplainDslPipe(
+        new CbsNovaExplainProperties(4000, "explain/", 128, 256, 4096));
     var runtime = new DevDslRuntime(previewPipe, runPipe, hierarchyPipe, explainPipe);
     var loggingProperties = new CbsNovaLoggingProperties(
             CbsNovaLoggingProperties.Level.INFO,
@@ -139,7 +138,7 @@ class DslStarterIntegrationTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.name").value("LoanDisbursement"))
             .andExpect(jsonPath("$.description").isNotEmpty())
-            .andExpect(jsonPath("$.mermaid").isNotEmpty());
+            .andExpect(jsonPath("$.markdown").isNotEmpty());
   }
 
   @Test

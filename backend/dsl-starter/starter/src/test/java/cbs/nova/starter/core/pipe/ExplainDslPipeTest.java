@@ -3,7 +3,6 @@ package cbs.nova.starter.core.pipe;
 import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.ExecutionMode;
@@ -25,7 +24,6 @@ import cbs.nova.starter.logging.DryRunLogBufferRegistry;
 import cbs.nova.starter.logging.ThreadLocalDryRunLoggingContext;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
-import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -64,7 +62,8 @@ class ExplainDslPipeTest {
                     .execute(ctx -> Result.success("ok"))
                     .explain(ctx -> {
                       ctx.runHelper("auditLog");
-                      return Result.success(null);
+                      return Result.success(ExplainReport.builder().name("ExplainProcess")
+                              .description("Process: ExplainProcess").markdown("m").build());
                     })
                     .compensation((ctx, history) -> ctx.log("rolled back"))
                     .build());
@@ -79,22 +78,18 @@ class ExplainDslPipeTest {
     ExplainReport report = result.value();
     assertThat(report.name()).isEqualTo("ExplainProcess");
     assertThat(report.description()).isEqualTo("Process: ExplainProcess");
-    assertThat(report.mermaid()).isNotBlank();
+    assertThat(report.markdown()).isNotBlank();
     assertThat(report.children()).isEmpty();
   }
 
   @Test
-  void failedRunStillReturnsReportForMissingEntity() {
+  void missingEntityFails() {
     ExplainDslPipe explainPipe = newPipe(mock(ExternalCallRecorder.class));
 
     Result<ExplainReport> result = explainPipe.execute("MissingProcess",
             SimpleContext.builder("payload").mode(ExecutionMode.EXPLAIN).runId("run-fail").build());
 
-    assertThat(result.isSuccess()).isTrue();
-    ExplainReport report = result.value();
-    assertThat(report.name()).isEqualTo("MissingProcess");
-    assertThat(report.mermaid()).isNotBlank();
-    assertThat(report.children()).isEmpty();
+    assertThat(result.isSuccess()).isFalse();
   }
 
   @Test
@@ -112,16 +107,68 @@ class ExplainDslPipeTest {
     assertThat(result.isSuccess()).isTrue();
     ExplainReport report = result.value();
     assertThat(report.description())
-            .startsWith("A process that routes an API call through the resilient transaction.")
-            .contains("# UnreliableApiSuccess");
+            .startsWith("A process that routes an API call through the resilient transaction.");
+    assertThat(report.markdown()).contains("# UnreliableApiSuccess");
     assertThat(report.children())
-            .anySatisfy(child -> assertThat(child.description())
-                    .startsWith("A transaction that expects temporary failures.")
-                    .contains("# unreliableApiTxResilient"));
+            .anySatisfy(child -> {
+              assertThat(child.description())
+                      .startsWith("A transaction that expects temporary failures.");
+              assertThat(child.markdown()).contains("# unreliableApiTxResilient");
+            });
   }
 
   @Test
-  void missingExplainViaResourceFallsBackToSynthesizedDescription() {
+  void unreliableApiSuccessExplainsAllThreeNodesInChain() {
+    loadCompactDsls();
+    ExplainDslPipe explainPipe = newPipe(mock(ExternalCallRecorder.class));
+    var body = new cbs.nova.dslexamples.v1.UnreliableApiModels.UnreliableProcessIn(
+            "explain-chain",
+            new cbs.nova.starter.helper.model.UnreliableApiIn("op-1", 0, false, "explain", null));
+
+    Result<ExplainReport> result = explainPipe.execute("UnreliableApiSuccess",
+            SimpleContext.builder(body).mode(ExecutionMode.EXPLAIN).runId("run-chain").build());
+
+    assertThat(result.isSuccess()).isTrue();
+    ExplainReport root = result.value();
+    assertThat(root.name()).isEqualTo("UnreliableApiSuccess");
+    assertThat(root.children()).extracting(ExplainReport::name)
+            .containsExactly("unreliableApiTxResilient");
+    ExplainReport tx = root.children().get(0);
+    assertThat(tx.children()).extracting(ExplainReport::name).containsExactly("unreliableApi");
+    ExplainReport helper = tx.children().get(0);
+    assertThat(root.description()).isNotBlank();
+    assertThat(tx.description()).isNotBlank();
+    assertThat(helper.description()).isNotBlank().contains("unreliable");
+  }
+
+  @Test
+  void explainCollectsHelperExplainAsChild() {
+    GlobalManager.globalManager().registerHelper("compensationTracker",
+            new CompensationTrackerHelper(Caffeine.newBuilder().build()));
+    GlobalManager.globalManager().registerProcess(
+            Dsl.process("TrackedFlow")
+                    .input(Object.class)
+                    .output(Object.class)
+                    .description("Tracked flow")
+                    .execute(ctx -> ctx.runHelper("compensationTracker",
+                            java.util.Map.of("markerId", "m-1")))
+                    .build());
+
+    Result<ExplainReport> result = newPipe(mock(ExternalCallRecorder.class)).execute(
+            "TrackedFlow",
+            SimpleContext.builder("payload").mode(ExecutionMode.EXPLAIN).runId("run-helper")
+                    .build());
+
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(result.value().children()).singleElement().satisfies(child -> {
+      assertThat(child.name()).isEqualTo("compensationTracker");
+      assertThat(child.description()).contains("Write here some text");
+      assertThat(child.markdown()).contains("mermaid diagram");
+    });
+  }
+
+  @Test
+  void missingExplainViaResourceFails() {
     GlobalManager.globalManager().registerProcess(
             Dsl.process("MissingExplainResource")
                     .input(Object.class)
@@ -135,10 +182,7 @@ class ExplainDslPipeTest {
             SimpleContext.builder("payload").mode(ExecutionMode.EXPLAIN).runId("run-fallback")
                     .build());
 
-    assertThat(result.isSuccess()).isTrue();
-    ExplainReport report = result.value();
-    assertThat(report.name()).isEqualTo("MissingExplainResource");
-    assertThat(report.description()).isEqualTo("Process: MissingExplainResource");
+    assertThat(result.isSuccess()).isFalse();
   }
 
   private void loadCompactDsls() {
@@ -174,13 +218,6 @@ class ExplainDslPipeTest {
   }
 
   private ExplainDslPipe newPipe(ExternalCallRecorder recorder) {
-    HierarchyDslPipe hierarchyDslPipe = new HierarchyDslPipe(recorder, dryRunLoggingContext,
-            bufferRegistry, defaultMaxEventsPerRun(), previewProperties,
-            new CbsNovaFakesProperties(false, null),
-            new RunScopedFakeConfig(Caffeine.newBuilder().build()),
-            new SimpleMeterRegistry(), new cbs.nova.starter.reporting.HierarchyDiagramRenderer(),
-            null);
-    return new ExplainDslPipe(hierarchyDslPipe,
-            new CbsNovaExplainProperties(4000, "explain/", 128, 256, 4096));
+    return new ExplainDslPipe(new CbsNovaExplainProperties(4000, "explain/", 128, 256, 4096));
   }
 }

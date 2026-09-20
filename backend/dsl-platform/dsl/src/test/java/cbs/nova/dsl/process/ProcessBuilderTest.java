@@ -176,14 +176,14 @@ class ProcessBuilderTest {
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value()).isNotNull();
     assertThat(result.value().name()).isEqualTo("NoExplainProc");
-    assertThat(result.value().mermaid()).isEqualTo(Constants.EMPTY_MARKDOWN);
+    assertThat(result.value().markdown()).isEqualTo(Constants.EMPTY_MARKDOWN);
     assertThat(result.value().description()).isEmpty();
 
   }
 
   @Test
   void effectiveExplainReturnsExplainWhenSet() {
-    var report = ExplainReport.builder().name("WithExplainProc").description("explain").mermaid("")
+    var report = ExplainReport.builder().name("WithExplainProc").description("explain").markdown("")
             .build();
     var process = Dsl.process("WithExplainProc")
             .execute(ctx -> Result.success("exec"))
@@ -207,7 +207,7 @@ class ProcessBuilderTest {
 
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value().name()).isEqualTo("DocProc");
-    assertThat(result.value().mermaid()).contains("# Builder Sample");
+    assertThat(result.value().markdown()).contains("# Builder Sample");
   }
 
   @Test
@@ -223,7 +223,7 @@ class ProcessBuilderTest {
     var result = process.explainLogic().apply(ctx);
 
     assertThat(result.isSuccess()).isTrue();
-    assertThat(result.value().mermaid()).contains("# Builder Sample");
+    assertThat(result.value().markdown()).contains("# Builder Sample");
   }
 
   @Test
@@ -239,7 +239,7 @@ class ProcessBuilderTest {
 
     var result = process.explainLogic().apply(ctx);
 
-    assertThat(result.value().mermaid())
+    assertThat(result.value().markdown())
             .contains("# Builder Sample")
             .hasSizeGreaterThan(8);
   }
@@ -316,7 +316,7 @@ class ProcessBuilderTest {
       var result = process.explainLogic().apply(ctx);
 
       assertThat(result.isSuccess()).isTrue();
-      assertThat(result.value().mermaid()).isEqualTo("# Proc By Name");
+      assertThat(result.value().markdown()).isEqualTo("# Proc By Name");
     } finally {
       gm.resetForTests();
     }
@@ -338,7 +338,7 @@ class ProcessBuilderTest {
       var result = process.explainLogic().apply(ctx);
 
       assertThat(result.isSuccess()).isTrue();
-      assertThat(result.value().mermaid()).isEqualTo("# Proc Filename");
+      assertThat(result.value().markdown()).isEqualTo("# Proc Filename");
     } finally {
       gm.resetForTests();
     }
@@ -361,7 +361,7 @@ class ProcessBuilderTest {
 
       var result = process.explainLogic().apply(ctx);
 
-      assertThat(result.value().mermaid()).isEqualTo("# Name Wins");
+      assertThat(result.value().markdown()).isEqualTo("# Name Wins");
     } finally {
       gm.resetForTests();
     }
@@ -378,7 +378,7 @@ class ProcessBuilderTest {
 
     var result = process.explainLogic().apply(ctx);
 
-    assertThat(result.value().mermaid()).isEqualTo(Constants.EMPTY_MARKDOWN);
+    assertThat(result.value().markdown()).isEqualTo(Constants.EMPTY_MARKDOWN);
     assertThat(result.value().description()).isEmpty();
   }
 
@@ -435,7 +435,7 @@ class ProcessBuilderTest {
 
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value().description()).isEqualTo("Default description.");
-    assertThat(result.value().mermaid()).isEqualTo(Constants.EMPTY_MARKDOWN);
+    assertThat(result.value().markdown()).isEqualTo(Constants.EMPTY_MARKDOWN);
   }
 
   @Test
@@ -452,7 +452,7 @@ class ProcessBuilderTest {
 
     assertThat(result.value().description())
             .isEqualTo("Markdown backing the explainVia builder tests.");
-    assertThat(result.value().mermaid()).contains("# Builder Sample");
+    assertThat(result.value().markdown()).contains("# Builder Sample");
   }
 
 }

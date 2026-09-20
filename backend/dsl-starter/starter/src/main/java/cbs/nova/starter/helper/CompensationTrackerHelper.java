@@ -31,21 +31,21 @@ public class CompensationTrackerHelper implements Executable<Map<String, Object>
   @Override
   public @NonNull String description() {
     return """
-        Write here short description about what helper used for
-        """;
+            Write here short description about what helper used for
+            """;
   }
 
   @Override
   public @NonNull ExplainReport explain(@NonNull Context<Map<String, Object>> ctx) {
     return ExplainReport.builder()
-        .name("compensationTracker")
-        .description("""
-            Write here some text, use some var from a `ctx.body()`
-            """)
-        .mermaid("""
-            Add here some text and mermaid diagram
-            """)
-        .build();
+            .name("compensationTracker")
+            .description("""
+                    Write here some text, use some var from a `ctx.body()`
+                    """)
+            .markdown("""
+                    Add here some text and mermaid diagram
+                    """)
+            .build();
   }
 
   public boolean wasCompensated(String markerId) {

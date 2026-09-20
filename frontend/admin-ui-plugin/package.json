@@ -20,7 +20,7 @@
     "typecheck": "nuxi typecheck",
     "lint": "biome lint .",
     "test:watch": "vitest",
-    "build:server": "files=$(find server -type f -name '*.ts' ! -name '*.spec.ts' ! -path '*/api/v1/generated/*') && pnpm exec esbuild $files --outdir=dist/server --platform=node --format=esm --bundle=false && find dist/server -name '*.js' -exec sed -i 's|from \"~/server/utils/httpClient\"|from \"@cbs/admin-ui-plugin/server/utils/httpClient\"|g' {} +"
+    "build:server": "files=$(find server -type f -name '*.ts' ! -name '*.spec.ts') && pnpm exec esbuild $files --outdir=dist/server --platform=node --format=esm --bundle=false && find dist/server -name '*.js' -exec sed -i -e 's|from \"~/server/utils/httpClient\"|from \"@cbs/admin-ui-plugin/server/utils/httpClient\"|g' -e 's|from \"~/server/utils/proxyFromManifest\"|from \"@cbs/admin-ui-plugin/server/utils/proxyFromManifest\"|g' {} + && mkdir -p dist/server/api/v1/generated && cp server/api/v1/generated/manifest.json dist/server/api/v1/generated/manifest.json && sed -i -E 's|(routes/[^\"]+)\\.ts\"|\\1.js\"|g' dist/server/api/v1/generated/manifest.json"
   },
   "dependencies": {
     "@cbs/components": "workspace:*",

@@ -189,7 +189,7 @@ public final class TransactionBuilder<I, O> implements ObjectBuilder<Transaction
             ExplainReport.builder()
                     .name(name)
                     .description(description != null ? description : "")
-                    .mermaid(GlobalManager.globalManager().resolveExplainContent(name))
+                    .markdown(GlobalManager.globalManager().resolveExplainContent(name))
                     .build());
   }
 
