@@ -1,5 +1,6 @@
-package cbs.nova.starter.approval;
+package cbs.nova.starter.config;
 
+import cbs.nova.starter.service.ChangeRequestService;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.controller.DslDraftHandler;
 import cbs.nova.starter.persistence.ChangeRequestRepository;

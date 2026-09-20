@@ -1,6 +1,6 @@
 package cbs.nova.starter.config;
 
-import cbs.nova.starter.core.pipe.ExplainBudget;
+import cbs.nova.starter.explain.ExplainBudget;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.context.annotation.Bean;

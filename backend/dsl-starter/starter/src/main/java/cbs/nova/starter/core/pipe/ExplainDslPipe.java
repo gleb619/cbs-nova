@@ -5,6 +5,7 @@ import cbs.nova.dsl.Result;
 import cbs.nova.dsl.model.ExplainReport;
 import cbs.nova.starter.config.properties.CbsNovaExplainProperties;
 import cbs.nova.dsl.helper.NoopHelperInterceptor;
+import cbs.nova.starter.core.stage.CurrentObjectNameStage;
 import cbs.nova.starter.core.stage.DispatchStage;
 import cbs.nova.starter.core.stage.ExplainReportStage;
 import lombok.RequiredArgsConstructor;
@@ -19,9 +20,10 @@ public final class ExplainDslPipe implements DslExecutionPipe<ExplainReport> {
   public @NonNull Result<ExplainReport> execute(@NonNull String name,
           @NonNull Context<?> ctx) {
     return DslExecutionPipeline.<ExplainReport>builder()
-        .stage(new ExplainReportStage(explainProperties))
-        .stage(DispatchStage.inline(NoopHelperInterceptor.INSTANCE))
-        .build()
-        .execute(name, ctx);
+            .stage(new CurrentObjectNameStage())
+            .stage(new ExplainReportStage(explainProperties))
+            .stage(DispatchStage.inline(NoopHelperInterceptor.INSTANCE))
+            .build()
+            .execute(name, ctx);
   }
 }

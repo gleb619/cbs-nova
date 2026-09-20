@@ -125,7 +125,7 @@ class UnreliableApiDslExplainTest {
             .contains("unreliable")
             .contains("CONSECUTIVE")
             .contains("RANDOM")
-            .contains("```markdown");
+            .contains("```mermaid");
   }
 
   private static HelperInstanceResolver typedHelperResolver() {

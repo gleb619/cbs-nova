@@ -10,6 +10,7 @@ import cbs.nova.dsl.model.HierarchyReport;
 import cbs.nova.starter.config.properties.CbsNovaFakesProperties;
 import cbs.nova.starter.config.properties.CbsNovaPreviewProperties;
 import cbs.nova.starter.core.recorder.ExternalCallRecorder;
+import cbs.nova.starter.core.stage.CurrentObjectNameStage;
 import cbs.nova.starter.core.stage.DispatchStage;
 import cbs.nova.starter.core.stage.DryRunLogStage;
 import cbs.nova.starter.core.stage.ExecutionTraceStage;
@@ -46,7 +47,7 @@ public final class HierarchyDslPipe implements DslExecutionPipe<HierarchyReport>
   /**
    * Legacy constructor used by tests that do not exercise object-level enforcement.
    */
-  //TODO: remove constructor, update related tests
+  // TODO: remove constructor, update related tests
   public HierarchyDslPipe(
           ExternalCallRecorder recorder,
           DryRunLoggingContext dryRunLoggingContext,
@@ -74,6 +75,7 @@ public final class HierarchyDslPipe implements DslExecutionPipe<HierarchyReport>
             Constants.HIERARCHY_GRAPH_ACCUMULATOR_KEY,
             new HierarchyAccumulator());
     return DslExecutionPipeline.<HierarchyReport>builder()
+            .stage(new CurrentObjectNameStage())
             .stage(new HierarchyReportStage(diagramRenderer))
             .stage(new MetricsStage(meterRegistry))
             .stage(new ExecutionTreeStage(previewProperties.callTree().maxDepth()))

@@ -2,9 +2,6 @@ package cbs.nova.starter.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import cbs.nova.starter.approval.ChangeRequestConfiguration;
-import cbs.nova.starter.config.properties.CbsHealthProperties;
-import cbs.nova.starter.config.properties.CbsNovaCacheProperties;
 import cbs.nova.starter.config.properties.CbsNovaFakesProperties;
 import cbs.nova.starter.config.properties.CbsNovaPreviewProperties;
 import cbs.nova.starter.config.router.DslRouterConfiguration;

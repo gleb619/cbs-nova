@@ -64,11 +64,11 @@ public final class DefaultHelperRunner implements HelperRunner {
     try {
       var richCtx = new FunctionRichContext<>(ctx);
       if (ctx.mode() == ExecutionMode.EXPLAIN) {
-        result = fn.get().effectiveExplain().apply(richCtx);
+        result = fn.get().explainLogic().apply(richCtx);
       } else {
         Function<FunctionContext<?>, Result<?>> logic = ctx.mode() == ExecutionMode.PREVIEW
                 || ctx.mode() == ExecutionMode.HIERARCHY
-                        ? fn.get().effectivePreview()
+                        ? fn.get().previewLogic()
                         : fn.get().executeLogic();
         result = logic.apply(richCtx);
       }

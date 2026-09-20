@@ -1,7 +1,7 @@
 package cbs.nova.starter.config.router;
 
 import cbs.nova.dsl.model.ErrorResponse;
-import cbs.nova.starter.approval.ChangeRequestService;
+import cbs.nova.starter.service.ChangeRequestService;
 import cbs.nova.starter.controller.ChangeRequestHandler;
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.entity.ChangeRequestEntity;

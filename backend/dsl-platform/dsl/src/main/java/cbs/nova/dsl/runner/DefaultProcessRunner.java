@@ -104,7 +104,7 @@ public final class DefaultProcessRunner implements ProcessRunner {
     return ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName();
   }
 
-  static record ExecutionOutcome(Result<?> result, boolean launchedByTemporal, Throwable failure) {
+  record ExecutionOutcome(Result<?> result, boolean launchedByTemporal, Throwable failure) {
   }
 
 }

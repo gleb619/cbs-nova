@@ -42,12 +42,14 @@ public class ArithmeticHelper implements Executable<ArithmeticIn, ArithmeticOut>
     ArithmeticIn input = ctx.body();
     String mode = (input.mode() == null) ? "unknown" : input.mode().toLowerCase(Locale.ROOT);
     String description = describe(mode, input);
-    String mermaid = "graph TD\n  A[arithmetic: " + mode + "] --> S[compute " + mode
-            + "]\n  S --> R[ArithmeticOut]";
+    String mermaid = """
+        graph TD
+          A[arithmetic: %s] --> S[compute %s]
+          S --> R[ArithmeticOut]""".formatted(mode, mode);
     return new ExplainReport("arithmetic", description, mermaid, List.of());
   }
 
-  private static @NonNull Result<ArithmeticOut> mathMode(
+  private @NonNull Result<ArithmeticOut> mathMode(
           @NonNull String mode,
           @NonNull ArithmeticIn input) {
     return switch (mode) {
@@ -69,7 +71,7 @@ public class ArithmeticHelper implements Executable<ArithmeticIn, ArithmeticOut>
     };
   }
 
-  private static @NonNull Result<ArithmeticOut> arithmeticOperation(
+  private @NonNull Result<ArithmeticOut> arithmeticOperation(
           @NonNull Operation operation,
           @NonNull ArithmeticIn input) {
     List<Number> values = input.effectiveNumbers();
@@ -79,19 +81,19 @@ public class ArithmeticHelper implements Executable<ArithmeticIn, ArithmeticOut>
 
     BigDecimal result = switch (operation) {
       case ADD -> values.stream()
-              .map(ArithmeticHelper::toBigDecimal)
+              .map(this::toBigDecimal)
               .reduce(BigDecimal.ZERO, BigDecimal::add);
       case SUBTRACT -> subtract(values);
       case MULTIPLY -> values.stream()
-              .map(ArithmeticHelper::toBigDecimal)
+              .map(this::toBigDecimal)
               .reduce(BigDecimal.ONE, BigDecimal::multiply);
       case DIVIDE -> divide(values);
       case MIN -> values.stream()
-              .map(ArithmeticHelper::toBigDecimal)
+              .map(this::toBigDecimal)
               .reduce(BigDecimal::min)
               .orElse(BigDecimal.ZERO);
       case MAX -> values.stream()
-              .map(ArithmeticHelper::toBigDecimal)
+              .map(this::toBigDecimal)
               .reduce(BigDecimal::max)
               .orElse(BigDecimal.ZERO);
     };
@@ -99,30 +101,30 @@ public class ArithmeticHelper implements Executable<ArithmeticIn, ArithmeticOut>
     return Result.success(new ArithmeticOut(result));
   }
 
-  private static BigDecimal subtract(List<Number> values) {
+  private BigDecimal subtract(List<Number> values) {
     BigDecimal first = toBigDecimal(values.get(0));
     return values.stream()
             .skip(1)
-            .map(ArithmeticHelper::toBigDecimal)
+            .map(this::toBigDecimal)
             .reduce(first, BigDecimal::subtract);
   }
 
-  private static BigDecimal divide(List<Number> values) {
+  private BigDecimal divide(List<Number> values) {
     BigDecimal first = toBigDecimal(values.get(0));
     return values.stream()
             .skip(1)
-            .map(ArithmeticHelper::toBigDecimal)
+            .map(this::toBigDecimal)
             .reduce(first, (a, b) -> a.divide(b, MathContext.DECIMAL64));
   }
 
-  private static BigDecimal toBigDecimal(Number value) {
+  private BigDecimal toBigDecimal(Number value) {
     if (value instanceof BigDecimal bd) {
       return bd;
     }
     return BigDecimal.valueOf(value.doubleValue());
   }
 
-  private static @NonNull Result<ArithmeticOut> sum(List<Number> numbers) {
+  private @NonNull Result<ArithmeticOut> sum(List<Number> numbers) {
     double total = 0.0;
     for (double value : requireNumbers(numbers, "sum")) {
       total += value;
@@ -130,7 +132,7 @@ public class ArithmeticHelper implements Executable<ArithmeticIn, ArithmeticOut>
     return Result.success(new ArithmeticOut(total));
   }
 
-  private static @NonNull Result<ArithmeticOut> min(List<Number> numbers) {
+  private @NonNull Result<ArithmeticOut> min(List<Number> numbers) {
     double[] values = requireNumbers(numbers, "min");
     double result = values[0];
     for (int i = 1; i < values.length; i++) {
@@ -139,7 +141,7 @@ public class ArithmeticHelper implements Executable<ArithmeticIn, ArithmeticOut>
     return Result.success(new ArithmeticOut(result));
   }
 
-  private static @NonNull Result<ArithmeticOut> max(List<Number> numbers) {
+  private @NonNull Result<ArithmeticOut> max(List<Number> numbers) {
     double[] values = requireNumbers(numbers, "max");
     double result = values[0];
     for (int i = 1; i < values.length; i++) {
@@ -148,7 +150,7 @@ public class ArithmeticHelper implements Executable<ArithmeticIn, ArithmeticOut>
     return Result.success(new ArithmeticOut(result));
   }
 
-  private static @NonNull Result<ArithmeticOut> mean(List<Number> numbers) {
+  private @NonNull Result<ArithmeticOut> mean(List<Number> numbers) {
     double[] values = requireNumbers(numbers, "mean");
     double total = 0.0;
     for (double value : values) {
@@ -157,7 +159,7 @@ public class ArithmeticHelper implements Executable<ArithmeticIn, ArithmeticOut>
     return Result.success(new ArithmeticOut(total / values.length));
   }
 
-  private static @NonNull Result<ArithmeticOut> median(List<Number> numbers) {
+  private @NonNull Result<ArithmeticOut> median(List<Number> numbers) {
     double[] values = requireNumbers(numbers, "median");
     Arrays.sort(values);
     double result;
@@ -170,7 +172,7 @@ public class ArithmeticHelper implements Executable<ArithmeticIn, ArithmeticOut>
     return Result.success(new ArithmeticOut(result));
   }
 
-  private static @NonNull Result<ArithmeticOut> percentile(List<Number> numbers, Double p) {
+  private @NonNull Result<ArithmeticOut> percentile(List<Number> numbers, Double p) {
     if (p == null) {
       throw new IllegalArgumentException("arithmetic.percentile: p is required");
     }
@@ -191,7 +193,7 @@ public class ArithmeticHelper implements Executable<ArithmeticIn, ArithmeticOut>
     return Result.success(new ArithmeticOut(result));
   }
 
-  private static @NonNull Result<ArithmeticOut> stddev(List<Number> numbers) {
+  private @NonNull Result<ArithmeticOut> stddev(List<Number> numbers) {
     double[] values = requireNumbers(numbers, "stddev");
     if (values.length < 2) {
       throw new IllegalArgumentException("arithmetic.stddev: requires at least two numbers");
@@ -209,7 +211,7 @@ public class ArithmeticHelper implements Executable<ArithmeticIn, ArithmeticOut>
     return Result.success(new ArithmeticOut(Math.sqrt(sumOfSquares / (values.length - 1))));
   }
 
-  private static @NonNull Result<ArithmeticOut> clamp(
+  private @NonNull Result<ArithmeticOut> clamp(
           Number value,
           Number min,
           Number max) {
@@ -232,7 +234,7 @@ public class ArithmeticHelper implements Executable<ArithmeticIn, ArithmeticOut>
     return Result.success(new ArithmeticOut(result));
   }
 
-  private static @NonNull Result<ArithmeticOut> round(Number value, Integer scale) {
+  private @NonNull Result<ArithmeticOut> round(Number value, Integer scale) {
     if (value == null) {
       throw new IllegalArgumentException("arithmetic.round: value is required");
     }
@@ -246,28 +248,28 @@ public class ArithmeticHelper implements Executable<ArithmeticIn, ArithmeticOut>
     return Result.success(new ArithmeticOut(result));
   }
 
-  private static @NonNull Result<ArithmeticOut> abs(Number value) {
+  private @NonNull Result<ArithmeticOut> abs(Number value) {
     if (value == null) {
       throw new IllegalArgumentException("arithmetic.abs: value is required");
     }
     return Result.success(new ArithmeticOut(Math.abs(value.doubleValue())));
   }
 
-  private static @NonNull Result<ArithmeticOut> floor(Number value) {
+  private @NonNull Result<ArithmeticOut> floor(Number value) {
     if (value == null) {
       throw new IllegalArgumentException("arithmetic.floor: value is required");
     }
     return Result.success(new ArithmeticOut((long) Math.floor(value.doubleValue())));
   }
 
-  private static @NonNull Result<ArithmeticOut> ceil(Number value) {
+  private @NonNull Result<ArithmeticOut> ceil(Number value) {
     if (value == null) {
       throw new IllegalArgumentException("arithmetic.ceil: value is required");
     }
     return Result.success(new ArithmeticOut((long) Math.ceil(value.doubleValue())));
   }
 
-  private static double[] requireNumbers(List<Number> numbers, String op) {
+  private double[] requireNumbers(List<Number> numbers, String op) {
     if (numbers == null || numbers.isEmpty()) {
       throw new IllegalArgumentException("arithmetic." + op + ": numbers is required");
     }
@@ -285,7 +287,7 @@ public class ArithmeticHelper implements Executable<ArithmeticIn, ArithmeticOut>
     return values;
   }
 
-  private static String preview(Object value) {
+  private String preview(Object value) {
     if (value == null) {
       return "null";
     }
@@ -293,11 +295,11 @@ public class ArithmeticHelper implements Executable<ArithmeticIn, ArithmeticOut>
     return string.length() > 40 ? string.substring(0, 40) + "..." : string;
   }
 
-  private static @NonNull String describe(@NonNull String mode, @NonNull ArithmeticIn input) {
+  private @NonNull String describe(@NonNull String mode, @NonNull ArithmeticIn input) {
     return base(mode) + argsDetail(mode, input);
   }
 
-  private static @NonNull String base(@NonNull String mode) {
+  private @NonNull String base(@NonNull String mode) {
     return switch (mode) {
       case "sum" ->
         "arithmetic helper: computes the double sum of `numbers`. Requires non-empty `numbers`.";
@@ -331,7 +333,7 @@ public class ArithmeticHelper implements Executable<ArithmeticIn, ArithmeticOut>
     };
   }
 
-  private static @NonNull String argsDetail(@NonNull String mode, @NonNull ArithmeticIn input) {
+  private @NonNull String argsDetail(@NonNull String mode, @NonNull ArithmeticIn input) {
     return switch (mode) {
       case "percentile" -> input.p() != null ? " Args: p=" + input.p() + "." : "";
       case "round" -> input.scale() != null ? " Args: scale=" + input.scale() + "." : "";

@@ -1,8 +1,8 @@
 package cbs.nova.starter.controller;
 
 import cbs.nova.dsl.model.ErrorResponse;
-import cbs.nova.starter.approval.ChangeRequestException;
-import cbs.nova.starter.approval.ChangeRequestService;
+import cbs.nova.starter.exception.ChangeRequestException;
+import cbs.nova.starter.service.ChangeRequestService;
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.entity.ChangeRequestEntity;
 import cbs.nova.starter.entity.ChangeRequestEntity.Status;

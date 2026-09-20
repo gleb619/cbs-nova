@@ -6,6 +6,7 @@ import cbs.nova.dsl.helper.HelperInterceptor;
 import cbs.nova.starter.config.properties.CbsNovaFakesProperties;
 import cbs.nova.starter.core.listener.DslExecutionEventBus;
 import cbs.nova.starter.core.recorder.ExternalCallRecorder;
+import cbs.nova.starter.core.stage.CurrentObjectNameStage;
 import cbs.nova.starter.core.stage.DispatchStage;
 import cbs.nova.starter.core.stage.DslExecutionEventStage;
 import cbs.nova.starter.core.stage.ExecutionTraceStage;
@@ -44,6 +45,7 @@ public final class RunDslPipe implements DslExecutionPipe<Object> {
             ? new ManifestObjectGuardHelperInterceptor(objectGuard, fakeInterceptor)
             : fakeInterceptor;
     return DslExecutionPipeline.builder()
+            .stage(new CurrentObjectNameStage())
             .stage(new DslExecutionEventStage(eventBus))
             .stage(new ExecutionTraceStage())
             .stage(new FakingStage(fakesProperties, runScopedFakeConfig))

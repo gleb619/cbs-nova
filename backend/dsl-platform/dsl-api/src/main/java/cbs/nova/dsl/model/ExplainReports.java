@@ -2,9 +2,11 @@ package cbs.nova.dsl.model;
 
 import static cbs.nova.dsl.config.Constants.EMPTY_MARKDOWN;
 
+import cbs.nova.dsl.config.Constants;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import org.jspecify.annotations.NonNull;
 
 /**
@@ -58,6 +60,28 @@ public final class ExplainReports {
             ? doc + (doc.isEmpty() ? "" : "\n\n") + "... " + omitted
                     + " more nodes omitted, budget exhausted"
             : doc;
+  }
+
+  public static Map<String, Object> explainReportSchema() {
+    Map<String, Object> children = Map.of(
+        "type", "array",
+        "items", Map.of("$ref", "#/$defs/ExplainReport"));
+    Map<String, Object> properties = Map.of(
+        "name", Map.of("type", "string"),
+        "description", Map.of("type", "string"),
+        "markdown", Map.of("type", "string"),
+        "children", children);
+    List<String> required = List.of("name", "description", "markdown", "children");
+    Map<String, Object> node = new LinkedHashMap<>();
+    node.put("type", "object");
+    node.put("properties", properties);
+    node.put("required", required);
+    return Map.of(
+        "$schema", Constants.JSON_SCHEMA_DRAFT_URI,
+        "$defs", Map.of("ExplainReport", node),
+        "type", "object",
+        "properties", properties,
+        "required", required);
   }
 
   private static @NonNull String section(@NonNull ExplainReport node) {

@@ -1,10 +1,5 @@
 package cbs.nova.dsl.function;
 
-import static cbs.nova.dsl.config.DslConstants.DEFAULT_HEARTBEAT_TIMEOUT;
-import static cbs.nova.dsl.config.DslConstants.DEFAULT_START_TO_CLOSE_TIMEOUT;
-import static cbs.nova.dsl.config.DslConstants.DEFAULT_TASK_QUEUE;
-import static cbs.nova.dsl.config.DslConstants.DEFAULT_VERSION;
-
 import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.FunctionContext;
@@ -34,18 +29,6 @@ public record FunctionDslObject(
   @Override
   public @NonNull DslType type() {
     return DslType.FUNCTION;
-  }
-
-  public @NonNull Function<FunctionContext<?>, Result<?>> effectivePreview() {
-    return previewLogic;
-  }
-
-  public @NonNull Function<FunctionContext<?>, Result<ExplainReport>> effectiveExplain() {
-    return explainLogic;
-  }
-
-  public @NonNull DslDescriptor describe() {
-    return descriptor.get();
   }
 
 }

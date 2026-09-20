@@ -9,7 +9,7 @@ import cbs.nova.starter.config.properties.CbsNovaExplainProperties;
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.core.pipe.DslPipeContext;
 import cbs.nova.starter.core.pipe.DslPipeStage;
-import cbs.nova.starter.core.pipe.ExplainBudget;
+import cbs.nova.starter.explain.ExplainBudget;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 
@@ -61,7 +61,8 @@ public final class ExplainReportStage implements DslPipeStage {
   }
 
   private static @NonNull String capitalize(@NonNull String value) {
-    return value.isEmpty() ? value
+    return value.isEmpty()
+            ? value
             : Character.toUpperCase(value.charAt(0)) + value.substring(1).toLowerCase();
   }
 }

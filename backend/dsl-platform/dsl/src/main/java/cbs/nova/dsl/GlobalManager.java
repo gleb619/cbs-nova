@@ -4,7 +4,6 @@ import cbs.nova.dsl.model.SimpleContext;
 import cbs.nova.dsl.config.Constants;
 import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.security.ObjectGuard;
-import cbs.nova.dsl.config.Constants;
 import cbs.nova.dsl.exception.DslEntityNotFoundException;
 import cbs.nova.dsl.exception.DslExecutionException;
 import cbs.nova.dsl.explain.ExplainResource;
@@ -270,7 +269,7 @@ public final class GlobalManager {
   }
 
   public @NonNull Optional<DslDescriptor> describeFunction(@NonNull String name) {
-    return helperManager.findFunction(name).map(FunctionDslObject::describe);
+    return helperManager.findFunction(name).map(FunctionDslObject::descriptor);
   }
 
   public @NonNull Optional<GeneratedClassDescriptor> findGeneratedProcess(@NonNull String name) {

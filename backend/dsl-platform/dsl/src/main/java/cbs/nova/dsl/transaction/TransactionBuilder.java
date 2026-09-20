@@ -3,7 +3,6 @@ package cbs.nova.dsl.transaction;
 import cbs.nova.dsl.CompensationContext;
 import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.DslObject;
-import cbs.nova.dsl.DslObject.DslType;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.ParameterDescriptor;
 import cbs.nova.dsl.Result;
@@ -15,14 +14,13 @@ import cbs.nova.dsl.model.ObjectBuilder;
 import cbs.nova.dsl.model.RetryPolicy;
 import cbs.nova.dsl.registry.DefaultParameterRegistry;
 import cbs.nova.dsl.registry.ParameterRegistry;
-import org.jspecify.annotations.NonNull;
-import org.jspecify.annotations.Nullable;
-
 import java.time.Duration;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 public final class TransactionBuilder<I, O> implements ObjectBuilder<TransactionDslObject> {
 
@@ -186,11 +184,11 @@ public final class TransactionBuilder<I, O> implements ObjectBuilder<Transaction
 
   private @NonNull Function<TransactionContext<?>, Result<ExplainReport>> defaultExplain() {
     return ctx -> Result.success(
-            ExplainReport.builder()
-                    .name(name)
-                    .description(description != null ? description : "")
-                    .markdown(GlobalManager.globalManager().resolveExplainContent(name))
-                    .build());
+        ExplainReport.builder()
+            .name(name)
+            .description(GlobalManager.globalManager().description(name).orElse(description))
+            .markdown(GlobalManager.globalManager().resolveExplainContent(name))
+            .build());
   }
 
   @SuppressWarnings("unchecked")

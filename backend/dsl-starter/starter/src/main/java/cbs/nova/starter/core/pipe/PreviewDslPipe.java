@@ -8,6 +8,7 @@ import cbs.nova.dsl.model.PreviewReport;
 import cbs.nova.starter.config.properties.CbsNovaFakesProperties;
 import cbs.nova.starter.config.properties.CbsNovaPreviewProperties;
 import cbs.nova.starter.core.recorder.ExternalCallRecorder;
+import cbs.nova.starter.core.stage.CurrentObjectNameStage;
 import cbs.nova.starter.core.stage.DispatchStage;
 import cbs.nova.starter.core.stage.DryRunLogStage;
 import cbs.nova.starter.core.stage.ExecutionTraceStage;
@@ -70,6 +71,7 @@ public final class PreviewDslPipe implements DslExecutionPipe<PreviewReport> {
             ? new ManifestObjectGuardHelperInterceptor(objectGuard, fakeInterceptor)
             : fakeInterceptor;
     return DslExecutionPipeline.<PreviewReport>builder()
+            .stage(new CurrentObjectNameStage())
             .stage(new PreviewCacheStage(cache))
             .stage(new PreviewReportStage())
             .stage(new MetricsStage(meterRegistry))

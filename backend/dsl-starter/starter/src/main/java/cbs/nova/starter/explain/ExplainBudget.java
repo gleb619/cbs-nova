@@ -1,4 +1,4 @@
-package cbs.nova.starter.core.pipe;
+package cbs.nova.starter.explain;
 
 import cbs.nova.dsl.model.ExplainReport;
 import com.knuddels.jtokkit.Encodings;
@@ -8,16 +8,17 @@ import com.knuddels.jtokkit.api.IntArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class ExplainBudget {
 
   private static final Encoding ENCODING = Encodings.newDefaultEncodingRegistry()
           .getEncoding(EncodingType.CL100K_BASE);
 
-  private ExplainBudget() {
-  }
 
   public static @NonNull ExplainReport apply(
           @NonNull ExplainReport report,

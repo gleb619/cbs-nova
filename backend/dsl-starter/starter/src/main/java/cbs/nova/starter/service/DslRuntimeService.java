@@ -13,7 +13,7 @@ import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.exception.DslException;
 import cbs.nova.starter.converter.DslRuntimeMapper;
 import cbs.nova.starter.core.StarterConstants;
-import cbs.nova.starter.core.pipe.PreviewTimeoutException;
+import cbs.nova.starter.exception.PreviewTimeoutException;
 import cbs.nova.starter.logging.LoggingExecutionListener;
 import cbs.nova.starter.model.DslRequest;
 import cbs.nova.dsl.model.ErrorResponse;

@@ -3,7 +3,7 @@ package cbs.nova.starter.core.stage;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.model.ExplainReport;
-import cbs.nova.starter.core.pipe.ExplainBudget;
+import cbs.nova.starter.explain.ExplainBudget;
 import com.knuddels.jtokkit.Encodings;
 import com.knuddels.jtokkit.api.Encoding;
 import com.knuddels.jtokkit.api.EncodingType;

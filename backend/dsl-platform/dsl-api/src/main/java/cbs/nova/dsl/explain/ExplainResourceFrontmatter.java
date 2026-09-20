@@ -37,6 +37,7 @@ public final class ExplainResourceFrontmatter {
    * Splits frontmatter from body. When no frontmatter is present, returns an empty metadata map and
    * the input unchanged.
    */
+  @Deprecated(forRemoval = true)
   public static @NonNull Parsed parse(@NonNull String source) {
     var lines = source.split("\\R", -1);
     var firstNonEmpty = -1;

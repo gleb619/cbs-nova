@@ -25,4 +25,8 @@ public class Constants {
 
   public static final String SIGNAL_AWAITER_METADATA_KEY = "cbs.nova.dsl.signalAwaiter";
 
+  // JSON Schema draft URI (JacksonJsonSchemaGenerator)
+
+  public static final String JSON_SCHEMA_DRAFT_URI = "https://json-schema.org/draft/2020-12/schema";
+
 }

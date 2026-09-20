@@ -10,6 +10,8 @@ import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.model.HierarchyReport;
 import cbs.nova.dsl.model.PreviewReport;
 import cbs.nova.dsl.Result;
+import cbs.nova.dsl.config.Constants;
+import cbs.nova.dsl.model.ExplainReport;
 import cbs.nova.starter.config.properties.CbsNovaFakesProperties;
 import cbs.nova.starter.core.listener.DslExecutionEventBus;
 import cbs.nova.starter.config.properties.CbsNovaPreviewProperties;
@@ -38,6 +40,7 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicReference;
 
 class DevDslRuntimeTest {
 
@@ -70,7 +73,7 @@ class DevDslRuntimeTest {
           new RunScopedFakeConfig(Caffeine.newBuilder().build()),
           new SimpleMeterRegistry(), new HierarchyDiagramRenderer(), null);
   private final ExplainDslPipe explainPipe = new ExplainDslPipe(
-      new CbsNovaExplainProperties(4000, "explain/", 128, 256, 4096));
+          new CbsNovaExplainProperties(4000, "explain/", 128, 256, 4096));
   private final DevDslRuntime runtime = new DevDslRuntime(previewPipe, runPipe, hierarchyPipe,
           explainPipe);
 
@@ -183,6 +186,42 @@ class DevDslRuntimeTest {
 
     assertThat(processReport.name()).isEqualTo("Ping");
     assertThat(transactionReport.name()).isEqualTo("EchoTx");
+  }
+
+  @Test
+  void currentObjectNameAvailableInAllModes() {
+    AtomicReference<Object> previewName = new AtomicReference<>();
+    AtomicReference<Object> runName = new AtomicReference<>();
+    AtomicReference<Object> hierarchyName = new AtomicReference<>();
+    AtomicReference<Object> explainName = new AtomicReference<>();
+    GlobalManager.globalManager()
+            .registerProcess(Dsl.process("MetaProbe")
+                    .execute(ctx -> {
+                      previewName.set(ctx.metadata(Constants.CURRENT_OBJECT_NAME));
+                      runName.set(ctx.metadata(Constants.CURRENT_OBJECT_NAME));
+                      hierarchyName.set(ctx.metadata(Constants.CURRENT_OBJECT_NAME));
+                      return Result.success("ok");
+                    })
+                    .explain(ctx -> {
+                      explainName.set(ctx.metadata(Constants.CURRENT_OBJECT_NAME));
+                      return Result.success(ExplainReport.builder().name("MetaProbe")
+                              .description("Process: MetaProbe").markdown("m").build());
+                    })
+                    .build());
+
+    runtime.preview("MetaProbe",
+            SimpleContext.builder("input").mode(ExecutionMode.PREVIEW).build());
+    runtime.run("MetaProbe",
+            SimpleContext.builder("input").mode(ExecutionMode.RUN).build());
+    runtime.hierarchy("MetaProbe",
+            SimpleContext.builder("input").mode(ExecutionMode.HIERARCHY).build());
+    runtime.explain("MetaProbe",
+            SimpleContext.builder("input").mode(ExecutionMode.EXPLAIN).build());
+
+    assertThat(previewName.get()).isEqualTo("MetaProbe");
+    assertThat(runName.get()).isEqualTo("MetaProbe");
+    assertThat(hierarchyName.get()).isEqualTo("MetaProbe");
+    assertThat(explainName.get()).isEqualTo("MetaProbe");
   }
 
   @Test

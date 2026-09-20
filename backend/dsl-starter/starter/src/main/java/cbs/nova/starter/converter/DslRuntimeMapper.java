@@ -3,7 +3,7 @@ package cbs.nova.starter.converter;
 import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.dsl.model.PreviewReport;
 import cbs.nova.dsl.exception.DslException;
-import cbs.nova.starter.core.pipe.PreviewTimeoutException;
+import cbs.nova.starter.exception.PreviewTimeoutException;
 import cbs.nova.starter.model.ErrorResponseContext;
 import org.mapstruct.Mapper;
 import org.mapstruct.ReportingPolicy;

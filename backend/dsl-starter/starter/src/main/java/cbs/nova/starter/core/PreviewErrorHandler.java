@@ -7,7 +7,7 @@ import cbs.nova.dsl.PreviewErrorCode;
 import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.dsl.exception.DslCompensationException;
 import cbs.nova.dsl.exception.DslEntityNotFoundException;
-import cbs.nova.starter.core.pipe.PreviewTimeoutException;
+import cbs.nova.starter.exception.PreviewTimeoutException;
 import cbs.nova.starter.exception.DslCapabilityDeniedException;
 import cbs.nova.dsl.exception.DslValidationException;
 import lombok.NoArgsConstructor;

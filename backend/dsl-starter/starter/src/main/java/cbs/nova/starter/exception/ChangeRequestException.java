@@ -1,4 +1,4 @@
-package cbs.nova.starter.approval;
+package cbs.nova.starter.exception;
 
 /**
  * Domain failure of a change-request operation (T568). The {@link #code()} is an

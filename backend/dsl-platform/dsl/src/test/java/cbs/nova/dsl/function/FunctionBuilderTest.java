@@ -84,7 +84,7 @@ class FunctionBuilderTest {
     var fn = Dsl.function("NoPrevFn")
             .execute(ctx -> Result.success("exec"))
             .build();
-    assertThat(fn.effectivePreview()).isSameAs(fn.executeLogic());
+    assertThat(fn.previewLogic()).isSameAs(fn.executeLogic());
     assertThat(fn.previewLogic()).isSameAs(fn.executeLogic());
   }
 
@@ -94,8 +94,8 @@ class FunctionBuilderTest {
             .execute(ctx -> Result.success("exec"))
             .preview(ctx -> Result.success("prev"))
             .build();
-    assertThat(fn.effectivePreview()).isSameAs(fn.previewLogic());
-    assertThat(fn.effectivePreview()).isNotSameAs(fn.executeLogic());
+    assertThat(fn.previewLogic()).isSameAs(fn.previewLogic());
+    assertThat(fn.previewLogic()).isNotSameAs(fn.executeLogic());
   }
 
   @Test
@@ -107,7 +107,7 @@ class FunctionBuilderTest {
             SimpleContext.builder().body("body").mode(ExecutionMode.EXPLAIN).runId("run-explain")
                     .build());
 
-    var result = fn.effectiveExplain().apply(ctx);
+    var result = fn.explainLogic().apply(ctx);
 
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value()).isNotNull();
@@ -124,8 +124,8 @@ class FunctionBuilderTest {
             .execute(ctx -> Result.success("exec"))
             .explain(ctx -> Result.success(report))
             .build();
-    assertThat(fn.effectiveExplain()).isSameAs(fn.explainLogic());
-    assertThat(fn.effectiveExplain()).isNotSameAs(fn.executeLogic());
+    assertThat(fn.explainLogic()).isSameAs(fn.explainLogic());
+    assertThat(fn.explainLogic()).isNotSameAs(fn.executeLogic());
   }
 
   @Test
@@ -138,7 +138,7 @@ class FunctionBuilderTest {
             SimpleContext.builder().body("body").mode(ExecutionMode.EXPLAIN).runId("run-doc")
                     .build());
 
-    var result = fn.effectiveExplain().apply(ctx);
+    var result = fn.explainLogic().apply(ctx);
 
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value().name()).isEqualTo("DocFn");
@@ -155,7 +155,7 @@ class FunctionBuilderTest {
             SimpleContext.builder().body("body").mode(ExecutionMode.EXPLAIN)
                     .runId("run-doc-prefixed").build());
 
-    var result = fn.effectiveExplain().apply(ctx);
+    var result = fn.explainLogic().apply(ctx);
 
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value().markdown()).contains("# Builder Sample");
@@ -172,7 +172,7 @@ class FunctionBuilderTest {
                     .metadata(Map.of(Constants.EXPLAIN_BUDGET_CHARS_KEY, 10))
                     .mode(ExecutionMode.EXPLAIN).runId("run-doc-budget").build());
 
-    var result = fn.effectiveExplain().apply(ctx);
+    var result = fn.explainLogic().apply(ctx);
 
     assertThat(result.value().markdown())
             .contains("# Builder Sample")
@@ -189,7 +189,7 @@ class FunctionBuilderTest {
             SimpleContext.builder().body("body").mode(ExecutionMode.EXPLAIN)
                     .runId("run-doc-missing").build());
 
-    var result = fn.effectiveExplain().apply(ctx);
+    var result = fn.explainLogic().apply(ctx);
 
     assertThat(result.isSuccess()).isFalse();
     assertThat(result.cause())
@@ -209,7 +209,7 @@ class FunctionBuilderTest {
             SimpleContext.builder().body("body").mode(ExecutionMode.EXPLAIN)
                     .runId("run-doc-cleared").build());
 
-    var result = fn.effectiveExplain().apply(ctx);
+    var result = fn.explainLogic().apply(ctx);
 
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value().description()).isEqualTo("code");
@@ -239,7 +239,7 @@ class FunctionBuilderTest {
             .parameters(reg -> reg.string("k"))
             .execute(ctx -> Result.success(null))
             .build();
-    var desc = fn.describe();
+    var desc = fn.descriptor();
     assertThat(desc.name()).isEqualTo("DefaultDescFn");
     assertThat(desc.type()).isEqualTo(DslType.FUNCTION);
     assertThat(desc.parameters()).hasSize(1);
@@ -267,7 +267,7 @@ class FunctionBuilderTest {
             .execute(ctx -> Result.success(null))
             .describe(() -> custom)
             .build();
-    assertThat(fn.describe()).isSameAs(custom);
+    assertThat(fn.descriptor()).isSameAs(custom);
   }
 
   @Test
@@ -288,7 +288,7 @@ class FunctionBuilderTest {
               SimpleContext.builder().body("body").mode(ExecutionMode.EXPLAIN)
                       .runId("run-lookup-name").build());
 
-      var result = fn.effectiveExplain().apply(ctx);
+      var result = fn.explainLogic().apply(ctx);
 
       assertThat(result.isSuccess()).isTrue();
       assertThat(result.value().markdown()).isEqualTo("# By Name Body");
@@ -310,7 +310,7 @@ class FunctionBuilderTest {
               SimpleContext.builder().body("body").mode(ExecutionMode.EXPLAIN)
                       .runId("run-lookup-file").build());
 
-      var result = fn.effectiveExplain().apply(ctx);
+      var result = fn.explainLogic().apply(ctx);
 
       assertThat(result.isSuccess()).isTrue();
       assertThat(result.value().markdown()).isEqualTo("# Filename Body");
@@ -334,7 +334,7 @@ class FunctionBuilderTest {
               SimpleContext.builder().body("body").mode(ExecutionMode.EXPLAIN)
                       .runId("run-lookup-prefer").build());
 
-      var result = fn.effectiveExplain().apply(ctx);
+      var result = fn.explainLogic().apply(ctx);
 
       assertThat(result.value().markdown()).isEqualTo("# Name Wins");
     } finally {
@@ -351,7 +351,7 @@ class FunctionBuilderTest {
             SimpleContext.builder().body("body").mode(ExecutionMode.EXPLAIN).runId("run-fallback")
                     .build());
 
-    var result = fn.effectiveExplain().apply(ctx);
+    var result = fn.explainLogic().apply(ctx);
 
     assertThat(result.value().markdown()).isEqualTo(Constants.EMPTY_MARKDOWN);
     assertThat(result.value().description()).isEmpty();

@@ -374,10 +374,6 @@ public class StarterConstants {
 
   public static final String DSL_RUNS_DEFAULT_TABLE = "dsl_runs";
 
-  // JSON Schema draft URI (JacksonJsonSchemaGenerator)
-
-  public static final String JSON_SCHEMA_DRAFT_URI = "https://json-schema.org/draft/2020-12/schema";
-
   // Correlation-id validation (CorrelationId)
 
   public static final int CORRELATION_ID_MAX_LENGTH = 200;

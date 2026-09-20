@@ -1,4 +1,4 @@
-package cbs.nova.starter.core.pipe;
+package cbs.nova.starter.exception;
 
 import java.time.Duration;
 import org.jspecify.annotations.NonNull;
