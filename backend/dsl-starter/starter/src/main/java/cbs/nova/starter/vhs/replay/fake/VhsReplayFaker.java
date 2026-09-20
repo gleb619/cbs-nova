@@ -36,7 +36,6 @@ public interface VhsReplayFaker {
    */
   boolean enabled();
 
-  /** A no-op faker; {@link #fake} returns the input event unchanged. */
   static VhsReplayFaker noop() {
     return new VhsReplayFaker() {
       @Override

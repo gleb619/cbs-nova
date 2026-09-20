@@ -2,6 +2,7 @@ package cbs.nova.starter.core.stage;
 
 import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.GlobalManager;
+import cbs.nova.dsl.config.Constants;
 import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.model.HierarchyAccumulator;
@@ -97,6 +98,11 @@ public final class HierarchyReportStage implements DslPipeStage {
   private @NonNull String describeEntity(
           DslDescriptor dslDesc, @NonNull GlobalManager gm, @NonNull String name) {
     if (dslDesc != null) {
+      String description = dslDesc.description();
+      if (description != null && !description.isBlank()
+              && !Constants.EMPTY_MARKDOWN.equals(description)) {
+        return description;
+      }
       return capitalize(dslDesc.type().name()) + ": " + dslDesc.name();
     }
     return gm.describeHelper(name)

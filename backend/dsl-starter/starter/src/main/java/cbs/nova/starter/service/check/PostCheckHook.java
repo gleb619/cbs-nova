@@ -18,7 +18,6 @@ import org.jspecify.annotations.Nullable;
  */
 public interface PostCheckHook {
 
-  /** The {@code postCheck.type} value this hook handles, e.g. {@code "audit-write"}. */
   String type();
 
   /**

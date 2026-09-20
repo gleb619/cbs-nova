@@ -60,18 +60,15 @@ public record CbsDslManifestProperties(
     objectMode = objectMode == null ? ObjectMode.PERMISSIVE : objectMode;
   }
 
-  /** Back-compat convenience constructor: no flags, no rate classes, default post-check tuning. */
   public CbsDslManifestProperties(boolean enabled, String path) {
     this(enabled, path, null, null, null, null, null);
   }
 
-  /** Back-compat convenience constructor: no post-check / object enforcement overrides. */
   public CbsDslManifestProperties(boolean enabled, String path,
           Map<String, Boolean> flags, Map<String, RateClass> rateClasses) {
     this(enabled, path, flags, rateClasses, null, null, null);
   }
 
-  /** Back-compat convenience constructor: post-check override only. */
   public CbsDslManifestProperties(boolean enabled, String path,
           Map<String, Boolean> flags, Map<String, RateClass> rateClasses,
           PostCheck postCheck) {
@@ -116,7 +113,6 @@ public record CbsDslManifestProperties(
       }
     }
 
-    /** All-defaults convenience constructor (pool 2, TTL 30m, piece scope). */
     public PostCheck() {
       this(2, Duration.ofMinutes(30), "piece");
     }

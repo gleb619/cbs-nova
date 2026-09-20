@@ -31,14 +31,25 @@ public record ExplainReport(
     children = children == null ? List.of() : List.copyOf(children);
   }
 
-  /** Shortcut: explain resource carrying only its long-form markdown body in {@code mermaid}. */
   public static @NonNull ExplainReport of(@NonNull String name, @NonNull String mermaid) {
     return ExplainReport.builder().name(name).mermaid(mermaid).build();
   }
 
-  /** Empty report — no description, no body, no children. */
+  public static @NonNull ExplainReport of(@NonNull String mermaid) {
+    return ExplainReport.builder().mermaid(mermaid).build();
+  }
+
   public static ExplainReport empty(String name) {
     return ExplainReport.builder().name(name).build();
+  }
+
+  public @NonNull ExplainReport withInfo(@NonNull String name, @NonNull String description) {
+    return ExplainReport.builder()
+        .name(name)
+        .description(description)
+        .mermaid(mermaid())
+        .children(new ArrayList<>(children()))
+        .build();
   }
 
   public @NonNull ExplainReport withChildren(@NonNull List<ExplainReport> children) {

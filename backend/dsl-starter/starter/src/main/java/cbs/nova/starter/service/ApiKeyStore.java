@@ -50,14 +50,11 @@ import tools.jackson.databind.ObjectMapper;
 @Service
 public final class ApiKeyStore {
 
-  /** Number of random bytes — 32 bytes = 256 bits of entropy. */
   private static final int RANDOM_BYTES = StarterConstants.API_KEY_RANDOM_BYTES;
-  /** Length of the visible identifier stored alongside the hash (and returned by list views). */
   private static final int PREFIX_LENGTH = StarterConstants.API_KEY_PREFIX_LENGTH;
 
   private final JdbcApiKeyRepository repository;
   private final ObjectMapper objectMapper;
-  /** Non-final so tests can swap in a deterministic source. Package-private setter below. */
   private SecureRandom random = new SecureRandom();
   /**
    * Self-reference resolved via the application context. Required because the auth filter calls
@@ -90,7 +87,6 @@ public final class ApiKeyStore {
   public record CreatedKey(long id, String label, String prefix, String plaintext) {
   }
 
-  /** Projection used by the list endpoint — never exposes the hash or plaintext. */
   public record ApiKeyView(long id, String label, String prefix, Instant createdAt,
           Instant revokedAt, Instant lastUsedAt) {
 
@@ -146,7 +142,6 @@ public final class ApiKeyStore {
     return new CreatedKey(persisted.id(), label, prefix, plaintext);
   }
 
-  /** Revokes a stored key by id. Idempotent for already-revoked ids (returns false). */
   public boolean revoke(long id) {
     boolean changed = repository.markRevoked(id, Instant.now());
     if (changed) {
@@ -155,7 +150,6 @@ public final class ApiKeyStore {
     return changed;
   }
 
-  /** Lists every stored key for the admin endpoint. NEVER includes the hash or plaintext. */
   public List<ApiKeyView> list() {
     return repository.listAll().stream()
             .map(ApiKeyView::from)
@@ -206,7 +200,6 @@ public final class ApiKeyStore {
     this.random = random;
   }
 
-  /** Test seam — expose the JSON object mapper so handler tests can assert envelope shape. */
   ObjectMapper objectMapperForTest() {
     return objectMapper;
   }

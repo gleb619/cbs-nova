@@ -78,7 +78,6 @@ import tools.jackson.databind.ObjectMapper;
 @Slf4j
 public final class PieceGuardFilter extends OncePerRequestFilter {
 
-  /** Request attribute carrying the matched piece id after a successful pre-check. */
   public static final String PIECE_ID_ATTRIBUTE = "cbs.nova.piece.id";
   /**
    * Request attribute carrying the caller's resolved {@link Role} name after a successful

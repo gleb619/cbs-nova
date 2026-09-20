@@ -94,7 +94,6 @@ public record CbsVhsReplayProperties(
       seed = seed == null || seed.isBlank() ? "vhs-replay" : seed;
     }
 
-    /** A faking configuration with everything disabled — the safe default. */
     public static Faking disabled() {
       return new Faking(false, List.of(), Map.of(), "vhs-replay");
     }

@@ -47,9 +47,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class RoleResolver {
 
-  /** OAuth 2.0 standard scope claim, space-delimited per RFC 6749 §3.3. */
   private static final String SCOPE_CLAIM = "scope";
-  /** Alternative scope claim used by some IdPs (Azure AD, Auth0). */
   private static final String SCP_CLAIM = "scp";
 
   private final String claimName;

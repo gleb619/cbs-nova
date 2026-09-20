@@ -38,7 +38,6 @@ public class DslDefinitionTestRepository {
   private final NamedParameterJdbcTemplate jdbcTemplate;
   private final TransactionTemplate transactionTemplate;
 
-  /** Lists all cases for a definition, ordered by case name for a stable report. */
   public List<DslDefinitionTestEntity> listForDefinition(String definitionName) {
     return jdbcTemplate.query("""
             SELECT %s FROM dsl_definition_tests
@@ -48,7 +47,6 @@ public class DslDefinitionTestRepository {
             new MapSqlParameterSource("definitionName", definitionName), ROW_MAPPER);
   }
 
-  /** Counts stored cases for a definition (used by tests/audit). */
   public int countByDefinition(String definitionName) {
     Long count = jdbcTemplate.queryForObject(
             "SELECT COUNT(*) FROM dsl_definition_tests WHERE definition_name = :definitionName",
@@ -56,7 +54,6 @@ public class DslDefinitionTestRepository {
     return count != null ? count.intValue() : 0;
   }
 
-  /** Appends one test case row. The database generates {@code id}. */
   public void insert(DslDefinitionTestEntity row) {
     jdbcTemplate.update("""
             INSERT INTO dsl_definition_tests
@@ -84,7 +81,6 @@ public class DslDefinitionTestRepository {
     });
   }
 
-  /** Deletes every case for a definition. */
   public void deleteForDefinition(String definitionName) {
     jdbcTemplate.update("DELETE FROM dsl_definition_tests WHERE definition_name = :definitionName",
             new MapSqlParameterSource("definitionName", definitionName));

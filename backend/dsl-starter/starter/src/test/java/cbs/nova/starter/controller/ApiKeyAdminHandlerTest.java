@@ -186,7 +186,6 @@ class ApiKeyAdminHandlerTest {
     assertThat(body).doesNotContain(storedHash);
   }
 
-  /** Test ObjectProvider that delegates to a lambda so the store can resolve itself. */
   private record SelfProvider(Supplier<ApiKeyStore> supplier)
           implements
             ObjectProvider<ApiKeyStore> {

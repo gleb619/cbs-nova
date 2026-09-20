@@ -36,7 +36,6 @@ public class NotificationRuleFiringRepository {
 
   private final NamedParameterJdbcTemplate jdbcTemplate;
 
-  /** Appends one firing row and returns the generated id. */
   public long insert(NotificationRuleFiringEntity row) {
     Objects.requireNonNull(row, "row");
     var params = new MapSqlParameterSource()
@@ -62,7 +61,6 @@ public class NotificationRuleFiringRepository {
     return key.longValue();
   }
 
-  /** Paged query, newest first. {@code ruleId}, when non-null, narrows the result set. */
   public NotificationRuleFiringSearchResult search(@Nullable Long ruleId, int offset, int limit) {
     if (offset < 0) {
       throw new IllegalArgumentException("offset must be non-negative, was " + offset);

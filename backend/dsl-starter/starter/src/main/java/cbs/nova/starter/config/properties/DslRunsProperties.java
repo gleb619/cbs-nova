@@ -19,9 +19,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "cbs.runs")
 public class DslRunsProperties {
 
-  /** Maximum allowed size of an incoming run/preview request body in bytes. */
   private long maxInputBytes = StarterConstants.DEFAULT_MAX_BYTES;
 
-  /** Maximum allowed size of a persisted run output JSON payload in bytes. */
   private long maxOutputBytes = StarterConstants.DEFAULT_MAX_BYTES;
 }

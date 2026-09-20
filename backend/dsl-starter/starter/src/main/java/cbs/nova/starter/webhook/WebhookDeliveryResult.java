@@ -16,7 +16,6 @@ public record WebhookDeliveryResult(
         @Nullable String error,
         long durationMs) {
 
-  /** True when {@code status} is a 2xx/3xx HTTP status code. */
   public boolean isSuccess() {
     try {
       int code = Integer.parseInt(status);

@@ -4,6 +4,7 @@ import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.annotation.Helper;
+import cbs.nova.dsl.model.ExplainReport;
 import com.github.benmanes.caffeine.cache.Cache;
 import java.time.Instant;
 import java.util.Collections;
@@ -25,6 +26,26 @@ public class CompensationTrackerHelper implements Executable<Map<String, Object>
       markers.put(marker.toString(), new Marker(marker.toString(), Instant.now()));
     }
     return Result.success("recorded");
+  }
+
+  @Override
+  public @NonNull String description() {
+    return """
+        Write here short description about what helper used for
+        """;
+  }
+
+  @Override
+  public @NonNull ExplainReport explain(@NonNull Context<Map<String, Object>> ctx) {
+    return ExplainReport.builder()
+        .name("compensationTracker")
+        .description("""
+            Write here some text, use some var from a `ctx.body()`
+            """)
+        .mermaid("""
+            Add here some text and mermaid diagram
+            """)
+        .build();
   }
 
   public boolean wasCompensated(String markerId) {

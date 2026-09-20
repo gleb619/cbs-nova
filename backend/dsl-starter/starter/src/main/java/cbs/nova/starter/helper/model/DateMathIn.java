@@ -24,12 +24,10 @@ package cbs.nova.starter.helper.model;
 public record DateMathIn(String op, String date, String end, Long amount, String unit,
         String zone) {
 
-  /** Returns {@code zone} or {@code "UTC"} when null/blank. */
   public String effectiveZone() {
     return (zone == null || zone.isBlank()) ? "UTC" : zone;
   }
 
-  /** Returns {@code unit} or {@code def} when null/blank. */
   public String effectiveUnit(String def) {
     return (unit == null || unit.isBlank()) ? def : unit;
   }

@@ -326,7 +326,6 @@ class JsonSchemaGeneratorTest {
     assertThat(counting.computeCount(Address.class)).isEqualTo(1);
   }
 
-  /** Test subclass that records how often {@code computeSchema} is invoked per Class. */
   private static final class CountingGenerator extends JacksonJsonSchemaGenerator {
     private final Map<Class<?>, Integer> counts = new HashMap<>();
 

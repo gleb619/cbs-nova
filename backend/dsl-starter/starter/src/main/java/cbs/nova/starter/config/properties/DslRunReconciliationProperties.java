@@ -24,7 +24,6 @@ public class DslRunReconciliationProperties {
    */
   private boolean enabled = false;
 
-  /** How often the reconciliation scans for stuck runs. */
   private Duration scanInterval = Duration.ofMinutes(5);
 
   /**
@@ -33,6 +32,5 @@ public class DslRunReconciliationProperties {
    */
   private Duration gracePeriod = Duration.ofMinutes(15);
 
-  /** Max runs inspected per reconciliation pass. */
   private int batchSize = 200;
 }

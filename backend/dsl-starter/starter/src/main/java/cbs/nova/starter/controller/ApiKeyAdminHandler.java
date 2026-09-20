@@ -30,7 +30,6 @@ public class ApiKeyAdminHandler {
 
   private final ApiKeyStore store;
 
-  /** Lists every stored key (label + prefix + timestamps). NEVER the hash, NEVER the plaintext. */
   public ServerResponse list(ServerRequest request) {
     List<ApiKeyView> keys = store.list();
     return ServerResponse.ok()

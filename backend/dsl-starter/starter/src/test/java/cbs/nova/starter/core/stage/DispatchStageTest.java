@@ -133,7 +133,6 @@ class DispatchStageTest {
     assertThat(dslResult.value()).isEqualTo("real");
   }
 
-  /** Simple helper returning a constant so we can tell faked vs real results apart. */
   private static final class EchoHelper implements Executable<Object, Object> {
     @Override
     public Result<Object> execute(Context<Object> ctx) {

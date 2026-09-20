@@ -19,7 +19,6 @@ public record ChangeRequestEntity(
         @Nullable Instant approvedAt,
         @Nullable String comment) {
 
-  /** Lifecycle of a change request. Only {@link #PENDING} rows can be approved or rejected. */
   public enum Status {
     PENDING, APPROVED, REJECTED, SUPERSEDED
   }

@@ -8,7 +8,6 @@ package cbs.nova.dsl.codegen.task;
 @FunctionalInterface
 public interface CompileTask {
 
-  /** Short phase name used in the timing report. */
   default String name() {
     return this.getClass().getSimpleName();
   }

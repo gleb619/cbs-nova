@@ -24,9 +24,7 @@ public class DslRunRetentionProperties {
    */
   private Duration retention = Duration.ZERO;
 
-  /** How often the scheduled purge runs. */
   private Duration purgeInterval = Duration.ofHours(1);
 
-  /** Max rows removed per batched delete pass, keeping each schema/row lock small. */
   private int purgeBatchSize = 500;
 }

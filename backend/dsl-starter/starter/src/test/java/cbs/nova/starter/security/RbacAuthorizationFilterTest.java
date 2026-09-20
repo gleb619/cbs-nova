@@ -315,7 +315,6 @@ class RbacAuthorizationFilterTest {
                     List.of(new SimpleGrantedAuthority("ROLE_" + role.name()))));
   }
 
-  /** Headers import guard. */
   @SuppressWarnings("unused")
   private static void headersReference() {
     HttpHeaders headers = new HttpHeaders();

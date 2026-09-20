@@ -30,7 +30,6 @@ public final class ExplainResourceFrontmatter {
   private ExplainResourceFrontmatter() {
   }
 
-  /** Parsed frontmatter and the body that follows it. */
   public record Parsed(@NonNull Map<String, String> metadata, @NonNull String body) {
   }
 

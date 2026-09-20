@@ -13,7 +13,6 @@ import org.jspecify.annotations.Nullable;
  */
 public interface ObjectGuard {
 
-  /** No-op guard: every invocation is allowed. */
   ObjectGuard NO_OP = new ObjectGuard() {
     @Override
     public @NonNull Optional<Denial> check(

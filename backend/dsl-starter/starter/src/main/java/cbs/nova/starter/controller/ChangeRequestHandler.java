@@ -117,7 +117,6 @@ public class ChangeRequestHandler {
     return roleResolver.resolve(request.servletRequest());
   }
 
-  /** Optional {@code {comment}} body; absent/blank bodies yield {@code null}. */
   private @Nullable String commentOf(ServerRequest request) throws ServletException, IOException {
     try {
       String raw = request.body(String.class);

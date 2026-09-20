@@ -17,15 +17,11 @@ public sealed interface PostCheck {
 
   String type();
 
-  /** Per-hook failure policy: {@link #ON_FAILURE_WARN warn} or {@link #ON_FAILURE_BLOCK}. */
   String onFailure();
 
-  /** Failure policy: log + audit a FAILURE row; the hook failure never affects anything else. */
   String ON_FAILURE_WARN = "warn";
-  /** Failure policy: as {@code warn}, plus block further executions of the piece until cleared. */
   String ON_FAILURE_BLOCK = "block-next-execution";
 
-  /** Normalizes a raw {@code onFailure} value, defaulting blank to {@code warn}. */
   static String normalizeOnFailure(@Nullable String onFailure) {
     if (onFailure == null || onFailure.isBlank()) {
       return ON_FAILURE_WARN;

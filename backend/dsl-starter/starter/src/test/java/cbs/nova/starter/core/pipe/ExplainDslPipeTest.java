@@ -9,16 +9,23 @@ import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
+import cbs.nova.dsl.config.DslConfig;
+import cbs.nova.dsl.helper.HelperInstanceResolver;
 import cbs.nova.dsl.model.ExplainReport;
+import cbs.nova.dsl.utils.DefinitionLoader;
 import cbs.nova.starter.config.properties.CbsNovaExplainProperties;
 import cbs.nova.starter.config.properties.CbsNovaFakesProperties;
 import cbs.nova.starter.config.properties.CbsNovaPreviewProperties;
 import cbs.nova.starter.config.properties.DryRunProperties;
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.core.recorder.ExternalCallRecorder;
+import cbs.nova.starter.helper.CompensationTrackerHelper;
+import cbs.nova.starter.helper.UnreliableApiHelper;
 import cbs.nova.starter.logging.DryRunLogBufferRegistry;
 import cbs.nova.starter.logging.ThreadLocalDryRunLoggingContext;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -43,6 +50,7 @@ class ExplainDslPipeTest {
   @AfterEach
   void tearDown() {
     GlobalManager.globalManager().resetForTests();
+    DslConfig.dslConfig().helperInstanceResolver().replace(null);
   }
 
   @Test
@@ -87,6 +95,82 @@ class ExplainDslPipeTest {
     assertThat(report.name()).isEqualTo("MissingProcess");
     assertThat(report.mermaid()).isNotBlank();
     assertThat(report.children()).isEmpty();
+  }
+
+  @Test
+  void explainViaResourceDrivesRootAndChildDescriptions() {
+    loadCompactDsls();
+    ExplainDslPipe explainPipe = newPipe(mock(ExternalCallRecorder.class));
+    var body = new cbs.nova.dslexamples.v1.UnreliableApiModels.UnreliableProcessIn(
+            "explain-test",
+            new cbs.nova.starter.helper.model.UnreliableApiIn("op-1", 0, false, "explain", null));
+
+    Result<ExplainReport> result = explainPipe.execute("UnreliableApiSuccess",
+            SimpleContext.builder(body).mode(ExecutionMode.EXPLAIN).runId("run-resource")
+                    .build());
+
+    assertThat(result.isSuccess()).isTrue();
+    ExplainReport report = result.value();
+    assertThat(report.description())
+            .startsWith("A process that routes an API call through the resilient transaction.")
+            .contains("# UnreliableApiSuccess");
+    assertThat(report.children())
+            .anySatisfy(child -> assertThat(child.description())
+                    .startsWith("A transaction that expects temporary failures.")
+                    .contains("# unreliableApiTxResilient"));
+  }
+
+  @Test
+  void missingExplainViaResourceFallsBackToSynthesizedDescription() {
+    GlobalManager.globalManager().registerProcess(
+            Dsl.process("MissingExplainResource")
+                    .input(Object.class)
+                    .output(Object.class)
+                    .explainVia("missing-resource.md")
+                    .execute(ctx -> Result.success("ok"))
+                    .build());
+    ExplainDslPipe explainPipe = newPipe(mock(ExternalCallRecorder.class));
+
+    Result<ExplainReport> result = explainPipe.execute("MissingExplainResource",
+            SimpleContext.builder("payload").mode(ExecutionMode.EXPLAIN).runId("run-fallback")
+                    .build());
+
+    assertThat(result.isSuccess()).isTrue();
+    ExplainReport report = result.value();
+    assertThat(report.name()).isEqualTo("MissingExplainResource");
+    assertThat(report.description()).isEqualTo("Process: MissingExplainResource");
+  }
+
+  private void loadCompactDsls() {
+    DslConfig.dslConfig().helperInstanceResolver().replace(typedHelperResolver());
+    new DefinitionLoader().load(GlobalManager.globalManager());
+    GlobalManager.globalManager().registerHelperResolvers();
+  }
+
+  private static HelperInstanceResolver typedHelperResolver() {
+    return helperClass -> {
+      if (helperClass == UnreliableApiHelper.class) {
+        return new UnreliableApiHelper(Caffeine.newBuilder()
+                .expireAfterWrite(StarterConstants.UNRELIABLE_API_TTL)
+                .maximumSize(StarterConstants.UNRELIABLE_API_MAX_SIZE)
+                .build());
+      }
+      if (helperClass == CompensationTrackerHelper.class) {
+        return new CompensationTrackerHelper(Caffeine.newBuilder()
+                .expireAfterWrite(StarterConstants.COMPENSATION_TRACKER_TTL)
+                .maximumSize(StarterConstants.COMPENSATION_TRACKER_MAX_SIZE)
+                .build());
+      }
+      try {
+        var constructor = helperClass.getDeclaredConstructor();
+        if (!constructor.canAccess(null)) {
+          constructor.setAccessible(true);
+        }
+        return (cbs.nova.dsl.Executable<?, ?>) constructor.newInstance();
+      } catch (ReflectiveOperationException e) {
+        throw new IllegalStateException("Cannot instantiate helper " + helperClass.getName(), e);
+      }
+    };
   }
 
   private ExplainDslPipe newPipe(ExternalCallRecorder recorder) {

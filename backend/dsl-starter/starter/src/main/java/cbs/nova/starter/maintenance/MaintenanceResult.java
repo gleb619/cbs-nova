@@ -15,7 +15,6 @@ import java.time.Duration;
  */
 public record MaintenanceResult(int purged, Duration duration) {
 
-  /** A zero-purged, zero-duration success result. */
   public static final MaintenanceResult EMPTY = new MaintenanceResult(0, Duration.ZERO);
 
   public MaintenanceResult {

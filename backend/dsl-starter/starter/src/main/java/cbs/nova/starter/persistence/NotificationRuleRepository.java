@@ -44,7 +44,6 @@ public class NotificationRuleRepository {
 
   private final NamedParameterJdbcTemplate jdbcTemplate;
 
-  /** Inserts one rule and returns the generated id. */
   public long insert(NotificationRuleEntity row) {
     Objects.requireNonNull(row, "row");
     var params = new MapSqlParameterSource()
@@ -114,7 +113,6 @@ public class NotificationRuleRepository {
     return items.stream().findFirst();
   }
 
-  /** Paged listing in match order: higher priority first, then insertion order. */
   public NotificationRuleSearchResult findAll(int offset, int limit) {
     checkPagination(offset, limit);
     var params = new MapSqlParameterSource()
@@ -149,7 +147,6 @@ public class NotificationRuleRepository {
     return total != null ? total : 0L;
   }
 
-  /** Returns {@code true} when a row with the given id existed and was deleted. */
   public boolean delete(long id) {
     int deleted = jdbcTemplate.update("DELETE FROM dsl_notification_rule WHERE id = :id",
             new MapSqlParameterSource("id", id));

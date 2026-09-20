@@ -59,7 +59,6 @@ public class DslMaintenanceService {
     return tasks;
   }
 
-  /** Whether a given task is enabled under the unified driver. */
   public boolean isEnabled(String taskName) {
     Boolean explicit = taskEnabled.get(taskName);
     return explicit == null ? true : explicit;
@@ -91,7 +90,6 @@ public class DslMaintenanceService {
     }
   }
 
-  /** Stop the unified scheduler. Idempotent. */
   public void shutdown() {
     started.set(false);
     ScheduledFuture<?> current = handle.getAndSet(null);
@@ -100,7 +98,6 @@ public class DslMaintenanceService {
     }
   }
 
-  /** Run all enabled tasks once. Public so tests can drive the service directly. */
   public void runOnce() {
     runSafely();
   }

@@ -68,7 +68,6 @@ public class JdbcApiKeyRepository {
     return count != null ? count : 0L;
   }
 
-  /** Inserts one row. The database generates {@code id}; {@code createdAt} is set by the caller. */
   public void insert(DslApiKeyEntity row) {
     var params = new MapSqlParameterSource()
             .addValue("label", row.label())
@@ -116,7 +115,6 @@ public class JdbcApiKeyRepository {
             .addValue("lastUsedAt", Timestamp.from(lastUsedAt)));
   }
 
-  /** Lists every row, newest first. The hash and plaintext are NEVER included in the result. */
   public List<DslApiKeyEntity> listAll() {
     return jdbcTemplate.query("""
             SELECT %s FROM dsl_api_keys
@@ -158,7 +156,6 @@ public class JdbcApiKeyRepository {
     }
   }
 
-  /** Compile-time guard against accidental {@code null} parameters. */
   @SuppressWarnings("unused")
   private static void requireNonNull(@Nullable Object value, String name) {
     if (value == null) {

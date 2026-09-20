@@ -48,7 +48,6 @@ import org.jspecify.annotations.Nullable;
 @Slf4j
 public final class VhsReplayEngine {
 
-  /** Source of waits, abstracted so tests can verify timing without real delays. */
   @FunctionalInterface
   public interface Sleeper {
 

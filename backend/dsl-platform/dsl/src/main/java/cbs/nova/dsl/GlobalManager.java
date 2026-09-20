@@ -257,6 +257,10 @@ public final class GlobalManager {
     return helperManager.findHelper(name);
   }
 
+  public @NonNull Optional<FunctionDslObject> findFunction(@NonNull String name) {
+    return helperManager.findFunction(name);
+  }
+
   public @NonNull Optional<DslDescriptor> describeProcess(@NonNull String name) {
     return findProcess(name).map(ProcessDslObject::descriptor);
   }
@@ -481,22 +485,18 @@ public final class GlobalManager {
     return GlobalManager.class.getClassLoader();
   }
 
-  /** Registers an explain resource provider at runtime (e.g. a custom HTTP-backed source). */
   public void registerExplainResource(@NonNull ExplainResourceProvider provider) {
     explainResourceRegistry.register(provider);
   }
 
-  /** Loads every SPI-registered provider on the given classloader. */
   public void registerExplainResources(@NonNull ClassLoader classLoader) {
     explainResourceRegistry.init(classLoader);
   }
 
-  /** Resolves an explain resource by its frontmatter {@code name}. */
   public @NonNull Optional<ExplainResource> describeExplainResource(@NonNull String name) {
     return explainResourceRegistry.describeByName(name);
   }
 
-  /** Resolves an explain resource by its {@code filename} (e.g. {@code batch-processing.md}). */
   public @NonNull Optional<ExplainResource> describeExplainResourceByFilename(
           @NonNull String filename) {
     return explainResourceRegistry.describeByFilename(filename);

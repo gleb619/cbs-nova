@@ -42,7 +42,6 @@ public final class VhsScrubber {
   private final List<ScrubRule> rules;
   private final VhsFaker faker = new VhsFaker();
 
-  /** Paths already warned about for a missing field — bounded WARN, never repeated per instance. */
   private final Set<String> warnedPaths = new HashSet<>();
 
   /**
@@ -68,12 +67,10 @@ public final class VhsScrubber {
     this.seed = seed != null ? seed : "vhs-" + UUID.randomUUID();
   }
 
-  /** A no-op scrubber with every scrub feature disabled. */
   public static VhsScrubber disabled() {
     return new VhsScrubber(false, List.of(), DEFAULT_MASK, null);
   }
 
-  /** Whether scrubbing is active for this instance. */
   public boolean enabled() {
     return enabled;
   }

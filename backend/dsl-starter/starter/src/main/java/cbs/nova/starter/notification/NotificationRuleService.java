@@ -83,7 +83,6 @@ public class NotificationRuleService {
     return Optional.of(updated);
   }
 
-  /** Returns {@code true} when a rule with the given id existed and was deleted. */
   public boolean delete(long id) {
     Optional<NotificationRuleEntity> existing = repository.findById(id);
     if (existing.isEmpty()) {

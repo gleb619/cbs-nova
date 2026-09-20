@@ -24,17 +24,14 @@ public record HttpCallOut(
         boolean success,
         @Nullable String errorMessage) {
 
-  /** Successful response with status 2xx. */
   public boolean isSuccess() {
     return success;
   }
 
-  /** Effective response body (never null; empty string if no body). */
   public String bodyOrEmpty() {
     return body == null ? "" : body;
   }
 
-  /** Effective headers map (never null). */
   public Map<String, String> headersOrEmpty() {
     return headers == null ? Map.of() : headers;
   }

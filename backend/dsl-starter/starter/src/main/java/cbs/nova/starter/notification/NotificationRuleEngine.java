@@ -106,7 +106,6 @@ public class NotificationRuleEngine implements DomainEventListener {
             .toList();
   }
 
-  /** Phase-1 matching, no SpEL: exact event type (in SQL) + null-or-equal/glob dimensions. */
   static boolean matches(NotificationRuleEntity rule, DomainEvent event) {
     if (!rule.eventType().equals(event.eventType())) {
       return false;

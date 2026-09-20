@@ -29,7 +29,6 @@ public record FakeRule(
     generate = generate == null ? Generate.synthetic_uuid : generate;
   }
 
-  /** Domain shape of the synthetic replacement. */
   public enum FakeType {
 
     /** Generic opaque identifier (UUID v4 by default). */

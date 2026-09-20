@@ -13,12 +13,10 @@ public final class PromotionModels {
   private PromotionModels() {
   }
 
-  /** One configured promotion environment (name only; directories stay server-side). */
   public record PromotionEnvironment(String name) {
 
   }
 
-  /** One definition visible in a source environment, for UI selection. */
   public record PromotionDefinition(String name, String type, String status) {
 
   }

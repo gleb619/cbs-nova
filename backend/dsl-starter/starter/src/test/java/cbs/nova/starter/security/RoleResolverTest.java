@@ -195,7 +195,6 @@ class RoleResolverTest {
             List.of(new SimpleGrantedAuthority("ROLE_" + role.toUpperCase())));
   }
 
-  /** Sanity helper so the {@link HttpServletRequest} import isn't trimmed by an optimiser. */
   @SuppressWarnings("unused")
   private static HttpServletRequest any() {
     return new MockHttpServletRequest();

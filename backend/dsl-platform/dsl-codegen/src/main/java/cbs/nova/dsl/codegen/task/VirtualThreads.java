@@ -13,7 +13,6 @@ public final class VirtualThreads {
   private VirtualThreads() {
   }
 
-  /** Runs all callables on virtual threads, returning results in submission order. */
   public static <T> List<T> runAll(List<? extends Callable<T>> callables) throws IOException {
     try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
       var futures = executor.invokeAll(callables);

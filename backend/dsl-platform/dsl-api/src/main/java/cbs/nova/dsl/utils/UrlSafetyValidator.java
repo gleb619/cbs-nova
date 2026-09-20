@@ -23,7 +23,6 @@ public final class UrlSafetyValidator {
   private UrlSafetyValidator() {
   }
 
-  /** Plain, framework-free validation config mapped from each module's properties. */
   public record Config(
           List<String> allowedSchemes,
           List<String> allowedHosts,

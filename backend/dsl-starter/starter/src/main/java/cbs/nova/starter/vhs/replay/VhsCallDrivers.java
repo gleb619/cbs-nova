@@ -24,7 +24,6 @@ import tools.jackson.databind.json.JsonMapper;
  */
 public final class VhsCallDrivers {
 
-  /** Environment variable that acts as the second, independent production opt-in key. */
   public static final String PRODUCTION_ENV_KEY = "CBS_VHS_REPLAY_ALLOW_PRODUCTION";
 
   private VhsCallDrivers() {

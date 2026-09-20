@@ -36,7 +36,6 @@ public class DslEventRepository {
 
   private final NamedParameterJdbcTemplate jdbcTemplate;
 
-  /** Inserts one event row and returns the generated {@code dsl_events.id}. */
   public long insert(DslEventEntity row) {
     Objects.requireNonNull(row, "row");
     var params = new MapSqlParameterSource()

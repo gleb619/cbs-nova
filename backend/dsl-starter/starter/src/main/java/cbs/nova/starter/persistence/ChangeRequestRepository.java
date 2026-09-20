@@ -45,7 +45,6 @@ public class ChangeRequestRepository {
 
   private final NamedParameterJdbcTemplate jdbcTemplate;
 
-  /** Inserts one change request and returns the generated id. */
   public long insert(ChangeRequestEntity row) {
     Objects.requireNonNull(row, "row");
     var params = new MapSqlParameterSource()
@@ -81,7 +80,6 @@ public class ChangeRequestRepository {
     return items.stream().findFirst();
   }
 
-  /** All rows for one definition, newest first. */
   public List<ChangeRequestEntity> findByDefinitionName(String definitionName) {
     return jdbcTemplate.query("""
             SELECT %s FROM dsl_change_request
@@ -91,7 +89,6 @@ public class ChangeRequestRepository {
             ROW_MAPPER);
   }
 
-  /** The single PENDING row for a definition, if any (at most one exists: submit supersedes). */
   public Optional<ChangeRequestEntity> findPendingByDefinitionName(String definitionName) {
     List<ChangeRequestEntity> items = jdbcTemplate.query("""
             SELECT %s FROM dsl_change_request
@@ -122,7 +119,6 @@ public class ChangeRequestRepository {
     return jdbcTemplate.query(sql.toString(), params, ROW_MAPPER);
   }
 
-  /** Status transition (approve / reject / supersede); the actor/timestamp/comment are nullable. */
   public void updateStatus(long id, Status status, @Nullable String approvedBy,
           @Nullable Instant approvedAt, @Nullable String comment) {
     var params = new MapSqlParameterSource()

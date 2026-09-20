@@ -167,7 +167,6 @@ class DslMaintenanceServiceTest {
     return new DslMaintenanceService(sorted, copy, Duration.ofMinutes(5), exec, registry);
   }
 
-  /** A test task that reports a configurable purged count and zero duration. */
   private static MaintenanceTask recordingTask(String name, int purged) {
     return new MaintenanceTask() {
       @Override

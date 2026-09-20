@@ -11,7 +11,6 @@ import cbs.nova.starter.model.NotificationRuleModels.NotificationActionDto;
  */
 public interface NotificationSink {
 
-  /** Sink type as it appears in the rule JSON {@code actions[].sink} field. */
   String sinkType();
 
   FiringOutcome deliver(NotificationRuleEntity rule, NotificationActionDto action,

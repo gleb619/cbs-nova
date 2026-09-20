@@ -80,7 +80,6 @@ class VhsReplayEngineTest {
     return file;
   }
 
-  /** Writes a valid tape through the real {@link VhsTapeWriter} (header + trailer included). */
   private Path writeTapeWithWriter(String name, List<TapeEvent> events) throws Exception {
     Path file = tempDir.resolve(name);
     FakeClock clock = new FakeClock(Instant.parse("2026-01-01T00:00:00Z"));
@@ -112,7 +111,6 @@ class VhsReplayEngineTest {
   // Test doubles
   // ---------------------------------------------------------------------------------------------
 
-  /** Records requested sleeps instead of actually sleeping. */
   static final class RecordingSleeper implements VhsReplayEngine.Sleeper {
     final List<Long> sleeps = new ArrayList<>();
 
@@ -126,7 +124,6 @@ class VhsReplayEngineTest {
     }
   }
 
-  /** Records executed calls; can be told to fail a specific call id. */
   static final class RecordingDriver implements VhsCallDriver {
     final List<String> callIds = new CopyOnWriteArrayList<>();
     final AtomicInteger invocations = new AtomicInteger();
@@ -144,7 +141,6 @@ class VhsReplayEngineTest {
     }
   }
 
-  /** Blocks all calls until released, to measure the concurrency cap. */
   static final class BlockingDriver implements VhsCallDriver {
     final CountDownLatch release = new CountDownLatch(1);
     final AtomicInteger inFlight = new AtomicInteger();
@@ -183,7 +179,6 @@ class VhsReplayEngineTest {
     }
   }
 
-  /** Tape sink that routes one run to one {@link VhsTapeWriter} file. */
   static final class SingleFileTapeSink implements VhsTapeSink {
     private final Path file;
     private final FakeClock clock;
@@ -488,7 +483,6 @@ class VhsReplayEngineTest {
     return out;
   }
 
-  /** Extracts the {@code relative_ms} deltas between consecutive {@code call_start} events. */
   private static List<Long> recordedCallDeltas(Path tape) {
     List<cbs.nova.starter.vhs.TapeEvent> calls = new VhsTapeReader(MAPPER).read(tape).events()
             .stream().filter(e -> "call_start".equals(e.eventType())).toList();

@@ -26,7 +26,6 @@ public record Piece(
     deny = deny == null ? new ObjectDeny(null, null, null) : deny;
   }
 
-  /** Back-compat constructor for api/button pieces that carry no object allow/deny data. */
   public Piece(
           String id,
           Target target,

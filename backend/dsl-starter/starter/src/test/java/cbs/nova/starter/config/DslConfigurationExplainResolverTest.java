@@ -77,6 +77,17 @@ class DslConfigurationExplainResolverTest {
   }
 
   @Test
+  void dslConfigResolverLoadsUnreliableApiSuccessMarkdown() {
+    withSourceDir()
+            .run(ctx -> ctx.getBean("dslApplicationRunner", ApplicationRunner.class).run(null));
+
+    assertThat(DslConfig.dslConfig().explainResourceResolver().get()
+            .load("unreliable-api-success.md"))
+            .contains("# UnreliableApiSuccess")
+            .contains("routes an API call through the resilient transaction");
+  }
+
+  @Test
   void userDefinedResolverBeanWinsOverAutoConfiguration() {
     new ApplicationContextRunner()
             .withUserConfiguration(UserResolverConfiguration.class, DslConfiguration.class,

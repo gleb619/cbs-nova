@@ -29,16 +29,12 @@ public record ScrubRule(
     action = action == null ? Action.mask : action;
   }
 
-  /** What to do with a matched field. */
   public enum Action {
 
-    /** Delete the field entirely so it never appears in the persisted tape. */
     remove,
 
-    /** Replace the value with the configured {@code maskValue}. */
     mask,
 
-    /** Replace the value with a deterministic fake derived from the original + seed. */
     fake
   }
 }

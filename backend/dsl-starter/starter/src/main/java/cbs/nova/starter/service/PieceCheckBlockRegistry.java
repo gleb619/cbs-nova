@@ -58,7 +58,6 @@ public class PieceCheckBlockRegistry {
             principalScoped ? "principal:" + principal : "piece", reason);
   }
 
-  /** True while a block covering (pieceId, principal) is active; expired blocks clear lazily. */
   public boolean isBlocked(String pieceId, String principal) {
     Block block = blocks.get(key(pieceId, principal));
     if (block == null) {
@@ -71,7 +70,6 @@ public class PieceCheckBlockRegistry {
     return true;
   }
 
-  /** Removes every block. Called on successful manifest reload (operator-initiated clear). */
   public void clear() {
     int cleared = blocks.size();
     blocks.clear();
@@ -80,7 +78,6 @@ public class PieceCheckBlockRegistry {
     }
   }
 
-  /** Snapshot of un-expired blocks, for tests and diagnostics. */
   public List<Block> activeBlocks() {
     long now = clockMillis.getAsLong();
     List<Block> active = new ArrayList<>();
@@ -96,7 +93,6 @@ public class PieceCheckBlockRegistry {
     return principalScoped ? pieceId + "|" + principal : pieceId;
   }
 
-  /** One immutable block entry. */
   public record Block(String pieceId, String principal, String reason, long expiresAtMillis) {
   }
 }

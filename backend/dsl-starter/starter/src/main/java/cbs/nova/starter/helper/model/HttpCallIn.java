@@ -66,19 +66,16 @@ public final class HttpCallIn {
     return validStatuses;
   }
 
-  /** Convenience factory for the common GET case. */
   public static HttpCallIn get(String url) {
     return new HttpCallIn(url, "GET", null, null, null, null, null);
   }
 
-  /** Convenience factory for a JSON POST. */
   public static HttpCallIn postJson(String url, String json) {
     return new HttpCallIn(url, "POST",
             Map.of("Content-Type", "application/json"),
             json, null, null, null);
   }
 
-  /** Effective request timeout in milliseconds; never zero or negative. */
   public long effectiveTimeoutMillis() {
     if (timeoutMillis == null || timeoutMillis <= 0) {
       return StarterConstants.DEFAULT_TIMEOUT_MILLIS;
@@ -86,7 +83,6 @@ public final class HttpCallIn {
     return timeoutMillis;
   }
 
-  /** Effective HTTP method (upper-cased), defaulting to GET. */
   public String effectiveMethod() {
     if (method == null || method.isBlank()) {
       return "GET";
@@ -94,22 +90,18 @@ public final class HttpCallIn {
     return method.toUpperCase();
   }
 
-  /** Effective headers map (never null). */
   public Map<String, String> effectiveHeaders() {
     return headers == null ? Map.of() : headers;
   }
 
-  /** Effective redirect policy; defaults to NEVER. */
   public RedirectPolicy effectiveRedirects() {
     return followRedirects == null ? RedirectPolicy.NEVER : followRedirects;
   }
 
-  /** Effective list of valid HTTP statuses (never null). */
   public List<Integer> effectiveValidStatuses() {
     return validStatuses == null ? List.of() : List.copyOf(validStatuses);
   }
 
-  /** Lightweight redirect policy enum (mapped to JDK constants at execution time). */
   public enum RedirectPolicy {
     NEVER, NORMAL, ALWAYS
   }

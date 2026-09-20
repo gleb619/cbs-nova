@@ -119,7 +119,6 @@ public class ChangeRequestService {
             row.requestedBy(), row.requestedAt(), Status.REJECTED, null, null, comment);
   }
 
-  /** Filtered listing, newest first; both filters are optional. */
   public List<ChangeRequestEntity> list(@Nullable String definitionName, @Nullable Status status) {
     return repository.findAll(definitionName, status);
   }
@@ -171,7 +170,6 @@ public class ChangeRequestService {
     }
   }
 
-  /** Mirrors {@code DslDraftHandler#safeFileName} — kept private there, replicated per T568. */
   private static String safeFileName(String name) {
     return name.replaceAll("[^A-Za-z0-9._-]", "_");
   }
