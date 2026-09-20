@@ -31,7 +31,7 @@ public class StartupTimeReporter {
     }
     var context = event.getApplicationContext();
     log.info(
-            "STARTUP_REPORT totalMillis={} beans={} profiles={}",
+            "STARTUP_REPORT totalMillis={} beans={} profiles={};",
             event.getTimeTaken().toMillis(),
             context.getBeanDefinitionCount(),
             String.join(",", context.getEnvironment().getActiveProfiles()));
@@ -41,14 +41,13 @@ public class StartupTimeReporter {
               properties.topSteps(),
               Duration.ofMillis(properties.slowThresholdMillis()));
 
-      lines.getFirst()
-              .forEach(line -> log.info("STARTUP_REPORT {}", line));
-      lines.getLast()
-              .forEach(line -> log.debug("STARTUP_REPORT {}", line));
+      log.info("STARTUP_REPORT \n {}\n---", String.join("\n ", lines.getFirst()));
+      log.debug("STARTUP_REPORT \n {}\n---", String.join("\n ", lines.getLast()));
     }
   }
 
-  protected List<List<String>> summarize(StartupTimeline timeline, int topSteps, Duration slowThreshold) {
+  protected List<List<String>> summarize(StartupTimeline timeline, int topSteps,
+          Duration slowThreshold) {
     var step = new ArrayList<String>();
     var substep = new ArrayList<String>();
     timeline.getEvents().stream()

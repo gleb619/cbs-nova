@@ -651,18 +651,52 @@ describe('RunResultPanel', () => {
     expect(wrapper.find('[data-testid="explain-markdown-rendered"]').html()).toContain('<h1')
   })
 
-  it('falls back to JSON mode in explain endpoint when no description or mermaid is present', () => {
+  it('shows View/Raw toggles in explain endpoint even without description or mermaid', () => {
     const wrapper = mountPanel({
       endpoint: 'explain',
       output: { result: { ok: true } },
       status: 'success',
     })
 
-    expect(wrapper.find('[data-testid="mode-json"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="mode-view"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="mode-raw"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="mode-form"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="mode-json"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="explain-markdown-view"]').exists()).toBe(true)
+  })
+
+  it('shows View/Raw toggles in explain idle state with no output', () => {
+    const wrapper = mountPanel({ endpoint: 'explain', output: null, status: 'idle' })
+
+    expect(wrapper.find('[data-testid="explain-mode-toggles"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="mode-view"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="mode-raw"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="mode-form"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="mode-json"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="explain-markdown-view"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="explain-markdown-empty"]').exists()).toBe(true)
+    const viewButton = wrapper.find('[data-testid="mode-view"]')
+    expect(viewButton.classes()).toContain('bg-accent-500')
+  })
+
+  it('renders the raw view in explain idle state when Raw is selected', async () => {
+    const wrapper = mountPanel({ endpoint: 'explain', output: null, status: 'idle' })
+
+    await wrapper.find('[data-testid="mode-raw"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="explain-raw-view"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="explain-raw-empty"]').exists()).toBe(true)
+  })
+
+  it('keeps Form/Json toggles for run/preview endpoints with no output', () => {
+    const wrapper = mountPanel({ output: null, status: 'idle' })
+
     expect(wrapper.find('[data-testid="mode-form"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="mode-json"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="explain-mode-toggles"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="mode-view"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="mode-raw"]').exists()).toBe(false)
-    expect(wrapper.find('[data-testid="runner-result-tab"]').text()).toContain('{"ok":true}')
   })
 
   it('disables the format button in explain mode', async () => {

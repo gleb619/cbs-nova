@@ -1,7 +1,10 @@
 import java.time.Duration
 import java.time.Instant
-import org.gradle.api.Task
-import org.gradle.api.tasks.TaskState
+import java.time.temporal.Temporal
+
+// CAVEAT: when the Gradle configuration cache is active, task-graph hook output
+// (including these [Task Timer] prints) may be suppressed and rely on stale runs.
+// Use `--no-configuration-cache` to reliably observe per-task timings.
 
 def taskStartTimes = [:]
 
@@ -12,12 +15,12 @@ gradle.taskGraph.beforeTask { Task task ->
 gradle.taskGraph.afterTask { Task task, TaskState state ->
   if (state.executed && taskStartTimes.containsKey(task.path)) {
     def startTime = taskStartTimes[task.path]
-    def duration = Duration.between(startTime, Instant.now())
-    println "⏱️  [Task Timer] ${task.path.padRight(40)} -> Finished in ${formatDuration(duration)}"
+    def duration = Duration.between(startTime as Temporal, Instant.now())
+    println "[Task Timer] ${task.path.padRight(40)} is finished in ${formatDuration(duration)}"
   }
 }
 
-String formatDuration(Duration duration) {
+static String formatDuration(Duration duration) {
   long minutes = duration.toMinutes()
   long seconds = duration.minusMinutes(minutes).getSeconds()
   long millis = duration.minusMinutes(minutes).minusSeconds(seconds).toMillis()

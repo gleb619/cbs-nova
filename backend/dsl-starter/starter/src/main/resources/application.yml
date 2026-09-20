@@ -39,7 +39,7 @@ management:
 # log line. %X{key:-} renders empty for uncorrelated requests (no noisy "null").
 logging:
   pattern:
-    level: "%5p [rid=%X{rid:-} cid=%X{cid:-}]"
+    level: "%5p [rid=%X{rid:-}, cid=%X{cid:-}]"
 
 # cbs.runs.retention* — legacy per-job knobs honoured by DslRunRetentionPurger
 # (T276) and (when dsl.maintenance.unified.enabled=true) by the unified

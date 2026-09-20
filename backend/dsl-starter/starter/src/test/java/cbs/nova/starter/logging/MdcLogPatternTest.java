@@ -19,7 +19,7 @@ import org.slf4j.MDC;
  */
 class MdcLogPatternTest {
 
-  private static final String LOG_LEVEL_PATTERN = "%5p [rid=%X{rid:-} cid=%X{cid:-}]";
+  private static final String LOG_LEVEL_PATTERN = "%5p [rid=%X{rid:-}, cid=%X{cid:-}]";
 
   private final LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory();
 
@@ -43,7 +43,7 @@ class MdcLogPatternTest {
       logger.info("correlated request");
 
       assertThat(layout.doLayout(appender.list.get(0)))
-              .contains("INFO [rid=req-abc cid=order-4711]");
+              .contains("INFO [rid=req-abc, cid=order-4711]");
     } finally {
       logger.detachAppender(appender);
       layout.stop();
@@ -64,7 +64,7 @@ class MdcLogPatternTest {
       logger.info("uncorrelated request");
 
       assertThat(layout.doLayout(appender.list.get(0)))
-              .contains("INFO [rid= cid=]")
+              .contains("INFO [rid=, cid=]")
               .doesNotContain("null");
     } finally {
       logger.detachAppender(appender);

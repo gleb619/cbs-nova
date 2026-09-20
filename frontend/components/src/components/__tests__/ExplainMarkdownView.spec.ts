@@ -71,6 +71,20 @@ describe('ExplainMarkdownView', () => {
     expect(mermaidRender).toHaveBeenCalledTimes(1)
   })
 
+  it('renders a bare mermaid diagram body as a diagram when the mermaid prop is set', async () => {
+    mermaidRender.mockResolvedValue({ svg: '<svg data-mock="bare-diagram"></svg>' })
+    const wrapper = mount(ExplainMarkdownView, {
+      props: { markdown: 'graph TD\n  A-->B\n', mermaid: true },
+    })
+
+    await flushPromises()
+
+    const diagram = wrapper.find('[data-testid="explain-mermaid-diagram"]')
+    expect(diagram.exists()).toBe(true)
+    expect(diagram.find('svg').exists()).toBe(true)
+    expect(mermaidRender.mock.calls[0]?.[1]).toContain('graph TD')
+  })
+
   it('does not invoke mermaid when the mermaid prop is unset', async () => {
     const wrapper = mount(ExplainMarkdownView, {
       props: { markdown: '```mermaid\ngraph TD; A-->B\n```\n' },

@@ -175,7 +175,9 @@ export function useNotifications(): UseNotificationsReturn {
 
   function clear(): void {
     // Cancel every pending timer so an early expiry cannot resurrect state.
-    state.notifications.forEach((n) => cancelTimer(store, n.id))
+    state.notifications.forEach((n) => {
+      cancelTimer(store, n.id)
+    })
     state.notifications = []
   }
 

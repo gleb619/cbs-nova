@@ -135,7 +135,7 @@ function closePanel() {
       </div>
 
       <div v-else-if="results.length === 0" class="text-sm text-gray-500 italic py-6 text-center">
-        No helpers found.
+        No objects found.
       </div>
 
       <table

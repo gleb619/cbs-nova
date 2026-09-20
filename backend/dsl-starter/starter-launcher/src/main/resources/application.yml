@@ -166,7 +166,7 @@ logging:
   # rid = X-Request-Id, cid = X-Correlation-Id from request-scope MDC; %X{key:-}
   # renders empty for uncorrelated requests.
   pattern:
-    level: "%5p [rid=%X{rid:-} cid=%X{cid:-}]"
+    level: "%5p [rid=%X{rid:-}, cid=%X{cid:-}]"
   level:
     root: INFO
     cbs.nova: INFO

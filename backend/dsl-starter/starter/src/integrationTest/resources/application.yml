@@ -38,7 +38,7 @@ springdoc:
 
 logging:
   pattern:
-    level: "%5p [rid=%X{rid:-} cid=%X{cid:-}]"
+    level: "%5p [rid=%X{rid:-}, cid=%X{cid:-}]"
 
 management:
   endpoints:

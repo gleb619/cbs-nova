@@ -286,23 +286,23 @@ public class DslIntrospectionService {
 
   private Map<String, Object> explainReportSchema() {
     Map<String, Object> children = Map.of(
-        "type", "array",
-        "items", Map.of("$ref", "#/$defs/ExplainReport"));
+            "type", "array",
+            "items", Map.of("$ref", "#/$defs/ExplainReport"));
     Map<String, Object> properties = Map.of(
-        "name", Map.of("type", "string"),
-        "description", Map.of("type", "string"),
-        "mermaid", Map.of("type", "string"),
-        "children", children);
+            "name", Map.of("type", "string"),
+            "description", Map.of("type", "string"),
+            "mermaid", Map.of("type", "string"),
+            "children", children);
     List<String> required = List.of("name", "description", "mermaid", "children");
     Map<String, Object> node = new LinkedHashMap<>();
     node.put("type", "object");
     node.put("properties", properties);
     node.put("required", required);
     return Map.of(
-        "$schema", StarterConstants.JSON_SCHEMA_DRAFT_URI,
-        "$defs", Map.of("ExplainReport", node),
-        "type", "object",
-        "properties", properties,
-        "required", required);
+            "$schema", StarterConstants.JSON_SCHEMA_DRAFT_URI,
+            "$defs", Map.of("ExplainReport", node),
+            "type", "object",
+            "properties", properties,
+            "required", required);
   }
 }

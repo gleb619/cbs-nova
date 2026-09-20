@@ -20,7 +20,8 @@ import org.springframework.context.support.GenericApplicationContext;
 
 class StartupTimeReporterTest {
 
-  CbsStartupReportProperties cbsStartupReportProperties = new CbsStartupReportProperties(true, 10, 100);
+  CbsStartupReportProperties cbsStartupReportProperties = new CbsStartupReportProperties(true, 10,
+          100);
 
   private StartupTimeReporter startupTimeReporter;
 
@@ -44,9 +45,10 @@ class StartupTimeReporterTest {
 
     var lines = startupTimeReporter.summarize(
             startup.drainBufferedTimeline(), 10, Duration.ofMillis(50))
-        .stream()
-        .flatMap(Collection::stream)
-        .collect(Collectors.toList());;
+            .stream()
+            .flatMap(Collection::stream)
+            .collect(Collectors.toList());
+    ;
 
     assertThat(lines.get(0)).startsWith("step=beans.instantiate totalMillis=");
     assertThat(lines).anyMatch(line -> line.startsWith("step=context.refresh totalMillis="));
@@ -63,9 +65,9 @@ class StartupTimeReporterTest {
 
     var lines = startupTimeReporter.summarize(
             startup.drainBufferedTimeline(), 2, Duration.ofDays(1))
-        .stream()
-        .flatMap(Collection::stream)
-        .toList();
+            .stream()
+            .flatMap(Collection::stream)
+            .toList();
 
     assertThat(lines.stream().filter(line -> line.startsWith("step=")).count()).isEqualTo(2);
   }

@@ -391,8 +391,8 @@ Every request carries two ids. Both are optional — the caller may send either,
 Where they show up:
 
 - **Backend log lines** carry both MDC keys on every line:
-  `INFO [rid=3f0a… cid=order-4711] …`. Uncorrelated requests render the segment with empty
-  values (`[rid=3f0a… cid=]`) — no noise, no `null`.
+  `INFO [rid=3f0a…, cid=order-4711] …`. Uncorrelated requests render the segment with empty
+  values (`[rid=3f0a…, cid=]`) — no noise, no `null`.
 - **BFF logs** (Nuxt/Nitro console) print a structured object next to each
   `[BFF >]` / `[BFF <]` / `[BFF !]` line containing `requestId` and, when the browser sent
   one, `correlationId`.

@@ -17,6 +17,9 @@ const props = withDefaults(
 
 const root = ref<HTMLElement | null>(null)
 
+const MERMAID_FIRST_LINE =
+  /^(graph\b|flowchart\b|sequenceDiagram\b|stateDiagram(-v2)?\b|classDiagram\b|erDiagram\b|gantt\b|pie\b|journey\b|gitGraph\b|mindmap\b|timeline\b|quadrantChart\b|requirementDiagram\b|C4Context\b)/
+
 let mermaidRender: ((definition: string) => Promise<string>) | null = null
 let mermaidUnavailable = false
 let mermaidSequence = 0
@@ -24,6 +27,10 @@ let mermaidSequence = 0
 const computedHtml = computed(() => {
   const raw = props.markdown ?? ''
   if (!raw) return ''
+  const source = raw.trim()
+  if (props.mermaid && !source.includes('```') && MERMAID_FIRST_LINE.test(source)) {
+    return marked.parse(`\`\`\`mermaid\n${source}\n\`\`\``, { async: false }) as string
+  }
   return marked.parse(raw, { async: false }) as string
 })
 

@@ -144,6 +144,8 @@ function isEphemeral(note: Notification): boolean {
             note.read ? 'opacity-60' : '',
           ]"
           @click="handleSelect(note)"
+          @keydown.enter="handleSelect(note)"
+          @keydown.space.prevent="handleSelect(note)"
         >
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-2">

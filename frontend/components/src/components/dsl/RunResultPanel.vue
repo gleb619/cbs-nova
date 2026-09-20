@@ -33,16 +33,13 @@ let previousOutput: RunnerOutput | null = props.output
 type PanelMode = 'form' | 'json' | 'schema' | 'history' | 'view' | 'raw'
 
 const isExplain = computed(() => props.endpoint === 'explain')
-const hasExplainBody = computed(() =>
-  Boolean(props.output?.explainReport || props.output?.description || props.output?.mermaidDiagram),
-)
 
 const explainMarkdown = computed(
   () => props.output?.explainReport?.mermaid || props.output?.description,
 )
 
 function initialMode(): PanelMode {
-  if (isExplain.value && hasExplainBody.value) return 'view'
+  if (isExplain.value) return 'view'
   return 'json'
 }
 
@@ -58,7 +55,7 @@ const { outputSchema, outputType, loading, error, hasOutputSchema, events } = us
 const schemaViewPayload = computed(() => outputSchema.value)
 
 const effectiveMode = computed<PanelMode>(() => {
-  if (isExplain.value && hasExplainBody.value) {
+  if (isExplain.value) {
     if (mode.value === 'form' || mode.value === 'json') return 'view'
     return mode.value
   }
@@ -167,8 +164,7 @@ const canFormat = computed(() => {
   return raw !== undefined && raw !== null
 })
 
-const showExplainToggles = computed(() => isExplain.value && hasExplainBody.value)
-const showFormJsonToggles = computed(() => !showExplainToggles.value)
+const showFormJsonToggles = computed(() => !isExplain.value)
 
 onBeforeUpdate(() => {
   if (props.name !== previousName || props.type !== previousType) {

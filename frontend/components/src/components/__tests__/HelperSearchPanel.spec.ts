@@ -55,7 +55,7 @@ describe('HelperSearchPanel', () => {
   it('shows the empty state when there are no results', () => {
     wrapper = mountPanel({ results: [], open: true, isLoading: false })
 
-    expect(wrapper.text()).toContain('No helpers found.')
+    expect(wrapper.text()).toContain('No objects found.')
     expect(wrapper.find('table').exists()).toBe(false)
   })
 

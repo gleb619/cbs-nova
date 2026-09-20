@@ -29,10 +29,9 @@ function iconFor(kind: NotificationKind): string {
 <template>
   <!-- Teleport so the stack sits above every layout regardless of overflow. -->
   <Teleport to="body">
-    <div
+    <section
       data-testid="app-toast-container"
       class="fixed top-5 right-5 z-50 flex flex-col gap-3 w-full max-w-sm pointer-events-none"
-      role="region"
       aria-label="Notifications"
     >
       <TransitionGroup
@@ -69,6 +68,6 @@ function iconFor(kind: NotificationKind): string {
           </button>
         </div>
       </TransitionGroup>
-    </div>
+    </section>
   </Teleport>
 </template>
