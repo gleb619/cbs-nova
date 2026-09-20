@@ -4,6 +4,8 @@ plugins {
   alias(libs.plugins.test.logger) apply false
 }
 
+apply from: "${rootDir}/../gradle/task-timer.gradle"
+
 // Central version lives in backend/gradle.properties.
 def parentProps = new Properties()
 file('../gradle.properties').withInputStream { parentProps.load(it) }

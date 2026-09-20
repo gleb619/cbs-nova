@@ -9,6 +9,8 @@ plugins {
   alias(libs.plugins.cyclonedx.bom)
 }
 
+apply from: "${rootDir}/../gradle/task-timer.gradle"
+
 // Pin the catalog Lombok version across all Spring Boot-managed configurations.
 ext['lombok.version'] = libs.versions.lombok.get()
 
