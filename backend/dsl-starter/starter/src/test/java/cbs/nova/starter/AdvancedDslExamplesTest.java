@@ -17,6 +17,8 @@ import cbs.nova.dslexamples.v1.OrderIdGenerationModels.OrderIdGenerationIn;
 import cbs.nova.dslexamples.v1.OrderIdGenerationModels.OrderIdGenerationOut;
 import cbs.nova.dslexamples.v1.OrderSagaModels.OrderSagaIn;
 import cbs.nova.dslexamples.v1.OrderSagaModels.OrderSagaOut;
+import cbs.nova.dslexamples.v1.RetryPolicyModels.RetryPolicyIn;
+import cbs.nova.dslexamples.v1.RetryPolicyModels.RetryPolicyOut;
 import cbs.nova.starter.config.properties.CbsNovaLoggingProperties;
 import cbs.nova.starter.config.properties.CbsNovaLoggingProperties.Level;
 import cbs.nova.starter.core.StarterConstants;
@@ -108,6 +110,24 @@ class AdvancedDslExamplesTest {
     String tail1 = out.namespacedId1().substring(out.namespacedId1().lastIndexOf('-') + 1);
     String tail2 = out.namespacedId2().substring(out.namespacedId2().lastIndexOf('-') + 1);
     assertThat(tail1).isEqualTo(tail2);
+  }
+
+  @Test
+  void retryPolicyPreviewComputesDeterministicAndRandomDelays() {
+    var input = new RetryPolicyIn(6, 1000L, 60000L);
+    Context<RetryPolicyIn> ctx = SimpleContext.builder(input).mode(ExecutionMode.PREVIEW)
+            .build();
+
+    Result<?> result = GlobalManager.globalManager().runProcess("RetryPolicy", ctx);
+
+    assertThat(result.isSuccess()).as("cause: %s", result.cause()).isTrue();
+    RetryPolicyOut out = (RetryPolicyOut) result.value();
+    assertThat(out.maxAttempts()).isEqualTo(6);
+    assertThat(out.baseMillis()).isEqualTo(1000L);
+    assertThat(out.maxMillis()).isEqualTo(60000L);
+    assertThat(out.noneDelays()).containsExactly(1000L, 2000L, 4000L, 8000L, 16000L, 32000L);
+    assertThat(out.fullDelay()).as("randomized full-jitter delay within [0, cap]")
+            .isBetween(0L, 60000L);
   }
 
   private static HelperInstanceResolver typedHelperResolver() {

@@ -634,3 +634,39 @@ boolean deterministicTailMatch = tail1.equals(tail2);
 With `orderId` = `"order-42"` and `namespace` = `"orders/v1"` the process returns three
 distinct non-blank UUIDs, both namespaced values share the same node group, and the process
 result records `deterministicTailMatch=true`.
+
+## Computing capped-exponential retry delays with `backoff`
+
+The `backoff` helper computes a retry delay for an attempt number given `baseMillis`,
+`maxMillis` and a `jitter` strategy (`none`, `full`, `equal`, `decorrelated`). It performs no
+Temporal-level retry itself — it is a pure delay computation you can reuse inside your own
+retry loop. `none` returns the exact capped-exponential value `min(baseMillis * 2^attempt,
+maxMillis)`; the randomized modes return a value within the same `[0, cap]` band.
+
+See `backend/dsl-starter/dsl-examples/src/dsl/RetryPolicyDsl.java` (input/output models in
+`backend/dsl-starter/dsl-examples/src/models/RetryPolicyModels.java`). The process walks a
+simulated retry loop over attempts `0..maxAttempts-1` with `jitter` = `"none"` to expose the
+deterministic schedule, then takes a single `"full"` jitter draw for the next attempt so both
+modes are visible in one result:
+
+```java
+List<Long> noneDelays = new ArrayList<>();
+for (int attempt = 0; attempt < in.maxAttempts(); attempt++) {
+  var r = ctx.runHelper("backoff",
+      new BackoffIn(attempt, in.baseMillis(), in.maxMillis(), "none", null));
+  if (!r.isSuccess()) {
+    return Result.failure(r.cause());
+  }
+  noneDelays.add(r.as(BackoffOut.class).delayMillis());
+}
+
+var full = ctx.runHelper("backoff",
+    new BackoffIn(in.maxAttempts(), in.baseMillis(), in.maxMillis(), "full", null));
+if (!full.isSuccess()) {
+  return Result.failure(full.cause());
+}
+```
+
+With `baseMillis` = `1000`, `maxMillis` = `60000` and `maxAttempts` = `6` the process records
+`noneDelays` = `[1000, 2000, 4000, 8000, 16000, 32000]` while `fullDelay` is a fresh random
+value guaranteed to lie within `[0, 60000]`.
