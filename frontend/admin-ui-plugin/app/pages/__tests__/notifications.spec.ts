@@ -61,8 +61,9 @@ const harness: NotificationsHarness = (() => {
   }
 })()
 
-;(globalThis as unknown as { __notificationsHarness?: NotificationsHarness }).__notificationsHarness =
-  harness
+;(
+  globalThis as unknown as { __notificationsHarness?: NotificationsHarness }
+).__notificationsHarness = harness
 
 vi.mock('@cbs/admin-ui-plugin/composables/useNotifications', () => ({
   useNotifications: useNotificationsMock,
@@ -105,15 +106,11 @@ const DslNotificationRuleListProbe = defineComponent({
           {
             'data-testid': 'probe-update-button',
             onClick: () =>
-              emit(
-                'update',
-                7,
-                {
-                  name: 'rule-1b',
-                  eventFilter: { eventType: 'RunFailed' },
-                  actions: [],
-                },
-              ),
+              emit('update', 7, {
+                name: 'rule-1b',
+                eventFilter: { eventType: 'RunFailed' },
+                actions: [],
+              }),
           },
           'Update',
         ),

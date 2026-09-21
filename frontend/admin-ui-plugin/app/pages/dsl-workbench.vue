@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { useClientLogger } from '@cbs/admin-ui-plugin/composables/useClientLogger'
 import { useApprovals } from '@cbs/admin-ui-plugin/composables/useApprovals'
+import { useClientLogger } from '@cbs/admin-ui-plugin/composables/useClientLogger'
 import { useDraftDirty } from '@cbs/admin-ui-plugin/composables/useDraftDirty'
 import { useDraftSave } from '@cbs/admin-ui-plugin/composables/useDraftSave'
 import { useDslApi } from '@cbs/admin-ui-plugin/composables/useDslApi'
@@ -152,6 +152,16 @@ function safeSelectConstruct(name: string) {
   syncSelectionEffects()
 }
 
+// Remove the objectName query param once we have consumed the deep link.
+// Keeps reloads from re-overriding the user's persisted selection.
+function consumeObjectNameQuery() {
+  if (typeof window === 'undefined') return
+  const url = new URL(window.location.href)
+  if (!url.searchParams.has('objectName')) return
+  url.searchParams.delete('objectName')
+  window.history.replaceState({}, '', url.toString())
+}
+
 // Side effects that follow every workbench selection change: mirroring the
 // selection into the shared drafts store (so the navbar widget can highlight
 // the active draft) and loading the source file for file-backed constructs.
@@ -228,6 +238,16 @@ const fileCode = ref('')
 const fileCodeLoading = ref(false)
 const isFileBacked = computed(() => !!selectedConstruct.value?.filePath)
 const editorCode = computed(() => (isFileBacked.value ? fileCode.value : draftBody.value))
+
+// Header label — show the source file basename for file-backed constructs
+// (e.g. `dsl/BatchProcessingDsl.java` → `BatchProcessingDsl.java`); fall back
+// to the construct name when no source file is associated (helpers/functions).
+const basename = (path: string) => path.split(/[\\/]/).pop() ?? path
+const selectedConstructLabel = computed(() => {
+  const construct = selectedConstruct.value
+  if (!construct) return ''
+  return basename(construct.filePath ?? construct.name)
+})
 
 async function loadSourceFile(construct: typeof selectedConstruct.value) {
   if (!construct?.filePath) {
@@ -584,6 +604,7 @@ onMounted(async () => {
 
   if (objectName) {
     safeSelectConstruct(String(objectName))
+    consumeObjectNameQuery()
   }
 
   refreshDrafts()
@@ -615,8 +636,13 @@ onBeforeUnmount(() => {
           ☰
         </button>
         <h1 class="text-lg font-semibold text-ink">DSL Workbench</h1>
-        <span v-if="selectedConstruct" class="text-sm text-ink-muted">
-          / {{ selectedConstruct.name }}
+        <span
+          v-if="selectedConstruct"
+          class="text-sm text-ink-muted"
+          data-testid="workbench-selected-construct-label"
+          :title="selectedConstruct.filePath ?? selectedConstruct.name"
+        >
+          / {{ selectedConstructLabel }}
         </span>
         <span
           v-if="selectedPendingApproval"

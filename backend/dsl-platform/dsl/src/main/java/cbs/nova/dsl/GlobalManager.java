@@ -474,6 +474,7 @@ public final class GlobalManager {
     DslConfig.dslConfig().temporalProcessLauncher().replace(null);
     DslConfig.dslConfig().transactionInvoker().replace(null);
     DslConfig.dslConfig().objectGuard().replace(ObjectGuard.NO_OP);
+    DslConfig.dslConfig().generatedClassRegistry().reset();
   }
 
   public void replaceGlobalManager(@NonNull GlobalManager replacement) {

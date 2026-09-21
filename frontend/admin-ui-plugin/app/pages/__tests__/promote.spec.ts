@@ -63,8 +63,7 @@ function installHarness(overrides: Partial<PromotionHarness> = {}): PromotionHar
     reset: vi.fn(),
     ...overrides,
   }
-  ;(globalThis as unknown as { __promotionHarness?: PromotionHarness }).__promotionHarness =
-    harness
+  ;(globalThis as unknown as { __promotionHarness?: PromotionHarness }).__promotionHarness = harness
   return harness
 }
 
@@ -97,10 +96,12 @@ afterEach(() => {
 
 describe('promote page (T569)', () => {
   it('loads environments on mount and shows empty-config guidance when none exist', async () => {
-    const harness = installHarness({ environments: (function () {
-      const vue = require('vue') as typeof import('vue')
-      return vue.ref<Array<{ name: string }>>([])
-    })() })
+    const harness = installHarness({
+      environments: (function () {
+        const vue = require('vue') as typeof import('vue')
+        return vue.ref<Array<{ name: string }>>([])
+      })(),
+    })
 
     const wrapper = mountPage()
     await flushPromises()

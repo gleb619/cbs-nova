@@ -98,6 +98,15 @@ class HelperSpiProcessorTest {
     assertThat(Files.readString(instanceResolverSpi).strip())
             .isEqualTo("fixture.GeneratedHelperInstanceResolver");
 
+    var sourceClass = outputDir.resolve("fixture/GeneratedHelperSource.class");
+    assertThat(sourceClass).exists();
+
+    var helperSourceSpi = outputDir
+            .resolve("META-INF/services/cbs.nova.dsl.helper.HelperSource");
+    assertThat(helperSourceSpi).exists();
+    assertThat(Files.readString(helperSourceSpi).strip())
+            .isEqualTo("fixture.GeneratedHelperSource");
+
     try (var loader = new URLClassLoader(
             new URL[]{outputDir.toUri().toURL()}, getClass().getClassLoader())) {
       var resolvers = ServiceLoader.load(HelperResolver.class, loader);
@@ -112,6 +121,14 @@ class HelperSpiProcessorTest {
       instanceResolvers.forEach(r -> instances.add(r.resolve(fixtureClass)));
       assertThat(instances).hasSize(1);
       assertThat(instances.get(0)).isInstanceOf(fixtureClass);
+
+      // HelperSource SPI exposes (name, filename) for the runtime registry.
+      var helperSources = ServiceLoader.load(cbs.nova.dsl.helper.HelperSource.class, loader);
+      List<cbs.nova.dsl.helper.HelperSource.Entry> sourceEntries = new ArrayList<>();
+      helperSources.forEach(s -> sourceEntries.addAll(s.entries()));
+      assertThat(sourceEntries)
+              .containsExactly(new cbs.nova.dsl.helper.HelperSource.Entry(
+                      "greetHelper", "TestGreetHelper.java"));
     }
   }
 

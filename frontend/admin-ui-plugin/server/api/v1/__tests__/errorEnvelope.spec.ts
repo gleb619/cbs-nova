@@ -58,40 +58,47 @@ type ErrorRouteCase = {
 const errorRoutes: ErrorRouteCase[] = [
   {
     name: 'POST /api/v1/dsl/run/:name',
-    handler: async () => (await import('../generated/routes/dsl/run/[name].post')).default(fakeEvent),
+    handler: async () =>
+      (await import('../generated/routes/dsl/run/[name].post')).default(fakeEvent),
     params: { name: 'runDef' },
     body: { input: {} },
   },
   {
     name: 'POST /api/v1/dsl/preview/:name',
-    handler: async () => (await import('../generated/routes/dsl/preview/[name].post')).default(fakeEvent),
+    handler: async () =>
+      (await import('../generated/routes/dsl/preview/[name].post')).default(fakeEvent),
     params: { name: 'previewDef' },
     body: { input: {} },
   },
   {
     name: 'POST /api/v1/dsl/explain/:name',
-    handler: async () => (await import('../generated/routes/dsl/explain/[name].post')).default(fakeEvent),
+    handler: async () =>
+      (await import('../generated/routes/dsl/explain/[name].post')).default(fakeEvent),
     params: { name: 'explainDef' },
     body: { input: {} },
   },
   {
     name: 'GET /api/v1/executions/:id',
-    handler: async () => (await import('../generated/routes/executions/[id].get')).default(fakeEvent),
+    handler: async () =>
+      (await import('../generated/routes/executions/[id].get')).default(fakeEvent),
     params: { id: 'exec-123' },
   },
   {
     name: 'POST /api/v1/executions/:id/cancel',
-    handler: async () => (await import('../generated/routes/executions/[id]/cancel.post')).default(fakeEvent),
+    handler: async () =>
+      (await import('../generated/routes/executions/[id]/cancel.post')).default(fakeEvent),
     params: { id: 'exec-123' },
   },
   {
     name: 'GET /api/v1/dsl/drafts/:name',
-    handler: async () => (await import('../generated/routes/dsl/drafts/[name].get')).default(fakeEvent),
+    handler: async () =>
+      (await import('../generated/routes/dsl/drafts/[name].get')).default(fakeEvent),
     params: { name: 'draftDef' },
   },
   {
     name: 'POST /api/v1/dsl/drafts/:name/save',
-    handler: async () => (await import('../generated/routes/dsl/drafts/[name]/save.post')).default(fakeEvent),
+    handler: async () =>
+      (await import('../generated/routes/dsl/drafts/[name]/save.post')).default(fakeEvent),
     params: { name: 'draftDef' },
     body: { source: 'foo: bar' },
   },

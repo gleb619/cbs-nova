@@ -1,4 +1,10 @@
-export type PromotionOutcome = 'created' | 'updated' | 'unchanged' | 'skipped' | 'published' | 'failed'
+export type PromotionOutcome =
+  | 'created'
+  | 'updated'
+  | 'unchanged'
+  | 'skipped'
+  | 'published'
+  | 'failed'
 
 export interface PromotionEnvironment {
   name: string

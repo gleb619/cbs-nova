@@ -19,9 +19,7 @@ export function useExecutionsApi() {
         | Execution[]
         | { items?: Execution[]; total?: number }
     }
-    return (await bffListExecutions()) as
-      | Execution[]
-      | { items?: Execution[]; total?: number }
+    return (await bffListExecutions()) as Execution[] | { items?: Execution[]; total?: number }
   }
 
   async function get(id: string): Promise<ExecutionDetail> {

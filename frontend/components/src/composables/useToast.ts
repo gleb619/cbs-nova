@@ -40,11 +40,7 @@ export interface UseToastReturn {
 export function useToast(): UseToastReturn {
   const notifications: UseNotificationsReturn = useNotifications()
 
-  function push(
-    message: string,
-    kind: NotificationKind = 'info',
-    duration?: number,
-  ): Notification {
+  function push(message: string, kind: NotificationKind = 'info', duration?: number): Notification {
     const d = duration ?? (kind === 'error' ? 0 : DEFAULT_DURATION)
     return notifications.push(message, kind, { duration: d, toast: true })
   }

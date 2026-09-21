@@ -14,8 +14,8 @@ import org.jspecify.annotations.NonNull;
  * Field semantics:
  * <ul>
  * <li>{@code description} — short summary, typically the YAML frontmatter description.</li>
- * <li>{@code markdown} — full markdown body of the explain resource (the long-form content, rendered
- * or diagrammed downstream).</li>
+ * <li>{@code markdown} — full markdown body of the explain resource (the long-form content,
+ * rendered or diagrammed downstream).</li>
  * </ul>
  */
 @Builder
@@ -44,7 +44,7 @@ public record ExplainReport(
             .build();
   }
 
-  //TODO: add usage in source code, not only in test ones
+  // TODO: add usage in source code, not only in test ones
   @Deprecated(forRemoval = true)
   public @NonNull ExplainReport withChildren(@NonNull List<ExplainReport> children) {
     return ExplainReport.builder()
@@ -55,7 +55,7 @@ public record ExplainReport(
             .build();
   }
 
-  //TODO: add usage in source code, not only in test ones
+  // TODO: add usage in source code, not only in test ones
   @Deprecated(forRemoval = true)
   public @NonNull ExplainReport addChild(@NonNull ExplainReport child) {
     var next = new ArrayList<>(children);

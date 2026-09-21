@@ -1,10 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, h, nextTick } from 'vue'
-import {
-  resetNotificationsState,
-  useNotifications,
-} from '../useNotifications'
+import { resetNotificationsState, useNotifications } from '../useNotifications'
 
 function mountConsumer() {
   const seen: ReturnType<typeof useNotifications>[] = []

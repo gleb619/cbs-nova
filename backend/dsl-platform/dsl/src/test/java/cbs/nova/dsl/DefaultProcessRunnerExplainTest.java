@@ -66,7 +66,8 @@ class DefaultProcessRunnerExplainTest {
               explainCalled.set(true);
               assertThat(ctx.mode()).isEqualTo(ExecutionMode.EXPLAIN);
               return Result.success(
-                      ExplainReport.builder().name("P").description("explain").markdown("").build());
+                      ExplainReport.builder().name("P").description("explain").markdown("")
+                              .build());
             })
             .build();
     var ctx = SimpleContext.builder().body("input").mode(ExecutionMode.EXPLAIN)

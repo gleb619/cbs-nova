@@ -1,10 +1,6 @@
 import { useClientLogger } from '@cbs/admin-ui-plugin/composables/useClientLogger'
 import { useDslApi } from '@cbs/admin-ui-plugin/composables/useDslApi'
-import type {
-  PromotionDefinition,
-  PromotionEnvironment,
-  PromoteResult,
-} from '@cbs/components'
+import type { PromotionDefinition, PromotionEnvironment, PromoteResult } from '@cbs/components'
 import { ref } from 'vue'
 import { extractApiError } from '../utils/extractApiError'
 
@@ -60,11 +56,7 @@ export function usePromotion() {
     }
   }
 
-  async function runPreview(payload: {
-    source: string
-    target: string
-    definitions?: string[]
-  }) {
+  async function runPreview(payload: { source: string; target: string; definitions?: string[] }) {
     previewLoading.value = true
     previewError.value = null
     try {

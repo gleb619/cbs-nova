@@ -64,31 +64,31 @@ public final class ExplainReports {
 
   public static Map<String, Object> explainReportSchema() {
     Map<String, Object> children = Map.of(
-        "type", "array",
-        "items", Map.of("$ref", "#/$defs/ExplainReport"));
+            "type", "array",
+            "items", Map.of("$ref", "#/$defs/ExplainReport"));
     Map<String, Object> properties = Map.of(
-        "name", Map.of("type", "string"),
-        "description", Map.of("type", "string"),
-        "markdown", Map.of("type", "string"),
-        "children", children);
+            "name", Map.of("type", "string"),
+            "description", Map.of("type", "string"),
+            "markdown", Map.of("type", "string"),
+            "children", children);
     List<String> required = List.of("name", "description", "markdown", "children");
     Map<String, Object> node = new LinkedHashMap<>();
     node.put("type", "object");
     node.put("properties", properties);
     node.put("required", required);
     return Map.of(
-        "$schema", Constants.JSON_SCHEMA_DRAFT_URI,
-        "$defs", Map.of("ExplainReport", node),
-        "type", "object",
-        "properties", properties,
-        "required", required);
+            "$schema", Constants.JSON_SCHEMA_DRAFT_URI,
+            "$defs", Map.of("ExplainReport", node),
+            "type", "object",
+            "properties", properties,
+            "required", required);
   }
 
   private static @NonNull String section(@NonNull ExplainReport node) {
     return node.markdown().isEmpty()
             ? "## " + node.name() + "\n\n" + node.description()
             : "## " + node.name() + "\n\n" + node.description() + "\n\n```mermaid\n"
-              + node.markdown() + "\n```";
+                    + node.markdown() + "\n```";
   }
 
   private static @NonNull List<ExplainReport> mergeChildren(

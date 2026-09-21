@@ -92,12 +92,9 @@ describe('useRunner', () => {
     statusOrder.push(r.status.value as string)
     await p
 
-    expect(getApiMocks().preview).toHaveBeenCalledWith(
-      'previewDef',
-      r.formData.value,
-      undefined,
-      { 'X-Request-Id': expect.stringMatching(UUID_REGEX) },
-    )
+    expect(getApiMocks().preview).toHaveBeenCalledWith('previewDef', r.formData.value, undefined, {
+      'X-Request-Id': expect.stringMatching(UUID_REGEX),
+    })
     expect(r.output.value).toMatchObject({
       result: 'r1',
       metadata: { k: 'v' },
@@ -153,12 +150,9 @@ describe('useRunner', () => {
 
     await r.submit()
 
-    expect(getApiMocks().explain).toHaveBeenCalledWith(
-      'expDef',
-      r.formData.value,
-      undefined,
-      { 'X-Request-Id': expect.stringMatching(UUID_REGEX) },
-    )
+    expect(getApiMocks().explain).toHaveBeenCalledWith('expDef', r.formData.value, undefined, {
+      'X-Request-Id': expect.stringMatching(UUID_REGEX),
+    })
     expect(getApiMocks().preview).not.toHaveBeenCalled()
     expect(getApiMocks().run).not.toHaveBeenCalled()
     expect(r.output.value).toMatchObject({ description: 'explain me' })

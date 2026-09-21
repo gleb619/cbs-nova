@@ -76,11 +76,7 @@ const payload = computed(() => ({
 }))
 
 const canPreview = computed(
-  () =>
-    source.value !== '' &&
-    target.value !== '' &&
-    !previewLoading.value &&
-    !applying.value,
+  () => source.value !== '' && target.value !== '' && !previewLoading.value && !applying.value,
 )
 
 async function onPreview() {
@@ -89,9 +85,8 @@ async function onPreview() {
 
 const changesCount = computed(
   () =>
-    preview.value?.results.filter(
-      (r) => r.outcome === 'created' || r.outcome === 'updated',
-    ).length ?? 0,
+    preview.value?.results.filter((r) => r.outcome === 'created' || r.outcome === 'updated')
+      .length ?? 0,
 )
 
 async function onApply() {
@@ -145,13 +140,17 @@ const auditUrl = computed(() => '/api/v1/dsl/audit?action=PROMOTION')
           type="checkbox"
           data-testid="promote-include-drafts"
           @change="reset"
-        />
+        >
         Include drafts
       </label>
     </div>
 
     <p v-if="environmentsLoading" class="text-sm text-neutral-500">Loading environments…</p>
-    <p v-else-if="environmentsError" class="text-sm text-error-700" data-testid="promote-environments-error">
+    <p
+      v-else-if="environmentsError"
+      class="text-sm text-error-700"
+      data-testid="promote-environments-error"
+    >
       {{ environmentsError }}
     </p>
     <p
@@ -160,7 +159,8 @@ const auditUrl = computed(() => '/api/v1/dsl/audit?action=PROMOTION')
       data-testid="promote-no-environments"
     >
       No promotion environments configured. Set
-      <code>cbs.dsl.promotion.environments.&lt;name&gt;.base-path</code> on the backend.
+      <code>cbs.dsl.promotion.environments.&lt;name&gt;.base-path</code>
+      on the backend.
     </p>
 
     <div v-if="source" class="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -177,7 +177,11 @@ const auditUrl = computed(() => '/api/v1/dsl/audit?action=PROMOTION')
           </button>
         </div>
         <p v-if="definitionsLoading" class="text-sm text-neutral-500">Loading definitions…</p>
-        <p v-else-if="definitionsError" class="text-sm text-error-700" data-testid="promote-definitions-error">
+        <p
+          v-else-if="definitionsError"
+          class="text-sm text-error-700"
+          data-testid="promote-definitions-error"
+        >
           {{ definitionsError }}
         </p>
         <p v-else-if="definitions.length === 0" class="text-sm text-neutral-500">
@@ -193,7 +197,7 @@ const auditUrl = computed(() => '/api/v1/dsl/audit?action=PROMOTION')
                 type="checkbox"
                 :checked="selected.has(def.name)"
                 @change="toggleDefinition(def.name)"
-              />
+              >
               <span>{{ def.name }}</span>
               <span class="text-xs text-neutral-500">{{ def.type }} · {{ def.status }}</span>
             </label>
@@ -222,7 +226,8 @@ const auditUrl = computed(() => '/api/v1/dsl/audit?action=PROMOTION')
         </p>
         <template v-else-if="preview">
           <p class="mb-2 text-sm text-neutral-700" data-testid="promote-preview-summary">
-            {{ changesCount }} of {{ preview.results.length }} definitions would change on
+            {{ changesCount }}
+            of {{ preview.results.length }} definitions would change on
             {{ target }}.
           </p>
           <DslPromotionDiffTable :results="preview.results" />
@@ -251,7 +256,8 @@ const auditUrl = computed(() => '/api/v1/dsl/audit?action=PROMOTION')
         Promoted {{ applyResult.published }} definition(s) to {{ target }}.
       </p>
       <p v-if="applyResult.failed > 0" class="text-sm text-error-700">
-        {{ applyResult.failed }} definition(s) failed.
+        {{ applyResult.failed }}
+        definition(s) failed.
       </p>
       <DslPromotionDiffTable :results="applyResult.results" class="mt-2" />
       <a

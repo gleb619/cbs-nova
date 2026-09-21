@@ -12,7 +12,8 @@ class ExplainReportTest {
   void mergeCombinesDescriptionsAndDiagrams() {
     var left = ExplainReport.builder().name("n").description("left-desc").markdown("left-diagram")
             .build();
-    var right = ExplainReport.builder().name("n").description("right-desc").markdown("right-diagram")
+    var right = ExplainReport.builder().name("n").description("right-desc")
+            .markdown("right-diagram")
             .build();
     var merged = ExplainReports.merge(left, right);
     assertThat(merged.name()).isEqualTo("n");
@@ -33,9 +34,11 @@ class ExplainReportTest {
 
   @Test
   void mergeKeepsSecondDescriptionWhenFirstIsNone() {
-    var left = ExplainReport.builder().name("n").description(EMPTY_MARKDOWN).markdown("left-diagram")
+    var left = ExplainReport.builder().name("n").description(EMPTY_MARKDOWN)
+            .markdown("left-diagram")
             .build();
-    var right = ExplainReport.builder().name("n").description("right-desc").markdown("right-diagram")
+    var right = ExplainReport.builder().name("n").description("right-desc")
+            .markdown("right-diagram")
             .build();
     var merged = ExplainReports.merge(left, right);
     assertThat(merged.description()).isEqualTo("right-desc");
@@ -58,7 +61,8 @@ class ExplainReportTest {
 
   @Test
   void mergeCombinesChildrenByNameInsteadOfDuplicating() {
-    var sharedLeft = ExplainReport.builder().name("shared").description("left").markdown("").build();
+    var sharedLeft = ExplainReport.builder().name("shared").description("left").markdown("")
+            .build();
     var sharedRight = ExplainReport.builder().name("shared").description("right").markdown("")
             .build();
     var left = ExplainReport.builder().name("n").description("l").markdown("").build()

@@ -19,7 +19,6 @@ public final class ExplainBudget {
   private static final Encoding ENCODING = Encodings.newDefaultEncodingRegistry()
           .getEncoding(EncodingType.CL100K_BASE);
 
-
   public static @NonNull ExplainReport apply(
           @NonNull ExplainReport report,
           int budgetChars,

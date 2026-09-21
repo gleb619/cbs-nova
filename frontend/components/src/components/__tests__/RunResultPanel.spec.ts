@@ -4,6 +4,7 @@ import {
   __resetConstructSchemaCache,
   DSL_SCHEMA_FETCH_KEY,
 } from '../../composables/useConstructSchema'
+import { resetNotificationsState, useNotifications } from '../../composables/useNotifications'
 import RunResultPanel from '../dsl/RunResultPanel.vue'
 import SchemaFormField from '../dsl/SchemaFormField.vue'
 
@@ -67,6 +68,7 @@ describe('RunResultPanel', () => {
   beforeEach(() => {
     __resetConstructSchemaCache()
     mermaidRender.mockReset()
+    resetNotificationsState()
   })
 
   afterEach(() => {
@@ -427,16 +429,22 @@ describe('RunResultPanel', () => {
     expect(wrapper.find('[data-testid="format-result"]').attributes('disabled')).toBeDefined()
   })
 
-  it('disables the format button in form mode', async () => {
+  it('shows a Copy button in Form mode for preview/run endpoints', async () => {
     const fetchMock = vi.fn().mockResolvedValue(schemaResponse)
 
-    const wrapper = mountPanel({ type: 'Process' }, fetchMock)
+    const wrapper = mountPanel(
+      { type: 'Process', output: { result: { ok: true } }, status: 'success' },
+      fetchMock,
+    )
     await flushPromises()
 
     await wrapper.find('[data-testid="mode-form"]').trigger('click')
     await flushPromises()
 
-    expect(wrapper.find('[data-testid="format-result"]').attributes('disabled')).toBeDefined()
+    const copyBtn = wrapper.find('[data-testid="copy-result"]')
+    expect(copyBtn.exists()).toBe(true)
+    expect(copyBtn.text()).toBe('Copy')
+    expect(copyBtn.attributes('disabled')).toBeUndefined()
   })
 
   it('disables the format button while loading', () => {
@@ -513,6 +521,7 @@ describe('RunResultPanel', () => {
     const emitted = wrapper.emitted('format')
     expect(emitted?.[0]?.[0]).toBe('{\n  "ok": true\n}\n')
   })
+
   it('renders the result again after switching to Schema mode and back to JSON', async () => {
     const fetchMock = vi.fn().mockResolvedValue(schemaResponse)
 
@@ -699,18 +708,31 @@ describe('RunResultPanel', () => {
     expect(wrapper.find('[data-testid="mode-raw"]').exists()).toBe(false)
   })
 
-  it('disables the format button in explain mode', async () => {
+  it('shows Show and Copy buttons in explain View mode and keeps Format disabled in Raw mode', async () => {
     const wrapper = mountPanel({
       endpoint: 'explain',
       output: { description: '# x' },
       status: 'success',
     })
 
-    expect(wrapper.find('[data-testid="format-result"]').attributes('disabled')).toBeDefined()
+    const showBtn = wrapper.find('[data-testid="show-result"]')
+    expect(showBtn.exists()).toBe(true)
+    expect(showBtn.text()).toBe('Show')
+    expect(showBtn.attributes('disabled')).toBeUndefined()
+
+    const copyBtn = wrapper.find('[data-testid="copy-result"]')
+    expect(copyBtn.exists()).toBe(true)
+    expect(copyBtn.text()).toBe('Copy')
+    expect(copyBtn.attributes('disabled')).toBeUndefined()
 
     await wrapper.find('[data-testid="mode-raw"]').trigger('click')
     await flushPromises()
-    expect(wrapper.find('[data-testid="format-result"]').attributes('disabled')).toBeDefined()
+    const formatBtn = wrapper.find('[data-testid="format-result"]')
+    expect(formatBtn.exists()).toBe(true)
+    expect(formatBtn.text()).toBe('Format')
+    expect(formatBtn.attributes('disabled')).toBeDefined()
+    expect(wrapper.find('[data-testid="show-result"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="copy-result"]').exists()).toBe(false)
   })
 
   it('shows the JSON schema in schema mode for the explain endpoint', async () => {
@@ -758,5 +780,253 @@ describe('RunResultPanel', () => {
     const field = wrapper.find('[data-testid="schema-field-result"]')
     expect(field.exists()).toBe(true)
     expect((field.element as HTMLInputElement).value).toBe('live value')
+  })
+  it('copies full explain report as markdown to clipboard and shows a success toast', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    vi.stubGlobal('navigator', { clipboard: { writeText } })
+
+    const report = {
+      name: 'demo',
+      description: 'short summary',
+      markdown: '# Helloworld',
+      children: [
+        {
+          name: 'child',
+          description: 'child summary',
+          markdown: '## Childbody',
+          children: [],
+        },
+      ],
+    }
+    const wrapper = mountPanel({
+      endpoint: 'explain',
+      output: { explainReport: report },
+      status: 'success',
+    })
+
+    await flushPromises()
+
+    const copyBtn = wrapper.find('[data-testid="copy-result"]')
+    expect(copyBtn.text()).toBe('Copy')
+    await copyBtn.trigger('click')
+    await flushPromises()
+
+    expect(writeText).toHaveBeenCalledTimes(1)
+    const copiedText = writeText.mock.calls[0]?.[0] as string
+    expect(copiedText).toContain('# demo')
+    expect(copiedText).toContain('short summary')
+    expect(copiedText).toContain('# Hello')
+    expect(copiedText).toContain('## child')
+    expect(copiedText).toContain('child summary')
+    expect(copiedText).toContain('## Child')
+
+    const notifications = useNotifications().notifications.value
+    expect(notifications).toHaveLength(1)
+    expect(notifications[0]?.message).toBe('Copied to clipboard!')
+    expect(notifications[0]?.kind).toBe('success')
+
+    vi.unstubAllGlobals()
+  })
+
+  it('copies plain description markdown when no explain report is present', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    vi.stubGlobal('navigator', { clipboard: { writeText } })
+
+    const markdown = '# ExplainBody'
+    const wrapper = mountPanel({
+      endpoint: 'explain',
+      output: { description: markdown },
+      status: 'success',
+    })
+
+    const copyBtn = wrapper.find('[data-testid="copy-result"]')
+    expect(copyBtn.text()).toBe('Copy')
+    await copyBtn.trigger('click')
+    await flushPromises()
+
+    expect(writeText).toHaveBeenCalledWith(markdown)
+    const notifications = useNotifications().notifications.value
+    expect(notifications).toHaveLength(1)
+    expect(notifications[0]?.message).toBe('Copied to clipboard!')
+    expect(notifications[0]?.kind).toBe('success')
+
+    vi.unstubAllGlobals()
+  })
+
+  it('shows an error toast when clipboard copy fails in explain View mode', async () => {
+    const writeText = vi.fn().mockRejectedValue(new Error('denied'))
+    vi.stubGlobal('navigator', { clipboard: { writeText } })
+
+    const wrapper = mountPanel({
+      endpoint: 'explain',
+      output: { description: '# x' },
+      status: 'success',
+    })
+
+    await wrapper.find('[data-testid="copy-result"]').trigger('click')
+    await flushPromises()
+
+    const notifications = useNotifications().notifications.value
+    expect(notifications).toHaveLength(1)
+    expect(notifications[0]?.message).toContain('Copy failed')
+    expect(notifications[0]?.kind).toBe('error')
+
+    vi.unstubAllGlobals()
+  })
+
+  it('opens a fullscreen markdown view when Show is clicked in explain View mode', async () => {
+    const markdown = '# Explain\n\nBody'
+    const wrapper = mountPanel({
+      endpoint: 'explain',
+      output: { description: markdown },
+      status: 'success',
+    })
+
+    const showBtn = wrapper.find('[data-testid="show-result"]')
+    expect(showBtn.text()).toBe('Show')
+    await showBtn.trigger('click')
+    await flushPromises()
+
+    const fullscreen = wrapper.find('[data-testid="fullscreen-markdown"]')
+    expect(fullscreen.exists()).toBe(true)
+    expect(fullscreen.classes()).toContain('bg-white')
+    const rendered = fullscreen.find('[data-testid="explain-markdown-rendered"]')
+    expect(rendered.exists()).toBe(true)
+    expect(rendered.html()).toContain('<h1')
+    expect(rendered.text()).toContain('Explain')
+  })
+
+  it('closes the fullscreen markdown view when Close is clicked', async () => {
+    const wrapper = mountPanel({
+      endpoint: 'explain',
+      output: { description: '# x' },
+      status: 'success',
+    })
+
+    await wrapper.find('[data-testid="show-result"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[data-testid="fullscreen-markdown"]').exists()).toBe(true)
+
+    await wrapper.find('[data-testid="close-fullscreen"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[data-testid="fullscreen-markdown"]').exists()).toBe(false)
+  })
+
+  it('closes the fullscreen markdown view on Escape', async () => {
+    const wrapper = mountPanel({
+      endpoint: 'explain',
+      output: { description: '# x' },
+      status: 'success',
+    })
+
+    await wrapper.find('[data-testid="show-result"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[data-testid="fullscreen-markdown"]').exists()).toBe(true)
+
+    const event = new KeyboardEvent('keydown', { key: 'Escape' })
+    document.dispatchEvent(event)
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="fullscreen-markdown"]').exists()).toBe(false)
+  })
+
+  it('renders mermaid diagrams inside the fullscreen markdown view', async () => {
+    mermaidRender.mockResolvedValue({ svg: '<svg data-mock="mermaid-diagram"></svg>' })
+    const wrapper = mountPanel({
+      endpoint: 'explain',
+      output: {
+        explainReport: {
+          name: 'demo',
+          description: 'd',
+          markdown: '## Flow\n\n```mermaid\ngraph TD; A-->B\n```\n',
+          children: [],
+        },
+      },
+      status: 'success',
+    })
+
+    await flushPromises()
+    await wrapper.find('[data-testid="show-result"]').trigger('click')
+    await flushPromises()
+
+    const fullscreen = wrapper.find('[data-testid="fullscreen-markdown"]')
+    const diagram = fullscreen.find('[data-testid="explain-mermaid-diagram"]')
+    expect(diagram.exists()).toBe(true)
+    expect(diagram.find('svg').exists()).toBe(true)
+  })
+
+  it('renders mermaid diagrams at their natural viewBox size with a scrollable container', async () => {
+    mermaidRender.mockResolvedValue({
+      svg: '<svg viewBox="0 0 800 300" data-mock="mermaid-diagram"><rect width="800" height="300" /></svg>',
+    })
+    const wrapper = mountPanel({
+      endpoint: 'explain',
+      output: {
+        explainReport: {
+          name: 'demo',
+          description: 'd',
+          markdown: `## Flow
+
+\`\`\`mermaid
+graph TD; A-->B
+\`\`\`
+`,
+          children: [],
+        },
+      },
+      status: 'success',
+    })
+
+    await flushPromises()
+    await wrapper.find('[data-testid="show-result"]').trigger('click')
+    await flushPromises()
+
+    const fullscreen = wrapper.find('[data-testid="fullscreen-markdown"]')
+    const diagram = fullscreen.find('[data-testid="explain-mermaid-diagram"]')
+    expect(diagram.exists()).toBe(true)
+    const svg = diagram.find('svg')
+    expect(svg.exists()).toBe(true)
+    expect((svg.element as SVGSVGElement).style.maxWidth).toBe('none')
+    expect((svg.element as SVGSVGElement).style.width).toBe('800px')
+    expect((svg.element as SVGSVGElement).style.height).toBe('300px')
+    expect((diagram.element as HTMLElement).style.width).toBe('100%')
+    expect((diagram.element as HTMLElement).style.overflow).toBe('auto')
+  })
+
+  it('renders all ExplainReport sections in the fullscreen view', async () => {
+    const wrapper = mountPanel({
+      endpoint: 'explain',
+      output: {
+        explainReport: {
+          name: 'root',
+          description: 'root desc',
+          markdown: '# Root',
+          children: [
+            {
+              name: 'child-a',
+              description: 'child a desc',
+              markdown: '## Child A',
+              children: [],
+            },
+            {
+              name: 'child-b',
+              description: 'child b desc',
+              markdown: '## Child B',
+              children: [],
+            },
+          ],
+        },
+      },
+      status: 'success',
+    })
+
+    await wrapper.find('[data-testid="show-result"]').trigger('click')
+    await flushPromises()
+
+    const fullscreen = wrapper.find('[data-testid="fullscreen-markdown"]')
+    const sections = fullscreen.findAll('[data-testid="explain-report-section"]')
+    expect(sections).toHaveLength(3)
+    const headings = fullscreen.findAll('[data-testid="explain-report-section-heading"]')
+    expect(headings.map((h) => h.text())).toEqual(['root', 'child-a', 'child-b'])
   })
 })

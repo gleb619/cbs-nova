@@ -30,7 +30,7 @@ class ExplainSupportTest {
     var report = executable.explain(ctx);
 
     assertThat(report.description()).isEqualTo("Greets the caller.");
-    assertThat(report.markdown()).isEmpty();
+    assertThat(report.markdown()).isEqualTo("Greets the caller.");
     assertThat(report.name()).isNotBlank();
   }
 
@@ -85,7 +85,8 @@ class ExplainSupportTest {
   void explainReportMergeCombinesDescriptionsAndDiagrams() {
     var left = ExplainReport.builder().name("n").description("left-desc").markdown("left-diagram")
             .build();
-    var right = ExplainReport.builder().name("n").description("right-desc").markdown("right-diagram")
+    var right = ExplainReport.builder().name("n").description("right-desc")
+            .markdown("right-diagram")
             .build();
     var merged = ExplainReports.merge(left, right);
     assertThat(merged.description()).contains("left-desc").contains("right-desc");

@@ -4,8 +4,7 @@ import AppToastContainer from '../AppToastContainer.vue'
 import { resetNotificationsState, useNotifications } from '../../composables/useNotifications'
 
 // The container teleports into <body>; stub Teleport so it renders in place.
-const mountContainer = () =>
-  mount(AppToastContainer, { global: { stubs: { teleport: true } } })
+const mountContainer = () => mount(AppToastContainer, { global: { stubs: { teleport: true } } })
 
 describe('AppToastContainer', () => {
   beforeEach(() => {

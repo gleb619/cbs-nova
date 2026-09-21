@@ -169,10 +169,10 @@ public class DslIntrospectionService {
     gm.helperNames().forEach(n -> {
       gm.describeHelper(n)
               .ifPresent(d -> aggregate.add(mapper.toHelperDefinitionMeta(n, d,
-                      null, status(n, statuses), null)));
+                      null, status(n, statuses), gm.findFilename(n).orElse(null))));
       gm.describeFunction(n)
               .ifPresent(d -> aggregate.add(mapper.toFunctionDefinitionMeta(d,
-                      null, status(n, statuses), null)));
+                      null, status(n, statuses), gm.findFilename(n).orElse(null))));
     });
     return aggregate;
   }

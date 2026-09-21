@@ -184,11 +184,12 @@ public final class TransactionBuilder<I, O> implements ObjectBuilder<Transaction
 
   private @NonNull Function<TransactionContext<?>, Result<ExplainReport>> defaultExplain() {
     return ctx -> Result.success(
-        ExplainReport.builder()
-            .name(name)
-            .description(GlobalManager.globalManager().description(name).orElse(description))
-            .markdown(GlobalManager.globalManager().resolveExplainContent(name))
-            .build());
+            ExplainReport.builder()
+                    .name(name)
+                    .description(GlobalManager.globalManager().description(name)
+                            .orElse(description == null ? "" : description))
+                    .markdown(GlobalManager.globalManager().resolveExplainContent(name))
+                    .build());
   }
 
   @SuppressWarnings("unchecked")

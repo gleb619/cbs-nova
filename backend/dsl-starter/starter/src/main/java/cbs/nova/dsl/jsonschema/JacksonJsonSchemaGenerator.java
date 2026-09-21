@@ -1,6 +1,6 @@
 package cbs.nova.dsl.jsonschema;
 
-import static cbs.nova.starter.core.StarterConstants.JSON_SCHEMA_DRAFT_URI;
+import static cbs.nova.dsl.config.Constants.JSON_SCHEMA_DRAFT_URI;
 
 import cbs.nova.dsl.ParameterDescriptor;
 import com.github.benmanes.caffeine.cache.Cache;

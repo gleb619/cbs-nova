@@ -1,9 +1,17 @@
 <script setup lang="ts">
-import { computed, onBeforeUpdate, ref } from 'vue'
+import { computed, nextTick, onBeforeUpdate, ref, watch } from 'vue'
 import { type ConstructType, useConstructSchema } from '../../composables/useConstructSchema'
-import type { PreviewHistoryEntry, RunnerOutput, RunnerStatus } from '../../types/runner'
+import { useToast } from '../../composables/useToast'
+import type {
+  ExplainReportNode,
+  PreviewHistoryEntry,
+  RunnerOutput,
+  RunnerStatus,
+} from '../../types/runner'
 import ExplainMarkdownView from '../runner/ExplainMarkdownView.vue'
 import ExplainRawView from '../runner/ExplainRawView.vue'
+import ExplainReportChain from '../runner/ExplainReportChain.vue'
+import ExplainReportList from '../runner/ExplainReportList.vue'
 import ResultTab from '../runner/ResultTab.vue'
 import PreviewHistoryPanel from './PreviewHistoryPanel.vue'
 import SchemaForm from './SchemaForm.vue'
@@ -34,9 +42,32 @@ type PanelMode = 'form' | 'json' | 'schema' | 'history' | 'view' | 'raw'
 
 const isExplain = computed(() => props.endpoint === 'explain')
 
+const toast = useToast()
+
+const hasExplainContent = computed(() => {
+  if (props.output?.explainReport) return true
+  return !!props.output?.description
+})
 const explainMarkdown = computed(
   () => props.output?.explainReport?.markdown || props.output?.description,
 )
+
+function explainReportToMarkdown(report: ExplainReportNode): string {
+  const lines: string[] = []
+  function walk(node: ExplainReportNode, depth: number) {
+    const heading = '#'.repeat(Math.min(depth + 1, 6))
+    lines.push(`${heading} ${node.name}`)
+    if (node.description) {
+      lines.push(node.description)
+    }
+    if (node.markdown) {
+      lines.push(node.markdown)
+    }
+    for (const child of node.children) walk(child, depth + 1)
+  }
+  walk(report, 0)
+  return lines.join('\n\n')
+}
 
 function initialMode(): PanelMode {
   if (isExplain.value) return 'view'
@@ -45,6 +76,7 @@ function initialMode(): PanelMode {
 
 const mode = ref<PanelMode>(initialMode())
 const selectedEntryId = ref<string | null>(null)
+const showFullscreen = ref(false)
 
 const { outputSchema, outputType, loading, error, hasOutputSchema, events } = useConstructSchema({
   name: () => props.name,
@@ -111,6 +143,46 @@ function formatResult() {
   }
 }
 
+function copyableText(): string | undefined {
+  if (effectiveMode.value === 'view') return explainMarkdown.value
+  if (effectiveMode.value === 'form') {
+    const result = props.output?.result
+    if (result !== undefined && result !== null) return JSON.stringify(result, null, 2)
+    if (outputSchema.value) return JSON.stringify(outputFormValue.value, null, 2)
+    return undefined
+  }
+  return undefined
+}
+
+async function copyExplain() {
+  const report = props.output?.explainReport
+  const text = report ? explainReportToMarkdown(report) : explainMarkdown.value
+  if (!text) return
+  try {
+    if (!navigator.clipboard) throw new Error('Clipboard API unavailable')
+    await navigator.clipboard.writeText(text)
+    toast.success('Copied to clipboard!')
+  } catch (e) {
+    toast.error(`Copy failed: ${(e as Error).message}`)
+  }
+}
+
+async function copyFormOutput() {
+  const text = copyableText()
+  if (!text) return
+  try {
+    if (!navigator.clipboard) throw new Error('Clipboard API unavailable')
+    await navigator.clipboard.writeText(text)
+    toast.success('Copied to clipboard!')
+  } catch (e) {
+    toast.error(`Copy failed: ${(e as Error).message}`)
+  }
+}
+
+function closeFullscreen() {
+  showFullscreen.value = false
+}
+
 function setMode(next: PanelMode) {
   if (next === mode.value) return
   mode.value = next
@@ -164,6 +236,40 @@ const canFormat = computed(() => {
   return raw !== undefined && raw !== null
 })
 
+const showCopyButton = computed(() => {
+  return effectiveMode.value === 'view' || effectiveMode.value === 'form'
+})
+const showShowButton = computed(() => {
+  return isExplain.value && effectiveMode.value === 'view'
+})
+const showFormatButton = computed(() => {
+  return !showCopyButton.value && !showShowButton.value
+})
+const canCopy = computed(() => {
+  if (effectiveMode.value === 'view') return hasExplainContent.value && props.status !== 'loading'
+  if (effectiveMode.value === 'form') return props.status !== 'loading'
+  return false
+})
+const canShow = computed(() => {
+  return hasExplainContent.value && props.status !== 'loading'
+})
+
+watch(showFullscreen, (open) => {
+  if (!open) return
+  const handler = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      e.preventDefault()
+      showFullscreen.value = false
+    }
+  }
+  document.addEventListener('keydown', handler)
+  void nextTick(() => {
+    const el = document.querySelector('[data-testid="fullscreen-markdown"]')
+    if (el instanceof HTMLElement) el.focus()
+  })
+  return () => document.removeEventListener('keydown', handler)
+})
+
 const showFormJsonToggles = computed(() => !isExplain.value)
 
 onBeforeUpdate(() => {
@@ -203,7 +309,9 @@ onBeforeUpdate(() => {
 
     <div class="flex-1 min-h-0 overflow-hidden">
       <div v-if="effectiveMode === 'view'" class="h-full overflow-auto p-3">
-        <ExplainMarkdownView :markdown="explainMarkdown" mermaid />
+        <ExplainReportChain v-if="output?.explainReport" :report="output.explainReport" />
+        <ExplainReportList v-if="output?.explainReport" :report="output.explainReport" />
+        <ExplainMarkdownView v-else :markdown="explainMarkdown" mermaid />
       </div>
 
       <div v-else-if="effectiveMode === 'raw'" class="h-full overflow-auto p-3">
@@ -352,6 +460,27 @@ onBeforeUpdate(() => {
           Clear
         </button>
         <button
+          v-if="showShowButton"
+          type="button"
+          class="text-xs px-2 py-1 border border-line hover:bg-surface disabled:opacity-50"
+          data-testid="show-result"
+          :disabled="!canShow"
+          @click="showFullscreen = true"
+        >
+          Show
+        </button>
+        <button
+          v-if="showCopyButton"
+          type="button"
+          class="text-xs px-2 py-1 border border-line hover:bg-surface disabled:opacity-50"
+          data-testid="copy-result"
+          :disabled="!canCopy"
+          @click="effectiveMode === 'form' ? copyFormOutput() : copyExplain()"
+        >
+          Copy
+        </button>
+        <button
+          v-if="showFormatButton"
           type="button"
           class="text-xs px-2 py-1 border border-line hover:bg-surface disabled:opacity-50"
           data-testid="format-result"
@@ -362,5 +491,27 @@ onBeforeUpdate(() => {
         </button>
       </div>
     </footer>
+    <div
+      v-if="showFullscreen"
+      class="fixed inset-0 z-50 flex flex-col bg-white"
+      data-testid="fullscreen-markdown"
+      tabindex="-1"
+    >
+      <header class="flex items-center justify-between px-4 py-3 border-b border-line bg-white">
+        <span class="text-sm font-medium text-ink">Detailed view</span>
+        <button
+          type="button"
+          class="text-xs px-3 py-1 border border-line hover:bg-surface"
+          data-testid="close-fullscreen"
+          @click="closeFullscreen"
+        >
+          Close
+        </button>
+      </header>
+      <div class="flex-1 min-h-0 overflow-auto p-6 bg-white">
+        <ExplainReportList v-if="output?.explainReport" :report="output.explainReport" />
+        <ExplainMarkdownView v-else :markdown="explainMarkdown" mermaid />
+      </div>
+    </div>
   </section>
 </template>

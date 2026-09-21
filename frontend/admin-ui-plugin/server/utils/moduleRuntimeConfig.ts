@@ -94,8 +94,7 @@ export function resolveRuntimeConfig(
     // No built-in default: `buildBackendHeaders` falls back to its own
     // DEFAULT_FORWARDED_HEADERS when this is undefined, so omitting the
     // option keeps the historical four-entry allowlist.
-    backendForwardedHeaders:
-      existing.backendForwardedHeaders ?? options.backendForwardedHeaders,
+    backendForwardedHeaders: existing.backendForwardedHeaders ?? options.backendForwardedHeaders,
     authIssuer: existing.authIssuer ?? options.authIssuer ?? '',
     authClientId: existing.authClientId ?? options.authClientId ?? 'cbs-nova-bff',
     authClientSecret: existing.authClientSecret ?? options.authClientSecret ?? '',

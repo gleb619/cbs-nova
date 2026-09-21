@@ -48,6 +48,7 @@ const getApi = (): ApiMock => dslApi
 
 describe('useDslWorkbench', () => {
   beforeEach(() => {
+    localStorage.clear()
     const api = getApi()
     api.getDefinitions.mockReset()
     api.preview.mockReset()
@@ -123,6 +124,33 @@ describe('useDslWorkbench', () => {
 
       expect(wb.state.value.selectedName).toBe('b')
     })
+    it('restores the persisted construct when one is stored', async () => {
+      localStorage.setItem('cbs-nova:dsl-workbench:selected-construct-name', JSON.stringify('c2'))
+      const api = getApi()
+      api.getDefinitions.mockResolvedValueOnce([
+        { name: 'c1', type: 'Process' as const, status: 'Draft' as const },
+        { name: 'c2', type: 'Helper' as const, status: 'Draft' as const },
+      ])
+
+      const wb = useDslWorkbench()
+      await wb.loadConstructs()
+
+      expect(wb.state.value.selectedName).toBe('c2')
+    })
+
+    it('falls back to the first construct when the persisted name is gone', async () => {
+      localStorage.setItem('cbs-nova:dsl-workbench:selected-construct-name', JSON.stringify('gone'))
+      const api = getApi()
+      api.getDefinitions.mockResolvedValueOnce([
+        { name: 'c1', type: 'Process' as const, status: 'Draft' as const },
+        { name: 'c2', type: 'Helper' as const, status: 'Draft' as const },
+      ])
+
+      const wb = useDslWorkbench()
+      await wb.loadConstructs()
+
+      expect(wb.state.value.selectedName).toBe('c1')
+    })
   })
 
   describe('selectConstruct', () => {
@@ -146,6 +174,22 @@ describe('useDslWorkbench', () => {
       expect(wb.state.value.selectedName).toBe('c2')
       expect(wb.state.value.validationErrors).toEqual([])
       expect(wb.state.value.isDirty).toBe(false)
+    })
+
+    it('persists the selected construct name to localStorage', async () => {
+      const api = getApi()
+      api.getDefinitions.mockResolvedValueOnce([
+        { name: 'c1', type: 'Process' as const, status: 'Draft' as const },
+        { name: 'c2', type: 'Helper' as const, status: 'Draft' as const },
+      ])
+
+      const wb = useDslWorkbench()
+      await wb.loadConstructs()
+      wb.selectConstruct('c2')
+
+      expect(localStorage.getItem('cbs-nova:dsl-workbench:selected-construct-name')).toBe(
+        JSON.stringify('c2'),
+      )
     })
   })
 

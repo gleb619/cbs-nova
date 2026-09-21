@@ -408,7 +408,7 @@ class DslIntrospectionResourceTest {
     var sampleFunction = FunctionDslObject.builder()
             .name("sampleFunction")
             .executeLogic(ctx -> Result.success("ok"))
-            .descriptor(() -> Descriptors.from("sampleFunction",
+            .descriptor(Descriptors.from("sampleFunction",
                     new ExecutableDescriptor(
                             "sampleFunction",
                             "A greeting function",

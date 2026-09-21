@@ -25,9 +25,7 @@ const BADGE_CLASS: Record<PromotionOutcome, string> = {
   failed: 'bg-error-100 text-error-800',
 }
 
-const sorted = computed(() =>
-  [...props.results].sort((a, b) => a.name.localeCompare(b.name)),
-)
+const sorted = computed(() => [...props.results].sort((a, b) => a.name.localeCompare(b.name)))
 </script>
 
 <template>

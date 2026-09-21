@@ -239,7 +239,7 @@ class FunctionBuilderTest {
             .parameters(reg -> reg.string("k"))
             .execute(ctx -> Result.success(null))
             .build();
-    var desc = fn.descriptor();
+    DslDescriptor desc = fn.descriptor();
     assertThat(desc.name()).isEqualTo("DefaultDescFn");
     assertThat(desc.type()).isEqualTo(DslType.FUNCTION);
     assertThat(desc.parameters()).hasSize(1);

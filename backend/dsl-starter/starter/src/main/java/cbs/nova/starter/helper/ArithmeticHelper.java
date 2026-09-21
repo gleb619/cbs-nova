@@ -43,9 +43,9 @@ public class ArithmeticHelper implements Executable<ArithmeticIn, ArithmeticOut>
     String mode = (input.mode() == null) ? "unknown" : input.mode().toLowerCase(Locale.ROOT);
     String description = describe(mode, input);
     String mermaid = """
-        graph TD
-          A[arithmetic: %s] --> S[compute %s]
-          S --> R[ArithmeticOut]""".formatted(mode, mode);
+            graph TD
+              A[arithmetic: %s] --> S[compute %s]
+              S --> R[ArithmeticOut]""".formatted(mode, mode);
     return new ExplainReport("arithmetic", description, mermaid, List.of());
   }
 

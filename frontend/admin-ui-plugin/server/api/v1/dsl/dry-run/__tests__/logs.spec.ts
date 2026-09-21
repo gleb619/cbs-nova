@@ -22,8 +22,7 @@ vi.mock('h3', async (importOriginal) => {
   const actual = await importOriginal<typeof import('h3')>()
   return {
     ...actual,
-    getRouterParam: (_event: unknown, name: string) =>
-      name === 'traceId' ? 'trace-1' : undefined,
+    getRouterParam: (_event: unknown, name: string) => (name === 'traceId' ? 'trace-1' : undefined),
     proxyRequest: proxyRequestMock,
   }
 })

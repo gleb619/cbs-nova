@@ -94,7 +94,9 @@ describe('NotificationsWidget', () => {
     expect(button.attributes('disabled')).toBeUndefined()
     await button.trigger('click')
     expect(n.unreadCount.value).toBe(0)
-    expect(wrapper.find('[data-testid="notifications-drawer-mark-all"]').attributes('disabled')).toBeDefined()
+    expect(
+      wrapper.find('[data-testid="notifications-drawer-mark-all"]').attributes('disabled'),
+    ).toBeDefined()
   })
 
   it('dismiss button on a row removes that notification everywhere', async () => {

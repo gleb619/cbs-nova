@@ -1428,3 +1428,117 @@ describe('dsl-workbench.vue share link action', () => {
     wrapper.unmount()
   })
 })
+
+describe('dsl-workbench.vue selected-construct header label', () => {
+  beforeEach(() => {
+    __setRouteQuery({})
+    harness.state.constructs = []
+    harness.state.selectedName = null
+    harness.state.validationErrors = []
+    harness.state.isDirty = false
+    harness.state.isSaving = false
+    harness.state.isLoading = false
+    harness.selectedConstruct.value = null
+    harness.loaders.constructs.value = false
+    useDslWorkbenchMock.mockClear()
+    dslApi.listDrafts.mockReset()
+    dslApi.listDrafts.mockResolvedValue([])
+    dslApi.listHelpers.mockReset()
+    dslApi.listHelpers.mockResolvedValue({ names: [], helpers: [] })
+  })
+
+  afterEach(() => {
+    __setRouteQuery({})
+  })
+
+  const headerLabel = (wrapper: WorkbenchWrapper) =>
+    wrapper.find('[data-testid="workbench-selected-construct-label"]').text().trim()
+
+  it('shows the construct name when no filePath is associated', async () => {
+    harness.state.constructs = [{ name: 'BatchProcessing', type: 'Process', status: 'Draft' }]
+    harness.state.selectedName = 'BatchProcessing'
+    harness.selectedConstruct.value = harness.state.constructs[0] ?? null
+
+    const wrapper = mountPage()
+    await flushPromises()
+
+    expect(headerLabel(wrapper)).toBe('/ BatchProcessing')
+  })
+
+  it('shows the file basename (not the construct name) when filePath is set', async () => {
+    harness.state.constructs = [
+      {
+        name: 'BatchProcessing',
+        type: 'Process',
+        status: 'Published',
+        filePath: 'dsl/BatchProcessingDsl.java',
+      },
+    ]
+    harness.state.selectedName = 'BatchProcessing'
+    harness.selectedConstruct.value = harness.state.constructs[0] ?? null
+
+    const wrapper = mountPage()
+    await flushPromises()
+
+    const label = wrapper.find('[data-testid="workbench-selected-construct-label"]')
+    expect(label.text().trim()).toBe('/ BatchProcessingDsl.java')
+    // Title carries the full path so hover reveals the directory location.
+    expect(label.attributes('title')).toBe('dsl/BatchProcessingDsl.java')
+  })
+
+  it('keeps showing the basename when the user switches between file-backed constructs', async () => {
+    harness.state.constructs = [
+      {
+        name: 'BatchProcessing',
+        type: 'Process',
+        status: 'Published',
+        filePath: 'dsl/BatchProcessingDsl.java',
+      },
+      {
+        name: 'LoanFlow',
+        type: 'Process',
+        status: 'Published',
+        filePath: 'examples/LoanFlowDsl.java',
+      },
+    ]
+    harness.state.selectedName = 'BatchProcessing'
+    harness.selectedConstruct.value = harness.state.constructs[0] ?? null
+
+    const wrapper = mountPage()
+    await flushPromises()
+
+    expect(headerLabel(wrapper)).toBe('/ BatchProcessingDsl.java')
+
+    const explorer = wrapper.findComponent({ name: 'ConstructExplorer' })
+    await explorer.vm.$emit('select', 'LoanFlow')
+    await nextTick()
+
+    expect(headerLabel(wrapper)).toBe('/ LoanFlowDsl.java')
+  })
+
+  it('falls back to the construct name after deleting a file-backed construct', async () => {
+    harness.state.constructs = [
+      {
+        name: 'BatchProcessing',
+        type: 'Process',
+        status: 'Published',
+        filePath: 'dsl/BatchProcessingDsl.java',
+      },
+      { name: 'helper-one', type: 'Helper', status: 'Draft' },
+    ]
+    harness.state.selectedName = 'BatchProcessing'
+    harness.selectedConstruct.value = harness.state.constructs[0] ?? null
+
+    const wrapper = mountPage()
+    await flushPromises()
+
+    expect(headerLabel(wrapper)).toBe('/ BatchProcessingDsl.java')
+
+    // Simulate the harness swapping selection to a non-file-backed construct
+    // (mirrors what `selectConstruct` does after the user picks a different one).
+    harness.selectConstruct('helper-one')
+    await nextTick()
+
+    expect(headerLabel(wrapper)).toBe('/ helper-one')
+  })
+})

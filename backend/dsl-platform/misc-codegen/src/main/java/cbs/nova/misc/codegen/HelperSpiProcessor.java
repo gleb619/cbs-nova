@@ -37,6 +37,9 @@ public class HelperSpiProcessor extends AbstractProcessor {
 
   private static final String RESOLVER_CLASS = "GeneratedHelperResolver";
   private static final String INSTANCE_RESOLVER_CLASS = "GeneratedHelperInstanceResolver";
+  //TODO: remove a GeneratedHelperSource, reuse a GeneratedHelperResolver and GeneratedHelperInstanceResolver, for
+  // filename resolving
+  private static final String SOURCE_CLASS = "GeneratedHelperSource";
   private static final String HELPER_ANNOTATION = "cbs.nova.dsl.annotation.Helper";
   private static final String SPRING_HELPER_ANNOTATION = "cbs.nova.starter.annotation.SpringHelper";
 
@@ -49,8 +52,10 @@ public class HelperSpiProcessor extends AbstractProcessor {
       if (!wrote.get() && !entries.isEmpty()) {
         writeGeneratedHelperResolver();
         writeGeneratedHelperInstanceResolver();
+        writeGeneratedHelperSource();
         writeResolverServiceFile();
         writeInstanceResolverServiceFile();
+        writeHelperSourceServiceFile();
         wrote.set(true);
       }
       return false;
@@ -82,7 +87,8 @@ public class HelperSpiProcessor extends AbstractProcessor {
         if (config == null) {
           continue;
         }
-        entries.add(new HelperEntry(fqn, config, hasNoArgConstructor(typeElement)));
+        entries.add(new HelperEntry(fqn, config, hasNoArgConstructor(typeElement),
+                typeElement.getSimpleName().toString()));
       }
     }
     return false;
@@ -258,6 +264,57 @@ public class HelperSpiProcessor extends AbstractProcessor {
             "HelperInstanceResolver");
   }
 
+  private void writeGeneratedHelperSource() {
+    var sourcePackage = commonPackage(entries);
+    var sourceFqn = sourcePackage.isEmpty()
+            ? SOURCE_CLASS
+            : sourcePackage + "." + SOURCE_CLASS;
+    try {
+      var sourceFile = processingEnv.getFiler().createSourceFile(sourceFqn);
+      try (var writer = new PrintWriter(sourceFile.openWriter())) {
+        var entriesLiteral = entries.stream()
+                .map(e -> "    new HelperSource.Entry(\"%s\", \"%s\")"
+                        .formatted(e.config().name(), e.simpleName() + ".java"))
+                .collect(Collectors.joining(",\n"));
+        var packageLine = sourcePackage.isEmpty()
+                ? ""
+                : "package %s;\n\n".formatted(sourcePackage);
+        var template = // language=java
+                """
+                        ${packageLine}import cbs.nova.dsl.helper.HelperSource;
+                        import java.util.List;
+                        import org.jspecify.annotations.NonNull;
+
+                        public final class ${sourceClass} implements HelperSource {
+                          @Override
+                          public @NonNull List<Entry> entries() {
+                            return List.of(
+                        ${entries}    );
+                          }
+                        }
+                        """;
+        writer.print(Substitutor.format(template, Map.of(
+                "packageLine", packageLine,
+                "sourceClass", SOURCE_CLASS,
+                "entries", entries.isEmpty() ? "" : entriesLiteral)));
+      }
+    } catch (IOException e) {
+      processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
+              "Failed to write GeneratedHelperSource: " + e.getMessage());
+    }
+  }
+
+  private void writeHelperSourceServiceFile() {
+    var sourcePackage = commonPackage(entries);
+    var sourceFqn = sourcePackage.isEmpty()
+            ? SOURCE_CLASS
+            : sourcePackage + "." + SOURCE_CLASS;
+    writeServiceFile(
+            "cbs.nova.dsl.helper.HelperSource",
+            sourceFqn,
+            "HelperSource");
+  }
+
   private void writeServiceFile(String serviceInterface, String resolverFqn, String label) {
     try {
       var resource = processingEnv.getFiler().createResource(
@@ -314,7 +371,8 @@ public class HelperSpiProcessor extends AbstractProcessor {
                     .isEmpty());
   }
 
-  private record HelperEntry(String fqn, HelperConfig config, boolean noArgConstructor) {
+  private record HelperEntry(String fqn, HelperConfig config, boolean noArgConstructor,
+          String simpleName) {
 
   }
 

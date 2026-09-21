@@ -34,9 +34,11 @@ without re-reading the source. It exists primarily so that:
 - **Not a full execution report.** It carries no `executionTrace`, `externalCalls`, `dryRunLogs`, or
   `metrics` — those live in the underlying [Hierarchy Mode](hierarchy-mode.md). For the actual
   business output and success flag, use [Preview Mode](preview-mode.md).
-- **Not side-effecting.** Traversal never runs real `execute`; discovering a node's callees rides on
-  the same `astTree: CallNode` collection Preview already produces (via `preview(...)`), not a
-  second execution.
+- **Not side-effecting by contract.** Traversal never dispatches `ExecutionMode.RUN`. Callee
+  discovery walks the entity's `previewLogic` under `ExecutionMode.EXPLAIN`, so entities that
+  define an explicit `.preview(...)` never touch their execute logic; entities without one fall
+  back to `preview(...)`'s default, which delegates to `execute` — authors of explain-mode docs
+  must not perform side effects in plain `execute` lambdas they expect explain to skip.
 
 ## How Explain works
 
@@ -49,19 +51,23 @@ without re-reading the source. It exists primarily so that:
    is `ExplainReport` and `outputSchema` describes the report record shape (recursive
    `children`). The report itself comes from `dslRuntime.explain(...)` /
    `POST /api/dsl/explain/{name}`.
-2. **Hierarchy run first.** Explain mode internally runs the entity through
-   `ExecutionMode.HIERARCHY`. This produces a `HierarchyReport` graph carrying the call tree,
-   external calls, dry-run logs, metrics, and errors for every reachable node.
-3. **Per-node mapping.** For each `HierarchyReport` node, Explain builds an `ExplainReport` node:
-   `name` is preserved; `description` is derived from the entity descriptor or helper catalog
-   (covers what the node does and what it integrates with); `mermaid` is rendered from the node's
-   own fields via `HierarchyDiagrams.mermaidNode(...)` and may be empty when a schema adds no
-   value; `children` are mapped recursively.
-4. **Budget enforcement is graph-aware.** The character budget applies to the whole document, not
-   one node's string: nodes are emitted whole, in call order, until the next node would not fit —
-   then a `... N more nodes omitted, budget exhausted` marker closes the document. No node is ever
-   cut mid-sentence. Token caps on `name`, `description`, and `mermaid` are also applied before the
-   character budget is measured.
+2. **Own explain run.** Explain mode dispatches the entity through `ExecutionMode.EXPLAIN` via
+   `ExplainDslPipe` → `ExplainReportStage` → `DispatchStage`. It does not run hierarchy mode; the
+   two pipes are independent.
+3. **Own report + callee walk.** The entity's own `ExplainReport` comes from its explain logic
+   (an explicit `.explain(...)`, an `.explainVia("file.md")` resource, or the
+   `Executable.explain` default, which derives `description` from the first line of
+   `description()` and `markdown` from the full text). Callees are discovered by walking the
+   entity's `previewLogic` with an `ExecutionListener` (`ExplainWalker`) attached: every nested
+   process/transaction/helper/function call that answers with its own `ExplainReport` in
+   `onTransactionEnd`/`onHelperEnd`/`onFunctionEnd` is attached as a child of the own report.
+   Helpers in EXPLAIN mode answer with `helper.explain(ctx).withInfo(name, description)` — never
+   `execute`.
+4. **Budget enforcement is graph-aware.** `ExplainReportStage` stamps
+   `Constants.EXPLAIN_BUDGET_CHARS_KEY` into the context metadata and applies `ExplainBudget`
+   after the run: token caps on `name`, `description`, and `markdown`, then the character budget.
+   If the root description is blank, the stage fills in `Process: <name>` / `Transaction: <name>`
+   from `GlobalManager.describe*`.
 
 For `UnreliableApiDsl.java` (`backend/dsl-starter/dsl-examples/src/dsl/`), explaining
 `UnreliableApiSuccess` walks:

@@ -42,20 +42,33 @@ public interface Executable<IN, OUT>
   }
 
   @Override
+  @Deprecated
+  //TODO: remove impl, instead add a some decorator in PipeStage
   default @NonNull ExplainReport explain(@NonNull Context<IN> ctx) {
     var descriptor = describe();
     var markdown = description();
+    var hasDescription = !EMPTY_MARKDOWN.equals(markdown) && !markdown.isBlank();
     var fallbackName = getClass().getSimpleName();
     var name = descriptor.name() != null
             ? descriptor.name()
             : (fallbackName.isEmpty() ? "executable" : fallbackName);
     return ExplainReport.builder()
             .name(name)
-            .description(
-                    EMPTY_MARKDOWN.equals(markdown) ? derivedDescription(descriptor) : markdown)
+            .description(hasDescription ? firstLine(markdown) : derivedDescription(descriptor))
+            .markdown(hasDescription ? markdown : EMPTY_MARKDOWN)
             .build();
   }
 
+  @Deprecated(forRemoval = true)
+  private static @NonNull String firstLine(@NonNull String markdown) {
+    return markdown.lines()
+            .map(String::trim)
+            .filter(line -> !line.isEmpty())
+            .findFirst()
+            .orElse("");
+  }
+
+  @Deprecated(forRemoval = true)
   private static @NonNull String derivedDescription(@NonNull ExecutableDescriptor descriptor) {
     var input = descriptor.inputType() != null ? descriptor.inputType().getSimpleName() : "untyped";
     var output = descriptor.outputType() != null

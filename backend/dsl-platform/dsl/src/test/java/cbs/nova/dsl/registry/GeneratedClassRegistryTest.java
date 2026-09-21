@@ -7,6 +7,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import cbs.nova.dsl.DslObject.DslType;
 import cbs.nova.dsl.GeneratedClassDescriptor;
 import cbs.nova.dsl.GeneratedClassProvider;
+import cbs.nova.dsl.helper.HelperSource;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -198,6 +200,40 @@ class GeneratedClassRegistryTest {
   @Test
   void noArgConstructorDoesNotThrow() {
     assertThatCode(GeneratedClassRegistry::new).doesNotThrowAnyException();
+  }
+
+  @Test
+  void registerHelperSourceExposesFilenamesForHelpers() {
+    HelperSource source = () -> List.of(
+            new HelperSource.Entry("greetHelper", "GreetHelper.java"),
+            new HelperSource.Entry("sumHelper", "math/SumHelper.java"));
+
+    registry.registerHelperSource(source);
+
+    assertThat(registry.findFilename("greetHelper")).contains("GreetHelper.java");
+    assertThat(registry.findFilename("sumHelper")).contains("math/SumHelper.java");
+    assertThat(registry.findFilename("unknown")).isEmpty();
+  }
+
+  @Test
+  void findFilenamePrefersProviderOverHelperSource() {
+    registry.registerHelperSource(() -> List.of(
+            new HelperSource.Entry("shared", "Helper.java")));
+    GeneratedClassProvider provider = new GeneratedClassProvider() {
+      @Override
+      public GeneratedClassDescriptor descriptor() {
+        return process("shared");
+      }
+
+      @Override
+      public String filename() {
+        return "SharedGeneratedClassProvider.java";
+      }
+    };
+    registry.register(provider);
+
+    assertThat(registry.findFilename("shared"))
+            .contains("SharedGeneratedClassProvider.java");
   }
 
   private static GeneratedClassDescriptor process(String name, String version) {

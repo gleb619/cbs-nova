@@ -6,13 +6,16 @@ import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.ExecutableDescriptor;
+import cbs.nova.dsl.helper.HelperSource;
 import cbs.nova.starter.model.DslIntrospectionModels.ConstructSchemaDto;
 import cbs.nova.starter.model.DslIntrospectionModels.ConstructSchemaMode;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
+import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.jsonschema.JacksonJsonSchemaGenerator;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.converter.DslIntrospectionMapper;
+import cbs.nova.starter.model.DslIntrospectionModels.DefinitionMetaDto;
 import cbs.nova.starter.model.DslIntrospectionModels.DefinitionStatus;
 import cbs.nova.starter.service.DslDefinitionStatusResolver;
 import cbs.nova.starter.service.DslGitStatusResolver;
@@ -314,5 +317,45 @@ class DslIntrospectionServiceTest {
     assertThat(children).containsEntry("type", "array");
     assertThat((Map<String, Object>) children.get("items"))
             .containsEntry("$ref", "#/$defs/ExplainReport");
+  }
+
+  @Test
+  void definitionsPropagateHelperFilenameFromHelperSource() {
+    GlobalManager.globalManager().registerHelper("helperWithFile",
+            new Executable<String, Integer>() {
+              @Override
+              public Result<Integer> execute(Context<String> ctx) {
+                return Result.success(1);
+              }
+
+              @Override
+              public ExecutableDescriptor describe() {
+                return new ExecutableDescriptor(
+                        "helperWithFile", "A helper", String.class, Integer.class, false, null,
+                        List.of());
+              }
+            });
+    GlobalManager.globalManager().registerFunction(
+            Dsl.function("functionWithFile")
+                    .parameters(p -> p.string("greeting"))
+                    .execute(ctx -> Result.success("ok"))
+                    .build());
+    DslConfig.dslConfig().generatedClassRegistry().registerHelperSource(() -> List.of(
+            new HelperSource.Entry("helperWithFile", "HelperWithFile.java"),
+            new HelperSource.Entry("functionWithFile", "FunctionWithFile.java")));
+
+    List<DefinitionMetaDto> definitions = service.definitions();
+
+    assertThat(definitions)
+            .anySatisfy(d -> {
+              assertThat(d.name()).isEqualTo("helperWithFile");
+              assertThat(d.type()).isEqualTo("helper");
+              assertThat(d.filePath()).isEqualTo("HelperWithFile.java");
+            })
+            .anySatisfy(d -> {
+              assertThat(d.name()).isEqualTo("functionWithFile");
+              assertThat(d.type()).isEqualTo("function");
+              assertThat(d.filePath()).isEqualTo("FunctionWithFile.java");
+            });
   }
 }

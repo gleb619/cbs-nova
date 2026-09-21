@@ -104,6 +104,7 @@ public final class FunctionBuilder<I, O> implements ObjectBuilder<FunctionDslObj
     var effectiveParameters = parameters != null
             ? parameters
             : List.<ParameterDescriptor>of();
+    //TODO: redo from supplier to just simple descriptor
     var effectiveDescriptor = effectiveDescriptor(effectiveParameters);
     var resolvedExecute = rawExecute();
     var explain = rawExplain() != null ? rawExplain() : defaultExplain();
@@ -116,7 +117,7 @@ public final class FunctionBuilder<I, O> implements ObjectBuilder<FunctionDslObj
             .executeLogic(resolvedExecute)
             .previewLogic(resolvedPreview)
             .explainLogic(explain)
-            .descriptor(effectiveDescriptor)
+            .descriptor(effectiveDescriptor.get())
             .build();
   }
 
@@ -135,11 +136,12 @@ public final class FunctionBuilder<I, O> implements ObjectBuilder<FunctionDslObj
 
   private @NonNull Function<FunctionContext<?>, Result<ExplainReport>> defaultExplain() {
     return ctx -> Result.success(
-        ExplainReport.builder()
-            .name(name)
-            .description(GlobalManager.globalManager().description(name).orElse(Constants.EMPTY_MARKDOWN))
-            .markdown(GlobalManager.globalManager().resolveExplainContent(name))
-            .build());
+            ExplainReport.builder()
+                    .name(name)
+                    .description(GlobalManager.globalManager().description(name)
+                            .orElse(Constants.EMPTY_MARKDOWN))
+                    .markdown(GlobalManager.globalManager().resolveExplainContent(name))
+                    .build());
   }
 
   @SuppressWarnings("unchecked")

@@ -1,6 +1,10 @@
 import { useClientLogger } from '@cbs/admin-ui-plugin/composables/useClientLogger'
 import { useDslApi } from '@cbs/admin-ui-plugin/composables/useDslApi'
-import { createNamespacedLoaderState, unwrapList } from '@cbs/components'
+import {
+  createNamespacedLoaderState,
+  createNamespacedLocalStorageState,
+  unwrapList,
+} from '@cbs/components'
 import { useState } from 'nuxt/app'
 import { computed, readonly } from 'vue'
 import type {
@@ -75,6 +79,8 @@ export function compileDiagnosticsToValidationErrors(
 
 export function useDslWorkbench() {
   const constructsLoading = useWorkbenchLoader('constructs')
+  const useWorkbenchStorage = createNamespacedLocalStorageState('cbs-nova:dsl-workbench')
+  const lastSelectedName = useWorkbenchStorage<string | null>('selected-construct-name', null)
 
   const state = useState<WorkbenchState>('dsl-workbench', () => ({
     constructs: [],
@@ -109,7 +115,8 @@ export function useDslWorkbench() {
       const list = rawList.map((c) => normalizeConstruct(c as { name: string }))
       state.value.constructs = list
       if (list.length && !state.value.selectedName) {
-        state.value.selectedName = list[0].name
+        const restored = lastSelectedName.value
+        state.value.selectedName = list.some((c) => c.name === restored) ? restored : list[0].name
       }
       log.info('constructs loaded', { count: list.length, selected: state.value.selectedName })
     } catch (err) {
@@ -128,6 +135,7 @@ export function useDslWorkbench() {
 
   function selectConstruct(name: string) {
     state.value.selectedName = name
+    lastSelectedName.value = name
     state.value.validationErrors = []
     setDirty(false)
     log.info('construct selected', { name })
@@ -147,6 +155,7 @@ export function useDslWorkbench() {
     }
     state.value.constructs = [...state.value.constructs, newConstruct]
     state.value.selectedName = name
+    lastSelectedName.value = name
     state.value.validationErrors = []
     setDirty(false)
     log.info('construct created', { name, type: normalizedType })
@@ -169,7 +178,14 @@ export function useDslWorkbench() {
     name: string,
     selected: DslConstruct | null,
     status: string,
-  ): { name: string; type?: string; status?: string; version?: string; taskQueue?: string; description?: string } {
+  ): {
+    name: string
+    type?: string
+    status?: string
+    version?: string
+    taskQueue?: string
+    description?: string
+  } {
     return {
       name,
       type: selected?.type,
@@ -278,9 +294,9 @@ export function useDslWorkbench() {
     await api.deleteDraft(name)
     await loadConstructs()
     if (state.value.selectedName === name) {
-      state.value.selectedName = state.value.constructs.length
-        ? state.value.constructs[0].name
-        : null
+      const nextName = state.value.constructs.length ? state.value.constructs[0].name : null
+      state.value.selectedName = nextName
+      lastSelectedName.value = nextName
     }
     log.info('construct deleted', { name })
   }

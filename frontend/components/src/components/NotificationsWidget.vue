@@ -28,8 +28,7 @@ const drawerOpen = ref(false)
 // "toast" is just a transient form of the same record. Toasts that are still
 // on screen appear here with an `ephemeral` flag so the user can tell them
 // apart.
-const { notifications, unreadCount, markRead, markAllRead, dismiss } =
-  useNotifications()
+const { notifications, unreadCount, markRead, markAllRead, dismiss } = useNotifications()
 
 function open() {
   drawerOpen.value = true
@@ -108,8 +107,7 @@ function isEphemeral(note: Notification): boolean {
       >
         <span class="uppercase tracking-wide">
           {{ notifications.length }}
-          total
-          ·
+          total ·
           {{ unreadCount }}
           unread
         </span>
@@ -130,11 +128,7 @@ function isEphemeral(note: Notification): boolean {
       >
         No notifications yet.
       </p>
-      <ul
-        v-else
-        class="divide-y divide-gray-800"
-        data-testid="notifications-drawer-list"
-      >
+      <ul v-else class="divide-y divide-gray-800" data-testid="notifications-drawer-list">
         <li
           v-for="note in notifications"
           :key="note.id"

@@ -433,7 +433,10 @@ function formatRelativeTime(iso: string): string {
             >
           </div>
         </div>
-        <span v-if="formError" data-testid="notification-rule-form-error" class="text-xs text-red-600"
+        <span
+          v-if="formError"
+          data-testid="notification-rule-form-error"
+          class="text-xs text-red-600"
           >{{ formError }}</span
         >
         <button
@@ -450,7 +453,11 @@ function formatRelativeTime(iso: string): string {
         <div v-for="i in 3" :key="i" class="h-16 bg-gray-100 rounded animate-pulse" />
       </div>
 
-      <div v-else-if="error" class="text-sm text-red-600" data-testid="notification-rule-list-error">
+      <div
+        v-else-if="error"
+        class="text-sm text-red-600"
+        data-testid="notification-rule-list-error"
+      >
         {{ error }}
       </div>
 
@@ -633,7 +640,9 @@ function formatRelativeTime(iso: string): string {
               data-testid="notification-test-fire-result"
               class="text-xs px-2 py-1 rounded border border-gray-200 flex items-center gap-2"
             >
-              <span class="font-medium text-gray-800">#{{ result.ruleId }} {{ result.ruleName }}</span>
+              <span class="font-medium text-gray-800"
+                >#{{ result.ruleId }} {{ result.ruleName }}</span
+              >
               <span class="text-gray-500">{{ result.sink }}</span>
               <span
                 class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium"
@@ -660,7 +669,11 @@ function formatRelativeTime(iso: string): string {
             Refresh
           </button>
         </div>
-        <div v-if="fireLogLoading" class="px-3 py-3 text-sm text-gray-500" data-testid="notification-fire-log-loading">
+        <div
+          v-if="fireLogLoading"
+          class="px-3 py-3 text-sm text-gray-500"
+          data-testid="notification-fire-log-loading"
+        >
           Loading firing log…
         </div>
         <div
@@ -697,7 +710,10 @@ function formatRelativeTime(iso: string): string {
               <td class="px-3 py-2 whitespace-nowrap text-gray-500" :title="firing.createdAt">
                 {{ formatRelativeTime(firing.createdAt) }}
               </td>
-              <td class="px-2 py-2 font-medium text-gray-900" data-testid="notification-fire-log-rule">
+              <td
+                class="px-2 py-2 font-medium text-gray-900"
+                data-testid="notification-fire-log-rule"
+              >
                 {{ firing.ruleName }}
               </td>
               <td class="px-2 py-2 text-gray-600" data-testid="notification-fire-log-sink">

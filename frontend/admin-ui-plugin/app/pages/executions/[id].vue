@@ -216,7 +216,6 @@ function runAgain() {
   })
 }
 
-
 // T567 — signal panel: allow operator to send a named signal to a running
 // Temporal workflow and query its current signal state.
 const signalName = ref('')
@@ -422,7 +421,7 @@ onUnmounted(() => {
             type="text"
             placeholder="Signal name"
             class="flex-1 px-3 py-2 text-sm border rounded border-neutral-300 focus:outline-none focus:ring-2 focus:ring-primary-300"
-          />
+          >
           <button
             type="button"
             :disabled="!signalName || signalBusy"
@@ -448,10 +447,16 @@ onUnmounted(() => {
             {{ signalBusy ? 'Sending…' : 'Send signal' }}
           </button>
         </div>
-        <p v-if="signalResult" class="text-sm text-success-600" data-testid="signal-result">{{ signalResult }}</p>
-        <p v-if="signalError" class="text-sm text-error-600" data-testid="signal-error">{{ signalError }}</p>
+        <p v-if="signalResult" class="text-sm text-success-600" data-testid="signal-result">
+          {{ signalResult }}
+        </p>
+        <p v-if="signalError" class="text-sm text-error-600" data-testid="signal-error">
+          {{ signalError }}
+        </p>
         <div v-if="queryResult?.signalState" class="bg-neutral-50 border border-line rounded p-2">
-          <pre class="text-xs text-ink-muted overflow-auto">{{ JSON.stringify(queryResult.signalState, null, 2) }}</pre>
+          <pre
+            class="text-xs text-ink-muted overflow-auto"
+          >{{ JSON.stringify(queryResult.signalState, null, 2) }}</pre>
         </div>
       </div>
 

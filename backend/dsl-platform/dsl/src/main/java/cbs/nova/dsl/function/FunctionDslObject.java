@@ -23,7 +23,7 @@ public record FunctionDslObject(
         @NonNull Function<FunctionContext<?>, Result<?>> executeLogic,
         @NonNull Function<FunctionContext<?>, Result<?>> previewLogic,
         @NonNull Function<FunctionContext<?>, Result<ExplainReport>> explainLogic,
-        @NonNull Supplier<DslDescriptor> descriptor,
+        @NonNull DslDescriptor descriptor,
         @Nullable String description) implements DslObject {
 
   @Override
