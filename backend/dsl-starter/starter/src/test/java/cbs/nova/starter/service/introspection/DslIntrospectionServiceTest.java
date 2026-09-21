@@ -1,6 +1,7 @@
 package cbs.nova.starter.service.introspection;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 
 import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.Context;
@@ -13,10 +14,13 @@ import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.jsonschema.JacksonJsonSchemaGenerator;
+import cbs.nova.dsl.model.ExplainReport;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.converter.DslIntrospectionMapper;
 import cbs.nova.starter.model.DslIntrospectionModels.DefinitionMetaDto;
 import cbs.nova.starter.model.DslIntrospectionModels.DefinitionStatus;
+import cbs.nova.starter.model.DslIntrospectionModels.LogicInfoDto;
+import cbs.nova.starter.model.DslIntrospectionModels.LogicStatus;
 import cbs.nova.starter.service.DslDefinitionStatusResolver;
 import cbs.nova.starter.service.DslGitStatusResolver;
 import cbs.nova.starter.service.DslIntrospectionService;
@@ -317,6 +321,91 @@ class DslIntrospectionServiceTest {
     assertThat(children).containsEntry("type", "array");
     assertThat((Map<String, Object>) children.get("items"))
             .containsEntry("$ref", "#/$defs/ExplainReport");
+  }
+
+  @Test
+  void objectStructureReportsDefaultLogicForBareProcess() {
+    GlobalManager.globalManager().registerProcess(
+            Dsl.process("PLogic").execute(ctx -> Result.success("ok")).build());
+
+    var dto = service.objectStructure("PLogic").orElseThrow();
+
+    assertThat(dto.logic())
+            .extracting(LogicInfoDto::kind, LogicInfoDto::status, LogicInfoDto::required)
+            .containsExactly(
+                    tuple("execute", LogicStatus.CONFIGURED, true),
+                    tuple("preview", LogicStatus.DEFAULT, false),
+                    tuple("explain", LogicStatus.DEFAULT, false));
+  }
+
+  @Test
+  void objectStructureReportsConfiguredLogicWhenPreviewAndExplainAreSet() {
+    GlobalManager.globalManager().registerProcess(
+            Dsl.process("PLogicFull")
+                    .execute(ctx -> Result.success("ok"))
+                    .preview(ctx -> Result.success("preview"))
+                    .explain(ctx -> Result.success(ExplainReport.of("report")))
+                    .build());
+
+    var dto = service.objectStructure("PLogicFull").orElseThrow();
+
+    assertThat(dto.logic())
+            .extracting(LogicInfoDto::kind, LogicInfoDto::status, LogicInfoDto::required)
+            .containsExactly(
+                    tuple("execute", LogicStatus.CONFIGURED, true),
+                    tuple("preview", LogicStatus.CONFIGURED, false),
+                    tuple("explain", LogicStatus.CONFIGURED, false));
+  }
+
+  @Test
+  void objectStructureReportsDefaultLogicForTransaction() {
+    GlobalManager.globalManager().registerTransaction(
+            Dsl.transaction("TLogic").execute(ctx -> Result.success("ok")).build());
+
+    var dto = service.objectStructure("TLogic").orElseThrow();
+
+    assertThat(dto.logic())
+            .extracting(LogicInfoDto::kind, LogicInfoDto::status, LogicInfoDto::required)
+            .containsExactly(
+                    tuple("execute", LogicStatus.CONFIGURED, true),
+                    tuple("preview", LogicStatus.DEFAULT, false),
+                    tuple("explain", LogicStatus.DEFAULT, false));
+  }
+
+  @Test
+  void objectStructureReportsDefaultLogicForFunction() {
+    GlobalManager.globalManager().registerFunction(
+            Dsl.function("FLogic").execute(ctx -> Result.success("ok")).build());
+
+    var dto = service.objectStructure("FLogic").orElseThrow();
+
+    assertThat(dto.type()).isEqualTo("function");
+    assertThat(dto.logic())
+            .extracting(LogicInfoDto::kind, LogicInfoDto::status, LogicInfoDto::required)
+            .containsExactly(
+                    tuple("execute", LogicStatus.CONFIGURED, true),
+                    tuple("preview", LogicStatus.DEFAULT, false),
+                    tuple("explain", LogicStatus.DEFAULT, false));
+  }
+
+  @Test
+  void objectStructureReportsHelperLogic() {
+    GlobalManager.globalManager().registerHelper("HLogic", new Executable<String, Integer>() {
+      @Override
+      public Result<Integer> execute(Context<String> ctx) {
+        return Result.success(1);
+      }
+    });
+
+    var dto = service.objectStructure("HLogic").orElseThrow();
+
+    assertThat(dto.type()).isEqualTo("helper");
+    assertThat(dto.logic())
+            .extracting(LogicInfoDto::kind, LogicInfoDto::status, LogicInfoDto::required)
+            .containsExactly(
+                    tuple("execute", LogicStatus.CONFIGURED, true),
+                    tuple("preview", LogicStatus.DEFAULT, false),
+                    tuple("explain", LogicStatus.DEFAULT, false));
   }
 
   @Test

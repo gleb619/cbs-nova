@@ -15,6 +15,7 @@ import {
   type NotificationRulePage,
   type NotificationTestPayload,
   type NotificationTestResult,
+  type ObjectStructureDto,
   type PromotionDefinition,
   type PromotionEnvironment,
   type PromotionRequest,
@@ -384,6 +385,20 @@ export function useDslApi() {
     })) as NotificationTestResult
   }
 
+  async function fetchObjectStructure(name: string): Promise<ObjectStructureDto | null> {
+    log.info('fetchObjectStructure request', { name })
+    try {
+      return (await $fetch(
+        `/api/v1/dsl/structures/${encodeURIComponent(name)}`,
+      )) as ObjectStructureDto
+    } catch (err) {
+      if (extractApiError(err).status === 404) return null
+      const message = extractApiError(err).message
+      log.error('failed to load object structure', { error: message })
+      throw new Error(message)
+    }
+  }
+
   async function fetchChangeRequests(params?: {
     definitionName?: string
     status?: string
@@ -557,6 +572,7 @@ export function useDslApi() {
     saveDefinitionTests,
     runDefinitionTests,
     fetchDiagnostics,
+    fetchObjectStructure,
     fetchWebhookDeliveries,
     fetchNotificationRules,
     createNotificationRule,

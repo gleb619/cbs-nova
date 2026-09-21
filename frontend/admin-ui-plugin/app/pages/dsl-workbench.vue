@@ -14,6 +14,7 @@ import type {
   HelperSearchFilters,
   HelpersResponse,
   ObjectSearchResult,
+  ObjectStructureDto,
   ValidationError,
 } from '@cbs/components'
 import {
@@ -275,6 +276,41 @@ function syncSelectionEffects() {
   mirrorSelectionToDrafts()
   workbenchDraft.setName(state.value.selectedName ?? '')
   void loadSourceFile(selectedConstruct.value)
+  void loadStructure(state.value.selectedName ?? '')
+}
+
+// Introspected whole-object structure for the Structure tab, keyed by the
+// selected construct name. Called from syncSelectionEffects (fetch-on-select);
+// the 404 (unknown object) case resolves to `null` and renders a friendly
+// empty state in the tab.
+const structure = ref<ObjectStructureDto | null>(null)
+const structureLoading = ref(false)
+const structureError = ref<string | null>(null)
+const structureName = ref<string | null>(null)
+
+async function loadStructure(name: string, force = false) {
+  if (!name) {
+    structure.value = null
+    structureError.value = null
+    structureName.value = null
+    return
+  }
+  if (!force && structureName.value === name) return
+  structureName.value = name
+  structureLoading.value = true
+  structureError.value = null
+  try {
+    structure.value = await dslApi.fetchObjectStructure(name)
+  } catch (err) {
+    structure.value = null
+    structureError.value = (err as Error).message
+  } finally {
+    structureLoading.value = false
+  }
+}
+
+function retryStructure() {
+  void loadStructure(structureName.value ?? '', true)
 }
 
 function onCodeChange(value: string) {
@@ -734,8 +770,12 @@ onBeforeUnmount(() => {
             :errors="displayValidationErrors"
             :diagnostics-fetch="dslApi.fetchDiagnostics"
             :diagnostics-definition="selectedConstruct?.name ?? ''"
+            :structure="structure"
+            :structure-loading="structureLoading"
+            :structure-error="structureError"
             @update:code="onCodeChange"
             @save="handleEditorSave"
+            @retry-structure="retryStructure"
           />
         </div>
       </main>

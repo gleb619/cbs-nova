@@ -117,6 +117,45 @@ public final class DslIntrospectionModels {
           String diagram) {
   }
 
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public record ObjectStructureDto(
+          String name,
+          String type,
+          List<StructureFieldDto> fields,
+          List<LogicInfoDto> logic) {
+  }
+
+  public record LogicInfoDto(
+          String kind,
+          LogicStatus status,
+          boolean required,
+          String description) {
+  }
+
+  public enum LogicStatus {
+
+    CONFIGURED("configured"), DEFAULT("default");
+
+    private final String value;
+
+    LogicStatus(String value) {
+      this.value = value;
+    }
+
+    @JsonValue
+    public String value() {
+      return value;
+    }
+  }
+
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public record StructureFieldDto(
+          String path,
+          String value,
+          String type,
+          String description) {
+  }
+
   public enum DefinitionStatus {
 
     PUBLISHED("Published"), DRAFT("Draft"), MODIFIED("Modified");

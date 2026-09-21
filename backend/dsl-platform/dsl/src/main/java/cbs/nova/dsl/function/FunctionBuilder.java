@@ -9,10 +9,10 @@ import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.DslObject.DslType;
 import cbs.nova.dsl.FunctionContext;
-import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.ParameterDescriptor;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.Constants;
+import cbs.nova.dsl.explain.DefaultExplainLogic;
 import cbs.nova.dsl.explain.ExplainResourceExplainer;
 import cbs.nova.dsl.model.ExplainReport;
 import cbs.nova.dsl.model.MapInput;
@@ -104,7 +104,7 @@ public final class FunctionBuilder<I, O> implements ObjectBuilder<FunctionDslObj
     var effectiveParameters = parameters != null
             ? parameters
             : List.<ParameterDescriptor>of();
-    //TODO: redo from supplier to just simple descriptor
+    // TODO: redo from supplier to just simple descriptor
     var effectiveDescriptor = effectiveDescriptor(effectiveParameters);
     var resolvedExecute = rawExecute();
     var explain = rawExplain() != null ? rawExplain() : defaultExplain();
@@ -135,13 +135,7 @@ public final class FunctionBuilder<I, O> implements ObjectBuilder<FunctionDslObj
   }
 
   private @NonNull Function<FunctionContext<?>, Result<ExplainReport>> defaultExplain() {
-    return ctx -> Result.success(
-            ExplainReport.builder()
-                    .name(name)
-                    .description(GlobalManager.globalManager().description(name)
-                            .orElse(Constants.EMPTY_MARKDOWN))
-                    .markdown(GlobalManager.globalManager().resolveExplainContent(name))
-                    .build());
+    return DefaultExplainLogic.forObject(name, Constants.EMPTY_MARKDOWN);
   }
 
   @SuppressWarnings("unchecked")

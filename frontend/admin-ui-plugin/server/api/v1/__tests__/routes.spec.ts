@@ -99,6 +99,7 @@ const transactionDetailHandler = (await import('../generated/routes/dsl/transact
   .default
 const constructBodyHandler = (await import('../generated/routes/dsl/constructs/[name].get')).default
 const constructSchemaHandler = (await import('../dsl/schemas/[name].get')).default
+const objectStructureHandler = (await import('../dsl/structures/[name].get')).default
 const processDiagramHandler = (await import('../dsl/processes/[name]/diagram.get')).default
 const schedulesIndexHandler = (await import('../generated/routes/dsl/schedules.get')).default
 const schedulesCreateHandler = (await import('../generated/routes/dsl/schedules.post')).default
@@ -812,6 +813,42 @@ describe('dsl/schemas/[name].get', () => {
       fakeEvent,
       '/api/dsl/schemas/LoanDisbursement?mode=explain',
     )
+  })
+})
+
+describe('dsl/structures/[name].get', () => {
+  it('interpolates the :name router param into the backend path with GET (no opts)', async () => {
+    routerParams = { name: 'BatchProcessing' }
+
+    await objectStructureHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(
+      fakeEvent,
+      '/api/dsl/structures/BatchProcessing',
+    )
+    expect(proxyToBackendMock.mock.calls[0][2]).toBeUndefined()
+  })
+
+  it('returns the backend ObjectStructureDto verbatim', async () => {
+    routerParams = { name: 'BatchProcessing' }
+    const payload = {
+      name: 'BatchProcessing',
+      type: 'process',
+      fields: [
+        {
+          path: 'taskQueue',
+          value: 'BatchProcessing-queue',
+          type: 'java.lang.String',
+          description: 'Temporal task queue this workflow polls',
+        },
+      ],
+    }
+    proxyToBackendMock.mockResolvedValueOnce(payload)
+
+    const result = await objectStructureHandler(fakeEvent)
+
+    expect(result).toEqual(payload)
   })
 })
 

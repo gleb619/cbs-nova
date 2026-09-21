@@ -9,6 +9,7 @@ import cbs.nova.starter.model.DslIntrospectionModels.ConstructSchemaDto;
 import cbs.nova.starter.model.PageResponse;
 import cbs.nova.starter.model.DslIntrospectionModels.HelperSearchResult;
 import cbs.nova.starter.model.DslIntrospectionModels.NamesResponse;
+import cbs.nova.starter.model.DslIntrospectionModels.ObjectStructureDto;
 import cbs.nova.starter.model.DslIntrospectionModels.ProcessDetail;
 import cbs.nova.starter.model.DslIntrospectionModels.ProcessDiagramDto;
 import cbs.nova.starter.model.DslIntrospectionModels.TransactionDetail;
@@ -64,6 +65,8 @@ public class DslIntrospectionRouterConfiguration {
               @Parameter(name = "name", in = ParameterIn.PATH),
               @Parameter(name = "mode", in = ParameterIn.QUERY, description = "Schema mode: preview (default) or explain")
           }, responses = @ApiResponse(responseCode = "200", description = "Construct schemas or explain report", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ConstructSchemaDto.class))))),
+      @RouterOperation(path = "/api/dsl/structures/{name}", beanClass = DslIntrospectionHandler.class, beanMethod = "objectStructure", method = RequestMethod.GET, operation = @Operation(operationId = "getObjectStructure", summary = "Get DSL object structure", tags = {
+          "DSL Introspection"}, parameters = @Parameter(name = "name", in = ParameterIn.PATH), responses = @ApiResponse(responseCode = "200", description = "Object structure", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ObjectStructureDto.class))))),
       @RouterOperation(path = "/api/dsl/definitions", beanClass = DslIntrospectionHandler.class, beanMethod = "definitions", method = RequestMethod.GET, operation = @Operation(operationId = "listDefinitions", summary = "List DSL definitions", tags = {
           "DSL Introspection"}, responses = @ApiResponse(responseCode = "200", description = "Definitions", content = @Content(mediaType = "application/json", schema = @Schema(implementation = PageResponse.class)))))
   })
@@ -78,6 +81,7 @@ public class DslIntrospectionRouterConfiguration {
             .GET("/api/dsl/helpers", handler::helpers)
             .GET("/api/dsl/constructs/{name}", handler::constructBody)
             .GET("/api/dsl/schemas/{name}", handler::constructSchema)
+            .GET("/api/dsl/structures/{name}", handler::objectStructure)
             .GET("/api/dsl/definitions", handler::definitions)
             .build();
   }

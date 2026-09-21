@@ -4,11 +4,11 @@ import cbs.nova.dsl.CompensationContext;
 import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.DslObject.DslType;
-import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.model.ObjectBuilder;
 import cbs.nova.dsl.ParameterDescriptor;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.Constants;
+import cbs.nova.dsl.explain.DefaultExplainLogic;
 import cbs.nova.dsl.explain.ExplainResourceExplainer;
 import cbs.nova.dsl.model.ExplainReport;
 import cbs.nova.dsl.model.MapInput;
@@ -160,13 +160,7 @@ public final class ProcessBuilder<I, O> implements ObjectBuilder<ProcessDslObjec
   }
 
   private @NonNull Function<ProcessContext<?>, Result<ExplainReport>> defaultExplain() {
-    return ctx -> Result.success(
-            ExplainReport.builder()
-                    .name(name)
-                    .description(GlobalManager.globalManager().description(name)
-                            .orElse(description == null ? "" : description))
-                    .markdown(GlobalManager.globalManager().resolveExplainContent(name))
-                    .build());
+    return DefaultExplainLogic.forObject(name, description);
   }
 
   @SuppressWarnings("unchecked")

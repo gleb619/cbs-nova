@@ -78,6 +78,13 @@ public class DslIntrospectionHandler {
             .orElse(ServerResponse.notFound().build());
   }
 
+  public ServerResponse objectStructure(ServerRequest request) {
+    String name = request.pathVariable("name");
+    return service.objectStructure(name)
+            .map(s -> ServerResponse.ok().body(s))
+            .orElse(ServerResponse.notFound().build());
+  }
+
   public ServerResponse definitions(ServerRequest request) {
     int limit = Pagination.intParam(request, "limit", StarterConstants.DEFAULT_LIMIT);
     int offset = Pagination.intParam(request, "offset", StarterConstants.DEFAULT_OFFSET);

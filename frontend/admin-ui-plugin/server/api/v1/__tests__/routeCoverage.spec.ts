@@ -126,6 +126,11 @@ const expectedProxies: readonly ExpectedProxy[] = [
     backendPath: '/api/dsl/schemas/{name}',
     bffPath: '/api/v1/dsl/schemas/{name}',
   },
+  {
+    method: 'GET',
+    backendPath: '/api/dsl/structures/{name}',
+    bffPath: '/api/v1/dsl/structures/{name}',
+  },
   // DslRuntimeRouterConfiguration
   {
     method: 'POST',

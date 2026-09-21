@@ -15,6 +15,7 @@ import cbs.nova.dsl.Result;
 import cbs.nova.dsl.jsonschema.JacksonJsonSchemaGenerator;
 import cbs.nova.dsl.function.FunctionDslObject;
 import cbs.nova.dsl.model.Descriptors;
+import cbs.nova.dsl.model.ExplainReport;
 import cbs.nova.starter.config.router.DslIntrospectionRouterConfiguration;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.controller.DslIntrospectionHandler;
@@ -398,6 +399,77 @@ class DslIntrospectionResourceTest {
             .andExpect(jsonPath("$.items[?(@.name=='LoanDisbursement' && @.type=='process')]")
                     .exists())
             .andExpect(jsonPath("$.total").value(1));
+  }
+
+  @Test
+  void structuresEndpointReturnsFlatFieldsForProcess() throws Exception {
+    mockMvc
+            .perform(get("/api/dsl/structures/LoanDisbursement")
+                    .accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.name").value("LoanDisbursement"))
+            .andExpect(jsonPath("$.type").value("process"))
+            .andExpect(jsonPath("$.fields").isArray())
+            .andExpect(jsonPath("$.fields[?(@.path=='name')].value").value("LoanDisbursement"))
+            .andExpect(jsonPath("$.fields[?(@.path=='version')].value").value("v1"))
+            .andExpect(jsonPath("$.fields[?(@.path=='taskQueue')].value").isNotEmpty())
+            .andExpect(jsonPath("$.fields[?(@.path=='hasCompensation')].value")
+                    .value("false"))
+            .andExpect(jsonPath("$.fields[?(@.path=='taskQueue')].description")
+                    .value("Temporal task queue this workflow polls"));
+  }
+
+  @Test
+  void structuresEndpointReportsDefaultLogicForProcess() throws Exception {
+    mockMvc
+            .perform(get("/api/dsl/structures/LoanDisbursement")
+                    .accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.logic[?(@.kind=='execute')].status").value("configured"))
+            .andExpect(jsonPath("$.logic[?(@.kind=='execute')].required").value(true))
+            .andExpect(jsonPath("$.logic[?(@.kind=='preview')].status").value("default"))
+            .andExpect(jsonPath("$.logic[?(@.kind=='explain')].status").value("default"));
+  }
+
+  @Test
+  void structuresEndpointReportsConfiguredLogicForProcess() throws Exception {
+    GlobalManager.globalManager().registerProcess(
+            Dsl.process("ConfiguredLogicProcess")
+                    .execute(ctx -> Result.success("ok"))
+                    .preview(ctx -> Result.success("preview"))
+                    .explain(ctx -> Result.success(ExplainReport.of("report")))
+                    .build());
+
+    mockMvc
+            .perform(get("/api/dsl/structures/ConfiguredLogicProcess")
+                    .accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.logic[?(@.kind=='execute')].status").value("configured"))
+            .andExpect(jsonPath("$.logic[?(@.kind=='preview')].status").value("configured"))
+            .andExpect(jsonPath("$.logic[?(@.kind=='explain')].status").value("configured"));
+  }
+
+  @Test
+  void structuresEndpointReturnsFieldsForRegisteredHelper() throws Exception {
+    registerSampleEntities();
+
+    mockMvc
+            .perform(get("/api/dsl/structures/sampleHelper").accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.name").value("sampleHelper"))
+            .andExpect(jsonPath("$.type").value("helper"))
+            .andExpect(jsonPath("$.fields[?(@.path=='inputType')].value").value("String"))
+            .andExpect(jsonPath("$.fields[?(@.path=='inputType')].type").value("class"))
+            .andExpect(jsonPath("$.fields[?(@.path=='hasSideEffects')].value").value("false"))
+            .andExpect(jsonPath("$.logic[?(@.kind=='execute')].status").value("configured"))
+            .andExpect(jsonPath("$.logic[?(@.kind=='preview')].status").value("default"));
+  }
+
+  @Test
+  void structuresEndpointReturns404ForUnknown() throws Exception {
+    mockMvc
+            .perform(get("/api/dsl/structures/Unknown").accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isNotFound());
   }
 
   private void registerSampleEntities() {

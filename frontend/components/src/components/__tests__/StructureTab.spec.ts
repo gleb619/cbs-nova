@@ -1,67 +1,67 @@
 import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
-import type { StepDef } from '../../types/dsl'
+import type { ObjectStructureDto } from '../../types/dsl'
 import StructureTab from '../dsl/StructureTab.vue'
+
+const structure: ObjectStructureDto = {
+  name: 'BatchProcessing',
+  type: 'process',
+  logic: [
+    { kind: 'execute', status: 'configured', required: true },
+    { kind: 'preview', status: 'default', required: false },
+    { kind: 'explain', status: 'default', required: false },
+  ],
+  fields: [
+    {
+      path: 'taskQueue',
+      value: 'BatchProcessing-queue',
+      type: 'java.lang.String',
+      description: 'Temporal task queue this workflow polls',
+    },
+  ],
+}
 
 describe('StructureTab', () => {
   it('exposes root data-testid', () => {
-    const wrapper = mount(StructureTab, { props: { steps: [] } })
+    const wrapper = mount(StructureTab)
 
     expect(wrapper.find('[data-testid="structure-tab"]').exists()).toBe(true)
   })
 
-  it('renders the empty state when no steps are supplied', () => {
-    const wrapper = mount(StructureTab, { props: { steps: [] } })
+  it('renders the structure table when structure is provided', () => {
+    const wrapper = mount(StructureTab, { props: { structure } })
 
-    expect(wrapper.text()).toContain('No steps defined yet.')
-    expect(wrapper.findAll('li')).toHaveLength(0)
+    expect(wrapper.find('[data-testid="structure-fields"]').exists()).toBe(true)
+    expect(wrapper.text()).toContain('BatchProcessing')
+    expect(wrapper.text()).toContain('BatchProcessing-queue')
+  })
+
+  it('shows a placeholder when no structure is available', () => {
+    const wrapper = mount(StructureTab)
+
+    expect(wrapper.text()).toContain('No structure available for this object.')
+  })
+
+  it('shows the loading spinner while structure is loading', () => {
+    const wrapper = mount(StructureTab, { props: { structureLoading: true } })
+
+    expect(wrapper.find('[data-testid="structure-loading"]').exists()).toBe(true)
+  })
+
+  it('shows the error banner with retry when structure failed to load', async () => {
+    const wrapper = mount(StructureTab, { props: { structureError: 'boom' } })
+
+    expect(wrapper.find('[data-testid="structure-error"]').exists()).toBe(true)
+
+    wrapper.find('button').trigger('click')
+    const retries = wrapper.emitted('retry')
+    expect(retries).toBeTruthy()
+  })
+
+  it('no longer renders the steps stub empty state', () => {
+    const wrapper = mount(StructureTab, { props: { structure } })
+
+    expect(wrapper.text()).not.toContain('No steps defined yet.')
     expect(wrapper.find('ol').exists()).toBe(false)
-  })
-
-  it('renders each step in order with name, type, and a 1-based index', () => {
-    const steps: StepDef[] = [
-      { id: 's1', type: 'helper', name: 'LogStart' },
-      { id: 's2', type: 'function', name: 'CallPayment' },
-      { id: 's3', type: 'transaction', name: 'BookInventory' },
-      { id: 's4', type: 'step', name: 'NotifyUser' },
-    ]
-
-    const wrapper = mount(StructureTab, { props: { steps } })
-
-    const items = wrapper.findAll('li')
-    expect(items).toHaveLength(4)
-
-    expect(items[0]!.text()).toContain('1.')
-    expect(items[0]!.text()).toContain('LogStart')
-    expect(items[0]!.text()).toContain('helper')
-
-    expect(items[1]!.text()).toContain('2.')
-    expect(items[1]!.text()).toContain('CallPayment')
-    expect(items[1]!.text()).toContain('function')
-
-    expect(items[2]!.text()).toContain('3.')
-    expect(items[2]!.text()).toContain('BookInventory')
-    expect(items[2]!.text()).toContain('transaction')
-
-    expect(items[3]!.text()).toContain('4.')
-    expect(items[3]!.text()).toContain('NotifyUser')
-    expect(items[3]!.text()).toContain('step')
-  })
-
-  it('preserves the supplied step order in the rendered list', () => {
-    const steps: StepDef[] = [
-      { id: 'a', type: 'step', name: 'Alpha' },
-      { id: 'b', type: 'step', name: 'Beta' },
-      { id: 'c', type: 'step', name: 'Gamma' },
-    ]
-
-    const wrapper = mount(StructureTab, { props: { steps } })
-
-    const names = wrapper.findAll('li').map((li) => {
-      const span = li.findAll('span').find((s) => s.classes().includes('font-medium'))!
-      return span.text()
-    })
-
-    expect(names).toEqual(['Alpha', 'Beta', 'Gamma'])
   })
 })

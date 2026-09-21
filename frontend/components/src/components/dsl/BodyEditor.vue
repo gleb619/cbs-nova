@@ -9,7 +9,7 @@ import type {
   DiagnosticsPage,
   DslConstruct,
   HelperCatalogEntry,
-  StepDef,
+  ObjectStructureDto,
   ValidationError,
 } from '../../types/dsl'
 import type { RunnerOutput } from '../../types/runner'
@@ -56,6 +56,10 @@ const props = withDefaults(
     }) => Promise<DiagnosticsPage>
     /** Definition whose diagnostics should be shown in the Problems tab. */
     diagnosticsDefinition?: string
+    /** Introspected structure of the selected DSL object (whole-object view). */
+    structure?: ObjectStructureDto | null
+    structureLoading?: boolean
+    structureError?: string | null
   }>(),
   { markers: () => [], errors: () => [] },
 )
@@ -64,6 +68,7 @@ const emit = defineEmits<{
   'update:code': [value: string]
   save: [value: string]
   select: [payload: { index: number; error: ValidationError }]
+  'retry-structure': []
 }>()
 
 type BodyEditorTab = 'structure' | 'code' | 'preview' | 'explain' | 'problems'
@@ -93,9 +98,6 @@ const tab = useBodyEditorStorage<BodyEditorTab>('active-tab', 'structure', {
     }
   },
 })
-
-// stub — future: derive from construct introspection
-const steps = ref<StepDef[]>([])
 
 const isControlled = computed(() => props.code !== undefined)
 
@@ -251,7 +253,13 @@ defineExpose({ revealPosition, insertAtCursor, selectProblem })
       </button>
     </div>
     <div class="flex-1 overflow-auto" data-testid="body-editor-content">
-      <StructureTab v-show="tab === 'structure'" :steps="steps" />
+      <StructureTab
+        v-show="tab === 'structure'"
+        :structure="structure"
+        :structure-loading="structureLoading"
+        :structure-error="structureError"
+        @retry="emit('retry-structure')"
+      />
       <CodeTab
         ref="codeTabRef"
         v-show="tab === 'code'"

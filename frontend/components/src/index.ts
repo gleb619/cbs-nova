@@ -39,6 +39,7 @@ export { default as DslSavedDraftsWidget } from './components/dsl/SavedDraftsWid
 export { default as DslScheduleList } from './components/dsl/ScheduleList.vue'
 export { default as DslSchemaForm } from './components/dsl/SchemaForm.vue'
 export { default as DslSchemaFormField } from './components/dsl/SchemaFormField.vue'
+export { default as DslStructureFieldsTable } from './components/dsl/StructureFieldsTable.vue'
 export { default as DslStructureTab } from './components/dsl/StructureTab.vue'
 export { default as ErrorBanner } from './components/ErrorBanner.vue'
 export { default as ErrorList } from './components/ErrorList.vue'

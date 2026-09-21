@@ -16,7 +16,7 @@ public final class GeneratedClassRegistry {
   private final Map<String, GeneratedClassDescriptor> processes = new ConcurrentHashMap<>();
   private final Map<String, GeneratedClassDescriptor> transactions = new ConcurrentHashMap<>();
   private final Map<String, GeneratedClassProvider> providers = new ConcurrentHashMap<>();
-  //TODO: modify GeneratedClassProvider, remove a helperFilenames, make a refatoring
+  // TODO: modify GeneratedClassProvider, remove a helperFilenames, make a refatoring
   private final Map<String, String> helperFilenames = new ConcurrentHashMap<>();
 
   public GeneratedClassRegistry init(ClassLoader classLoader) {

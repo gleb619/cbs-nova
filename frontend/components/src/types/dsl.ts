@@ -24,11 +24,29 @@ export interface ValidationError {
   column?: number | null
 }
 
-export interface StepDef {
-  id: string
-  type: 'helper' | 'function' | 'transaction' | 'step'
+export interface StructureFieldDto {
+  path: string
+  value?: string | null
+  type: string
+  description?: string
+}
+
+export type LogicKind = 'execute' | 'preview' | 'explain'
+export type LogicStatus = 'configured' | 'default'
+
+export interface LogicInfoDto {
+  kind: LogicKind
+  status: LogicStatus
+  required: boolean
+  description?: string
+}
+
+export interface ObjectStructureDto {
   name: string
-  inputMapping?: string
+  type: 'process' | 'transaction' | 'helper' | 'function'
+  fields: StructureFieldDto[]
+  /** Absent on backends that predate the logic introspection feature. */
+  logic?: LogicInfoDto[]
 }
 
 export interface HelperCatalogEntry {
