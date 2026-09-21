@@ -837,3 +837,52 @@ matching `\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z`, and a local timestamp matching
 `\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+\d{2}:\d{2}` with a `+05:30` offset. The test asserts
 the format and offset shape rather than exact clock values, since the clock is not
 deterministic across runs.
+
+## Signing and verifying a webhook payload with `hmacSha256Sign` + `hmacSha256Verify`
+
+Demonstrate the outbound/inbound HMAC-SHA256 webhook signature handshake in one process.
+The helper computes an HMAC-SHA256 of the payload with a shared secret to build the
+`X-Signature: sha256=<digest>` header value, then verifies three scenarios on the inbound
+side — same payload + same secret (accept), tampered payload + original signature (reject),
+and original payload + wrong secret (reject). The accepted scenario proves the end-to-end
+sign+verify round-trip; the two rejected scenarios pin the constant-time comparison
+behaviour for the two common webhook-tampering failure modes.
+
+See `backend/dsl-starter/dsl-examples/src/dsl/WebhookSignatureDsl.java` (input/output models
+in `backend/dsl-starter/dsl-examples/src/models/WebhookSignatureModels.java`):
+
+```java
+// Outbound: sign the payload with the shared secret.
+var signedVar = ctx.runHelper("hmacSha256Sign",
+    new HmacSha256SignIn(in.payload(), in.secret(), in.encoding()));
+if (!signedVar.isSuccess()) {
+  return Result.failure(signedVar.cause());
+}
+HmacSha256SignOut signed = signedVar.as(HmacSha256SignOut.class);
+String outboundSignature = signed.signature();
+String outboundHeader = "sha256=" + outboundSignature;
+
+// Inbound (a): same payload + same secret — accept.
+var okVar = ctx.runHelper("hmacSha256Verify",
+    new HmacSha256VerifyIn(in.payload(), in.secret(), outboundSignature, in.encoding()));
+boolean validSignedPayload = okVar.as(HmacSha256VerifyOut.class).valid();
+
+// Inbound (b): tampered payload + original signature — reject.
+var tamperVar = ctx.runHelper("hmacSha256Verify",
+    new HmacSha256VerifyIn(in.tamperedPayload(), in.secret(), outboundSignature, in.encoding()));
+boolean validTamperedPayload = tamperVar.as(HmacSha256VerifyOut.class).valid();
+
+// Inbound (c): original payload + wrong secret — reject.
+var wrongVar = ctx.runHelper("hmacSha256Verify",
+    new HmacSha256VerifyIn(in.payload(), in.wrongSecret(), outboundSignature, in.encoding()));
+boolean validWrongSecret = wrongVar.as(HmacSha256VerifyOut.class).valid();
+```
+
+With `payload` = `{"event":"order.created","id":"order-42"}`, `secret` = the shared
+signing secret, `wrongSecret` = a different secret, `tamperedPayload` =
+`{"event":"order.created","id":"order-99"}` and `encoding` = `"hex"`, the process returns
+`outboundSignature` matching `[0-9a-f]{64}`, `outboundHeader` =
+`"sha256=" + outboundSignature`, `encoding` = `"hex"`, `validSignedPayload` = `true`,
+`validTamperedPayload` = `false`, and `validWrongSecret` = `false`. The shared secret is
+never echoed in the process output — only the derived signature header and the boolean
+verification results leave the workflow.
