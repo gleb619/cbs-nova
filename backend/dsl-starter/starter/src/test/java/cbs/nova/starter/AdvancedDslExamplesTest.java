@@ -19,6 +19,8 @@ import cbs.nova.dslexamples.v1.OrderSagaModels.OrderSagaIn;
 import cbs.nova.dslexamples.v1.OrderSagaModels.OrderSagaOut;
 import cbs.nova.dslexamples.v1.RetryPolicyModels.RetryPolicyIn;
 import cbs.nova.dslexamples.v1.RetryPolicyModels.RetryPolicyOut;
+import cbs.nova.dslexamples.v1.ScheduleWindowModels.ScheduleWindowIn;
+import cbs.nova.dslexamples.v1.ScheduleWindowModels.ScheduleWindowOut;
 import cbs.nova.dslexamples.v1.ApiKeyProvisioningModels.ApiKeyProvisioningIn;
 import cbs.nova.dslexamples.v1.ApiKeyProvisioningModels.ApiKeyProvisioningOut;
 import cbs.nova.dslexamples.v1.SampleDataGenerationModels.SampleDataGenerationIn;
@@ -166,6 +168,49 @@ class AdvancedDslExamplesTest {
     assertThat(out.purpose()).isEqualTo("payment-service");
     assertThat(out.apiKey()).hasSize(32).matches("[A-Za-z0-9_-]{32}");
     assertThat(out.idempotencyKey()).hasSize(32).matches("[0-9a-f]{32}");
+  }
+
+  @Test
+  void scheduleWindowPreviewParsesIsoGracePeriodAndShorthandHardLimit() {
+    var input = new ScheduleWindowIn("nightly-rollout", "PT1H30M", "2h");
+    Context<ScheduleWindowIn> ctx = SimpleContext.builder(input).mode(ExecutionMode.PREVIEW)
+            .build();
+
+    Result<?> result = GlobalManager.globalManager().runProcess("ScheduleWindow", ctx);
+
+    assertThat(result.isSuccess()).as("cause: %s", result.cause()).isTrue();
+    ScheduleWindowOut out = (ScheduleWindowOut) result.value();
+    assertThat(out.jobName()).isEqualTo("nightly-rollout");
+    // ISO-8601 form: "PT1H30M" = 1h30m = 90 minutes = 5_400_000 ms.
+    assertThat(out.graceMillis()).isEqualTo(5_400_000L);
+    assertThat(out.graceSeconds()).isEqualTo(5400L);
+    assertThat(out.graceIso()).isEqualTo("PT1H30M");
+    // Shorthand form: "2h" = 2 hours = 7_200_000 ms.
+    assertThat(out.hardLimitMillis()).isEqualTo(7_200_000L);
+    assertThat(out.hardLimitSeconds()).isEqualTo(7200L);
+    assertThat(out.hardLimitIso()).isEqualTo("PT2H");
+  }
+
+  @Test
+  void scheduleWindowPreviewParsesShorthandGracePeriodAndIsoHardLimit() {
+    var input = new ScheduleWindowIn("batch-flush", "45m", "P2DT3H");
+    Context<ScheduleWindowIn> ctx = SimpleContext.builder(input).mode(ExecutionMode.PREVIEW)
+            .build();
+
+    Result<?> result = GlobalManager.globalManager().runProcess("ScheduleWindow", ctx);
+
+    assertThat(result.isSuccess()).as("cause: %s", result.cause()).isTrue();
+    ScheduleWindowOut out = (ScheduleWindowOut) result.value();
+    assertThat(out.jobName()).isEqualTo("batch-flush");
+    // Shorthand form: "45m" = 45 minutes = 2_700_000 ms.
+    assertThat(out.graceMillis()).isEqualTo(2_700_000L);
+    assertThat(out.graceSeconds()).isEqualTo(2700L);
+    assertThat(out.graceIso()).isEqualTo("PT45M");
+    // ISO-8601 form: "P2DT3H" = 2 days + 3 hours = 51 hours = 183_600_000 ms.
+    // Bare-day forms normalize to a time component, so iso becomes "PT51H".
+    assertThat(out.hardLimitMillis()).isEqualTo(183_600_000L);
+    assertThat(out.hardLimitSeconds()).isEqualTo(183_600L);
+    assertThat(out.hardLimitIso()).isEqualTo("PT51H");
   }
 
   private static HelperInstanceResolver typedHelperResolver() {
