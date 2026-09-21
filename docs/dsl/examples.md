@@ -790,3 +790,50 @@ in both slots — `45m` yields `graceMillis=2_700_000` / `graceSeconds=2700` / `
 and `P2DT3H` (2 days + 3 hours = 51 hours) yields `hardLimitMillis=183_600_000` /
 `hardLimitSeconds=183_600` / `hardLimitIso="PT51H"` — bare-day forms normalize to a time
 component. Values are asserted exactly because both inputs are deterministic.
+## Stamping an audit trail with `currentTimestamp` (UTC + explicit zone)
+
+Stamp an audit/event record with a Temporal-workflow-safe timestamp by running the
+`currentTimestamp` helper. The helper returns a single ISO-8601 offset timestamp string and
+accepts an optional `zone` argument:
+- **No zone** (or `null`/blank) — defaults to `UTC`, rendered with a trailing `Z`
+  (e.g. `2026-09-21T06:30:00Z`).
+- **Explicit zone** — any IANA timezone name such as `"Asia/Kolkata"`, rendered as an offset
+  string (e.g. `2026-09-21T11:30:00+05:30`). Invalid zones fall back to UTC.
+
+The helper is Temporal-replay-safe: it derives the instant from
+`Workflow.currentTimeMillis()` when running inside a Temporal workflow so the value is
+deterministic under replay, only falling back to `Instant.now()` outside a workflow context
+(such as a preview run). The process stamps a single event twice — once canonical UTC, once in
+the caller's zone — so a downstream audit sink can store a stable UTC value while retaining a
+human-readable local offset.
+
+See `backend/dsl-starter/dsl-examples/src/dsl/AuditTrailDsl.java` (input/output models in
+`backend/dsl-starter/dsl-examples/src/models/AuditTrailModels.java`):
+
+```java
+// Default UTC form — no zone argument.
+var utcVar = ctx.runHelper("currentTimestamp",
+    new CurrentTimestampIn(null));
+if (!utcVar.isSuccess()) {
+  return Result.failure(utcVar.cause());
+}
+String utcTimestamp = utcVar.as(CurrentTimestampOut.class).timestamp();
+
+// Explicit caller-specified timezone — e.g. "Asia/Kolkata".
+var localVar = ctx.runHelper("currentTimestamp",
+    new CurrentTimestampIn(in.zone()));
+if (!localVar.isSuccess()) {
+  return Result.failure(localVar.cause());
+}
+String localTimestamp = localVar.as(CurrentTimestampOut.class).timestamp();
+
+return Result.success(new AuditTrailOut(
+    in.eventType(), in.actor(), utcTimestamp, localTimestamp, in.zone()));
+```
+
+With `eventType` = `"ORDER_STATUS_CHANGED"`, `actor` = `"scheduler"` and
+`zone` = `"Asia/Kolkata"` the process returns the echoed event metadata, a UTC timestamp
+matching `\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z`, and a local timestamp matching
+`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+\d{2}:\d{2}` with a `+05:30` offset. The test asserts
+the format and offset shape rather than exact clock values, since the clock is not
+deterministic across runs.

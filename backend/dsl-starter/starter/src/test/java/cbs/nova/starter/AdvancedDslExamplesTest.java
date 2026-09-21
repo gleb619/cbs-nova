@@ -21,6 +21,8 @@ import cbs.nova.dslexamples.v1.RetryPolicyModels.RetryPolicyIn;
 import cbs.nova.dslexamples.v1.RetryPolicyModels.RetryPolicyOut;
 import cbs.nova.dslexamples.v1.ScheduleWindowModels.ScheduleWindowIn;
 import cbs.nova.dslexamples.v1.ScheduleWindowModels.ScheduleWindowOut;
+import cbs.nova.dslexamples.v1.AuditTrailModels.AuditTrailIn;
+import cbs.nova.dslexamples.v1.AuditTrailModels.AuditTrailOut;
 import cbs.nova.dslexamples.v1.ApiKeyProvisioningModels.ApiKeyProvisioningIn;
 import cbs.nova.dslexamples.v1.ApiKeyProvisioningModels.ApiKeyProvisioningOut;
 import cbs.nova.dslexamples.v1.SampleDataGenerationModels.SampleDataGenerationIn;
@@ -211,6 +213,29 @@ class AdvancedDslExamplesTest {
     assertThat(out.hardLimitMillis()).isEqualTo(183_600_000L);
     assertThat(out.hardLimitSeconds()).isEqualTo(183_600L);
     assertThat(out.hardLimitIso()).isEqualTo("PT51H");
+  }
+
+  @Test
+  void auditTrailPreviewStampsUtcAndZoneAwareTimestamps() {
+    var input = new AuditTrailIn("ORDER_STATUS_CHANGED", "scheduler", "Asia/Kolkata");
+    Context<AuditTrailIn> ctx = SimpleContext.builder(input).mode(ExecutionMode.PREVIEW)
+            .build();
+
+    Result<?> result = GlobalManager.globalManager().runProcess("AuditTrail", ctx);
+
+    assertThat(result.isSuccess()).as("cause: %s", result.cause()).isTrue();
+    AuditTrailOut out = (AuditTrailOut) result.value();
+    assertThat(out.eventType()).isEqualTo("ORDER_STATUS_CHANGED");
+    assertThat(out.actor()).isEqualTo("scheduler");
+    // ISO_OFFSET_DATE_TIME in UTC renders with a trailing 'Z' — assert format, not value.
+    assertThat(out.utcTimestamp())
+            .matches("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z");
+    // Explicit zone renders as an ISO-8601 offset, e.g. '...T11:30:00+05:30'.
+    assertThat(out.localTimestamp())
+            .matches("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?\\+\\d{2}:\\d{2}");
+    // The local timestamp is an offset-converted view of the same instant, so the
+    // wall-clock part differs from UTC but the offset reflects the requested zone.
+    assertThat(out.zone()).isEqualTo("Asia/Kolkata");
   }
 
   private static HelperInstanceResolver typedHelperResolver() {
