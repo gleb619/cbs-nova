@@ -604,3 +604,33 @@ requires a typed context body, the example routes calls through small class-leve
 helpers (`callFunction` / `callHelper`) instead of the Map-based `ctx.runHelper` overloads.
 A preview-mode test pinning the exact numbers lives in
 `backend/dsl-starter/starter/src/test/java/cbs/nova/starter/PricingFunctionsDslTest.java`.
+
+## Generating time-sortable order IDs with `uuidV7`
+
+Mint three IDs for a logical order in one process: one with the default random tail, then two
+with the same `namespace`. Because the namespace mixes deterministically into the 62-bit random
+tail via `SHA-256(namespace)` while the timestamp and monotonic counter keep changing, both
+namespaced IDs share the last 12 hex characters (the node group) but still sort and remain
+unique. The process exposes that property through a boolean so a test can pin it.
+
+See `backend/dsl-starter/dsl-examples/src/dsl/OrderIdGenerationDsl.java` (input/output models in
+`backend/dsl-starter/dsl-examples/src/models/OrderIdGenerationModels.java`).
+
+```java
+var random = ctx.runHelper("uuidV7", new UuidV7In(null));
+String randomId = random.as(UuidV7Out.class).uuid();
+
+var namespaced1 = ctx.runHelper("uuidV7", new UuidV7In(in.namespace()));
+String id1 = namespaced1.as(UuidV7Out.class).uuid();
+
+var namespaced2 = ctx.runHelper("uuidV7", new UuidV7In(in.namespace()));
+String id2 = namespaced2.as(UuidV7Out.class).uuid();
+
+String tail1 = id1.substring(id1.lastIndexOf('-') + 1);
+String tail2 = id2.substring(id2.lastIndexOf('-') + 1);
+boolean deterministicTailMatch = tail1.equals(tail2);
+```
+
+With `orderId` = `"order-42"` and `namespace` = `"orders/v1"` the process returns three
+distinct non-blank UUIDs, both namespaced values share the same node group, and the process
+result records `deterministicTailMatch=true`.

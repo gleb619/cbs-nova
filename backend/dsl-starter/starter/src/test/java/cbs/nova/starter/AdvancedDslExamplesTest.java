@@ -13,6 +13,8 @@ import cbs.nova.dsl.helper.HelperInstanceResolver;
 import cbs.nova.dslexamples.v1.ExceptionProbeModels.ExceptionProbeIn;
 import cbs.nova.dslexamples.v1.ExceptionProbeModels.ExceptionProbeOut;
 import cbs.nova.dslexamples.v1.NestedCompensationModels.NestedCompensationIn;
+import cbs.nova.dslexamples.v1.OrderIdGenerationModels.OrderIdGenerationIn;
+import cbs.nova.dslexamples.v1.OrderIdGenerationModels.OrderIdGenerationOut;
 import cbs.nova.dslexamples.v1.OrderSagaModels.OrderSagaIn;
 import cbs.nova.dslexamples.v1.OrderSagaModels.OrderSagaOut;
 import cbs.nova.starter.config.properties.CbsNovaLoggingProperties;
@@ -86,6 +88,26 @@ class AdvancedDslExamplesTest {
     Result<?> result = GlobalManager.globalManager().runProcess("NestedCompensation", ctx);
 
     assertThat(result.isSuccess()).isFalse();
+  }
+
+  @Test
+  void orderIdGenerationPreviewProducesRandomAndDeterministicIds() {
+    var input = new OrderIdGenerationIn("order-42", "orders/v1");
+    Context<OrderIdGenerationIn> ctx = SimpleContext.builder(input).mode(ExecutionMode.PREVIEW)
+            .build();
+
+    Result<?> result = GlobalManager.globalManager().runProcess("OrderIdGeneration", ctx);
+
+    assertThat(result.isSuccess()).as("cause: %s", result.cause()).isTrue();
+    OrderIdGenerationOut out = (OrderIdGenerationOut) result.value();
+    assertThat(out.orderId()).isEqualTo("order-42");
+    assertThat(out.randomId()).isNotBlank();
+    assertThat(out.namespacedId1()).isNotBlank();
+    assertThat(out.namespacedId2()).isNotBlank();
+    assertThat(out.deterministicTailMatch()).isTrue();
+    String tail1 = out.namespacedId1().substring(out.namespacedId1().lastIndexOf('-') + 1);
+    String tail2 = out.namespacedId2().substring(out.namespacedId2().lastIndexOf('-') + 1);
+    assertThat(tail1).isEqualTo(tail2);
   }
 
   private static HelperInstanceResolver typedHelperResolver() {
