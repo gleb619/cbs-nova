@@ -740,3 +740,53 @@ String idempotencyKey = idempotencyVar.as(SecretOut.class).result();
 With `purpose` = `"payment-service"` the process returns the echoed purpose, a 32-character
 Base64url API key (`[A-Za-z0-9_-]{32}`), and a 32-character hex idempotency key (`[0-9a-f]{32}`).
 Length and charset are asserted — values are cryptographic by design.
+
+## Resolving a schedule window with `parseDuration` (ISO-8601 + shorthand)
+
+Resolve a human-entered schedule window into a normalized form by running each duration string
+through the `parseDuration` helper. The helper accepts both shapes:
+- **ISO-8601** strings parseable by `java.time.Duration.parse(...)`, e.g. `"PT1H30M"`, `"P2DT3H"`,
+  `"PT0.5S"`. Bare-day forms such as `"P2D"` normalize to a time component (`"PT48H"`).
+- **Shorthand** made of one or more `<number><unit>` segments, e.g. `"90m"`, `"1h30m"`,
+  `"2d12h"`, `"250ms"`. Units are `d`, `h`, `m` (always minutes, never months), `s`, and `ms`.
+
+For every accepted input the helper returns `millis` (total milliseconds), `seconds`
+(`Duration.toSeconds()`), and `iso` (the normalized ISO-8601 string). The process echoes the
+`jobName` and both parsed windows so a downstream scheduler can store a single canonical form
+regardless of which shape the operator typed.
+
+See `backend/dsl-starter/dsl-examples/src/dsl/ScheduleWindowDsl.java` (input/output models in
+`backend/dsl-starter/dsl-examples/src/models/ScheduleWindowModels.java`):
+
+```java
+// ISO-8601 form — e.g. "PT1H30M" or "P2DT3H".
+var graceVar = ctx.runHelper("parseDuration",
+    new ParseDurationIn(in.gracePeriod()));
+if (!graceVar.isSuccess()) {
+  return Result.failure(graceVar.cause());
+}
+ParseDurationOut graceOut = graceVar.as(ParseDurationOut.class);
+
+// Shorthand form — e.g. "1h30m", "2d12h", "250ms".
+var hardVar = ctx.runHelper("parseDuration",
+    new ParseDurationIn(in.hardLimit()));
+if (!hardVar.isSuccess()) {
+  return Result.failure(hardVar.cause());
+}
+ParseDurationOut hardOut = hardVar.as(ParseDurationOut.class);
+
+return Result.success(new ScheduleWindowOut(
+    in.jobName(),
+    graceOut.millis(), graceOut.seconds(), graceOut.iso(),
+    hardOut.millis(), hardOut.seconds(), hardOut.iso()));
+```
+
+With `jobName` = `"nightly-rollout"`, `gracePeriod` = `"PT1H30M"` (ISO-8601) and `hardLimit`
+= `"2h"` (shorthand) the process returns `graceMillis=5_400_000`, `graceSeconds=5400`,
+`graceIso="PT1H30M"`, `hardLimitMillis=7_200_000`, `hardLimitSeconds=7200`,
+`hardLimitIso="PT2H"`. The second preview test (`jobName="batch-flush"`,
+`gracePeriod="45m"`, `hardLimit="P2DT3H"`) flips the assignment so both forms are exercised
+in both slots — `45m` yields `graceMillis=2_700_000` / `graceSeconds=2700` / `graceIso="PT45M"`,
+and `P2DT3H` (2 days + 3 hours = 51 hours) yields `hardLimitMillis=183_600_000` /
+`hardLimitSeconds=183_600` / `hardLimitIso="PT51H"` — bare-day forms normalize to a time
+component. Values are asserted exactly because both inputs are deterministic.
