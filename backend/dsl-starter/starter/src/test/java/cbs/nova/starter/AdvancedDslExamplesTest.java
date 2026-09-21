@@ -23,6 +23,8 @@ import cbs.nova.dslexamples.v1.ScheduleWindowModels.ScheduleWindowIn;
 import cbs.nova.dslexamples.v1.ScheduleWindowModels.ScheduleWindowOut;
 import cbs.nova.dslexamples.v1.AuditTrailModels.AuditTrailIn;
 import cbs.nova.dslexamples.v1.AuditTrailModels.AuditTrailOut;
+import cbs.nova.dslexamples.v1.WebhookSignatureModels.WebhookSignatureIn;
+import cbs.nova.dslexamples.v1.WebhookSignatureModels.WebhookSignatureOut;
 import cbs.nova.dslexamples.v1.ApiKeyProvisioningModels.ApiKeyProvisioningIn;
 import cbs.nova.dslexamples.v1.ApiKeyProvisioningModels.ApiKeyProvisioningOut;
 import cbs.nova.dslexamples.v1.SampleDataGenerationModels.SampleDataGenerationIn;
@@ -213,6 +215,34 @@ class AdvancedDslExamplesTest {
     assertThat(out.hardLimitMillis()).isEqualTo(183_600_000L);
     assertThat(out.hardLimitSeconds()).isEqualTo(183_600L);
     assertThat(out.hardLimitIso()).isEqualTo("PT51H");
+  }
+
+  @Test
+  void webhookSignaturePreviewSignsAndVerifiesAcrossScenarios() {
+    var input = new WebhookSignatureIn(
+            "{\"event\":\"order.created\",\"id\":\"order-42\"}",
+            "test-shared-secret-1",
+            "test-shared-secret-2",
+            "{\"event\":\"order.created\",\"id\":\"order-99\"}",
+            "hex");
+    Context<WebhookSignatureIn> ctx = SimpleContext.builder(input).mode(ExecutionMode.PREVIEW)
+            .build();
+
+    Result<?> result = GlobalManager.globalManager().runProcess("WebhookSignature", ctx);
+
+    assertThat(result.isSuccess()).as("cause: %s", result.cause()).isTrue();
+    WebhookSignatureOut out = (WebhookSignatureOut) result.value();
+    // hex-encoded HMAC-SHA256 is 64 lowercase hex characters; the header prefixes
+    // the digest with the "sha256=" scheme tag.
+    assertThat(out.outboundSignature()).matches("[0-9a-f]{64}");
+    assertThat(out.outboundHeader()).isEqualTo("sha256=" + out.outboundSignature());
+    assertThat(out.encoding()).isEqualTo("hex");
+    // End-to-end round-trip with the same secret must accept.
+    assertThat(out.validSignedPayload()).isTrue();
+    // Tampered payload + original signature must reject.
+    assertThat(out.validTamperedPayload()).isFalse();
+    // Original payload + wrong secret must reject.
+    assertThat(out.validWrongSecret()).isFalse();
   }
 
   @Test
