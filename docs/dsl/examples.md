@@ -670,3 +670,39 @@ if (!full.isSuccess()) {
 With `baseMillis` = `1000`, `maxMillis` = `60000` and `maxAttempts` = `6` the process records
 `noneDelays` = `[1000, 2000, 4000, 8000, 16000, 32000]` while `fullDelay` is a fresh random
 value guaranteed to lie within `[0, 60000]`.
+
+## Generating synthetic order records with `random`
+
+Mint a synthetic order record in one process: an alphanumeric `orderId` suffix (string mode),
+a `customerId` in `[10000, 99999]` (int mode), an `amount` in `[10.0, 1000.0)` (double mode),
+a `priority` chosen from `{low, medium, high}` and a `region` chosen from `{EU, US, APAC}`
+(both via choice mode), plus three hex tags. The `random` helper is non-cryptographic — it is
+backed by `ThreadLocalRandom` and is intended for sample data, ids, and load-test jitter only.
+Do not use it for secrets, tokens, or any security-sensitive value.
+
+See `backend/dsl-starter/dsl-examples/src/dsl/SampleDataGenerationDsl.java` (input/output models
+in `backend/dsl-starter/dsl-examples/src/models/SampleDataGenerationModels.java`):
+
+```java
+var orderIdVar = ctx.runHelper("random",
+    new RandomIn("string", null, null, null, null, null, null, 8, "alphanumeric", null));
+String orderId = prefix + "-" + ((String) orderIdVar.as(RandomOut.class).result());
+
+var custVar = ctx.runHelper("random",
+    new RandomIn("int", 10000, 99999, null, null, null, null, null, null, null));
+int customerId = (Integer) custVar.as(RandomOut.class).result();
+
+var amountVar = ctx.runHelper("random",
+    new RandomIn("double", null, null, null, null, 10.0, 1000.0, null, null, null));
+double amount = (Double) amountVar.as(RandomOut.class).result();
+
+var prioVar = ctx.runHelper("random",
+    new RandomIn("choice", null, null, null, null, null, null, null, null,
+        List.<Object>of("low", "medium", "high")));
+String priority = (String) prioVar.as(RandomOut.class).result();
+```
+
+With `prefix` = `"ORD"` the process returns an `orderId` shaped `ORD-XXXXXXXX` (8 alphanumeric
+chars), a `customerId` in `[10000, 99999]`, an `amount` in `[10.0, 1000.0)`, a `priority` from
+the supplied pool, a `region` from `{EU, US, APAC}`, and three 6-character hex tags. All
+ranges and pool membership are asserted — values are random by design.

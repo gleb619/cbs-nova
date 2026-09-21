@@ -19,6 +19,8 @@ import cbs.nova.dslexamples.v1.OrderSagaModels.OrderSagaIn;
 import cbs.nova.dslexamples.v1.OrderSagaModels.OrderSagaOut;
 import cbs.nova.dslexamples.v1.RetryPolicyModels.RetryPolicyIn;
 import cbs.nova.dslexamples.v1.RetryPolicyModels.RetryPolicyOut;
+import cbs.nova.dslexamples.v1.SampleDataGenerationModels.SampleDataGenerationIn;
+import cbs.nova.dslexamples.v1.SampleDataGenerationModels.SampleDataGenerationOut;
 import cbs.nova.starter.config.properties.CbsNovaLoggingProperties;
 import cbs.nova.starter.config.properties.CbsNovaLoggingProperties.Level;
 import cbs.nova.starter.core.StarterConstants;
@@ -128,6 +130,25 @@ class AdvancedDslExamplesTest {
     assertThat(out.noneDelays()).containsExactly(1000L, 2000L, 4000L, 8000L, 16000L, 32000L);
     assertThat(out.fullDelay()).as("randomized full-jitter delay within [0, cap]")
             .isBetween(0L, 60000L);
+  }
+
+  @Test
+  void sampleDataGenerationPreviewProducesSyntheticRecord() {
+    var input = new SampleDataGenerationIn("ORD");
+    Context<SampleDataGenerationIn> ctx = SimpleContext.builder(input).mode(ExecutionMode.PREVIEW)
+            .build();
+
+    Result<?> result = GlobalManager.globalManager().runProcess("SampleDataGeneration", ctx);
+
+    assertThat(result.isSuccess()).as("cause: %s", result.cause()).isTrue();
+    SampleDataGenerationOut out = (SampleDataGenerationOut) result.value();
+    assertThat(out.orderId()).startsWith("ORD-").hasSize("ORD-".length() + 8);
+    assertThat(out.customerId()).isBetween(10000, 99999);
+    assertThat(out.amount()).isBetween(10.0, 1000.0);
+    assertThat(out.priority()).isIn("low", "medium", "high");
+    assertThat(out.region()).isIn("EU", "US", "APAC");
+    assertThat(out.tags()).hasSize(3);
+    assertThat(out.tags()).allSatisfy(tag -> assertThat(tag).hasSize(6).matches("[0-9a-f]+"));
   }
 
   private static HelperInstanceResolver typedHelperResolver() {
