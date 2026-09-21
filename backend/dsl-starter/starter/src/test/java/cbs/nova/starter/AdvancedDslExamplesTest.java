@@ -19,6 +19,8 @@ import cbs.nova.dslexamples.v1.OrderSagaModels.OrderSagaIn;
 import cbs.nova.dslexamples.v1.OrderSagaModels.OrderSagaOut;
 import cbs.nova.dslexamples.v1.RetryPolicyModels.RetryPolicyIn;
 import cbs.nova.dslexamples.v1.RetryPolicyModels.RetryPolicyOut;
+import cbs.nova.dslexamples.v1.ApiKeyProvisioningModels.ApiKeyProvisioningIn;
+import cbs.nova.dslexamples.v1.ApiKeyProvisioningModels.ApiKeyProvisioningOut;
 import cbs.nova.dslexamples.v1.SampleDataGenerationModels.SampleDataGenerationIn;
 import cbs.nova.dslexamples.v1.SampleDataGenerationModels.SampleDataGenerationOut;
 import cbs.nova.starter.config.properties.CbsNovaLoggingProperties;
@@ -149,6 +151,21 @@ class AdvancedDslExamplesTest {
     assertThat(out.region()).isIn("EU", "US", "APAC");
     assertThat(out.tags()).hasSize(3);
     assertThat(out.tags()).allSatisfy(tag -> assertThat(tag).hasSize(6).matches("[0-9a-f]+"));
+  }
+
+  @Test
+  void apiKeyProvisioningPreviewProducesCryptographicKeys() {
+    var input = new ApiKeyProvisioningIn("payment-service");
+    Context<ApiKeyProvisioningIn> ctx = SimpleContext.builder(input).mode(ExecutionMode.PREVIEW)
+            .build();
+
+    Result<?> result = GlobalManager.globalManager().runProcess("ApiKeyProvisioning", ctx);
+
+    assertThat(result.isSuccess()).as("cause: %s", result.cause()).isTrue();
+    ApiKeyProvisioningOut out = (ApiKeyProvisioningOut) result.value();
+    assertThat(out.purpose()).isEqualTo("payment-service");
+    assertThat(out.apiKey()).hasSize(32).matches("[A-Za-z0-9_-]{32}");
+    assertThat(out.idempotencyKey()).hasSize(32).matches("[0-9a-f]{32}");
   }
 
   private static HelperInstanceResolver typedHelperResolver() {

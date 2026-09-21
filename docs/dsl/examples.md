@@ -706,3 +706,37 @@ With `prefix` = `"ORD"` the process returns an `orderId` shaped `ORD-XXXXXXXX` (
 chars), a `customerId` in `[10000, 99999]`, an `amount` in `[10.0, 1000.0)`, a `priority` from
 the supplied pool, a `region` from `{EU, US, APAC}`, and three 6-character hex tags. All
 ranges and pool membership are asserted — values are random by design.
+
+### ApiKeyProvisioning — cryptographic API key / idempotency key via `secret` helper
+
+This is the security-sensitive counterpart to the `random` helper example above. While `random`
+is backed by `ThreadLocalRandom` and must never be used for secrets, the `secret` helper is backed
+by `SecureRandom` and is intended for exactly these cases: API keys, tokens, signing secrets, and
+idempotency keys.
+
+The process demonstrates both `secret` modes:
+- **`token`** — a URL-safe opaque string of `length` characters drawn uniformly from the 64-char
+  Base64url alphabet (`A-Z a-z 0-9 - _`), yielding 6 bits of entropy per character. A `length` of
+  32 produces a 192-bit API key — the same entropy the helper's own javadoc recommends for session
+  tokens and API keys.
+- **`bytes`** — `length` random bytes returned as a hex-encoded string (default encoding). 16 bytes
+  → 128-bit hex string — a common size for idempotency keys.
+
+See `backend/dsl-starter/dsl-examples/src/dsl/ApiKeyProvisioningDsl.java` (input/output models in
+`backend/dsl-starter/dsl-examples/src/models/ApiKeyProvisioningModels.java`):
+
+```java
+// token mode — 32-char URL-safe API key (192 bits entropy).
+var apiKeyVar = ctx.runHelper("secret",
+    new SecretIn("token", 32, null));
+String apiKey = apiKeyVar.as(SecretOut.class).result();
+
+// bytes mode — 16-byte idempotency key, hex-encoded (128 bits).
+var idempotencyVar = ctx.runHelper("secret",
+    new SecretIn("bytes", 16, "hex"));
+String idempotencyKey = idempotencyVar.as(SecretOut.class).result();
+```
+
+With `purpose` = `"payment-service"` the process returns the echoed purpose, a 32-character
+Base64url API key (`[A-Za-z0-9_-]{32}`), and a 32-character hex idempotency key (`[0-9a-f]{32}`).
+Length and charset are asserted — values are cryptographic by design.
