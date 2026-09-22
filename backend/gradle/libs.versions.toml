@@ -33,6 +33,7 @@ jtokkit = "1.1.0"
 junit4 = "4.13.2"
 junit-vintage = "5.12.2"
 gradle-tooling-api = "9.4.1"
+flexmark = "0.64.8"
 
 # plugins
 spring-boot = "4.0.4"
@@ -153,6 +154,10 @@ squigglesql = { module = "com.github.squigglesql:squigglesql", version.ref = "sq
 
 # -- YAML --
 snakeyaml = { module = "org.yaml:snakeyaml", version = "2.3" }
+
+# -- Flexmark (YAML front-matter parser for explain markdown, T600) --
+flexmark = { module = "com.vladsch.flexmark:flexmark", version.ref = "flexmark" }
+flexmark-ext-yaml-front-matter = { module = "com.vladsch.flexmark:flexmark-ext-yaml-front-matter", version.ref = "flexmark" }
 
 [bundles]
 spring-web = ["spring-boot-starter-web", "spring-boot-starter-validation", "spring-boot-starter-actuator"]

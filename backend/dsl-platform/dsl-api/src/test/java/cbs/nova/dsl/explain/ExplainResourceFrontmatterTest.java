@@ -109,4 +109,19 @@ class ExplainResourceFrontmatterTest {
     assertThatThrownBy(() -> parsed.metadata().put("y", "z"))
             .isInstanceOf(UnsupportedOperationException.class);
   }
+
+  /**
+   * flexmark honours quoted YAML scalars; the hand-rolled reader left the surrounding quotes in
+   * place. Pin the new behaviour so the library upgrade is intentional.
+   */
+  @Test
+  void stripsSurroundingQuotesFromValue() {
+    var parsed = ExplainResourceFrontmatter.parse("""
+            ---
+            description: "Sums values."
+            ---
+            body""");
+
+    assertThat(parsed.metadata()).containsEntry("description", "Sums values.");
+  }
 }

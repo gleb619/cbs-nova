@@ -10,6 +10,8 @@ dependencies {
   compileOnly libs.jackson.databind3
   api libs.avaje.jsonb
   annotationProcessor libs.avaje.jsonb.generator
+  api libs.flexmark
+  api libs.flexmark.ext.yaml.front.matter
 
   testImplementation platform(libs.junit.bom)
   testImplementation libs.junit.jupiter
