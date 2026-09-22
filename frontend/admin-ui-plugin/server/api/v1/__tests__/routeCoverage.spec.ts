@@ -147,6 +147,11 @@ const expectedProxies: readonly ExpectedProxy[] = [
     backendPath: '/api/dsl/explain/{name}',
     bffPath: '/api/v1/dsl/explain/{name}',
   },
+  {
+    method: 'POST',
+    backendPath: '/api/dsl/hierarchy/{name}',
+    bffPath: '/api/v1/dsl/hierarchy/{name}',
+  },
   // DslSignalsRouterConfiguration
   {
     method: 'POST',
@@ -223,11 +228,6 @@ const expectedProxies: readonly ExpectedProxy[] = [
     method: 'POST',
     backendPath: '/api/dsl/change-requests/{id}/reject',
     bffPath: '/api/v1/dsl/change-requests/{id}/reject',
-  },
-  {
-    method: 'POST',
-    backendPath: '/api/dsl/hierarchy/{name}',
-    bffPath: '/api/v1/dsl/hierarchy/{name}',
   },
   // DslPromoteRouterConfiguration (T569 environment promotion)
   {
