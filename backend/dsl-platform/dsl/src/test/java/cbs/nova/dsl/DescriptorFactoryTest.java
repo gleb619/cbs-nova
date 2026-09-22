@@ -150,6 +150,11 @@ class DescriptorFactoryTest {
       }
 
       @Override
+      public String description() {
+        return null;
+      }
+
+      @Override
       public Class<?> inputType() {
         return String.class;
       }

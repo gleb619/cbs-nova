@@ -13,10 +13,8 @@ public interface ObjectDescriptor {
   @NonNull
   DslType type();
 
-  // TODO: fix, remove `default` modifier
-  default @Nullable String description() {
-    return null;
-  }
+  @Nullable
+  String description();
 
   @Nullable
   Class<?> inputType();
