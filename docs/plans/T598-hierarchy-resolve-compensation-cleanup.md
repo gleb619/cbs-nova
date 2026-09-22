@@ -60,3 +60,14 @@ backend/dsl-starter/gradlew -p backend/dsl-starter :starter:test --tests '*Hiera
 backend/dsl-starter/gradlew -p backend/dsl-starter :starter:test
 make lint
 ```
+
+## Blocked — duplicate of T585 (2026-09-22)
+
+T585's plan file mis-named the target as `ExplainReportStage.resolveCompensation`, but that method
+doesn't exist — the actual TODO/`@Deprecated` code T585 fixed (commit `dea01676`) is exactly
+`HierarchyReportStage.resolveCompensation` (this file, line ~81). T585 already verified the premise
+false (no NoOp fallback anywhere in `ProcessBuilder`/`TransactionBuilder`/runners), kept the null
+check as load-bearing, rewrote the comment to state the real invariant, and removed
+`@Deprecated(forRemoval=true)`. Current source already matches this task's acceptance criteria.
+Flagging Blocked instead of silently closing — human should confirm and archive/delete this row
+rather than have the loop re-do already-shipped work.
