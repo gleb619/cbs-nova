@@ -25,6 +25,11 @@ describe('resolveRuntimeConfig', () => {
       appName: 'CBS Nova Admin',
       temporalUiBaseUrl: '',
       temporalNamespace: 'default',
+      // Workbench tuning knobs (T589) — see useWorkbenchDraft.ts. Defaults
+      // match the values previously hardcoded in the composable.
+      workbenchDraftTtlMs: 24 * 60 * 60 * 1000,
+      workbenchSaveDebounceMs: 250,
+      workbenchServerSaveDebounceMs: 3000,
     })
   })
 
@@ -67,6 +72,9 @@ describe('resolveRuntimeConfig', () => {
       appName: 'Options Admin',
       temporalUiBaseUrl: 'https://options-temporal-ui',
       temporalNamespace: 'options-ns',
+      workbenchDraftTtlMs: 24 * 60 * 60 * 1000,
+      workbenchSaveDebounceMs: 250,
+      workbenchServerSaveDebounceMs: 3000,
     })
   })
 

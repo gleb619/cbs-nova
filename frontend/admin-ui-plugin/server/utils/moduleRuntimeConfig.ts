@@ -40,6 +40,24 @@ export interface AdminUiPublicRuntimeConfig {
   appName: string
   temporalUiBaseUrl: string
   temporalNamespace: string
+  /**
+   * Local-draft entries older than this are dropped on read. Unit: ms.
+   * Override via `NUXT_PUBLIC_WORKBENCH_DRAFT_TTL_MS` (number, ms).
+   * Default 24h matches the T589 prior hardcoded behaviour.
+   */
+  workbenchDraftTtlMs: number
+  /**
+   * Debounce window for writing the workbench body to localStorage. Unit: ms.
+   * Override via `NUXT_PUBLIC_WORKBENCH_SAVE_DEBOUNCE_MS` (number, ms).
+   * Default 250 ms matches the T589 prior hardcoded behaviour.
+   */
+  workbenchSaveDebounceMs: number
+  /**
+   * Debounce window for the optional workbench server autosave. Unit: ms.
+   * Override via `NUXT_PUBLIC_WORKBENCH_SERVER_SAVE_DEBOUNCE_MS` (number, ms).
+   * Default 3000 ms matches the T589 prior hardcoded behaviour.
+   */
+  workbenchServerSaveDebounceMs: number
 }
 
 /**
@@ -67,6 +85,9 @@ export interface ExistingRuntimeConfig {
     appName?: string
     temporalUiBaseUrl?: string
     temporalNamespace?: string
+    workbenchDraftTtlMs?: number
+    workbenchSaveDebounceMs?: number
+    workbenchServerSaveDebounceMs?: number
   }
 }
 
@@ -119,6 +140,17 @@ export function resolveRuntimeConfig(
     appName: existing.public?.appName ?? options.appName ?? 'CBS Nova Admin',
     temporalUiBaseUrl: existing.public?.temporalUiBaseUrl ?? options.temporalUiBaseUrl ?? '',
     temporalNamespace: existing.public?.temporalNamespace ?? options.temporalNamespace ?? 'default',
+    // Workbench tuning knobs (T589) — see useWorkbenchDraft.ts. Defaults are
+    // the values that used to be hardcoded in the composable, so behaviour is
+    // unchanged unless the host sets `NUXT_PUBLIC_*` env vars.
+    workbenchDraftTtlMs:
+      existing.public?.workbenchDraftTtlMs ?? options.workbenchDraftTtlMs ?? 24 * 60 * 60 * 1000,
+    workbenchSaveDebounceMs:
+      existing.public?.workbenchSaveDebounceMs ?? options.workbenchSaveDebounceMs ?? 250,
+    workbenchServerSaveDebounceMs:
+      existing.public?.workbenchServerSaveDebounceMs ??
+      options.workbenchServerSaveDebounceMs ??
+      3000,
   }
 
   return { config, publicConfig }

@@ -1,9 +1,70 @@
 import { type ComputedRef, computed, customRef, onUnmounted, type Ref, ref } from 'vue'
+import { useRuntimeConfig } from 'nuxt/app'
 import { createEmitter } from '../utils/createEmitter'
 
 export interface WorkbenchDraftPayload {
   body: string
   savedAt: number
+}
+
+/**
+ * Hardcoded fallbacks for the three workbench-draft tuning knobs. They are
+ * registered as defaults in `module.ts` `resolveRuntimeConfig` (so a host can
+ * override them through `NUXT_PUBLIC_*` env vars or the host `nuxt.config`)
+ * and read at composable setup time via `useRuntimeConfig().public`. Values
+ * here are the *last* line of defence — non-positive overrides fall through
+ * to these constants.
+ */
+
+/** Local-draft entries older than this are dropped on read (TTL). Unit: ms. ENV: `NUXT_PUBLIC_WORKBENCH_DRAFT_TTL_MS`. */
+export const DEFAULT_DRAFT_TTL_MS = 24 * 60 * 60 * 1000
+/** Debounce window for writing the body to localStorage. Unit: ms. ENV: `NUXT_PUBLIC_WORKBENCH_SAVE_DEBOUNCE_MS`. */
+export const DEFAULT_SAVE_DEBOUNCE_MS = 250
+/** Debounce window for the optional server autosave. Unit: ms. ENV: `NUXT_PUBLIC_WORKBENCH_SERVER_SAVE_DEBOUNCE_MS`. */
+export const DEFAULT_SERVER_SAVE_DEBOUNCE_MS = 3000
+
+/**
+ * Resolve the workbench-draft TTL (ms) from `useRuntimeConfig().public`,
+ * falling back to {@link DEFAULT_DRAFT_TTL_MS} when missing or non-positive.
+ * Tolerates non-Nuxt contexts (test/SSR utility scripts): a thrown
+ * `useRuntimeConfig` is swallowed and the fallback is returned.
+ */
+export function resolveDraftTtlMs(): number {
+  try {
+    const value = useRuntimeConfig().public?.workbenchDraftTtlMs
+    if (typeof value === 'number' && value > 0) return value
+  } catch {
+    // not in a Nuxt context — fall through to default
+  }
+  return DEFAULT_DRAFT_TTL_MS
+}
+
+/**
+ * Resolve the local-storage save debounce (ms) from `useRuntimeConfig().public`,
+ * falling back to {@link DEFAULT_SAVE_DEBOUNCE_MS} when missing or non-positive.
+ */
+export function resolveSaveDebounceMs(): number {
+  try {
+    const value = useRuntimeConfig().public?.workbenchSaveDebounceMs
+    if (typeof value === 'number' && value > 0) return value
+  } catch {
+    // not in a Nuxt context — fall through to default
+  }
+  return DEFAULT_SAVE_DEBOUNCE_MS
+}
+
+/**
+ * Resolve the server autosave debounce (ms) from `useRuntimeConfig().public`,
+ * falling back to {@link DEFAULT_SERVER_SAVE_DEBOUNCE_MS} when missing or non-positive.
+ */
+export function resolveServerSaveDebounceMs(): number {
+  try {
+    const value = useRuntimeConfig().public?.workbenchServerSaveDebounceMs
+    if (typeof value === 'number' && value > 0) return value
+  } catch {
+    // not in a Nuxt context — fall through to default
+  }
+  return DEFAULT_SERVER_SAVE_DEBOUNCE_MS
 }
 
 export interface WorkbenchDraftServerSync {
@@ -21,10 +82,14 @@ export interface UseWorkbenchDraftOptions {
   server?: WorkbenchDraftServerSync
 }
 
-//TODO: instead of hardcode add some settings, that can be overrired via ENV
-const DRAFT_TTL_MS = 24 * 60 * 60 * 1000
-const SAVE_DEBOUNCE_MS = 250
-const SERVER_SAVE_DEBOUNCE_MS = 3000
+// Tuning knobs are resolved from `useRuntimeConfig().public` at composable
+// setup time (see resolveDraftTtlMs / resolveSaveDebounceMs /
+// resolveServerSaveDebounceMs below). Defaults are registered in `module.ts`
+// `resolveRuntimeConfig` so a host can override them via `NUXT_PUBLIC_*` env
+// vars (workbenchDraftTtlMs, workbenchSaveDebounceMs,
+// workbenchServerSaveDebounceMs) without touching code. Defaults stay
+// identical to the previous hardcoded values so behaviour is unchanged without
+// an explicit override.
 
 function draftKey(name: string): string {
   return `cbs.nova.draft.${name}`
@@ -43,7 +108,7 @@ function removeDraft(name: string): void {
   }
 }
 
-function readDraft(name: string): WorkbenchDraftPayload | null {
+function readDraft(name: string, ttlMs: number): WorkbenchDraftPayload | null {
   if (!hasLocalStorage()) return null
 
   let raw: string | null = null
@@ -67,9 +132,9 @@ function readDraft(name: string): WorkbenchDraftPayload | null {
     return null
   }
 
-  if (parsed.savedAt + DRAFT_TTL_MS < Date.now()) {
-    // Stale (older than 24h) — clear on read per T201 TTL requirement. The
-    // server draft (no TTL) remains the durable copy.
+  if (parsed.savedAt + ttlMs < Date.now()) {
+    // Stale (older than the configured TTL) — clear on read. The server
+    // draft (no TTL) remains the durable copy.
     removeDraft(name)
     return null
   }
@@ -121,6 +186,14 @@ export function useWorkbenchDraft(
   const server = options.server
   const currentName = ref(typeof name === 'string' ? name : name.value)
   const emitter = createEmitter<WorkbenchDraftEvents>()
+
+  // Resolve the three tuning knobs once at composable setup. Snapshotting
+  // them locally keeps the resolved values stable for the lifetime of this
+  // composable instance even if the host reconfigures `useRuntimeConfig`
+  // later (e.g. a hot-reloaded module).
+  const draftTtlMs = resolveDraftTtlMs()
+  const saveDebounceMs = resolveSaveDebounceMs()
+  const serverSaveDebounceMs = resolveServerSaveDebounceMs()
 
   // Underlying storage for the body; the public `body` is a customRef that
   // emits a `bodyChanged` event whenever it is mutated through the public
@@ -220,7 +293,7 @@ export function useWorkbenchDraft(
     serverTimer = setTimeout(() => {
       serverTimer = null
       void flushServerSave()
-    }, SERVER_SAVE_DEBOUNCE_MS)
+    }, serverSaveDebounceMs)
   }
 
   async function resolveServerDraft(nameAtLoad: string, local: WorkbenchDraftPayload | null) {
@@ -248,7 +321,7 @@ export function useWorkbenchDraft(
     clearSaveTimer()
     clearServerState()
     serverLoadToken++
-    const draft = currentNameVal ? readDraft(currentNameVal) : null
+    const draft = currentNameVal ? readDraft(currentNameVal, draftTtlMs) : null
     if (draft) {
       setBodySilently(draft.body)
       savedBody.value = draft.body
@@ -286,7 +359,7 @@ export function useWorkbenchDraft(
       savedBody.value = value
       lastSavedAt.value = savedAt
       emitter.emit('saved', { body: value, savedAt })
-    }, SAVE_DEBOUNCE_MS)
+    }, saveDebounceMs)
     armServerTimer()
   })
 
