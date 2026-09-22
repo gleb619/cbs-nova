@@ -189,6 +189,26 @@ class DevDslRuntimeTest {
   }
 
   @Test
+  void defaultExplainProducesNamedReportForAllEntityKinds() {
+    GlobalManager.globalManager()
+            .registerTransaction(Dsl.transaction("DefaultTx")
+                    .execute(ctx -> Result.success("tx-out")).build());
+    GlobalManager.globalManager()
+            .registerFunction(Dsl.function("DefaultFn")
+                    .execute(ctx -> Result.success("fn-out")).build());
+
+    var ctx = SimpleContext.builder("input").mode(ExecutionMode.EXPLAIN).build();
+    var processReport = runtime.explain("Ping", ctx);
+    var transactionReport = runtime.explain("DefaultTx", ctx);
+    var functionReport = runtime.explain("DefaultFn", ctx);
+
+    assertThat(processReport.name()).isEqualTo("Ping");
+    assertThat(processReport.description()).isEqualTo("Process: Ping");
+    assertThat(transactionReport.name()).isEqualTo("DefaultTx");
+    assertThat(functionReport.name()).isEqualTo("DefaultFn");
+  }
+
+  @Test
   void currentObjectNameAvailableInAllModes() {
     AtomicReference<Object> previewName = new AtomicReference<>();
     AtomicReference<Object> runName = new AtomicReference<>();
