@@ -1,5 +1,6 @@
 package cbs.nova.dsl.explain;
 
+import cbs.nova.dsl.model.ExplainReport;
 import org.jspecify.annotations.NonNull;
 
 /**
@@ -26,6 +27,12 @@ public interface ExplainResourceProvider {
   String content();
 
   default @NonNull ExplainResource resource() {
-    return new ExplainResource(name(), description(), filename(), content());
+    return new ExplainResource(
+            ExplainReport.builder()
+                    .name(name())
+                    .description(description())
+                    .markdown(content())
+                    .build(),
+            filename());
   }
 }
