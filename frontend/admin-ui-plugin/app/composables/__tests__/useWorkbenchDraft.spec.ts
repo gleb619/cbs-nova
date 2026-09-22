@@ -2,6 +2,30 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useWorkbenchDraft } from '../useWorkbenchDraft'
 
+// --- T589: runtimeConfig override plumbing ---
+// Mirror the useStalePollInterval.spec pattern: hoist a mutable public-config
+// mock so the public-key overrides are picked up by resolveDraftTtlMs /
+// resolveSaveDebounceMs / resolveServerSaveDebounceMs.
+type WorkbenchDraftPublicConfig = {
+  workbenchDraftTtlMs?: number
+  workbenchSaveDebounceMs?: number
+  workbenchServerSaveDebounceMs?: number
+  [key: string]: unknown
+}
+
+const { publicConfig, useRuntimeConfigMock } = vi.hoisted(() => ({
+  publicConfig: {
+    workbenchDraftTtlMs: undefined,
+    workbenchSaveDebounceMs: undefined,
+    workbenchServerSaveDebounceMs: undefined,
+  } as WorkbenchDraftPublicConfig,
+  useRuntimeConfigMock: vi.fn(),
+}))
+
+vi.mock('nuxt/app', () => ({
+  useRuntimeConfig: () => useRuntimeConfigMock(),
+}))
+
 const KEY = 'cbs.nova.draft.c1'
 
 const flush = async () => {
@@ -13,6 +37,12 @@ describe('useWorkbenchDraft', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     window.localStorage.clear()
+    // Reset the hoisted publicConfig to its undefined baseline so each test
+    // gets the documented defaults unless it explicitly overrides.
+    publicConfig.workbenchDraftTtlMs = undefined
+    publicConfig.workbenchSaveDebounceMs = undefined
+    publicConfig.workbenchServerSaveDebounceMs = undefined
+    useRuntimeConfigMock.mockReset().mockReturnValue({ public: publicConfig })
   })
 
   afterEach(() => {
@@ -416,6 +446,135 @@ describe('useWorkbenchDraft', () => {
       await flush()
 
       expect(body.value).toBe('local body')
+    })
+  })
+
+  describe('runtimeConfig overrides (T589)', () => {
+    it('save debounce: longer public override delays the localStorage write', async () => {
+      publicConfig.workbenchSaveDebounceMs = 1500
+
+      const { body } = useWorkbenchDraft('c1')
+
+      body.value = 'late save'
+      // previous default 250ms window — must not flush yet
+      await vi.advanceTimersByTimeAsync(250)
+      expect(window.localStorage.getItem(KEY)).toBeNull()
+      // half-way into the overridden window
+      await vi.advanceTimersByTimeAsync(1000)
+      expect(window.localStorage.getItem(KEY)).toBeNull()
+      // cross the overridden boundary
+      await vi.advanceTimersByTimeAsync(250)
+      await flush()
+
+      const parsed = JSON.parse(window.localStorage.getItem(KEY) as string)
+      expect(parsed.body).toBe('late save')
+    })
+
+    it('save debounce: shorter public override flushes earlier than the default', async () => {
+      publicConfig.workbenchSaveDebounceMs = 50
+
+      const { body } = useWorkbenchDraft('c1')
+
+      body.value = 'quick save'
+      await vi.advanceTimersByTimeAsync(49)
+      expect(window.localStorage.getItem(KEY)).toBeNull()
+      await vi.advanceTimersByTimeAsync(1)
+      await flush()
+
+      const parsed = JSON.parse(window.localStorage.getItem(KEY) as string)
+      expect(parsed.body).toBe('quick save')
+    })
+
+    it('TTL: a public override shortens the stale-draft window', () => {
+      // 100ms override — anything older is treated as stale.
+      publicConfig.workbenchDraftTtlMs = 100
+      const staleSavedAt = Date.now() - 200
+      window.localStorage.setItem(
+        KEY,
+        JSON.stringify({ body: 'stale body', savedAt: staleSavedAt }),
+      )
+
+      const { body, restoredFromDraft } = useWorkbenchDraft('c1')
+
+      expect(body.value).toBe('')
+      expect(restoredFromDraft.value).toBe(false)
+      expect(window.localStorage.getItem(KEY)).toBeNull()
+    })
+
+    it('TTL: a longer-than-24h public override keeps drafts that the hardcoded TTL would drop', () => {
+      // Hardcoded TTL would be 24h; bump it to 48h and check a 25h-old draft
+      // survives.
+      publicConfig.workbenchDraftTtlMs = 48 * 60 * 60 * 1000
+      const olderThanHardcodedTtl = Date.now() - 25 * 60 * 60 * 1000
+      window.localStorage.setItem(
+        KEY,
+        JSON.stringify({ body: 'still alive', savedAt: olderThanHardcodedTtl }),
+      )
+
+      const { body, restoredFromDraft } = useWorkbenchDraft('c1')
+
+      expect(body.value).toBe('still alive')
+      expect(restoredFromDraft.value).toBe(true)
+    })
+
+    it('server save debounce: public override changes the server-fire timing', async () => {
+      const save = vi.fn().mockResolvedValue(1)
+      publicConfig.workbenchServerSaveDebounceMs = 500
+
+      const { body } = useWorkbenchDraft('c1', { server: { save, load: vi.fn() } })
+
+      body.value = 'ping'
+      // the hardcoded default would fire at 3000ms; with the override the
+      // server save must already be in flight by 500ms
+      await vi.advanceTimersByTimeAsync(499)
+      expect(save).not.toHaveBeenCalled()
+      await vi.advanceTimersByTimeAsync(1)
+      await flush()
+      await flush()
+
+      expect(save).toHaveBeenCalledTimes(1)
+      expect(save).toHaveBeenCalledWith('ping')
+    })
+
+    it('falls back to defaults when useRuntimeConfig throws (non-Nuxt context)', () => {
+      useRuntimeConfigMock.mockImplementation(() => {
+        throw new Error('no nuxt context')
+      })
+
+      // No throw on setup despite the throw inside useRuntimeConfig.
+      expect(() => useWorkbenchDraft('c1')).not.toThrow()
+    })
+
+    it('ignores non-positive overrides and uses the documented defaults', async () => {
+      publicConfig.workbenchSaveDebounceMs = 0
+      publicConfig.workbenchServerSaveDebounceMs = -1
+      publicConfig.workbenchDraftTtlMs = 0
+
+      // Debounce 0 must fall through to 250ms — saving must not happen
+      // before the default window elapses.
+      const save = vi.fn().mockResolvedValue(1)
+      const { body } = useWorkbenchDraft('c1', { server: { save, load: vi.fn() } })
+
+      body.value = 'honour default'
+      await vi.advanceTimersByTimeAsync(249)
+      expect(window.localStorage.getItem(KEY)).toBeNull()
+      await vi.advanceTimersByTimeAsync(1)
+      await flush()
+      expect(JSON.parse(window.localStorage.getItem(KEY) as string).body).toBe('honour default')
+
+      // Server debounce override of -1 must fall through to 3000ms — at
+      // ~250ms the server save must still not have fired.
+      expect(save).not.toHaveBeenCalled()
+
+      // Advance to just before the default 3000ms server window closes
+      // (local save already fired at ~250ms, so 3000ms from the body change
+      // lands ~2750ms from now).
+      await vi.advanceTimersByTimeAsync(2749)
+      expect(save).not.toHaveBeenCalled()
+      await vi.advanceTimersByTimeAsync(1)
+      await flush()
+      await flush()
+      expect(save).toHaveBeenCalledTimes(1)
     })
   })
 })

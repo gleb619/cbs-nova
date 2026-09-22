@@ -185,6 +185,27 @@ export interface ModuleOptions {
    * Defaults to TEMPORAL_NAMESPACE env var, then 'default'.
    */
   temporalNamespace?: string
+
+  /**
+   * Local-draft entries older than this are dropped on read. Unit: ms.
+   * Defaults to WORKBENCH_DRAFT_TTL_MS env var, then 24h.
+   * Surfaced as `useRuntimeConfig().public.workbenchDraftTtlMs`.
+   */
+  workbenchDraftTtlMs?: number
+
+  /**
+   * Debounce window for writing the workbench body to localStorage. Unit: ms.
+   * Defaults to WORKBENCH_SAVE_DEBOUNCE_MS env var, then 250 ms.
+   * Surfaced as `useRuntimeConfig().public.workbenchSaveDebounceMs`.
+   */
+  workbenchSaveDebounceMs?: number
+
+  /**
+   * Debounce window for the optional workbench server autosave. Unit: ms.
+   * Defaults to WORKBENCH_SERVER_SAVE_DEBOUNCE_MS env var, then 3000 ms.
+   * Surfaced as `useRuntimeConfig().public.workbenchServerSaveDebounceMs`.
+   */
+  workbenchServerSaveDebounceMs?: number
 }
 
 export default defineNuxtModule<ModuleOptions>({
@@ -218,6 +239,13 @@ export default defineNuxtModule<ModuleOptions>({
     appName: 'CBS Nova Admin',
     temporalUiBaseUrl: process.env.TEMPORAL_UI_BASE_URL ?? '',
     temporalNamespace: process.env.TEMPORAL_NAMESPACE ?? 'default',
+    // Workbench tuning knobs (T589) — public runtimeConfig, auto-overridable
+    // via NUXT_PUBLIC_* env vars in addition to the explicit WORKBENCH_* ones
+    // listed here. Defaults match the values previously hardcoded in
+    // useWorkbenchDraft.ts so behaviour is unchanged without an override.
+    workbenchDraftTtlMs: Number(process.env.WORKBENCH_DRAFT_TTL_MS ?? 24 * 60 * 60 * 1000),
+    workbenchSaveDebounceMs: Number(process.env.WORKBENCH_SAVE_DEBOUNCE_MS ?? 250),
+    workbenchServerSaveDebounceMs: Number(process.env.WORKBENCH_SERVER_SAVE_DEBOUNCE_MS ?? 3000),
   },
 
   async setup(options, nuxt) {
