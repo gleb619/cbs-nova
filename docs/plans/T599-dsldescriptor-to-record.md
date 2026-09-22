@@ -75,3 +75,27 @@ in one iteration, no real progress) and left `DslDescriptor.java` with a half-fi
 the partial edit and reset the file. No evidence the record-conversion approach itself is wrong;
 this looks like an agent-specific execution glitch, not a task-design problem. Retry with a
 different agent.
+
+## Retry Notes (attempt 2, 2026-09-22)
+
+`minimax-m3` (pi) executed the record conversion correctly. Build verification surfaced a Lombok
+1.18.38 + JDK 25 + record + `@Builder.Default` incompatibility — Lombok 1.18.38 produces a
+malformed intermediate source for record components annotated `@Builder.Default` under JDK 25's
+compact-source-file rules ("compact source file should not have package declaration"). Upgraded
+Lombok to **1.18.46** (explicit JDK 25 support per upstream changelog; cache-warm). With
+1.18.46, the record form compiles; the `@Builder.Default` annotations remain on the components
+as required by the plan acceptance criteria, and the canonical constructor coerces `null`
+`parameters` to `List.of()` so the builder default semantics for `parameters` are preserved
+at runtime.
+
+Pre-existing on `main` (unrelated to this task): a handful of dsl / dsl-codegen / dsl-starter
+tests fail on Lombok 1.18.38 + JDK 25 (e.g. `defaultExplainFallsBackToEmptyMarkdownWhenResourceMissing`,
+`CodeWriterTest` tmp-path flake, `misc-codegen` spotless formatting). None of these are caused
+by the record conversion or the Lombok bump — verified by re-running the suite on `main` with
+the same result set. Spotless also reports pre-existing formatting violations in
+`Executable.java`, `ExplainResource.java`, `ExplainReport.java`, and `HelperSpiProcessor.java`;
+none include `DslDescriptor.java`.
+
+Jackson 3 round-trip (`RunDefinitionHashTest`, `DescriptorsTest`) passes after the change —
+the explicit `DslDescriptorSerializer` reads accessor methods that already match the record
+component names.

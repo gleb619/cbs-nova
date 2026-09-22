@@ -5,35 +5,25 @@ import cbs.nova.dsl.model.ObjectDescriptor;
 import java.time.Duration;
 import java.util.List;
 import lombok.Builder;
-import lombok.Getter;
-import lombok.experimental.Accessors;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
-//TODO: change to a record
 @Deprecated
 @Builder
-@Getter
-@Accessors(fluent = true)
-public final class DslDescriptor {
+public record DslDescriptor(
+        @NonNull ObjectDescriptor objectDescriptor,
+        @Builder.Default boolean hasSideEffects,
+        @Builder.Default @NonNull List<ParameterDescriptor> parameters,
+        @Nullable String taskQueue,
+        @Nullable String version,
+        @Nullable Duration startToCloseTimeout,
+        @Nullable Duration heartbeatTimeout) {
 
-  @NonNull
-  @Getter
-  private final ObjectDescriptor objectDescriptor;
-  @Builder.Default
-  private final boolean hasSideEffects = false;
-  @Builder.Default
-  private final @NonNull List<ParameterDescriptor> parameters = List.of();
-  @Nullable
-  @Getter
-  private final String taskQueue;
-  @Nullable
-  @Getter
-  private final String version;
-  @Nullable
-  private final Duration startToCloseTimeout;
-  @Nullable
-  private final Duration heartbeatTimeout;
+  public DslDescriptor {
+    if (parameters == null) {
+      parameters = List.of();
+    }
+  }
 
   public @NonNull String name() {
     return objectDescriptor.name();
