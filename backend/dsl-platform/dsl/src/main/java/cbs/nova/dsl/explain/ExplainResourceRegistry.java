@@ -1,10 +1,10 @@
 package cbs.nova.dsl.explain;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.ServiceLoader;
-import java.util.concurrent.ConcurrentHashMap;
 import org.jspecify.annotations.NonNull;
 
 /**
@@ -14,11 +14,15 @@ import org.jspecify.annotations.NonNull;
  */
 public final class ExplainResourceRegistry {
 
-  // TODO: Instead add a collection with some memoize via caffeine
-  @Deprecated(forRemoval = true)
-  private final Map<String, ExplainResourceProvider> byName = new ConcurrentHashMap<>();
-  @Deprecated(forRemoval = true)
-  private final Map<String, ExplainResourceProvider> byFilename = new ConcurrentHashMap<>();
+  // Providers are discovered up front via ServiceLoader, so both indexes are memoized once at
+  // register time. Bounded size keeps memory under control; the discovered provider set is small,
+  // so eviction pressure is negligible in practice.
+  private final Cache<String, ExplainResourceProvider> byName = Caffeine.newBuilder()
+          .maximumSize(1_024L)
+          .build();
+  private final Cache<String, ExplainResourceProvider> byFilename = Caffeine.newBuilder()
+          .maximumSize(1_024L)
+          .build();
 
   public @NonNull ExplainResourceRegistry init(@NonNull ClassLoader classLoader) {
     ServiceLoader.load(ExplainResourceProvider.class, classLoader).forEach(this::register);
@@ -31,11 +35,11 @@ public final class ExplainResourceRegistry {
   }
 
   public @NonNull Optional<ExplainResourceProvider> findByName(@NonNull String name) {
-    return Optional.ofNullable(byName.get(name));
+    return Optional.ofNullable(byName.getIfPresent(name));
   }
 
   public @NonNull Optional<ExplainResourceProvider> findByFilename(@NonNull String filename) {
-    return Optional.ofNullable(byFilename.get(filename));
+    return Optional.ofNullable(byFilename.getIfPresent(filename));
   }
 
   public @NonNull Optional<ExplainResource> describeByName(@NonNull String name) {
@@ -47,10 +51,10 @@ public final class ExplainResourceRegistry {
   }
 
   public @NonNull List<String> names() {
-    return List.copyOf(byName.keySet());
+    return List.copyOf(byName.asMap().keySet());
   }
 
   public @NonNull List<String> filenames() {
-    return List.copyOf(byFilename.keySet());
+    return List.copyOf(byFilename.asMap().keySet());
   }
 }
