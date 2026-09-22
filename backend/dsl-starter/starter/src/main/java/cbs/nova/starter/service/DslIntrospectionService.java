@@ -1,6 +1,6 @@
 package cbs.nova.starter.service;
 
-import static cbs.nova.dsl.model.ExplainReports.explainReportSchema;
+import static cbs.nova.dsl.utils.ExplainReports.explainReportSchema;
 
 import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.DslObject;

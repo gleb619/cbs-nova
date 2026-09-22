@@ -1,8 +1,10 @@
-package cbs.nova.dsl.model;
+package cbs.nova.dsl.utils;
 
 import static cbs.nova.dsl.config.Constants.EMPTY_MARKDOWN;
 
 import cbs.nova.dsl.config.Constants;
+import cbs.nova.dsl.model.ExplainReport;
+import cbs.nova.dsl.model.GraphWalk;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -16,8 +18,6 @@ import org.jspecify.annotations.NonNull;
  * must end exactly on a node boundary — so truncation is a property of the walk
  * ({@link #toMarkdown(ExplainReport, int)}), not of any one report's constructor.
  */
-// TODO: move to a `util` package
-@Deprecated
 public final class ExplainReports {
 
   private ExplainReports() {
