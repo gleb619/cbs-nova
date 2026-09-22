@@ -33,6 +33,7 @@ import {
   DslMetadataPanel,
   DslPlainConstructList,
   ErrorBanner,
+  HotkeyTooltip,
   useHelperSearch,
   useSavedDrafts,
 } from '@cbs/components'
@@ -443,7 +444,7 @@ async function confirmCreate() {
   closeNewPanel()
 }
 
-type ActionValue = 'refresh' | 'validate' | 'save' | 'share-link' | 'publish' | 'submit-approval'
+type ActionValue = 'share-link' | 'publish' | 'submit-approval'
 type HelpersMenuValue = 'objects' | 'helpers' | 'history' | 'diagnostics' | 'tests'
 
 const helpersMenuItems = computed<DropdownMenuItem[]>(() => [
@@ -486,17 +487,6 @@ function runHelpersMenu(item: DropdownMenuItem) {
 }
 
 const actionItems = computed<DropdownMenuItem[]>(() => [
-  { label: 'Refresh', value: 'refresh', disabled: state.value.isLoading },
-  {
-    label: 'Validate',
-    value: 'validate',
-    disabled: !selectedConstruct.value || state.value.isSaving,
-  },
-  {
-    label: isFileBacked.value ? 'Save File' : 'Save Draft',
-    value: 'save',
-    disabled: !selectedConstruct.value || state.value.isSaving || !state.value.isDirty,
-  },
   {
     label: 'Share Link',
     value: 'share-link',
@@ -519,16 +509,6 @@ const actionItems = computed<DropdownMenuItem[]>(() => [
 
 function runAction(item: DropdownMenuItem) {
   switch (item.value as ActionValue) {
-    case 'refresh':
-      void reloadDefinitions().then(() => syncSelectionEffects())
-      refreshDrafts()
-      break
-    case 'validate':
-      validateConstruct()
-      break
-    case 'save':
-      draftSave.save().then(() => refreshDrafts())
-      break
     case 'share-link':
       void shareLink()
       break
@@ -546,6 +526,19 @@ function runAction(item: DropdownMenuItem) {
         })
       break
   }
+}
+
+// Refresh and Validate moved to the Code tab toolbar (T589). Keeping the
+// implementations here so the page owns the wiring (reload + sync selection
+// effects + draft refresh; validation just delegates to the workbench).
+async function onEditorRefresh() {
+  await reloadDefinitions()
+  syncSelectionEffects()
+  refreshDrafts()
+}
+
+async function onEditorValidate() {
+  await validateConstruct()
 }
 
 // Share Link — builds a deep-link URL for the current selection + open body
@@ -606,7 +599,71 @@ function handleSaveShortcut(event: KeyboardEvent) {
   void draftSave.save()
 }
 
+// Platform-aware modifier label — mirrors CodeTab's pattern so the tooltips
+// stay consistent across the page (⌘ on Mac, Ctrl elsewhere).
+const isMac =
+  typeof navigator !== 'undefined' &&
+  /Mac|iPhone|iPad|iPod/.test(navigator.platform || navigator.userAgent || '')
+const MOD = computed(() => (isMac ? '⌘' : 'Ctrl'))
+const ALT = 'Alt'
+
+const newShortcut = computed(() => `${MOD.value}+${ALT}+N`)
+const actionsShortcut = computed(() => `${MOD.value}+${ALT}+A`)
+const miscShortcut = computed(() => `${MOD.value}+${ALT}+M`)
+
+function isEditableTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false
+  const tag = target.tagName
+  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable
+}
+
+// Dispatch a synthetic click on the named DropdownMenu trigger. In real DOM
+// this opens the menu via the component's own toggle handler; in tests the
+// DropdownMenu is stub-replaced so this becomes a no-op (the keydown handler
+// is still verified to not throw).
+function clickDropdownTrigger(testId: string) {
+  if (typeof document === 'undefined') return
+  const trigger = document.querySelector<HTMLButtonElement>(
+    `[data-testid="${testId}"] [data-testid="dropdown-menu-trigger"]`,
+  )
+  trigger?.click()
+}
+
+function handleHeaderShortcuts(event: KeyboardEvent) {
+  // Ctrl/Cmd + Alt + <N|A|M>. Avoids browser-reserved chords (Ctrl+N, Cmd+M, etc.).
+  const mod = isMac ? event.metaKey : event.ctrlKey
+  if (!mod) return
+  if (!event.altKey) return
+  if (event.shiftKey) return
+  // Reject the mixed case where both modifiers are held — only one platform's chord is meaningful.
+  if (event.metaKey && event.ctrlKey) return
+  if (event.repeat) return
+  // Let focused editors own the key first.
+  if (event.defaultPrevented) return
+  // Don't intercept typing inside form fields / contenteditable surfaces.
+  if (isEditableTarget(event.target)) return
+  // No header action while a blocking modal is open.
+  if (isAnyModalOpen.value) return
+
+  const key = event.key.toLowerCase()
+  if (key === 'n') {
+    event.preventDefault()
+    openNewPanel()
+    return
+  }
+  if (key === 'a') {
+    event.preventDefault()
+    clickDropdownTrigger('workbench-hotkey-actions')
+    return
+  }
+  if (key === 'm') {
+    event.preventDefault()
+    clickDropdownTrigger('workbench-hotkey-misc')
+  }
+}
+
 useEventListener(window, 'keydown', handleSaveShortcut)
+useEventListener(window, 'keydown', handleHeaderShortcuts)
 
 onMounted(async () => {
   // Deep-link target: `?objectName=<name>` (e.g. from CLI / search results).
@@ -689,21 +746,27 @@ onBeforeUnmount(() => {
         </span>
       </div>
       <div class="ml-auto flex items-center gap-3">
-        <button
-          type="button"
-          class="px-3 py-1.5 text-sm rounded border border-line hover:bg-surface"
-          data-testid="workbench-new-definition"
-          @click="openNewPanel"
-        >
-          New
-        </button>
-        <DropdownMenu label="Actions" align="right" :items="actionItems" @select="runAction" />
-        <DropdownMenu
-          label="Misc"
-          align="right"
-          :items="helpersMenuItems"
-          @select="runHelpersMenu"
-        />
+        <HotkeyTooltip :keys="newShortcut" data-testid="workbench-hotkey-new">
+          <button
+            type="button"
+            class="px-3 py-1.5 text-sm rounded border border-line hover:bg-surface"
+            data-testid="workbench-new-definition"
+            @click="openNewPanel"
+          >
+            New
+          </button>
+        </HotkeyTooltip>
+        <HotkeyTooltip :keys="actionsShortcut" data-testid="workbench-hotkey-actions">
+          <DropdownMenu label="Actions" align="right" :items="actionItems" @select="runAction" />
+        </HotkeyTooltip>
+        <HotkeyTooltip :keys="miscShortcut" data-testid="workbench-hotkey-misc">
+          <DropdownMenu
+            label="Misc"
+            align="right"
+            :items="helpersMenuItems"
+            @select="runHelpersMenu"
+          />
+        </HotkeyTooltip>
       </div>
     </header>
 
@@ -766,6 +829,9 @@ onBeforeUnmount(() => {
             :constructs-fetch="fetchConstructs"
             :preview="runPreview"
             :explain="runExplain"
+            :refresh="onEditorRefresh"
+            :validate="onEditorValidate"
+            :busy="state.isSaving"
             :markers="editorMarkers"
             :errors="displayValidationErrors"
             :diagnostics-fetch="dslApi.fetchDiagnostics"

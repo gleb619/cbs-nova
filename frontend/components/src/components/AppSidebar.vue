@@ -72,5 +72,18 @@ const { collapsed, hidden } = useSidebar()
     <div v-if="collapsed" class="p-2 border-t border-neutral-700">
       <AppSidebarHideButton />
     </div>
+    <!-- Full-size hint: discoverability for the Alt→hotkey-tooltip overlay.
+         Hidden as soon as the rail collapses (toggle button) or hides. -->
+    <div
+      v-if="!collapsed && !hidden"
+      data-testid="app-sidebar-hotkey-hint"
+      class="px-4 py-2 border-t border-neutral-700 text-[11px] leading-tight text-neutral-400 select-none"
+    >
+      Press
+      <kbd
+        class="mx-1 inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1 rounded border border-neutral-600 bg-neutral-700 text-neutral-100 font-mono text-[10px]"
+      >Alt</kbd>
+      to reveal hotkey tooltips
+    </div>
   </aside>
 </template>

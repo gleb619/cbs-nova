@@ -164,3 +164,4 @@ docs/adr/
 __pycache__/
 *.pyc
 /dsl-workbench-objectname.png
+/.playwright-mcp/*.yml

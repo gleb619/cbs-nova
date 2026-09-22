@@ -17,8 +17,23 @@ const props = withDefaults(
     helperCatalogFetch?: () => Promise<HelperCatalogEntry[]>
     constructsFetch?: () => Promise<DslConstruct[]>
     markers?: EditorMarker[]
+    /** Reload the source backing the editor (e.g. refetch definitions). */
+    refresh?: () => void | Promise<void>
+    /** Run validation for the current construct and surface diagnostics. */
+    validate?: () => void | Promise<void>
+    /** Disable both refresh and validate (e.g. page is mid-save). */
+    busy?: boolean
   }>(),
-  { language: 'java', saveStatus: 'idle', lastSavedAt: null, savedHash: null, markers: () => [] },
+  {
+    language: 'java',
+    saveStatus: 'idle',
+    lastSavedAt: null,
+    savedHash: null,
+    markers: () => [],
+    refresh: undefined,
+    validate: undefined,
+    busy: false,
+  },
 )
 
 const emit = defineEmits<{
@@ -88,8 +103,77 @@ function handleGlobalSave() {
   if (!props.readOnly && isDirty.value) requestSave()
 }
 
-onMounted(() => window.addEventListener('dsl:save', handleGlobalSave))
-onBeforeUnmount(() => window.removeEventListener('dsl:save', handleGlobalSave))
+function runRefresh() {
+  if (props.busy || !props.refresh) return
+  void props.refresh()
+}
+
+function runValidate() {
+  if (props.busy || !props.validate) return
+  void props.validate()
+}
+
+const refreshDisabled = computed(() => props.busy || !props.refresh)
+const validateDisabled = computed(() => props.busy || !props.validate)
+
+// Platform-aware modifier label: ⌘ on Mac, Ctrl elsewhere.
+const isMac =
+  typeof navigator !== 'undefined' &&
+  /Mac|iPhone|iPad|iPod/.test(navigator.platform || navigator.userAgent || '')
+
+const MOD = computed(() => (isMac ? '⌘' : 'Ctrl'))
+
+const saveShortcut = computed(() => `${MOD.value}+S`)
+const refreshShortcut = computed(() => `${MOD.value}+Shift+R`)
+const validateShortcut = computed(() => `${MOD.value}+Enter`)
+
+function isEditableTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false
+  const tag = target.tagName
+  return (
+    tag === 'INPUT' ||
+    tag === 'TEXTAREA' ||
+    tag === 'SELECT' ||
+    target.isContentEditable
+  )
+}
+
+function handleHotkey(event: KeyboardEvent) {
+  if (props.readOnly) return
+  const mod = isMac ? event.metaKey : event.ctrlKey
+  if (!mod) return
+  // Skip when an editable element owns the key (e.g. Monaco textarea, native inputs).
+  if (isEditableTarget(event.target)) return
+
+  const key = event.key.toLowerCase()
+
+  if (key === 's' && !event.shiftKey) {
+    event.preventDefault()
+    if (props.busy) return
+    if (isDirty.value) requestSave()
+    return
+  }
+
+  if (key === 'r' && event.shiftKey) {
+    event.preventDefault()
+    runRefresh()
+    return
+  }
+
+  if (key === 'enter') {
+    event.preventDefault()
+    runValidate()
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('dsl:save', handleGlobalSave)
+  window.addEventListener('keydown', handleHotkey)
+})
+onBeforeUnmount(() => {
+  window.removeEventListener('dsl:save', handleGlobalSave)
+  window.removeEventListener('keydown', handleHotkey)
+})
 
 const autosaveOptions = [
   { value: 'off', label: 'Off' },
@@ -164,7 +248,29 @@ defineExpose({ revealPosition, insertAtCursor })
       class="flex flex-wrap items-center gap-2 px-3 py-1.5 border-b border-neutral-200 bg-white"
       data-testid="code-tab-toolbar"
     >
-      <HotkeyTooltip keys="Ctrl+S">
+      <HotkeyTooltip :keys="refreshShortcut">
+        <button
+          type="button"
+          class="px-3 py-1 text-xs font-medium rounded border border-neutral-300 text-neutral-700 hover:bg-neutral-100 disabled:opacity-50 disabled:cursor-not-allowed"
+          :disabled="refreshDisabled"
+          data-testid="code-tab-refresh"
+          @click="runRefresh"
+        >
+          Refresh
+        </button>
+      </HotkeyTooltip>
+      <HotkeyTooltip :keys="validateShortcut">
+        <button
+          type="button"
+          class="px-3 py-1 text-xs font-medium rounded border border-neutral-300 text-neutral-700 hover:bg-neutral-100 disabled:opacity-50 disabled:cursor-not-allowed"
+          :disabled="validateDisabled"
+          data-testid="code-tab-validate"
+          @click="runValidate"
+        >
+          Validate
+        </button>
+      </HotkeyTooltip>
+      <HotkeyTooltip :keys="saveShortcut">
         <button
           type="button"
           class="px-3 py-1 text-xs font-medium rounded border"

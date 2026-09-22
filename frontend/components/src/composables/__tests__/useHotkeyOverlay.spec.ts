@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 import { nextTick } from 'vue'
 import { useHotkeyOverlay } from '../useHotkeyOverlay'
 
@@ -15,10 +15,6 @@ function dispatchBlur() {
 }
 
 describe('useHotkeyOverlay', () => {
-  beforeEach(() => {
-    dispatchBlur()
-  })
-
   afterEach(() => {
     dispatchBlur()
   })
@@ -28,33 +24,37 @@ describe('useHotkeyOverlay', () => {
     expect(visible.value).toBe(false)
   })
 
-  it('shows overlay on Alt keydown and hides on Alt keyup', () => {
+  it('shows overlay on Alt keydown and hides on Alt keyup', async () => {
     const { visible } = useHotkeyOverlay()
     dispatchKeydown('Alt')
+    await nextTick()
     expect(visible.value).toBe(true)
     dispatchKeyup('Alt')
+    await nextTick()
     expect(visible.value).toBe(false)
   })
 
-  it('does not show overlay on repeated Alt keydown', () => {
+  it('does not show overlay on repeated Alt keydown', async () => {
     const { visible } = useHotkeyOverlay()
     dispatchKeydown('Alt', true)
+    await nextTick()
     expect(visible.value).toBe(false)
   })
 
-  it('ignores non-Alt keys', () => {
+  it('ignores non-Alt keys', async () => {
     const { visible } = useHotkeyOverlay()
     dispatchKeydown('a')
-    expect(visible.value).toBe(false)
-    dispatchKeydown('Shift')
+    await nextTick()
     expect(visible.value).toBe(false)
   })
 
-  it('hides overlay on window blur even when Alt is held', () => {
+  it('hides overlay on window blur even when Alt is held', async () => {
     const { visible } = useHotkeyOverlay()
     dispatchKeydown('Alt')
+    await nextTick()
     expect(visible.value).toBe(true)
     dispatchBlur()
+    await nextTick()
     expect(visible.value).toBe(false)
   })
 

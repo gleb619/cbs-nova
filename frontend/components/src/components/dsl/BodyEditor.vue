@@ -60,6 +60,12 @@ const props = withDefaults(
     structure?: ObjectStructureDto | null
     structureLoading?: boolean
     structureError?: string | null
+    /** Forwarded to <CodeTab>; reloads the source backing the editor. */
+    refresh?: () => void | Promise<void>
+    /** Forwarded to <CodeTab>; runs validation for the current construct. */
+    validate?: () => void | Promise<void>
+    /** Forwarded to <CodeTab>; disables Refresh + Validate while a save is mid-flight. */
+    busy?: boolean
   }>(),
   { markers: () => [], errors: () => [] },
 )
@@ -272,6 +278,9 @@ defineExpose({ revealPosition, insertAtCursor, selectProblem })
         :helper-catalog-fetch="helperCatalogFetch"
         :constructs-fetch="constructsFetch"
         :markers="markers"
+        :refresh="refresh"
+        :validate="validate"
+        :busy="busy"
         @save="emit('save', $event)"
       />
       <PreviewTab

@@ -2,6 +2,7 @@ package cbs.nova.dsl.explain;
 
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
+import cbs.nova.dsl.config.Constants;
 import cbs.nova.dsl.model.ExplainReport;
 import java.util.function.Function;
 import org.jspecify.annotations.NonNull;
@@ -28,7 +29,7 @@ public final class DefaultExplainLogic<C> implements Function<C, Result<ExplainR
             ExplainReport.builder()
                     .name(name)
                     .description(GlobalManager.globalManager().description(name)
-                            .orElse(fallbackDescription == null ? "" : fallbackDescription))
+                            .orElse(fallbackDescription == null ? Constants.EMPTY_MARKDOWN : fallbackDescription))
                     .markdown(GlobalManager.globalManager().resolveExplainContent(name))
                     .build());
   }

@@ -106,4 +106,31 @@ describe('AppSidebar', () => {
     expect(collapsed.value).toBe(true)
     expect(wrapper.find('[data-testid="app-sidebar"]').classes()).toContain('w-0')
   })
+
+  it('renders the hotkey hint only when fully expanded', async () => {
+    const wrapper = mount(AppSidebar, { props: { items } })
+    expect(wrapper.find('[data-testid="app-sidebar-hotkey-hint"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="app-sidebar-hotkey-hint"]').text()).toContain('Alt')
+
+    const { collapse } = useSidebar()
+    collapse()
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('[data-testid="app-sidebar-hotkey-hint"]').exists()).toBe(false)
+
+    const { expand, hide } = useSidebar()
+    expand()
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('[data-testid="app-sidebar-hotkey-hint"]').exists()).toBe(true)
+
+    hide()
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('[data-testid="app-sidebar-hotkey-hint"]').exists()).toBe(false)
+  })
+
+  it('hotkey hint contains an Alt kbd element', () => {
+    const wrapper = mount(AppSidebar, { props: { items } })
+    const hint = wrapper.find('[data-testid="app-sidebar-hotkey-hint"]')
+    expect(hint.find('kbd').exists()).toBe(true)
+    expect(hint.find('kbd').text()).toBe('Alt')
+  })
 })

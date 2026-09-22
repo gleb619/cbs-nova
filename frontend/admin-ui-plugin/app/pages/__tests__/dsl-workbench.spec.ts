@@ -269,6 +269,8 @@ const makeStub = (testId: string) =>
       'items',
       'label',
       'align',
+      'refresh',
+      'validate',
     ],
     emits: [
       'create',
@@ -277,6 +279,7 @@ const makeStub = (testId: string) =>
       'delete',
       'update:code',
       'update:collapsed',
+      'save',
       'update:open',
       'update:name',
       'update:type',
@@ -846,9 +849,9 @@ describe('dsl-workbench.vue save-status pill and Ctrl+S', () => {
     harness.markDirty()
     await nextTick()
 
-    // Trigger save through the Actions menu.
-    const dropdown = wrapper.findComponent({ name: 'DropdownMenu' })
-    await dropdown.vm.$emit('select', { value: 'save' })
+    // Save is owned by the Code tab toolbar now; trigger it via the editor event.
+    const editor = wrapper.findComponent({ name: 'BodyEditor' })
+    await editor.vm.$emit('save', 'code')
     await nextTick()
 
     expect(findEditorSaveStatus(wrapper)).toBe('saving')
@@ -870,8 +873,8 @@ describe('dsl-workbench.vue save-status pill and Ctrl+S', () => {
     harness.markDirty()
     await nextTick()
 
-    const dropdown = wrapper.findComponent({ name: 'DropdownMenu' })
-    await dropdown.vm.$emit('select', { value: 'save' })
+    const editor = wrapper.findComponent({ name: 'BodyEditor' })
+    await editor.vm.$emit('save', 'code')
     await flushPromises()
 
     expect(findEditorSaveStatus(wrapper)).toBe('error')
@@ -890,13 +893,12 @@ describe('dsl-workbench.vue save-status pill and Ctrl+S', () => {
     await flushPromises()
 
     harness.markDirty()
-    const dropdown = wrapper.findComponent({ name: 'DropdownMenu' })
-    await dropdown.vm.$emit('select', { value: 'save' })
+    const editor = wrapper.findComponent({ name: 'BodyEditor' })
+    await editor.vm.$emit('save', 'code')
     await flushPromises()
 
     expect(findEditorSaveStatus(wrapper)).toBe('error')
 
-    const editor = wrapper.findComponent({ name: 'BodyEditor' })
     await editor.vm.$emit('save', 'code')
     await nextTick()
 
@@ -1074,7 +1076,7 @@ describe('dsl-workbench.vue file-backed construct', () => {
     expect(editor.props('code')).toBe('public class LoanDsl {}')
   })
 
-  it('shows Save File action for file-backed constructs and Save Draft for drafts', async () => {
+  it('does not expose Refresh, Validate or Save actions in the Actions dropdown', async () => {
     harness.state.constructs = [
       { name: 'LoanDsl', type: 'Process', status: 'Published', filePath: 'LoanDsl.java' },
       { name: 'DraftOne', type: 'Helper', status: 'Draft' },
@@ -1088,40 +1090,69 @@ describe('dsl-workbench.vue file-backed construct', () => {
     await flushPromises()
 
     const dropdown = wrapper.findComponent({ name: 'DropdownMenu' })
-    let items = dropdown.props('items') as { label: string; value: string }[]
-    expect(items.find((i) => i.value === 'save')?.label).toBe('Save File')
+    const fileBackedItems = dropdown.props('items') as { value: string }[]
+    expect(fileBackedItems.find((i) => i.value === 'refresh')).toBeUndefined()
+    expect(fileBackedItems.find((i) => i.value === 'validate')).toBeUndefined()
+    expect(fileBackedItems.find((i) => i.value === 'save')).toBeUndefined()
 
     await explorer.vm.$emit('select', 'DraftOne')
     await flushPromises()
 
-    items = dropdown.props('items') as { label: string; value: string }[]
-    expect(items.find((i) => i.value === 'save')?.label).toBe('Save Draft')
+    const draftItems = dropdown.props('items') as { value: string }[]
+    expect(draftItems.find((i) => i.value === 'refresh')).toBeUndefined()
+    expect(draftItems.find((i) => i.value === 'validate')).toBeUndefined()
+    expect(draftItems.find((i) => i.value === 'save')).toBeUndefined()
   })
 
-  it('passes editor content to saveConstruct when saving a file-backed construct', async () => {
-    harness.state.constructs = [
-      { name: 'LoanDsl', type: 'Process', status: 'Published', filePath: 'LoanDsl.java' },
-    ]
-    harness.saveConstruct.mockImplementationOnce(async () => {
-      harness.state.isDirty = false
-    })
+  it('wires BodyEditor validate callback to validateConstruct', async () => {
+    harness.state.constructs = [{ name: 'DraftOne', type: 'Helper', status: 'Draft' }]
+    harness.validateConstruct.mockClear()
 
     const wrapper = mountPage()
     await flushPromises()
 
-    const explorer = wrapper.findComponent({ name: 'ConstructExplorer' })
-    await explorer.vm.$emit('select', 'LoanDsl')
+    const editor = wrapper.findComponent({ name: 'BodyEditor' })
+    const validate = editor.props('validate') as () => Promise<void>
+    expect(validate).toBeTypeOf('function')
+
+    await validate()
+    await flushPromises()
+
+    expect(harness.validateConstruct).toHaveBeenCalledTimes(1)
+  })
+
+  it('wires BodyEditor refresh callback to reloadDefinitions and refreshes drafts', async () => {
+    harness.state.constructs = [{ name: 'DraftOne', type: 'Helper', status: 'Draft' }]
+    harness.reloadDefinitions.mockClear()
+    dslApi.listDrafts.mockClear()
+    dslApi.listDrafts.mockResolvedValue([])
+
+    const wrapper = mountPage()
     await flushPromises()
 
     const editor = wrapper.findComponent({ name: 'BodyEditor' })
-    await editor.vm.$emit('update:code', 'public class LoanDsl { }')
-    await nextTick()
+    const refresh = editor.props('refresh') as () => Promise<void>
+    expect(refresh).toBeTypeOf('function')
 
-    const dropdown = wrapper.findComponent({ name: 'DropdownMenu' })
-    await dropdown.vm.$emit('select', { value: 'save' })
+    await refresh()
     await flushPromises()
 
-    expect(harness.saveConstruct).toHaveBeenCalledWith('public class LoanDsl { }')
+    expect(harness.reloadDefinitions).toHaveBeenCalledTimes(1)
+    expect(dslApi.listDrafts).toHaveBeenCalled()
+  })
+
+  it('forwards busy state to BodyEditor when the workbench is saving', async () => {
+    harness.state.isSaving = true
+
+    const wrapper = mountPage()
+    await flushPromises()
+
+    const editor = wrapper.findComponent({ name: 'BodyEditor' })
+    expect(editor.props('busy')).toBe(true)
+
+    harness.state.isSaving = false
+    await nextTick()
+    expect(editor.props('busy')).toBe(false)
   })
 })
 
@@ -1540,5 +1571,198 @@ describe('dsl-workbench.vue selected-construct header label', () => {
     await nextTick()
 
     expect(headerLabel(wrapper)).toBe('/ helper-one')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Header hotkeys: Ctrl/⌘ + Alt + <N|A|M> open the three header buttons
+// (New / Actions / Misc). The HotkeyTooltip wrappers carry the shortcut
+// label; the global keydown handler drives the action.
+// ---------------------------------------------------------------------------
+
+describe('dsl-workbench.vue header hotkeys (New / Actions / Misc)', () => {
+  beforeEach(() => {
+    harness.state.constructs = []
+    harness.state.selectedName = null
+    harness.state.validationErrors = []
+    harness.state.isDirty = false
+    harness.state.isSaving = false
+    harness.state.isLoading = false
+    harness.selectedConstruct.value = null
+    harness.loaders.constructs.value = false
+    dslApi.listDrafts.mockReset()
+    dslApi.listDrafts.mockResolvedValue([])
+    dslApi.listHelpers.mockReset()
+    dslApi.listHelpers.mockResolvedValue({ names: [], helpers: [] })
+  })
+
+  function fireKeydown(opts: {
+    key: string
+    ctrlKey?: boolean
+    metaKey?: boolean
+    altKey?: boolean
+    shiftKey?: boolean
+    target?: EventTarget | null
+  }) {
+    const event = new KeyboardEvent('keydown', {
+      key: opts.key,
+      ctrlKey: opts.ctrlKey ?? false,
+      metaKey: opts.metaKey ?? false,
+      altKey: opts.altKey ?? false,
+      shiftKey: opts.shiftKey ?? false,
+      bubbles: true,
+      cancelable: true,
+    })
+    if (opts.target) {
+      Object.defineProperty(event, 'target', { value: opts.target })
+    }
+    window.dispatchEvent(event)
+    return event
+  }
+
+  it('renders HotkeyTooltip wrappers for the three header buttons', async () => {
+    const wrapper = mountPage()
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="workbench-hotkey-new"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="workbench-hotkey-actions"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="workbench-hotkey-misc"]').exists()).toBe(true)
+
+    // HotkeyTooltip falls through attrs onto its root <span>; the inner
+    // DropdownMenu is stub-replaced in tests (renders with its component
+    // name as the testid — verify both stubs land inside the wrappers).
+    expect(
+      wrapper
+        .find('[data-testid="workbench-hotkey-actions"] [data-testid="DropdownMenu"]')
+        .exists(),
+    ).toBe(true)
+    expect(
+      wrapper.find('[data-testid="workbench-hotkey-misc"] [data-testid="DropdownMenu"]').exists(),
+    ).toBe(true)
+  })
+
+  it('shows the platform-aware shortcut label inside each tooltip wrapper', async () => {
+    const wrapper = mountPage()
+    await flushPromises()
+
+    // The tooltip itself only renders when useHotkeyOverlay.visible is true.
+    // Force-enable it (Alt press) so the label text is observable.
+    const altDown = new KeyboardEvent('keydown', { key: 'Alt', bubbles: true })
+    window.dispatchEvent(altDown)
+
+    await nextTick()
+
+    const newTooltip = wrapper.find(
+      '[data-testid="workbench-hotkey-new"] [data-testid="hotkey-tooltip"]',
+    )
+    const actionsTooltip = wrapper.find(
+      '[data-testid="workbench-hotkey-actions"] [data-testid="hotkey-tooltip"]',
+    )
+    const miscTooltip = wrapper.find(
+      '[data-testid="workbench-hotkey-misc"] [data-testid="hotkey-tooltip"]',
+    )
+
+    expect(newTooltip.exists()).toBe(true)
+    expect(actionsTooltip.exists()).toBe(true)
+    expect(miscTooltip.exists()).toBe(true)
+
+    const expectedMod = /Mac|iPhone|iPad|iPod/.test(navigator.platform || navigator.userAgent || '')
+      ? '⌘'
+      : 'Ctrl'
+    expect(newTooltip.text()).toBe(`${expectedMod}+Alt+N`)
+    expect(actionsTooltip.text()).toBe(`${expectedMod}+Alt+A`)
+    expect(miscTooltip.text()).toBe(`${expectedMod}+Alt+M`)
+
+    window.dispatchEvent(new KeyboardEvent('keyup', { key: 'Alt', bubbles: true }))
+  })
+
+  it('Ctrl+Alt+N opens the new-definition modal', async () => {
+    const wrapper = mountPage()
+    await flushPromises()
+
+    expect(wrapper.find('#workbench-new-title').exists()).toBe(false)
+
+    const event = fireKeydown({ key: 'n', ctrlKey: true, altKey: true })
+    await nextTick()
+
+    expect(event.defaultPrevented).toBe(true)
+    expect(wrapper.find('#workbench-new-title').exists()).toBe(true)
+  })
+
+  it('⌘+Alt+N opens the new-definition modal on macOS-style user agents', async () => {
+    const originalPlatform = navigator.platform
+    Object.defineProperty(navigator, 'platform', { value: 'MacIntel', configurable: true })
+    Object.defineProperty(navigator, 'userAgent', {
+      value: 'Mozilla/5.0 (Macintosh)',
+      configurable: true,
+    })
+
+    try {
+      const wrapper = mountPage()
+      await flushPromises()
+
+      const event = fireKeydown({ key: 'n', metaKey: true, altKey: true })
+      await nextTick()
+
+      expect(event.defaultPrevented).toBe(true)
+      expect(wrapper.find('#workbench-new-title').exists()).toBe(true)
+    } finally {
+      Object.defineProperty(navigator, 'platform', { value: originalPlatform, configurable: true })
+    }
+  })
+
+  it('does not open the modal when Ctrl is pressed without Alt', async () => {
+    const wrapper = mountPage()
+    await flushPromises()
+
+    fireKeydown({ key: 'n', ctrlKey: true })
+    await nextTick()
+
+    expect(wrapper.find('#workbench-new-title').exists()).toBe(false)
+  })
+
+  it('does not open the modal when the user is typing in an input', async () => {
+    const wrapper = mountPage()
+    await flushPromises()
+
+    const input = document.createElement('input')
+    document.body.appendChild(input)
+
+    fireKeydown({ key: 'n', ctrlKey: true, altKey: true, target: input })
+    await nextTick()
+
+    expect(wrapper.find('#workbench-new-title').exists()).toBe(false)
+    input.remove()
+  })
+
+  it('Ctrl+Alt+A and Ctrl+Alt+M dispatch clicks on the dropdown triggers without errors', async () => {
+    const wrapper = mountPage()
+    await flushPromises()
+
+    // The dropdowns are stub-replaced in tests, so the trigger button is not
+    // rendered — the handler should silently no-op (verify no throw).
+    const aEvent = fireKeydown({ key: 'a', ctrlKey: true, altKey: true })
+    const mEvent = fireKeydown({ key: 'm', ctrlKey: true, altKey: true })
+    await nextTick()
+
+    expect(aEvent.defaultPrevented).toBe(true)
+    expect(mEvent.defaultPrevented).toBe(true)
+    expect(wrapper.find('#workbench-new-title').exists()).toBe(false)
+  })
+
+  it('does not intercept Ctrl+Alt+N while a modal is already open', async () => {
+    const wrapper = mountPage()
+    await flushPromises()
+
+    // Open the New modal manually, then confirm Ctrl+Alt+N is a no-op
+    // (no double-open, no errors).
+    await wrapper.find('[data-testid="workbench-new-definition"]').trigger('click')
+    expect(wrapper.find('#workbench-new-title').exists()).toBe(true)
+
+    const event = fireKeydown({ key: 'n', ctrlKey: true, altKey: true })
+    await nextTick()
+
+    expect(event.defaultPrevented).toBe(false)
+    expect(wrapper.find('#workbench-new-title').exists()).toBe(true)
   })
 })
