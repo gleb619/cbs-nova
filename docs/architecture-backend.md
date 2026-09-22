@@ -28,12 +28,26 @@ See [DSL Constructs & Execution Contract](dsl/constructs.md), [Authoring DSL Flo
 
 1. **Run** — executes generated workflows/activities against a Temporal cluster.
 2. **Preview (dry-run)** — executes DSL definitions directly, without Temporal, for fast local validation.
-3. **Explain** — preview mode that also returns a human-readable description and a Mermaid diagram.
+3. **Hierarchy** — preview mode that returns a structured, JSON-serializable call-graph report
+   (`HierarchyReport`) for a DSL entity: execution trace, captured external calls, call counts,
+   dry-run logs, metrics, errors, and a per-node diagram. Local, safe, cycle-safe — does not connect
+   to Temporal. Backed by `ExecutionMode.HIERARCHY`, `DslRuntime.hierarchy()`, and the
+   `POST /api/dsl/hierarchy/{name}` route.
+4. **Explain** — a lightweight, budget-limited view over the Hierarchy graph. Consumes a
+   `HierarchyReport` and renders natural-language descriptions and per-node diagrams into a
+   character-bounded markdown document. The mapping and the budget are enforced by
+   `ExplainReportStage` and `cbs.nova.starter.explain.ExplainBudget` (default
+   `CbsNovaExplainProperties.budgetChars = 4000`).
 
-See [Preview Mode (dry-run)](dsl/preview-mode.md) and [Runtime Engine](dsl/runtime.md#operational-modes).
-For the architectural rationale, alternatives considered, and the mechanism behind the three modes (`DslRuntime`,
-pipes, `DispatchStage`, `HelperInterceptor` / `FakeHelperInterceptor`, capture `BeanPostProcessor`s), see
-[ADR 0004](adr/0004-preview-dry-run-explain-modes.md).
+The three safe/local modes form a capability chain: **Hierarchy → Explain → Preview**. Hierarchy
+exposes the call graph as data, Explain narrates it under a budget, Preview runs the same graph and
+also returns the actual business output.
+
+See [Hierarchy Mode](dsl/hierarchy-mode.md), [Explain Mode](dsl/explain-mode.md),
+[Preview Mode (dry-run)](dsl/preview-mode.md), and [Runtime Engine](dsl/runtime.md#operational-modes).
+For the architectural rationale, alternatives considered, and the mechanism behind the modes
+(`DslRuntime`, pipes, `DispatchStage`, `HelperInterceptor` / `FakeHelperInterceptor`, capture
+`BeanPostProcessor`s), see [ADR 0004](adr/0004-preview-dry-run-explain-modes.md).
 
 ## High-level architecture
 
@@ -53,8 +67,8 @@ pipes, `DispatchStage`, `HelperInterceptor` / `FakeHelperInterceptor`, capture `
 │  Production: generated Temporal workers │
 │  (Workflow + Activity interfaces)       │
 ├─────────────────────────────────────────┤
-│  Preview/Explain: direct DslObject      │
-│  execution through GlobalManager        │
+│  Preview/Explain/Hierarchy: direct Dsl  │
+│  Object execution through GlobalManager │
 └─────────────────┬───────────────────────┘
                   ▼
 ┌─────────────────────────────────────────┐
@@ -114,7 +128,12 @@ Generated code talks to one facade — `GlobalManager.getInstance()` — which d
 - **Manager layer** — `ProcessManager`, `TransactionManager`, `HelperManager`.
 
 See [Runtime Engine](dsl/runtime.md) for registries, runners, managers, modes, REST surface, dynamic configuration,
-and helper/Spring integration.
+and helper/Spring integration. Each mode has its own pipe that builds on a shared stage pipeline:
+`PreviewDslPipe`, `HierarchyDslPipe`, and `ExplainDslPipe` all chain `DispatchStage` with the same
+collector stages (`MetricsStage`, `ExecutionTreeStage`, `DryRunLogStage`, `ExecutionTraceStage`,
+`FakingStage`, `ExternalCallRecordingStage`); `HierarchyDslPipe` finishes the accumulator into a
+`HierarchyReport` via `HierarchyReportStage` (see [Hierarchy Mode](dsl/hierarchy-mode.md) for the
+contract and the relationship to Preview/Explain).
 
 ## Spring Boot autoconfiguration
 
@@ -128,7 +147,7 @@ Spring beans. See [Runtime Engine](dsl/runtime.md#helper-and-spring-integration)
 The starter layers three independent, opt-in guards on the DSL REST surface. All three are off by default, so a plain starter behaves exactly like the historical anonymous implementation until an operator turns a knob.
 
 - **API-key filter** — `cbs.nova.starter.web.ApiKeyAuthFilter` is opt-in: `ApiKeyAuthFilterConfiguration` only registers the filter beans for `/api/*` when `cbs.dsl.auth.enabled=true`. When enabled and `cbs.dsl.auth.api-key` is a non-blank string, every request must carry the exact value in the `X-Api-Key` header; otherwise the filter returns `401 UNAUTHORIZED` with a JSON `ErrorResponse`. With `enabled=false` (the default) the filter beans are not created and `/api/*` is anonymous. To prevent the silent-disablement footgun — api-key configured but `enabled` left at its default — a startup WARN fires from `ApiKeyAuthMisconfigurationWarning` whenever `api-key` is non-blank while `enabled=false`.
-- **Rate limiting** — `cbs.security.ratelimit.*` (class `CbsSecurityRateLimitProperties`, filter `cbs.nova.starter.web.RateLimitFilter`) defaults to disabled. Setting `cbs.security.ratelimit.enabled=true` turns on an in-memory token-bucket limiter keyed by client IP (`X-Forwarded-For` first hop, falling back to remote address). Defaults are capacity `20` and refill `5.0` tokens per second. Only mutating routes are limited: `POST /api/dsl/run/**`, `POST /api/dsl/preview/**`, `POST /api/dsl/explain/**`, `POST /api/dsl/reload`, `POST /api/dsl/drafts/*/save`, `POST /api/dsl/drafts/*/publish`, `DELETE /api/dsl/drafts/*`, and `POST /api/executions/*/cancel`. All `GET` routes and actuator paths are exempt. A rejected request receives `429 Too Many Requests` with a `Retry-After` header.
+- **Rate limiting** — `cbs.security.ratelimit.*` (class `CbsSecurityRateLimitProperties`, filter `cbs.nova.starter.web.RateLimitFilter`) defaults to disabled. Setting `cbs.security.ratelimit.enabled=true` turns on an in-memory token-bucket limiter keyed by client IP (`X-Forwarded-For` first hop, falling back to remote address). Defaults are capacity `20` and refill `5.0` tokens per second. Only mutating routes are limited: `POST /api/dsl/run/**`, `POST /api/dsl/preview/**`, `POST /api/dsl/explain/**`, `POST /api/dsl/reload`, `POST /api/dsl/drafts/*/save`, `POST /api/dsl/drafts/*/publish`, `DELETE /api/dsl/drafts/*`, and `POST /api/executions/*/cancel`. The list is `RateLimitFilter.RULES` — Hierarchy (`POST /api/dsl/hierarchy/**`) is **not** currently limited. All `GET` routes and actuator paths are exempt. A rejected request receives `429 Too Many Requests` with a `Retry-After` header.
 - **OIDC / JWT resource-server** — `cbs.security.oidc.enabled` (class `CbsSecurityOidcProperties`, default `false`) switches from the permissive filter chain to a JWT resource-server. When enabled, the default `protectedPaths` (`/api/dsl/**` and `/api/executions/**`) require a valid `Authorization: Bearer <jwt>`; the default `permitAllPaths` (`/actuator/health/**`) stay anonymous, as do the springdoc/OpenAPI endpoints. The JWT decoder itself is bootstrapped by Spring Boot from `spring.security.oauth2.resourceserver.jwt.issuer-uri` (the compose stack points it at the Keycloak realm described in `app/compose/auth.yml`).
 - **httpCall SSRF guard** — the `httpCall` helper validates every outbound URL before a request is built (`cbs.nova.starter.security.OutboundUrlValidator`, config `cbs.dsl.helper.http-call`): a scheme allowlist (`allowed-schemes`, default `["https", "http"]`), a default-on private-address block (`block-private-addresses`, default `true` — rejects loopback / link-local / site-local / any-local / multicast targets such as cloud-metadata endpoints), and an optional host allowlist (`allowed-hosts`, exact or `*.suffix`). The default-on address block is a **behaviour change**: DSLs calling internal hosts now fail until the flag is relaxed or the host is allowlisted. Redirect-following (`NORMAL`/`ALWAYS`) re-validates the final URI post-hoc but cannot prevent a followed redirect to a blocked address (TOCTOU) — use `NEVER` for untrusted targets. Details: [`helpers.md`](dsl/helpers.md#outbound-url-validation-ssrf-guard).
 
@@ -389,6 +408,7 @@ evaluator, provide an `ExpressionEvaluator` bean or call
 - [Compile-time Code Generation](dsl/codegen.md)
 - [Runtime Engine](dsl/runtime.md)
 - [Preview Mode (dry-run)](dsl/preview-mode.md)
+- [Hierarchy Mode](dsl/hierarchy-mode.md) — structured call-graph report shared by Hierarchy and Explain.
 - [Working with DSL Examples](dsl/examples.md)
 - [IDEA Plugin for DSL Editing](dsl/idea-plugin.md)
 - [Starter Configuration Reference](dsl/configuration.md) — every `@ConfigurationProperties` key and its default.
@@ -401,4 +421,4 @@ evaluator, provide an `ExpressionEvaluator` bean or call
 - **Dynamic worker configuration** — task queues, timeouts, and retry policies are configurable via DSL builders.
 - **Reusable helpers and functions** — common logic is extracted as `@Helper` classes or `Dsl.function(...)` definitions.
 - **Declarative compensation** — Processes and Transactions can define rollback/cleanup steps that run automatically on failure.
-- **Preview & Explain** — fast feedback loops and living documentation without deploying to Temporal.
+- **Preview, Hierarchy & Explain** — fast feedback loops, structured call-graph reports, and living documentation without deploying to Temporal.
