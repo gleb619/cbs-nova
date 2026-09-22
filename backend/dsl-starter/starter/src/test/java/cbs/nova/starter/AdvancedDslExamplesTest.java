@@ -352,6 +352,9 @@ class AdvancedDslExamplesTest {
       if (helperClass == ValidateJsonHelper.class) {
         return new ValidateJsonHelper();
       }
+      if (helperClass == SchemaValidateHelper.class) {
+        return new SchemaValidateHelper();
+      }
       if (helperClass == XmlExtractHelper.class) {
         return new XmlExtractHelper();
       }

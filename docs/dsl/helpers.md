@@ -628,6 +628,36 @@ HttpCallOut resp = ctx.runHelper("httpCall",
 In **Preview mode** `httpCall` is intercepted and recorded, not sent — see
 [`preview-mode.md`](preview-mode.md).
 
+### Schema-validate a record or payload with `schemaValidate`
+
+`schemaValidate` (`SchemaValidateIn(payload, schema, failFast)`) is the structured-error
+counterpart to `validateJson`: it runs the same `JsonSchemaValidator` the server-side
+`InputValidator` uses, so a DSL process can validate a record against a JSON Schema mid-flow
+and fail fast with `{path, message}` errors that point at the right field.
+
+`failFast` defaults to `false` (collect all errors). Set it to `true` to stop at the first
+reported error.
+
+```java
+SchemaValidateOut check = ctx.runHelper("schemaValidate",
+        new SchemaValidateIn(orderJson,
+                "{\"type\":\"object\",\"required\":[\"orderId\",\"amount\"],"
+                        + "\"properties\":{\"orderId\":{\"type\":\"string\"},"
+                        + "\"amount\":{\"type\":\"number\"}}}",
+                false))
+        .as(SchemaValidateOut.class);
+
+if (!check.valid()) {
+    // check.errors() -> List<ValidationError{path, message, severity}>
+    // check.summary() -> "invalid: N error(s)" for logs / surfaces
+}
+```
+
+The result is intentionally non-throwing: a validation problem is a normal outcome, surfaced
+via `valid = false` and the error list, not as a helper failure. Use the helper when you want
+to **branch** on validity (e.g. route to an error sink vs proceed). Use `validateJson` when you
+just want the error list without a summary string, or when you only need the boolean validity.
+
 ### Outbound URL validation (SSRF guard)
 
 Before any request is built, `httpCall` validates the URL against the helper-scoped config
