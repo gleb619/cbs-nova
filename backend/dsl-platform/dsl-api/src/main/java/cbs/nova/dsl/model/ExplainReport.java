@@ -8,7 +8,7 @@ import org.jspecify.annotations.NonNull;
 /**
  * One node of an Explain call graph: a name, its own description/diagram, and links ({@code
  * children}) to the {@link ExplainReport} of every entity it calls. Pure data — merging,
- * budget-bounded truncation, and whole-graph markdown rendering live in {@link ExplainReports}.
+ * budget-bounded truncation, and whole-graph markdown rendering live in {@link cbs.nova.dsl.utils.ExplainReports}.
  *
  * <p>
  * Field semantics:

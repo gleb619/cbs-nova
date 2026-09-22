@@ -3,7 +3,7 @@ package cbs.nova.dsl;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.model.ExplainReport;
-import cbs.nova.dsl.model.ExplainReports;
+import cbs.nova.dsl.utils.ExplainReports;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;

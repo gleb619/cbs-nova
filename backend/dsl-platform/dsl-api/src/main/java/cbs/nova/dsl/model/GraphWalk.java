@@ -7,12 +7,12 @@ import java.util.function.Function;
 import org.jspecify.annotations.NonNull;
 
 /** Cycle-safe breadth-first graph walk keyed by node name; first visit wins, order is stable. */
-final class GraphWalk {
+public final class GraphWalk {
 
   private GraphWalk() {
   }
 
-  static <N> @NonNull List<N> breadthFirst(@NonNull N root,
+  public static <N> @NonNull List<N> breadthFirst(@NonNull N root,
           @NonNull Function<N, List<N>> children, @NonNull Function<N, String> key) {
     var visited = new LinkedHashMap<String, N>();
     var pending = new ArrayDeque<N>();
