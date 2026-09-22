@@ -11,6 +11,8 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   select: [name: string]
+  openObjects: []
+  openHelpers: []
 }>()
 
 const collapsed = defineModel<boolean>('collapsed', { default: false })
@@ -31,6 +33,14 @@ function toggle() {
 
 function handleSelect(name: string) {
   emit('select', name)
+}
+
+function openObjects() {
+  emit('openObjects')
+}
+
+function openHelpers() {
+  emit('openHelpers')
 }
 </script>
 
@@ -71,6 +81,29 @@ function handleSelect(name: string) {
         :selected-name="selectedName"
         :on-select="handleSelect"
       />
+    </div>
+
+    <div
+      v-if="!collapsed"
+      class="p-2 border-t border-gray-800 flex items-center gap-2"
+      data-testid="construct-explorer-footer"
+    >
+      <button
+        type="button"
+        class="flex-1 px-2 py-1.5 text-xs rounded bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-gray-100"
+        data-testid="construct-explorer-objects-btn"
+        @click="openObjects"
+      >
+        Objects
+      </button>
+      <button
+        type="button"
+        class="flex-1 px-2 py-1.5 text-xs rounded bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-gray-100"
+        data-testid="construct-explorer-helpers-btn"
+        @click="openHelpers"
+      >
+        Helpers
+      </button>
     </div>
 
     <div

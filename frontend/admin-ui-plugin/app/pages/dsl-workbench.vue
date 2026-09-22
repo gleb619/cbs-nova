@@ -29,7 +29,7 @@ import {
   DslDiagnosticsHistoryPanel,
   DslDraftRestoreBanner,
   DslHelperCatalog,
-  DslHelperSearchPanel,
+  DslObjectsSearchPanel,
   DslMetadataPanel,
   DslPlainConstructList,
   ErrorBanner,
@@ -40,7 +40,7 @@ import {
 import { useToast } from '@cbs/components/composables'
 import { useEventListener } from '@vueuse/core'
 import { useCookie, useRoute } from 'nuxt/app'
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { onBeforeRouteLeave } from 'vue-router'
 import type { RunnerOutput } from '~/types'
 import DslHistoryPanel from '../components/DslHistoryPanel.vue'
@@ -96,7 +96,7 @@ const explorerFilter = ref('')
 // than v-model — the editor never writes back, so URL stays stable on click.
 const BODY_EDITOR_TABS = ['structure', 'code', 'preview', 'explain', 'problems'] as const
 type BodyEditorTab = (typeof BODY_EDITOR_TABS)[number]
-const helperSearchOpen = useWorkbenchStorage<boolean>('helper-search-open', false)
+const objectsSearchOpen = useWorkbenchStorage<boolean>('objects-search-open', false)
 const helperCatalogOpen = useWorkbenchStorage<boolean>('helper-catalog-open', false)
 const historyPanelOpen = useWorkbenchStorage<boolean>('history-panel-open', false)
 const diagnosticsPanelOpen = useWorkbenchStorage<boolean>('diagnostics-panel-open', false)
@@ -171,11 +171,30 @@ function mirrorSelectionToDrafts() {
   draftsSelectedName.value = state.value.selectedName ?? null
 }
 
-const helperSearch = useHelperSearch({
+// TBD — object search filters are persisted so the user's previous query is
+// restored on the next visit. Once the backend unifies /api/dsl/definitions and
+// /api/dsl/objects/search into a single "working set" endpoint, this storage can
+// seed that request instead of a separate search call.
+const objectSearchFilters = useWorkbenchStorage<HelperSearchFilters>('object-search-filters', {
+  name: '',
+  type: '',
+  description: '',
+})
+
+const objectSearch = useHelperSearch({
   fetch: async (filters: HelperSearchFilters) =>
     (await dslApi.searchObjects(filters)) as ObjectSearchResult[],
   debounceMs: 250,
+  initialFilters: objectSearchFilters.value,
 })
+
+watch(
+  objectSearch.filters,
+  (filters) => {
+    objectSearchFilters.value = { ...filters }
+  },
+  { deep: true },
+)
 
 const helpersCatalog = ref<HelperCatalogEntry[]>([])
 const helpersLoading = ref(false)
@@ -347,8 +366,8 @@ function toggleExplorer() {
   explorerOpen.value = !explorerOpen.value
 }
 
-function toggleHelperSearch() {
-  helperSearchOpen.value = !helperSearchOpen.value
+function toggleObjectsSearch() {
+  objectsSearchOpen.value = !objectsSearchOpen.value
 }
 
 const pendingDeleteName = ref<string | null>(null)
@@ -445,11 +464,10 @@ async function confirmCreate() {
 }
 
 type ActionValue = 'share-link' | 'publish' | 'submit-approval'
-type HelpersMenuValue = 'objects' | 'helpers' | 'history' | 'diagnostics' | 'tests'
+type HelpersMenuValue = 'history' | 'diagnostics' | 'tests'
 
 const helpersMenuItems = computed<DropdownMenuItem[]>(() => [
-  { label: helperSearchOpen.value ? 'Close Objects' : 'Objects', value: 'objects' },
-  { label: helperCatalogOpen.value ? 'Close Helpers' : 'Helpers', value: 'helpers' },
+  // Objects / Helpers toggles moved to the ConstructExplorer footer.
   {
     label: historyPanelOpen.value ? 'Close History' : 'History',
     value: 'history',
@@ -468,12 +486,6 @@ const helpersMenuItems = computed<DropdownMenuItem[]>(() => [
 
 function runHelpersMenu(item: DropdownMenuItem) {
   switch (item.value as HelpersMenuValue) {
-    case 'objects':
-      toggleHelperSearch()
-      break
-    case 'helpers':
-      toggleHelperCatalog()
-      break
     case 'history':
       toggleHistoryPanel()
       break
@@ -783,6 +795,8 @@ onBeforeUnmount(() => {
           :selected-name="state.selectedName"
           :loading="loaders.constructs"
           @select="safeSelectConstruct"
+          @open-objects="toggleObjectsSearch"
+          @open-helpers="toggleHelperCatalog"
         >
           <template #default="{ constructs, selectedName, onSelect }">
             <DslPlainConstructList
@@ -904,16 +918,16 @@ onBeforeUnmount(() => {
         />
       </CbsDrawer>
 
-      <DslHelperSearchPanel
-        v-model:open="helperSearchOpen"
-        v-model:name="helperSearch.filters.value.name"
-        v-model:type="helperSearch.filters.value.type"
-        v-model:description="helperSearch.filters.value.description"
-        :results="helperSearch.results.value"
-        :is-loading="helperSearch.isLoading.value"
-        :error="helperSearch.error.value"
-        @search="helperSearch.search"
-        @clear="helperSearch.clearFilters"
+      <DslObjectsSearchPanel
+        v-model:open="objectsSearchOpen"
+        v-model:name="objectSearch.filters.value.name"
+        v-model:type="objectSearch.filters.value.type"
+        v-model:description="objectSearch.filters.value.description"
+        :results="objectSearch.results.value"
+        :is-loading="objectSearch.isLoading.value"
+        :error="objectSearch.error.value"
+        @search="objectSearch.search"
+        @clear="objectSearch.clearFilters"
         @select="onHelperSelect"
       />
     </div>

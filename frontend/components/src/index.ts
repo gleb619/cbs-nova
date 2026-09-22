@@ -24,7 +24,7 @@ export { default as DslDiagnosticsHistoryPanel } from './components/dsl/Diagnost
 export { default as DslDraftRestoreBanner } from './components/dsl/DraftRestoreBanner.vue'
 export { default as DslExecutionTimeline } from './components/dsl/ExecutionTimeline.vue'
 export { default as DslHelperCatalog } from './components/dsl/HelperCatalog.vue'
-export { default as DslHelperSearchPanel } from './components/dsl/HelperSearchPanel.vue'
+export { default as DslObjectsSearchPanel } from './components/dsl/ObjectsSearchPanel.vue'
 export { default as DslInputMappingGrid } from './components/dsl/InputMappingGrid.vue'
 export { default as DslMetadataPanel } from './components/dsl/MetadataPanel.vue'
 export type { EditorMarker } from './components/dsl/MonacoEditor.vue'

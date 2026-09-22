@@ -129,3 +129,27 @@ describe('ConstructExplorer', () => {
     expect(wrapper.find('[data-testid="construct-list-skeleton"]').exists()).toBe(true)
   })
 })
+
+describe('ConstructExplorer footer', () => {
+  it('emits openObjects when the Objects footer button is clicked', async () => {
+    const wrapper = mountContainer({ constructs, selectedName: null })
+
+    await wrapper.get('[data-testid="construct-explorer-objects-btn"]').trigger('click')
+
+    expect(wrapper.emitted('openObjects')).toBeTruthy()
+  })
+
+  it('emits openHelpers when the Helpers footer button is clicked', async () => {
+    const wrapper = mountContainer({ constructs, selectedName: null })
+
+    await wrapper.get('[data-testid="construct-explorer-helpers-btn"]').trigger('click')
+
+    expect(wrapper.emitted('openHelpers')).toBeTruthy()
+  })
+
+  it('hides the footer when collapsed', () => {
+    const wrapper = mountContainer({ constructs, selectedName: null, collapsed: true })
+
+    expect(wrapper.find('[data-testid="construct-explorer-footer"]').exists()).toBe(false)
+  })
+})

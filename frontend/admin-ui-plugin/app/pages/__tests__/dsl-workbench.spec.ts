@@ -323,7 +323,7 @@ const componentStubs = {
   DeleteDraftConfirmationModal: makeStub('DeleteDraftConfirmationModal'),
   DraftRestoreBanner: makeStub('DraftRestoreBanner'),
   HelperCatalog: makeStub('HelperCatalog'),
-  HelperSearchPanel: makeStub('HelperSearchPanel'),
+  ObjectsSearchPanel: makeStub('ObjectsSearchPanel'),
   MetadataPanel: makeStub('MetadataPanel'),
   PlainConstructList: makeStub('PlainConstructList'),
   ProblemsPanel: makeStub('ProblemsPanel'),
@@ -348,7 +348,7 @@ type WorkbenchWrapper = ReturnType<typeof mountPage>
 // drive behaviour through the same `select` event real clicks produce.
 async function openHelpersMenuItem(
   wrapper: WorkbenchWrapper,
-  value: 'objects' | 'helpers' | 'history' | 'diagnostics' | 'tests',
+  value: 'history' | 'diagnostics' | 'tests',
 ) {
   const dropdowns = wrapper.findAllComponents({ name: 'DropdownMenu' })
   const misc = dropdowns.find((node) => node.props('label') === 'Misc')

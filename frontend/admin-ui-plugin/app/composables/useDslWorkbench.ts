@@ -108,6 +108,10 @@ export function useDslWorkbench() {
   })
 
   async function loadConstructs() {
+    // TBD — this currently calls the unbounded /api/dsl/definitions endpoint.
+    // A future "working set" endpoint will replace it so the UI only receives
+    // the user's selected DSL objects. Keep the normalization/sorting logic
+    // here; only the fetch call will change.
     constructsLoading.value = true
     try {
       const result = await api.getDefinitions()

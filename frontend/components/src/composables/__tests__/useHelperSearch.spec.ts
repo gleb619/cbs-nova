@@ -49,7 +49,7 @@ describe('useHelperSearch', () => {
 
     await execute()
 
-    expect(error.value).toBe('Failed to search helpers')
+    expect(error.value).toBe('Failed to search objects')
   })
 
   it('debounces search calls', async () => {
@@ -106,5 +106,34 @@ describe('useHelperSearch', () => {
     expect(results.value).toEqual([])
     expect(error.value).toBeNull()
     expect(fetch).toHaveBeenCalledWith({ name: '', type: '', description: '' })
+  })
+})
+
+describe('useHelperSearch initialFilters', () => {
+  it('seeds filters from initialFilters when provided', () => {
+    const { filters, hasActiveFilters } = useHelperSearch({
+      fetch: vi.fn().mockResolvedValue([]),
+      initialFilters: { name: 'Foo', type: 'process', description: 'Bar' },
+    })
+
+    expect(filters.value).toEqual({ name: 'Foo', type: 'process', description: 'Bar' })
+    expect(hasActiveFilters.value).toBe(true)
+  })
+
+  it('falls back to empty defaults when initialFilters is omitted', () => {
+    const { filters } = useHelperSearch({
+      fetch: vi.fn().mockResolvedValue([]),
+    })
+
+    expect(filters.value).toEqual({ name: '', type: '', description: '' })
+  })
+
+  it('tolerates a partial initialFilters object', () => {
+    const { filters } = useHelperSearch({
+      fetch: vi.fn().mockResolvedValue([]),
+      initialFilters: { type: 'helper' },
+    })
+
+    expect(filters.value).toEqual({ name: '', type: 'helper', description: '' })
   })
 })

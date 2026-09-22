@@ -1,13 +1,13 @@
 import { mount } from '@vue/test-utils'
 import { afterEach, describe, expect, it } from 'vitest'
 import type { ObjectSearchResult } from '../../composables/useHelperSearch'
-import HelperSearchPanel from '../dsl/HelperSearchPanel.vue'
+import ObjectsSearchPanel from '../dsl/ObjectsSearchPanel.vue'
 
 // The panel its content into <body> via <Teleport>. Stubbing the Teleport render
 // lets us drive form interactions and emitted events through the wrapper itself,
 // which the sibling Teleport-based spec drives solely via document queries.
 const mountPanel = (props: Record<string, unknown>) =>
-  mount(HelperSearchPanel, { props: props as never, global: { stubs: { teleport: true } } })
+  mount(ObjectsSearchPanel, { props: props as never, global: { stubs: { teleport: true } } })
 
 const results: ObjectSearchResult[] = [
   {
@@ -20,7 +20,7 @@ const results: ObjectSearchResult[] = [
   { name: 'Notify', type: 'process', description: '', inputType: 'Order', outputType: 'Boolean' },
 ]
 
-describe('HelperSearchPanel', () => {
+describe('ObjectsSearchPanel', () => {
   let wrapper: ReturnType<typeof mountPanel>
 
   afterEach(() => {
@@ -30,7 +30,7 @@ describe('HelperSearchPanel', () => {
   it('exposes root data-testid', () => {
     wrapper = mountPanel({ results: [], open: true, isLoading: false })
 
-    expect(wrapper.find('[data-testid="helper-search-panel"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="objects-search-panel"]').exists()).toBe(true)
   })
 
   it('renders nothing while the drawer is closed', () => {
@@ -133,10 +133,10 @@ describe('HelperSearchPanel', () => {
       results: [],
       open: true,
       isLoading: false,
-      error: 'Failed to search helpers',
+      error: 'Failed to search objects',
     })
 
-    expect(wrapper.text()).toContain('Failed to search helpers')
+    expect(wrapper.text()).toContain('Failed to search objects')
   })
 
   it('renders loading placeholders while results are being fetched', () => {
@@ -157,7 +157,7 @@ describe('HelperSearchPanel', () => {
   it('emits select with the clicked result', async () => {
     wrapper = mountPanel({ results, open: true, isLoading: false })
 
-    await wrapper.get('[data-testid="helper-search-result-row-ParseDate"]').trigger('click')
+    await wrapper.get('[data-testid="objects-search-result-row-ParseDate"]').trigger('click')
 
     expect(wrapper.emitted('select')!.at(-1)).toEqual([results[0]])
   })
@@ -165,7 +165,7 @@ describe('HelperSearchPanel', () => {
   it('emits select when Enter is pressed on a row', async () => {
     wrapper = mountPanel({ results, open: true, isLoading: false })
 
-    await wrapper.get('[data-testid="helper-search-result-row-Notify"]').trigger('keydown.enter')
+    await wrapper.get('[data-testid="objects-search-result-row-Notify"]').trigger('keydown.enter')
 
     expect(wrapper.emitted('select')!.at(-1)).toEqual([results[1]])
   })
@@ -173,8 +173,8 @@ describe('HelperSearchPanel', () => {
   it('keeps the panel open after a select so several helpers can be inserted', async () => {
     wrapper = mountPanel({ results, open: true, isLoading: false })
 
-    await wrapper.get('[data-testid="helper-search-result-row-ParseDate"]').trigger('click')
-    await wrapper.get('[data-testid="helper-search-result-row-Notify"]').trigger('click')
+    await wrapper.get('[data-testid="objects-search-result-row-ParseDate"]').trigger('click')
+    await wrapper.get('[data-testid="objects-search-result-row-Notify"]').trigger('click')
 
     expect(wrapper.emitted('select')).toHaveLength(2)
     expect(wrapper.emitted('update:open')).toBeUndefined()
@@ -183,15 +183,15 @@ describe('HelperSearchPanel', () => {
   it('shows no active detail block until a row becomes active', () => {
     wrapper = mountPanel({ results, open: true, isLoading: false })
 
-    expect(wrapper.find('[data-testid="helper-search-active-detail"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="objects-search-active-detail"]').exists()).toBe(false)
   })
 
   it('ArrowDown activates the first row and shows its input → output detail', async () => {
     wrapper = mountPanel({ results, open: true, isLoading: false })
 
-    await wrapper.get('[data-testid="helper-search-results"]').trigger('keydown.down')
+    await wrapper.get('[data-testid="objects-search-results"]').trigger('keydown.down')
 
-    const detail = wrapper.get('[data-testid="helper-search-active-detail"]')
+    const detail = wrapper.get('[data-testid="objects-search-active-detail"]')
     expect(detail.text()).toContain('String → Date')
     expect(detail.text()).toContain('Parses a date string')
   })
@@ -199,15 +199,15 @@ describe('HelperSearchPanel', () => {
   it('ArrowDown then ArrowUp moves the active row back', async () => {
     wrapper = mountPanel({ results, open: true, isLoading: false })
 
-    const container = wrapper.get('[data-testid="helper-search-results"]')
+    const container = wrapper.get('[data-testid="objects-search-results"]')
     await container.trigger('keydown.down')
     await container.trigger('keydown.down')
-    expect(wrapper.get('[data-testid="helper-search-active-detail"]').text()).toContain(
+    expect(wrapper.get('[data-testid="objects-search-active-detail"]').text()).toContain(
       'Order → Boolean',
     )
 
     await container.trigger('keydown.up')
-    expect(wrapper.get('[data-testid="helper-search-active-detail"]').text()).toContain(
+    expect(wrapper.get('[data-testid="objects-search-active-detail"]').text()).toContain(
       'String → Date',
     )
   })
@@ -215,12 +215,12 @@ describe('HelperSearchPanel', () => {
   it('clamps arrow navigation at both ends of the result list', async () => {
     wrapper = mountPanel({ results, open: true, isLoading: false })
 
-    const container = wrapper.get('[data-testid="helper-search-results"]')
+    const container = wrapper.get('[data-testid="objects-search-results"]')
     await container.trigger('keydown.down')
     await container.trigger('keydown.up')
     await container.trigger('keydown.up')
 
-    expect(wrapper.get('[data-testid="helper-search-active-detail"]').text()).toContain(
+    expect(wrapper.get('[data-testid="objects-search-active-detail"]').text()).toContain(
       'String → Date',
     )
   })
@@ -232,9 +232,9 @@ describe('HelperSearchPanel', () => {
       isLoading: false,
     })
 
-    await wrapper.get('[data-testid="helper-search-results"]').trigger('keydown.down')
+    await wrapper.get('[data-testid="objects-search-results"]').trigger('keydown.down')
 
-    const detail = wrapper.get('[data-testid="helper-search-active-detail"]')
+    const detail = wrapper.get('[data-testid="objects-search-active-detail"]')
     expect(detail.text()).toContain('— → —')
     expect(detail.text()).toContain('No description')
   })
@@ -242,17 +242,17 @@ describe('HelperSearchPanel', () => {
   it('marks the active row aria-selected', async () => {
     wrapper = mountPanel({ results, open: true, isLoading: false })
 
-    await wrapper.get('[data-testid="helper-search-results"]').trigger('keydown.down')
+    await wrapper.get('[data-testid="objects-search-results"]').trigger('keydown.down')
 
     expect(
-      wrapper.get('[data-testid="helper-search-result-row-ParseDate"]').attributes('aria-selected'),
+      wrapper.get('[data-testid="objects-search-result-row-ParseDate"]').attributes('aria-selected'),
     ).toBe('true')
   })
 
   it('Escape in the results list closes the drawer', async () => {
     wrapper = mountPanel({ results, open: true, isLoading: false })
 
-    await wrapper.get('[data-testid="helper-search-results"]').trigger('keydown.esc')
+    await wrapper.get('[data-testid="objects-search-results"]').trigger('keydown.esc')
 
     expect(wrapper.emitted('update:open')!.at(-1)).toEqual([false])
   })
@@ -260,12 +260,12 @@ describe('HelperSearchPanel', () => {
   it('resets the active row when a new search runs', async () => {
     wrapper = mountPanel({ results, open: true, isLoading: false })
 
-    await wrapper.get('[data-testid="helper-search-results"]').trigger('keydown.down')
-    expect(wrapper.find('[data-testid="helper-search-active-detail"]').exists()).toBe(true)
+    await wrapper.get('[data-testid="objects-search-results"]').trigger('keydown.down')
+    expect(wrapper.find('[data-testid="objects-search-active-detail"]').exists()).toBe(true)
 
     await wrapper.setProps({ results: [results[1]] })
-    await wrapper.get('[data-testid="helper-search-search-button"]').trigger('click')
+    await wrapper.get('[data-testid="objects-search-search-button"]').trigger('click')
 
-    expect(wrapper.find('[data-testid="helper-search-active-detail"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="objects-search-active-detail"]').exists()).toBe(false)
   })
 })

@@ -75,7 +75,7 @@ function closePanel() {
     v-model:open="open"
     title="Object Search"
     aria-label="Object search"
-    test-id="helper-search-panel"
+    test-id="objects-search-panel"
     close-label="Close object search"
     width-class="w-96"
   >
@@ -86,12 +86,12 @@ function closePanel() {
           type="text"
           placeholder="Name"
           class="w-full px-2 py-1.5 text-sm rounded bg-gray-800 text-gray-100 placeholder-gray-500 border border-gray-700 focus:outline-none focus:border-gray-500"
-          data-testid="helper-search-name-input"
+          data-testid="objects-search-name-input"
         >
         <select
           v-model="type"
           class="w-full px-2 py-1.5 text-sm rounded bg-gray-800 text-gray-100 border border-gray-700 focus:outline-none focus:border-gray-500"
-          data-testid="helper-search-type-select"
+          data-testid="objects-search-type-select"
         >
           <option value="">All types</option>
           <option value="process">Process</option>
@@ -104,14 +104,14 @@ function closePanel() {
           type="text"
           placeholder="Description"
           class="w-full px-2 py-1.5 text-sm rounded bg-gray-800 text-gray-100 placeholder-gray-500 border border-gray-700 focus:outline-none focus:border-gray-500"
-          data-testid="helper-search-description-input"
+          data-testid="objects-search-description-input"
         >
         <div class="flex gap-2">
           <button
             type="button"
             class="flex-1 px-3 py-1.5 text-sm rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
             :disabled="isLoading"
-            data-testid="helper-search-search-button"
+            data-testid="objects-search-search-button"
             @click="onSearch"
           >
             Search
@@ -119,7 +119,7 @@ function closePanel() {
           <button
             type="button"
             class="px-3 py-1.5 text-sm rounded border border-gray-600 text-gray-300 hover:bg-gray-800"
-            data-testid="helper-search-clear-button"
+            data-testid="objects-search-clear-button"
             @click="onClear"
           >
             Clear
@@ -142,7 +142,7 @@ function closePanel() {
         v-else
         class="w-full text-sm"
         aria-label="Object search results"
-        data-testid="helper-search-results"
+        data-testid="objects-search-results"
         @keydown.down.prevent="move(1)"
         @keydown.up.prevent="move(-1)"
         @keydown.esc="closePanel"
@@ -160,7 +160,7 @@ function closePanel() {
             :key="`${result.name}-${result.type}`"
             class="cursor-pointer hover:bg-gray-800 focus:outline-none focus:bg-gray-800"
             :class="index === activeIndex ? 'bg-gray-800' : ''"
-            :data-testid="`helper-search-result-row-${result.name}`"
+            :data-testid="`objects-search-result-row-${result.name}`"
             tabindex="0"
             :aria-selected="index === activeIndex"
             @click="choose(index)"
@@ -194,7 +194,7 @@ function closePanel() {
       <div
         v-if="activeResult"
         class="mt-2 rounded border border-gray-800 bg-gray-800/60 px-2 py-2"
-        data-testid="helper-search-active-detail"
+        data-testid="objects-search-active-detail"
       >
         <div class="text-xs text-gray-300 font-mono">
           {{ activeResult.inputType || '—' }}
