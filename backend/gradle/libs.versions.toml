@@ -29,6 +29,10 @@ resilience4j = "2.3.0"
 squigglesql = "4.2.1"
 
 jgit = "7.1.0.202411261347-r"
+jtokkit = "1.1.0"
+junit4 = "4.13.2"
+junit-vintage = "5.12.2"
+gradle-tooling-api = "9.4.1"
 
 # plugins
 spring-boot = "4.0.4"
@@ -57,6 +61,16 @@ avaje-jsonb = { module = "io.avaje:avaje-jsonb", version.ref = "avaje-jsonb" }
 avaje-jsonb-generator = { module = "io.avaje:avaje-jsonb-generator", version.ref = "avaje-jsonb-generator" }
 orgjson = { module = "org.json:json", version.ref = "orgjson" }
 jackson-databind3 = { module = "tools.jackson.core:jackson-databind", version = "3.1.0" }
+
+# -- JTokkit (token counting for LLM/AI adapters in starter) --
+jtokkit = { module = "com.knuddels:jtokkit", version.ref = "jtokkit" }
+
+# -- Gradle Tooling API (used by dsl-builder to invoke gradle) --
+gradle-tooling-api = { module = "org.gradle:gradle-tooling-api", version.ref = "gradle-tooling-api" }
+
+# -- JUnit 4 + Vintage engine (IntelliJ Platform test framework requires legacy junit.framework.TestCase support) --
+junit4 = { module = "junit:junit", version.ref = "junit4" }
+junit-vintage-engine = { module = "org.junit.vintage:junit-vintage-engine", version.ref = "junit-vintage" }
 
 # -- JavaParser (used by dsl-codegen and dsl preprocessing) --
 javaparser = { module = "com.github.javaparser:javaparser-core", version.ref = "javaparser" }
@@ -96,6 +110,7 @@ spring-boot-starter-test = { module = "org.springframework.boot:spring-boot-star
 spring-boot-starter-jdbc = { module = "org.springframework.boot:spring-boot-starter-jdbc" }
 spring-boot-starter-data-jdbc = { module = "org.springframework.boot:spring-boot-starter-data-jdbc" }
 spring-boot-starter-data-redis = { module = "org.springframework.boot:spring-boot-starter-data-redis" }
+spring-boot-starter-webmvc-test = { module = "org.springframework.boot:spring-boot-starter-webmvc-test" }
 spring-boot-starter-amqp = { module = "org.springframework.boot:spring-boot-starter-amqp" }
 spring-boot-starter-oauth2-resource-server = { module = "org.springframework.boot:spring-boot-starter-oauth2-resource-server" }
 spring-security-test = { module = "org.springframework.security:spring-security-test" }

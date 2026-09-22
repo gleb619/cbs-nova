@@ -10,13 +10,13 @@ dependencies {
   implementation "cbs.nova:dsl:${project.version}"
   implementation libs.jgit
   implementation libs.caffeine
-  implementation 'org.gradle:gradle-tooling-api:9.4.1'
+  implementation libs.gradle.tooling.api
   implementation libs.bundles.spring.web
   implementation libs.springdoc.openapi.starter.webmvc.ui
   compileOnly libs.lombok
   annotationProcessor libs.lombok
   testImplementation libs.bundles.spring.test
-  testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+  testImplementation libs.spring.boot.starter.webmvc.test
 }
 
 springBoot {
