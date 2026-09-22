@@ -34,4 +34,9 @@ public final class ScheduleModels {
           String definition,
           String cron) {
   }
+
+  public record UpdateScheduleRequest(
+          String cron,
+          @Nullable String timezone) {
+  }
 }

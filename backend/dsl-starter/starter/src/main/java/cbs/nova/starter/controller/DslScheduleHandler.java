@@ -8,6 +8,7 @@ import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.model.ScheduleModels.CreateScheduleRequest;
 import cbs.nova.starter.model.ScheduleModels.ScheduleActionRequest;
 import cbs.nova.starter.model.ScheduleModels.ScheduleSummary;
+import cbs.nova.starter.model.ScheduleModels.UpdateScheduleRequest;
 import cbs.nova.starter.service.DslAuditService;
 import cbs.nova.starter.service.DslScheduleService;
 import lombok.AllArgsConstructor;
@@ -40,6 +41,7 @@ public class DslScheduleHandler {
   static final String ACTION_SCHEDULE_DELETE = "SCHEDULE_DELETE";
   static final String ACTION_SCHEDULE_PAUSE = "schedule.paused";
   static final String ACTION_SCHEDULE_RESUME = "schedule.resumed";
+  static final String ACTION_SCHEDULE_UPDATE = "schedule.updated";
 
   private final DslScheduleService service;
   private final ObjectMapper objectMapper;
@@ -131,6 +133,28 @@ public class DslScheduleHandler {
               .body(Map.of("resumed", true));
     } catch (RuntimeException e) {
       audit(request, ACTION_SCHEDULE_RESUME, definition, StarterConstants.OUTCOME_FAILURE,
+              Map.of("error", String.valueOf(e.getMessage())));
+      throw e;
+    }
+  }
+
+  public ServerResponse update(ServerRequest request) throws IOException {
+    String definition = request.pathVariable("definition");
+    UpdateScheduleRequest body = parse(request, UpdateScheduleRequest.class);
+    if (body == null) {
+      audit(request, ACTION_SCHEDULE_UPDATE, definition, StarterConstants.OUTCOME_FAILURE,
+              Map.of("error", "request body is required"));
+      return badRequest("Request body is required");
+    }
+    try {
+      service.update(definition, body);
+      audit(request, ACTION_SCHEDULE_UPDATE, definition, StarterConstants.OUTCOME_SUCCESS,
+              Map.of("definition", definition));
+      return ServerResponse.ok()
+              .contentType(MediaType.APPLICATION_JSON)
+              .body(Map.of("updated", true));
+    } catch (RuntimeException e) {
+      audit(request, ACTION_SCHEDULE_UPDATE, definition, StarterConstants.OUTCOME_FAILURE,
               Map.of("error", String.valueOf(e.getMessage())));
       throw e;
     }

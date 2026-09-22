@@ -19,6 +19,7 @@ import cbs.nova.starter.exception.DefinitionNotFoundException;
 import cbs.nova.starter.exception.ScheduleConflictException;
 import cbs.nova.starter.model.ScheduleModels.CreateScheduleRequest;
 import cbs.nova.starter.model.ScheduleModels.ScheduleSummary;
+import cbs.nova.starter.model.ScheduleModels.UpdateScheduleRequest;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import io.temporal.client.schedules.Schedule;
@@ -31,7 +32,11 @@ import io.temporal.client.schedules.ScheduleOptions;
 import io.temporal.client.schedules.ScheduleSpec;
 import io.temporal.client.schedules.ScheduleState;
 import io.temporal.client.schedules.ScheduleAlreadyRunningException;
+import io.temporal.client.schedules.ScheduleActionStartWorkflow;
 import io.temporal.client.schedules.SchedulePolicy;
+import io.temporal.client.schedules.ScheduleUpdate;
+import io.temporal.client.schedules.ScheduleUpdateInput;
+import io.temporal.workflow.Functions;
 import io.temporal.workflow.WorkflowInterface;
 import io.temporal.workflow.WorkflowMethod;
 import org.junit.jupiter.api.BeforeEach;
@@ -273,6 +278,57 @@ class DslScheduleServiceTest {
     doThrow(new StatusRuntimeException(Status.NOT_FOUND)).when(handle).unpause(any());
 
     assertThatThrownBy(() -> service.resume("LoanDisbursement", null))
+            .isInstanceOf(DefinitionNotFoundException.class)
+            .hasMessageContaining("No published definition: LoanDisbursement");
+  }
+
+  @Test
+  void updateChangesCronAndTimezoneInPlace() {
+    when(scheduleClient.getHandle("sched-LoanDisbursement")).thenReturn(handle);
+
+    Schedule current = mock(Schedule.class);
+    when(current.getAction()).thenReturn(mock(ScheduleActionStartWorkflow.class));
+    SchedulePolicy policy = mock(SchedulePolicy.class);
+    when(current.getPolicy()).thenReturn(policy);
+    ScheduleDescription currentDescription = mock(ScheduleDescription.class);
+    when(currentDescription.getSchedule()).thenReturn(current);
+    ScheduleUpdateInput input = new ScheduleUpdateInput(currentDescription);
+
+    service.update("LoanDisbursement",
+            new UpdateScheduleRequest("30 14 * * 1", "Asia/Almaty"));
+
+    ArgumentCaptor<Functions.Func1<ScheduleUpdateInput, ScheduleUpdate>> captor = ArgumentCaptor
+            .forClass(Functions.Func1.class);
+    verify(handle).update(captor.capture());
+    ScheduleUpdate update = captor.getValue().apply(input);
+    ScheduleSpec spec = update.getSchedule().getSpec();
+    assertThat(spec.getCronExpressions()).containsExactly("30 14 * * 1");
+    assertThat(spec.getTimeZoneName()).isEqualTo("Asia/Almaty");
+  }
+
+  @Test
+  void updateThrowsIllegalArgumentForBlankCron() {
+    assertThatThrownBy(() -> service
+            .update("LoanDisbursement", new UpdateScheduleRequest("   ", "UTC")))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("cron is required");
+  }
+
+  @Test
+  void updateThrowsIllegalArgumentForBadTimezone() {
+    assertThatThrownBy(() -> service
+            .update("LoanDisbursement", new UpdateScheduleRequest("0 9 * * *", "Mars/Phobos")))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("Invalid timezone");
+  }
+
+  @Test
+  void updateThrowsDefinitionNotFoundWhenScheduleMissing() {
+    when(scheduleClient.getHandle("sched-LoanDisbursement")).thenReturn(handle);
+    doThrow(new StatusRuntimeException(Status.NOT_FOUND)).when(handle).update(any());
+
+    assertThatThrownBy(() -> service
+            .update("LoanDisbursement", new UpdateScheduleRequest("0 9 * * *", "UTC")))
             .isInstanceOf(DefinitionNotFoundException.class)
             .hasMessageContaining("No published definition: LoanDisbursement");
   }

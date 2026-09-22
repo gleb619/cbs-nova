@@ -12,6 +12,7 @@ import cbs.nova.starter.exception.ScheduleConflictException;
 import cbs.nova.starter.model.ScheduleModels.CreateScheduleRequest;
 import cbs.nova.starter.model.ScheduleModels.CreateScheduleResponse;
 import cbs.nova.starter.model.ScheduleModels.ScheduleSummary;
+import cbs.nova.starter.model.ScheduleModels.UpdateScheduleRequest;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import io.temporal.api.enums.v1.ScheduleOverlapPolicy;
@@ -27,6 +28,7 @@ import io.temporal.client.schedules.ScheduleListDescription;
 import io.temporal.client.schedules.ScheduleOptions;
 import io.temporal.client.schedules.SchedulePolicy;
 import io.temporal.client.schedules.ScheduleSpec;
+import io.temporal.client.schedules.ScheduleUpdate;
 import io.temporal.client.WorkflowOptions;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -143,6 +145,48 @@ public class DslScheduleService {
     log.info("[DSL schedules] created {} for definition '{}' with cron '{}' in timezone '{}'",
             scheduleId, definition, cron, timezone);
     return new CreateScheduleResponse(scheduleId, definition, cron);
+  }
+
+  /**
+   * Updates an existing schedule's cron/timezone in place via {@link ScheduleHandle#update(...)},
+   * reusing {@code create}'s cron/timezone validation. If the schedule does not exist, a
+   * {@link DefinitionNotFoundException} is thrown so the caller receives a 404.
+   */
+  public void update(@NonNull String definition, UpdateScheduleRequest request) {
+    String cron = requireNonBlank(request.cron(), "cron is required");
+    String timezone = request.timezone() != null && !request.timezone().isBlank()
+            ? request.timezone()
+            : DEFAULT_TIMEZONE;
+    try {
+      ZoneId.of(timezone);
+    } catch (DateTimeException e) {
+      throw new IllegalArgumentException("Invalid timezone: " + timezone, e);
+    }
+
+    String scheduleId = scheduleIdFor(definition);
+    ScheduleHandle handle = scheduleClient.getHandle(scheduleId);
+    try {
+      handle.update(input -> {
+        Schedule current = input.getDescription().getSchedule();
+        ScheduleSpec spec = ScheduleSpec.newBuilder()
+                .setCronExpressions(List.of(cron))
+                .setTimeZoneName(timezone)
+                .build();
+        Schedule updated = Schedule.newBuilder()
+                .setAction(current.getAction())
+                .setSpec(spec)
+                .setPolicy(current.getPolicy())
+                .build();
+        return new ScheduleUpdate(updated);
+      });
+      log.info("[DSL schedules] updated {} for definition '{}' with cron '{}' in timezone '{}'",
+              scheduleId, definition, cron, timezone);
+    } catch (Exception e) {
+      if (isNotFound(e)) {
+        throw new DefinitionNotFoundException(definition);
+      }
+      throw e;
+    }
   }
 
   /**

@@ -10,6 +10,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -21,6 +22,7 @@ import cbs.nova.starter.exception.DefinitionNotFoundException;
 import cbs.nova.starter.exception.ScheduleConflictException;
 import cbs.nova.starter.model.ScheduleModels.CreateScheduleResponse;
 import cbs.nova.starter.model.ScheduleModels.ScheduleSummary;
+import cbs.nova.starter.model.ScheduleModels.UpdateScheduleRequest;
 import cbs.nova.starter.service.DslScheduleService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -359,6 +361,77 @@ class DslScheduleResourceTest {
     assertThat(result.total()).isEqualTo(1);
     var row = result.items().get(0);
     assertThat(row.action()).isEqualTo("schedule.resumed");
+    assertThat(row.outcome()).isEqualTo("FAILURE");
+    assertThat(row.target()).isEqualTo("ghost");
+  }
+
+  @Test
+  void updateReturns200AndCallsServiceWithCronAndTimezone() throws Exception {
+    mockMvc.perform(patch("/api/dsl/schedules/A")
+            .contentType("application/json")
+            .content("{\"cron\":\"30 14 * * 1\",\"timezone\":\"Asia/Almaty\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.updated").value(true));
+
+    verify(service).update(eq("A"),
+            any(UpdateScheduleRequest.class));
+  }
+
+  @Test
+  void updateReturns400WhenBodyMissing() throws Exception {
+    mockMvc.perform(patch("/api/dsl/schedules/A"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("BAD_REQUEST"));
+  }
+
+  @Test
+  void updateReturns404ForMissingSchedule() throws Exception {
+    doThrow(new DefinitionNotFoundException("ghost")).when(service).update(eq("ghost"),
+            any(UpdateScheduleRequest.class));
+
+    mockMvc.perform(patch("/api/dsl/schedules/ghost")
+            .contentType("application/json")
+            .content("{\"cron\":\"0 9 * * *\",\"timezone\":\"UTC\"}"))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.code").value("NOT_FOUND"));
+  }
+
+  @Test
+  void updateWritesAuditRowOnSuccess() throws Exception {
+    var audit = AuditTestSupport.h2();
+    mockMvc = mockMvc(new DslScheduleHandler(service, objectMapper,
+            AuditTestSupport.providerOf(audit.service())));
+
+    mockMvc.perform(patch("/api/dsl/schedules/A")
+            .contentType("application/json")
+            .content("{\"cron\":\"0 9 * * *\",\"timezone\":\"UTC\"}"))
+            .andExpect(status().isOk());
+
+    var result = audit.service().search(null, 0, 10);
+    assertThat(result.total()).isEqualTo(1);
+    var row = result.items().get(0);
+    assertThat(row.action()).isEqualTo("schedule.updated");
+    assertThat(row.outcome()).isEqualTo("SUCCESS");
+    assertThat(row.target()).isEqualTo("A");
+  }
+
+  @Test
+  void updateWritesAuditRowOnFailure() throws Exception {
+    var audit = AuditTestSupport.h2();
+    doThrow(new DefinitionNotFoundException("ghost")).when(service).update(eq("ghost"),
+            any(UpdateScheduleRequest.class));
+    mockMvc = mockMvc(new DslScheduleHandler(service, objectMapper,
+            AuditTestSupport.providerOf(audit.service())));
+
+    mockMvc.perform(patch("/api/dsl/schedules/ghost")
+            .contentType("application/json")
+            .content("{\"cron\":\"0 9 * * *\",\"timezone\":\"UTC\"}"))
+            .andExpect(status().isNotFound());
+
+    var result = audit.service().search(null, 0, 10);
+    assertThat(result.total()).isEqualTo(1);
+    var row = result.items().get(0);
+    assertThat(row.action()).isEqualTo("schedule.updated");
     assertThat(row.outcome()).isEqualTo("FAILURE");
     assertThat(row.target()).isEqualTo("ghost");
   }
