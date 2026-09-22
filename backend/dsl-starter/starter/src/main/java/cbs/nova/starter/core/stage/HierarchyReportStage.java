@@ -76,9 +76,12 @@ public final class HierarchyReportStage implements DslPipeStage {
     return Result.success(report);
   }
 
-  // TODO: now objects alwasys have a compensations. Fallback is NoOp impl, so compensation is
-  // nonnull from now
-  @Deprecated(forRemoval = true)
+  // Compensation is reported based on whether the registered process/transaction carries a
+  // compensation handler — ProcessBuilder/TransactionBuilder do NOT apply a NoOp fallback at
+  // build time (rawCompensation returns null when none was configured), and the runners
+  // (DefaultTransactionRunner, ProcessCompensationHandler, GlobalManager) skip applying a
+  // compensation when compensationLogic() is null. So hasCompensation mirrors the explicit
+  // user-provided compensation wiring; the null check is load-bearing.
   private boolean resolveCompensation(@NonNull GlobalManager gm, @NonNull String name,
           DslDescriptor dslDesc) {
     if (dslDesc == null) {
