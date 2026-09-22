@@ -70,6 +70,12 @@ public class DslScheduleRouterConfiguration {
           "DSL Schedules"}, responses = {
               @ApiResponse(responseCode = "200", description = "Schedule deleted", content = @Content(mediaType = "application/json", schema = @Schema(implementation = Map.class))),
               @ApiResponse(responseCode = "400", description = "Invalid definition name", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+          })),
+      @RouterOperation(path = "/api/dsl/schedules/{definition}", beanClass = DslScheduleHandler.class, beanMethod = "update", method = RequestMethod.PATCH, operation = @Operation(operationId = "updateSchedule", summary = "Update the cron/timezone of the Temporal schedule for a DSL definition", tags = {
+          "DSL Schedules"}, responses = {
+              @ApiResponse(responseCode = "200", description = "Schedule updated", content = @Content(mediaType = "application/json", schema = @Schema(implementation = Map.class))),
+              @ApiResponse(responseCode = "400", description = "Invalid cron or timezone", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+              @ApiResponse(responseCode = "404", description = "Schedule not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
           }))
   })
   public RouterFunction<ServerResponse> dslScheduleRouter(DslScheduleHandler handler) {
@@ -78,6 +84,7 @@ public class DslScheduleRouterConfiguration {
             .POST("/api/dsl/schedules", handler::create)
             .POST("/api/dsl/schedules/{definition}/pause", handler::pause)
             .POST("/api/dsl/schedules/{definition}/resume", handler::resume)
+            .PATCH("/api/dsl/schedules/{definition}", handler::update)
             .DELETE("/api/dsl/schedules/{definition}", handler::delete)
             .build();
   }
