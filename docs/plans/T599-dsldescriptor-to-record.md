@@ -66,3 +66,12 @@ backend/dsl-platform/gradlew -p backend/dsl-platform test
 backend/dsl-starter/gradlew -p backend/dsl-starter :starter:test
 make lint
 ```
+
+## Retry Notes (attempt 1, 2026-09-22)
+
+`at` agent (cline) got stuck in a broken tool-call loop (170+ near-identical `echo` probe commands
+in one iteration, no real progress) and left `DslDescriptor.java` with a half-finished edit
+(Lombok annotations stripped but not yet converted to record syntax — did not compile). Discarded
+the partial edit and reset the file. No evidence the record-conversion approach itself is wrong;
+this looks like an agent-specific execution glitch, not a task-design problem. Retry with a
+different agent.
