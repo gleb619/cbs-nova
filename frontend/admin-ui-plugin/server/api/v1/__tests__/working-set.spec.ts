@@ -10,20 +10,15 @@ vi.mock('~/server/utils/httpClient', () => ({
 
 let queryValue: Record<string, unknown> = {}
 
-type RouterParamMap = Record<string, string | undefined>
-let routerParams: RouterParamMap = {}
-
 vi.mock('h3', async (importOriginal) => {
   const actual = await importOriginal<typeof import('h3')>()
   return {
     ...actual,
-    getRouterParam: (_event: unknown, name: string) => routerParams[name],
-    readBody: async (_event: unknown) => ({}),
     getQuery: (_event: unknown) => queryValue,
   }
 })
 
-const searchHandler = (await import('../dsl/objects/search.get')).default
+const workingSetHandler = (await import('../dsl/working-set.get')).default
 
 const fakeEvent = {} as Parameters<typeof proxyToBackendMock>[0]
 
@@ -31,27 +26,26 @@ beforeEach(() => {
   proxyToBackendMock.mockReset()
   proxyToBackendMock.mockResolvedValue([])
   queryValue = {}
-  routerParams = {}
 })
 
-describe('dsl/objects/search.get', () => {
-  it('forwards page, size, query, mode, and type params to /api/dsl/objects/search', async () => {
+describe('dsl/working-set.get', () => {
+  it('forwards page, size, query, mode, and type params to /api/dsl/working-set', async () => {
     queryValue = { page: '2', size: '50', query: 'Loan', mode: 'exact', type: 'process' }
 
-    await searchHandler(fakeEvent)
+    await workingSetHandler(fakeEvent)
 
     expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
-    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/objects/search', {
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/working-set', {
       query: { page: '2', size: '50', query: 'Loan', mode: 'exact', type: 'process' },
     })
   })
 
   it('omits blank query params from the backend request', async () => {
-    queryValue = { page: '', size: '  ', query: 'valid', mode: '' }
+    queryValue = { page: '', size: '  ', query: 'valid', mode: '', type: ' ' }
 
-    await searchHandler(fakeEvent)
+    await workingSetHandler(fakeEvent)
 
-    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/objects/search', {
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/working-set', {
       query: { query: 'valid' },
     })
   })
@@ -59,9 +53,9 @@ describe('dsl/objects/search.get', () => {
   it('sends empty query object when no filters provided', async () => {
     queryValue = {}
 
-    await searchHandler(fakeEvent)
+    await workingSetHandler(fakeEvent)
 
-    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/objects/search', {
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/working-set', {
       query: {},
     })
   })
@@ -69,9 +63,9 @@ describe('dsl/objects/search.get', () => {
   it('ignores unexpected query params', async () => {
     queryValue = { query: 'Helper', unknown: 'ignored' }
 
-    await searchHandler(fakeEvent)
+    await workingSetHandler(fakeEvent)
 
-    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/objects/search', {
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/working-set', {
       query: { query: 'Helper' },
     })
   })

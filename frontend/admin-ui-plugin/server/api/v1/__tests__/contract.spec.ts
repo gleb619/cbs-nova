@@ -38,7 +38,7 @@ const executionsStatsFixture = loadFixture('executions-stats.json')
 const schedulesFixture = loadFixture('schedules.json')
 
 // Import handlers after mocks are hoisted.
-const workingSetHandler = (await import('../generated/routes/dsl/working-set.get')).default
+const workingSetHandler = (await import('../dsl/working-set.get')).default
 const draftsHandler = (await import('../generated/routes/dsl/drafts.get')).default
 const executionsHandler = (await import('../executions/index.get')).default
 const executionsStatsHandler = (await import('../generated/routes/executions/stats.get')).default

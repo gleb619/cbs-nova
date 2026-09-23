@@ -18,6 +18,17 @@ describe('useDslApi', () => {
     expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/working-set')
   })
 
+  it('getDefinitions forwards filters to /api/v1/dsl/working-set', async () => {
+    fetchMock.mockResolvedValueOnce([])
+
+    const api = useDslApi()
+    await api.getDefinitions({ page: 1, size: 25, query: 'Foo', mode: 'fuzzy', type: 'process' })
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/working-set', {
+      query: { page: '1', size: '25', query: 'Foo', mode: 'fuzzy', type: 'process' },
+    })
+  })
+
   it('listHelpers delegates to /api/v1/dsl/objects/search', async () => {
     fetchMock.mockResolvedValueOnce({ items: [], total: 0, offset: 0, limit: 100 })
 
@@ -38,6 +49,22 @@ describe('useDslApi', () => {
 
     expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/objects/search', {
       query: { page: '1', size: '25', query: 'Foo', mode: 'fuzzy' },
+    })
+  })
+
+  it('searchObjects forwards type and omits blank type', async () => {
+    fetchMock.mockResolvedValueOnce({ items: [], total: 0, offset: 0, limit: 50 })
+    fetchMock.mockResolvedValueOnce({ items: [], total: 0, offset: 0, limit: 50 })
+
+    const api = useDslApi()
+    await api.searchObjects({ type: 'process' })
+    await api.searchObjects({ type: '  ' })
+
+    expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/v1/dsl/objects/search', {
+      query: { type: 'process' },
+    })
+    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/v1/dsl/objects/search', {
+      query: {},
     })
   })
 

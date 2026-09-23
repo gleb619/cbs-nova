@@ -490,9 +490,52 @@ class DslIntrospectionServiceTest {
     registerSampleHelper("BarHelper", "other", String.class, String.class);
 
     PageResponse<ObjectSearchResult> page = service.searchObjects(0, 10, "bar",
-            cbs.nova.starter.model.DslIntrospectionModels.ObjectSearchMode.ALL);
+            cbs.nova.starter.model.DslIntrospectionModels.ObjectSearchMode.ALL, null);
 
     assertThat(page.total()).isEqualTo(2);
+  }
+
+  @Test
+  void searchObjectsFiltersByDslTypeProcess() {
+    GlobalManager.globalManager().registerProcess(
+            Dsl.process("PType").execute(ctx -> Result.success("ok")).build());
+    GlobalManager.globalManager().registerTransaction(
+            Dsl.transaction("TType").execute(ctx -> Result.success("ok")).build());
+    registerSampleHelper("HType", "helper desc", String.class, Integer.class);
+
+    PageResponse<ObjectSearchResult> page = service.searchObjects(0, 50, null,
+            cbs.nova.starter.model.DslIntrospectionModels.ObjectSearchMode.ALL, DslType.PROCESS);
+
+    assertThat(page.items()).extracting("name").containsExactly("PType");
+    assertThat(page.total()).isEqualTo(1);
+  }
+
+  @Test
+  void searchObjectsFiltersByDslTypeOtherMatchesHelpers() {
+    GlobalManager.globalManager().registerProcess(
+            Dsl.process("POther").execute(ctx -> Result.success("ok")).build());
+    registerSampleHelper("HOther", "helper desc", String.class, Integer.class);
+
+    PageResponse<ObjectSearchResult> page = service.searchObjects(0, 50, null,
+            cbs.nova.starter.model.DslIntrospectionModels.ObjectSearchMode.ALL, DslType.OTHER);
+
+    assertThat(page.items()).extracting("name").containsExactly("HOther");
+    assertThat(page.total()).isEqualTo(1);
+  }
+
+  @Test
+  void workingSetFiltersByQueryTextAndDslType() {
+    GlobalManager.globalManager().registerProcess(
+            Dsl.process("AlphaProcess").execute(ctx -> Result.success("ok")).build());
+    GlobalManager.globalManager().registerProcess(
+            Dsl.process("BetaProcess").execute(ctx -> Result.success("ok")).build());
+    registerSampleHelper("AlphaHelper", "helper desc", String.class, Integer.class);
+
+    var response = service.workingSet(new ObjectSearchQuery(0, 50, "alpha",
+            cbs.nova.starter.model.DslIntrospectionModels.ObjectSearchMode.EXACT, DslType.PROCESS));
+
+    assertThat(response.items()).extracting("name").containsExactly("AlphaProcess");
+    assertThat(response.total()).isEqualTo(1);
   }
 
   private void registerSampleHelper(String name, String description, Class<?> inputType,

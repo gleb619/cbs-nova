@@ -125,6 +125,19 @@ class DslIntrospectionResourceTest {
   }
 
   @Test
+  void objectsSearchFiltersByType() throws Exception {
+    registerSampleEntities();
+
+    mockMvc.perform(get("/api/dsl/objects/search")
+            .param("type", "PROCESS")
+            .accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.items.length()").value(1))
+            .andExpect(jsonPath("$.total").value(1))
+            .andExpect(jsonPath("$.items[0].name").value("LoanDisbursement"));
+  }
+
+  @Test
   void objectsSearchDefaultsPageAndSize() throws Exception {
     registerSampleEntities();
 
@@ -260,11 +273,11 @@ class DslIntrospectionResourceTest {
   }
 
   @Test
-  void workingSetEndpointFiltersByName() throws Exception {
+  void workingSetEndpointFiltersByQuery() throws Exception {
     registerSampleEntities();
 
     mockMvc.perform(get("/api/dsl/working-set")
-            .param("name", "sample")
+            .param("query", "sample")
             .accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.items.length()").value(3))
@@ -280,7 +293,7 @@ class DslIntrospectionResourceTest {
     registerSampleEntities();
 
     mockMvc.perform(get("/api/dsl/working-set")
-            .param("type", "helper")
+            .param("type", "OTHER")
             .accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.items.length()").value(1))
@@ -289,11 +302,11 @@ class DslIntrospectionResourceTest {
   }
 
   @Test
-  void workingSetEndpointFiltersByDescription() throws Exception {
+  void workingSetEndpointFiltersByQueryMatchingDescription() throws Exception {
     registerSampleEntities();
 
     mockMvc.perform(get("/api/dsl/working-set")
-            .param("description", "greeting")
+            .param("query", "greeting")
             .accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.items.length()").value(2))
@@ -305,10 +318,10 @@ class DslIntrospectionResourceTest {
     registerSampleEntities();
 
     mockMvc.perform(get("/api/dsl/working-set")
-            .param("name", "sample")
-            .param("type", "function")
-            .param("limit", "1")
-            .param("offset", "0")
+            .param("query", "sample")
+            .param("type", "FUNCTION")
+            .param("size", "1")
+            .param("page", "0")
             .accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.items.length()").value(1))
@@ -319,13 +332,13 @@ class DslIntrospectionResourceTest {
   }
 
   @Test
-  void workingSetEndpointPaginatesWithOffset() throws Exception {
+  void workingSetEndpointPaginatesWithPageAndSize() throws Exception {
     registerSampleEntities();
 
     mockMvc.perform(get("/api/dsl/working-set")
-            .param("name", "sample")
-            .param("limit", "1")
-            .param("offset", "1")
+            .param("query", "sample")
+            .param("size", "1")
+            .param("page", "1")
             .accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.items.length()").value(1))
