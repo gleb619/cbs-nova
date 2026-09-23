@@ -1,0 +1,27 @@
+[extend]
+useDefault = true
+
+# Gitleaks secret-scan config for cbs-nova.
+#
+# Strategy: extend the upstream default ruleset unchanged, then allowlist only
+# the specific unit-test fixture files that carry dummy values. Allowlisting is
+# file-scoped only (no global regexes): a secret anywhere else still trips the
+# job. Each entry names the fixture and the dummy it excuses. Keep new
+# fixtures' dummies out of production paths; add a commented path here only.
+
+[allowlist]
+description = "test-fixture dummies in dsl-starter unit tests"
+paths = [
+  # DslRuntimeResourceTest#runAcceptsValidIdempotencyKeyAndUsesDerivedRunId
+  # sends an `Idempotency-Key: valid-key_1.0` header.
+  '''backend/dsl-starter/starter/src/test/java/cbs/nova/starter/DslRuntimeResourceTest\.java''',
+  # JdbcApiKeyRepositoryTest#insertThenFindByHashRoundTripsRow builds a
+  # DslApiKeyEntity with a 64-char dummy hex key (`0123456789abcdef` × 4).
+  '''backend/dsl-starter/starter/src/test/java/cbs/nova/starter/persistence/JdbcApiKeyRepositoryTest\.java''',
+  # RateLimitFilterTest#jwtSubIsUsedAsPrincipal uses a hand-rolled dummy
+  # JWT (header.payload.signature all hard-coded) for rate-limit testing.
+  '''backend/dsl-starter/starter/src/test/java/cbs/nova/starter/web/RateLimitFilterTest\.java''',
+  # docs/backend-knowledge.md (deleted; history only, commits b228c8e4/ecdbe2f6) shows
+  # truncated `eyJhbGciOiJSUzI1NiIs...` access_token/TOKEN placeholders in a curl walkthrough.
+  '''docs/backend-knowledge\.md''',
+]
