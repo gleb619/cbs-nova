@@ -1345,7 +1345,6 @@ export interface components {
             version?: string;
         };
         DslDescriptor: {
-            hasSideEffects?: boolean;
             heartbeatTimeout?: string;
             objectDescriptor?: components["schemas"]["ObjectDescriptor"];
             parameters?: components["schemas"]["ParameterDescriptor"][];
@@ -1379,10 +1378,8 @@ export interface components {
         };
         ExecutableDescriptor: {
             description?: string;
-            hasSideEffects?: boolean;
             name?: string;
             parameters?: components["schemas"]["ParameterDescriptor"][];
-            previewBehavior?: string;
         };
         ExecutionDto: {
             completedAt?: string;
@@ -1435,6 +1432,21 @@ export interface components {
             description?: string;
             markdown?: string;
             name?: string;
+        };
+        HelperCatalogEntry: {
+            description?: string;
+            inputType?: string;
+            name?: string;
+            outputType?: string;
+        };
+        HelperCatalogPage: {
+            items?: components["schemas"]["HelperCatalogEntry"][];
+            /** Format: int32 */
+            limit?: number;
+            /** Format: int32 */
+            offset?: number;
+            /** Format: int64 */
+            total?: number;
         };
         HelperSearchResult: {
             description?: string;
@@ -1644,21 +1656,6 @@ export interface components {
             offset?: number;
             /** Format: int64 */
             total?: number;
-        };
-        HelperCatalogEntry: {
-            name?: string;
-            description?: string;
-            inputType?: string;
-            outputType?: string;
-        };
-        HelperCatalogPage: {
-            items?: components["schemas"]["HelperCatalogEntry"][];
-            /** Format: int64 */
-            total?: number;
-            /** Format: int32 */
-            offset?: number;
-            /** Format: int32 */
-            limit?: number;
         };
     };
     responses: never;

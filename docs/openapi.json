@@ -358,9 +358,6 @@
       },
       "DslDescriptor": {
         "properties": {
-          "hasSideEffects": {
-            "type": "boolean"
-          },
           "heartbeatTimeout": {
             "type": "string"
           },
@@ -450,9 +447,6 @@
           "description": {
             "type": "string"
           },
-          "hasSideEffects": {
-            "type": "boolean"
-          },
           "name": {
             "type": "string"
           },
@@ -461,9 +455,6 @@
               "$ref": "#/components/schemas/ParameterDescriptor"
             },
             "type": "array"
-          },
-          "previewBehavior": {
-            "type": "string"
           }
         },
         "type": "object"
@@ -605,6 +596,46 @@
           },
           "name": {
             "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "HelperCatalogEntry": {
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "inputType": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "outputType": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "HelperCatalogPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/HelperCatalogEntry"
+            },
+            "type": "array"
+          },
+          "limit": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "offset": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "total": {
+            "format": "int64",
+            "type": "integer"
           }
         },
         "type": "object"
@@ -1195,46 +1226,6 @@
           }
         },
         "type": "object"
-      },
-      "HelperCatalogEntry": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string"
-          },
-          "description": {
-            "type": "string"
-          },
-          "inputType": {
-            "type": "string"
-          },
-          "outputType": {
-            "type": "string"
-          }
-        }
-      },
-      "HelperCatalogPage": {
-        "type": "object",
-        "properties": {
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/HelperCatalogEntry"
-            }
-          },
-          "total": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "offset": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "limit": {
-            "type": "integer",
-            "format": "int32"
-          }
-        }
       }
     }
   },
