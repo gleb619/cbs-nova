@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { useDslApi } from '@cbs/admin-ui-plugin/composables/useDslApi'
 import { useExecutions } from '@cbs/admin-ui-plugin/composables/useExecutions'
 import { useExecutionsApi } from '@cbs/admin-ui-plugin/composables/useExecutionsApi'
 import { resolveStalePollMs } from '@cbs/admin-ui-plugin/composables/useStalePollInterval'
@@ -33,24 +32,24 @@ const {
   cancelExecution,
 } = useExecutions()
 
-type DetailTab = 'diagram' | 'payload' | 'metadata' | 'logs' | 'errors' | 'transactions'
+type DetailTab = 'payload' | 'metadata' | 'logs' | 'errors' | 'transactions'
 
-const activeTab = ref<DetailTab>('diagram')
+const activeTab = ref<DetailTab>('payload')
 
 // T296 — the backend has no log source for production runs today, so the
 // Logs tab only appears when the detail payload actually carries one. The
 // user's tab choice is kept in `activeTab`; `visibleTab` falls back to
-// 'diagram' while the chosen tab is not available, so the panel never goes
+// 'payload' while the chosen tab is not available, so the panel never goes
 // blank when e.g. logs disappear after a refresh.
 const hasLogs = computed(() => (selectedExecution.value?.logs?.length ?? 0) > 0)
 const availableTabs = computed<DetailTab[]>(() => {
-  const tabs: DetailTab[] = ['diagram', 'payload', 'metadata', 'transactions']
+  const tabs: DetailTab[] = ['payload', 'metadata', 'transactions']
   if (hasLogs.value) tabs.push('logs')
   tabs.push('errors')
   return tabs
 })
 const visibleTab = computed<DetailTab>(() =>
-  availableTabs.value.includes(activeTab.value) ? activeTab.value : 'diagram',
+  availableTabs.value.includes(activeTab.value) ? activeTab.value : 'payload',
 )
 
 // T461 — live polling on the detail page is user-controllable and persisted
@@ -132,31 +131,6 @@ const regularSteps = computed(() => traceSteps.value.filter((s) => !s.isCompensa
 const temporal = useTemporalLink()
 const workflowLink = computed(() => temporal.workflowUrl(selectedExecution.value?.workflowId ?? ''))
 
-// T266: completed runs don't carry a diagram field — fetch one for the
-// underlying process definition by name and bind it to the Diagram tab.
-const diagram = ref<string | undefined>(selectedExecution.value?.mermaidDiagram)
-const diagramError = ref<string | null>(null)
-const diagramLoading = ref(false)
-
-async function loadDiagram() {
-  const processName = selectedExecution.value?.entity
-  if (!processName) {
-    diagram.value = undefined
-    return
-  }
-  diagramLoading.value = true
-  diagramError.value = null
-  try {
-    const response = await useDslApi().getProcessDiagram(processName, 'mermaid')
-    diagram.value = response?.diagram
-  } catch (err) {
-    diagramError.value = (err as Error)?.message ?? 'Failed to load diagram'
-    diagram.value = undefined
-  } finally {
-    diagramLoading.value = false
-  }
-}
-
 const transactions = ref<TransactionExecutionDto[]>([])
 const transactionsLoading = ref(false)
 const transactionsError = ref<string | null>(null)
@@ -187,9 +161,6 @@ function onTabSelect(tab: DetailTab) {
   }
 }
 
-if (selectedExecution.value?.entity) {
-  await loadDiagram()
-}
 // T293 — map the execution's stored mode enum to the runner's mode strings.
 // RunnerMode is 'preview' | 'run' | 'explain'; ExecutionMode is
 // 'PREVIEW' | 'RUN' | 'EXPLAIN'. Unknown values fall back to the default.
@@ -372,13 +343,12 @@ onUnmounted(() => {
                            visibleTab === tab ? 'border-accent-500 text-accent-500' : 'border-transparent text-ink-muted hover:text-ink']"
             @click="onTabSelect(tab)"
           >
-            {{ tab === 'diagram' ? 'Diagram' : tab === 'payload' ? 'I/O Payload' : tab === 'transactions' ? 'Transactions' : tab[0].toUpperCase() + tab.slice(1) }}
+            {{ tab === 'payload' ? 'I/O Payload' : tab === 'transactions' ? 'Transactions' : tab[0].toUpperCase() + tab.slice(1) }}
           </button>
         </div>
         <div class="p-4">
-          <ExecutionsDiagramTab v-if="visibleTab === 'diagram'" :diagram="diagram" />
           <ExecutionsPayloadTab
-            v-else-if="visibleTab === 'payload'"
+            v-if="visibleTab === 'payload'"
             :input="selectedExecution.input"
             :output="selectedExecution.output"
           />

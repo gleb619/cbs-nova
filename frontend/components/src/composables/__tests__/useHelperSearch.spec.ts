@@ -22,11 +22,11 @@ describe('useHelperSearch', () => {
 
     const { filters, execute, results, isLoading } = useHelperSearch({ fetch, debounceMs: 0 })
 
-    filters.value.name = 'H1'
+    filters.value.query = 'H1'
     await execute()
 
     expect(isLoading.value).toBe(false)
-    expect(fetch).toHaveBeenCalledWith({ name: 'H1', type: '', description: '' })
+    expect(fetch).toHaveBeenCalledWith({ query: 'H1', mode: 'exact' })
     expect(results.value).toHaveLength(1)
     expect(results.value[0].name).toBe('H1')
   })
@@ -58,11 +58,11 @@ describe('useHelperSearch', () => {
 
     const { filters, search, isLoading } = useHelperSearch({ fetch, debounceMs: 200 })
 
-    filters.value.name = 'a'
+    filters.value.query = 'a'
     search()
-    filters.value.name = 'ab'
+    filters.value.query = 'ab'
     search()
-    filters.value.name = 'abc'
+    filters.value.query = 'abc'
     search()
 
     expect(isLoading.value).toBe(false)
@@ -72,7 +72,7 @@ describe('useHelperSearch', () => {
     await nextTick()
 
     expect(fetch).toHaveBeenCalledTimes(1)
-    expect(fetch).toHaveBeenCalledWith({ name: 'abc', type: '', description: '' })
+    expect(fetch).toHaveBeenCalledWith({ query: 'abc', mode: 'exact' })
 
     vi.useRealTimers()
   })
@@ -84,10 +84,14 @@ describe('useHelperSearch', () => {
 
     expect(hasActiveFilters.value).toBe(false)
 
-    filters.value.type = 'helper'
+    filters.value.mode = 'fuzzy'
     expect(hasActiveFilters.value).toBe(true)
 
-    filters.value.type = ' '
+    filters.value.mode = 'exact'
+    filters.value.query = 'helper'
+    expect(hasActiveFilters.value).toBe(true)
+
+    filters.value.query = ' '
     expect(hasActiveFilters.value).toBe(false)
   })
 
@@ -99,13 +103,13 @@ describe('useHelperSearch', () => {
       debounceMs: 0,
     })
 
-    filters.value = { name: 'x', type: 'y', description: 'z' }
+    filters.value = { query: 'x', mode: 'fuzzy' }
     await clearFilters()
 
-    expect(filters.value).toEqual({ name: '', type: '', description: '' })
+    expect(filters.value).toEqual({ query: '', mode: 'exact' })
     expect(results.value).toEqual([])
     expect(error.value).toBeNull()
-    expect(fetch).toHaveBeenCalledWith({ name: '', type: '', description: '' })
+    expect(fetch).toHaveBeenCalledWith({ query: '', mode: 'exact' })
   })
 })
 
@@ -113,10 +117,10 @@ describe('useHelperSearch initialFilters', () => {
   it('seeds filters from initialFilters when provided', () => {
     const { filters, hasActiveFilters } = useHelperSearch({
       fetch: vi.fn().mockResolvedValue([]),
-      initialFilters: { name: 'Foo', type: 'process', description: 'Bar' },
+      initialFilters: { query: 'Foo', mode: 'fuzzy' },
     })
 
-    expect(filters.value).toEqual({ name: 'Foo', type: 'process', description: 'Bar' })
+    expect(filters.value).toEqual({ query: 'Foo', mode: 'fuzzy' })
     expect(hasActiveFilters.value).toBe(true)
   })
 
@@ -125,15 +129,15 @@ describe('useHelperSearch initialFilters', () => {
       fetch: vi.fn().mockResolvedValue([]),
     })
 
-    expect(filters.value).toEqual({ name: '', type: '', description: '' })
+    expect(filters.value).toEqual({ query: '', mode: 'exact' })
   })
 
   it('tolerates a partial initialFilters object', () => {
     const { filters } = useHelperSearch({
       fetch: vi.fn().mockResolvedValue([]),
-      initialFilters: { type: 'helper' },
+      initialFilters: { mode: 'fuzzy' },
     })
 
-    expect(filters.value).toEqual({ name: '', type: 'helper', description: '' })
+    expect(filters.value).toEqual({ query: '', mode: 'fuzzy' })
   })
 })

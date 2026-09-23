@@ -184,7 +184,6 @@ All paths are relative to the application root. The reload and draft routers are
 | POST   | `/api/dsl/explain/{name}`           | Static-analysis report for a DSL process               | `DslRequest` body → `ExplainReport`                                                            |
 | GET    | `/api/dsl/processes`                | List registered process names                          | `NamesResponse`                                                                                |
 | GET    | `/api/dsl/processes/{name}`         | Metadata for a single process                          | `ProcessDetail`                                                                                |
-| GET    | `/api/dsl/processes/{name}/diagram` | Render a diagram; optional query `format=mermaid       | plantuml                                                                                       |bpmn` | `ProcessDiagramDto` |
 | GET    | `/api/dsl/transactions`             | List registered transaction names                      | `NamesResponse`                                                                                |
 | GET    | `/api/dsl/transactions/{name}`      | Metadata for a single transaction                      | `TransactionDetail`                                                                            |
 | GET    | `/api/dsl/objects/search`           | Search helpers, processes, transactions, and functions | query params `name`, `type`, `description` → `HelperSearchResult[]`                            |

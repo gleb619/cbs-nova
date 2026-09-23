@@ -1,5 +1,7 @@
 package cbs.nova.starter.model;
 
+import cbs.nova.starter.model.DslIntrospectionModels.ObjectSearchMode;
+
 public final class RequestQueryModels {
 
   private RequestQueryModels() {
@@ -12,15 +14,11 @@ public final class RequestQueryModels {
           String correlationId) {
   }
 
-  public record IntrospectionSearchQuery(
-          String name,
-          String type,
-          String description) {
-  }
-
-  public record HelperCatalogQuery(
-          String text,
-          String mode) {
+  public record ObjectSearchQuery(
+          int page,
+          int size,
+          String query,
+          ObjectSearchMode mode) {
   }
 
   public record WorkingSetQuery(

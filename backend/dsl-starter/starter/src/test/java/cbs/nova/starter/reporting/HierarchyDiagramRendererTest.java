@@ -149,37 +149,4 @@ class HierarchyDiagramRendererTest {
     assertThat(renderer.plantUmlDiagram(report)).contains(":" + processName + ";");
     assertThat(renderer.bpmnXml(report)).contains("name=\"" + processName + "\"");
   }
-
-  @Test
-  void renderByNameReturnsMermaidForRegisteredProcess() {
-    String processName = "ByName-" + System.nanoTime();
-    GlobalManager.globalManager()
-            .registerProcess(Dsl.process(processName)
-                    .execute(ctx -> Result.success("ok"))
-                    .build());
-
-    String mermaid = renderer.renderByName(processName, "mermaid");
-
-    assertThat(mermaid).isNotBlank();
-    assertThat(mermaid).contains("Execute[" + processName + "]");
-  }
-
-  @Test
-  void renderByNameReturnsNullForUnknownEntity() {
-    assertThat(renderer.renderByName("nope-" + System.nanoTime(), "mermaid")).isNull();
-  }
-
-  @Test
-  void renderByNameFallsBackToMermaidForUnknownFormat() {
-    String processName = "Fallback-" + System.nanoTime();
-    GlobalManager.globalManager()
-            .registerProcess(Dsl.process(processName)
-                    .execute(ctx -> Result.success("ok"))
-                    .build());
-
-    String diagram = renderer.renderByName(processName, "graphviz");
-
-    assertThat(diagram).isNotBlank();
-    assertThat(diagram).contains("graph TD");
-  }
 }

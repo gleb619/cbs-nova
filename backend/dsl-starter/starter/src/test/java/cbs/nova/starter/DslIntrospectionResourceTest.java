@@ -18,12 +18,10 @@ import cbs.nova.starter.config.router.DslIntrospectionRouterConfiguration;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.controller.DslIntrospectionHandler;
 import cbs.nova.starter.converter.RequestQueryConverter;
-import cbs.nova.starter.reporting.HierarchyDiagramRenderer;
 import cbs.nova.starter.service.DslDefinitionStatusResolver;
 import cbs.nova.starter.service.DslGitStatusResolver;
 import cbs.nova.starter.service.DslIntrospectionService;
 import cbs.nova.starter.converter.DslIntrospectionMapper;
-import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -52,7 +50,7 @@ class DslIntrospectionResourceTest {
             new DslDefinitionStatusResolver(DslProperties.builder().build(),
                     new DslGitStatusResolver(DslProperties.builder().build(), null)));
     DslIntrospectionHandler handler = new DslIntrospectionHandler(service,
-            new HierarchyDiagramRenderer(), new RequestQueryConverter());
+            new RequestQueryConverter());
     DslIntrospectionRouterConfiguration router = new DslIntrospectionRouterConfiguration();
     mockMvc = MockMvcBuilders.routerFunctions(router.dslIntrospectionRouter(handler)).build();
   }
@@ -63,220 +61,77 @@ class DslIntrospectionResourceTest {
   }
 
   @Test
-  void processesEndpointReturnsRegisteredNames() throws Exception {
-    mockMvc
-            .perform(get("/api/dsl/processes").accept(MediaType.APPLICATION_JSON))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.names[0]").value("LoanDisbursement"));
-  }
+  void objectsSearchReturnsEmptyPageWhenNothingRegistered() throws Exception {
+    GlobalManager.globalManager().resetForTests();
 
-  @Test
-  void transactionsEndpointReturnsEmptyList() throws Exception {
-    mockMvc
-            .perform(get("/api/dsl/transactions").accept(MediaType.APPLICATION_JSON))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.names").isArray());
-  }
-
-  @Test
-  void helpersEndpointReturnsEmptyPage() throws Exception {
-    mockMvc
-            .perform(get("/api/dsl/helpers").accept(MediaType.APPLICATION_JSON))
+    mockMvc.perform(get("/api/dsl/objects/search").accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.items").isArray())
+            .andExpect(jsonPath("$.items.length()").value(0))
             .andExpect(jsonPath("$.total").value(0))
             .andExpect(jsonPath("$.offset").value(0))
-            .andExpect(jsonPath("$.limit").value(100));
+            .andExpect(jsonPath("$.limit").value(50));
   }
 
   @Test
-  void helpersEndpointReturnsCatalogForRegisteredHelpers() throws Exception {
-    registerSampleEntities();
-
-    mockMvc
-            .perform(get("/api/dsl/helpers").accept(MediaType.APPLICATION_JSON))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.items").isArray())
-            .andExpect(jsonPath("$.total").value(2))
-            .andExpect(jsonPath("$.offset").value(0))
-            .andExpect(jsonPath("$.limit").value(100))
-            .andExpect(jsonPath("$.items[?(@.name=='sampleHelper')].description")
-                    .value("A greeting helper"))
-            .andExpect(jsonPath("$.items[?(@.name=='sampleHelper')].inputType").value("String"))
-            .andExpect(jsonPath("$.items[?(@.name=='sampleHelper')].outputType").value("String"));
-  }
-
-  @Test
-  void helpersEndpointPaginatesAndSearches() throws Exception {
-    registerSampleEntities();
-
-    mockMvc.perform(get("/api/dsl/helpers")
-            .param("limit", "1")
-            .param("offset", "1")
-            .accept(MediaType.APPLICATION_JSON))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.items").isArray())
-            .andExpect(jsonPath("$.items.length()").value(1))
-            .andExpect(jsonPath("$.total").value(2))
-            .andExpect(jsonPath("$.offset").value(1))
-            .andExpect(jsonPath("$.limit").value(1));
-
-    mockMvc.perform(get("/api/dsl/helpers")
-            .param("search", "sample")
-            .param("searchMode", "exact")
-            .accept(MediaType.APPLICATION_JSON))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.total").value(2))
-            .andExpect(jsonPath("$.items[*].name")
-                    .value(Matchers.hasItems("sampleHelper", "sampleFunction")));
-
-    mockMvc.perform(get("/api/dsl/helpers")
-            .param("search", "greeting")
-            .param("searchMode", "exact")
-            .accept(MediaType.APPLICATION_JSON))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.total").value(1))
-            .andExpect(jsonPath("$.items[0].name").value("sampleHelper"));
-  }
-
-  @Test
-  void processDetailEndpointReturnsDetails() throws Exception {
-    mockMvc
-            .perform(get("/api/dsl/processes/LoanDisbursement").accept(MediaType.APPLICATION_JSON))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.name").value("LoanDisbursement"))
-            .andExpect(jsonPath("$.version").value("v1"))
-            .andExpect(jsonPath("$.hasCompensation").value(false))
-            .andExpect(jsonPath("$.inputSchema").exists());
-  }
-
-  @Test
-  void processDetailEndpointReturnsInputSchemaForParameterBasedProcess() throws Exception {
-    GlobalManager.globalManager()
-            .registerProcess(
-                    Dsl.process("ParamBasedProcess")
-                            .parameters(p -> p.number("amount"))
-                            .execute(ctx -> Result.success("ok")).build());
-
-    mockMvc
-            .perform(get("/api/dsl/processes/ParamBasedProcess").accept(MediaType.APPLICATION_JSON))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.inputSchema.type").value("object"))
-            .andExpect(jsonPath("$.inputSchema.properties.amount").exists());
-  }
-
-  @Test
-  void processDetailEndpointReturns404ForUnknown() throws Exception {
-    mockMvc
-            .perform(get("/api/dsl/processes/Unknown").accept(MediaType.APPLICATION_JSON))
-            .andExpect(status().isNotFound());
-  }
-
-  @Test
-  void processDiagramEndpointReturnsMermaidForKnownProcess() throws Exception {
-    mockMvc
-            .perform(get("/api/dsl/processes/LoanDisbursement/diagram")
-                    .accept(MediaType.APPLICATION_JSON))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.name").value("LoanDisbursement"))
-            .andExpect(jsonPath("$.format").value("mermaid"))
-            .andExpect(jsonPath("$.diagram").isNotEmpty());
-  }
-
-  @Test
-  void processDiagramEndpointHonoursFormatQueryParam() throws Exception {
-    mockMvc
-            .perform(get("/api/dsl/processes/LoanDisbursement/diagram")
-                    .param("format", "bpmn")
-                    .accept(MediaType.APPLICATION_JSON))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.format").value("bpmn"))
-            .andExpect(jsonPath("$.diagram").isNotEmpty());
-  }
-
-  @Test
-  void processDiagramEndpointReturns404ForUnknown() throws Exception {
-    mockMvc
-            .perform(get("/api/dsl/processes/Unknown/diagram")
-                    .accept(MediaType.APPLICATION_JSON))
-            .andExpect(status().isNotFound());
-  }
-
-  @Test
-  void transactionDetailEndpointReturns404ForUnknown() throws Exception {
-    mockMvc
-            .perform(get("/api/dsl/transactions/Unknown").accept(MediaType.APPLICATION_JSON))
-            .andExpect(status().isNotFound());
-  }
-
-  @Test
-  void helpersSearchReturnsMatchingEntitiesWithoutFilters() throws Exception {
+  void objectsSearchReturnsAllEntitiesWithoutFilters() throws Exception {
     registerSampleEntities();
 
     mockMvc.perform(get("/api/dsl/objects/search").accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$").isArray())
-            .andExpect(jsonPath("$[?(@.name=='LoanDisbursement' && @.type=='process')]").exists())
+            .andExpect(jsonPath("$.items").isArray())
+            .andExpect(jsonPath("$.items[?(@.name=='LoanDisbursement' && @.type=='process')]")
+                    .exists())
             .andExpect(
-                    jsonPath("$[?(@.name=='SampleTransaction' && @.type=='transaction')]").exists())
-            .andExpect(jsonPath("$[?(@.name=='sampleHelper' && @.type=='helper')]").exists())
-            .andExpect(jsonPath("$[?(@.name=='sampleFunction' && @.type=='function')]").exists());
+                    jsonPath("$.items[?(@.name=='SampleTransaction' && @.type=='transaction')]")
+                            .exists())
+            .andExpect(jsonPath("$.items[?(@.name=='sampleHelper' && @.type=='helper')]")
+                    .exists())
+            .andExpect(jsonPath("$.items[?(@.name=='sampleFunction' && @.type=='function')]")
+                    .exists())
+            .andExpect(jsonPath("$.total").value(4));
   }
 
   @Test
-  void objectsSearchFiltersByName() throws Exception {
+  void objectsSearchFiltersByQuery() throws Exception {
     registerSampleEntities();
 
     mockMvc.perform(get("/api/dsl/objects/search")
-            .param("name", "sample")
+            .param("query", "sample")
             .accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$").isArray())
-            .andExpect(jsonPath("$[?(@.name=='SampleTransaction')]").exists())
-            .andExpect(jsonPath("$[?(@.name=='sampleHelper')]").exists())
-            .andExpect(jsonPath("$[?(@.name=='sampleFunction')]").exists())
-            .andExpect(jsonPath("$[?(@.name=='LoanDisbursement')]").doesNotExist());
+            .andExpect(jsonPath("$.items").isArray())
+            .andExpect(jsonPath("$.items[?(@.name=='SampleTransaction')]").exists())
+            .andExpect(jsonPath("$.items[?(@.name=='sampleHelper')]").exists())
+            .andExpect(jsonPath("$.items[?(@.name=='sampleFunction')]").exists())
+            .andExpect(jsonPath("$.items[?(@.name=='LoanDisbursement')]").doesNotExist())
+            .andExpect(jsonPath("$.total").value(3));
   }
 
   @Test
-  void objectsSearchFiltersByType() throws Exception {
+  void objectsSearchPaginates() throws Exception {
     registerSampleEntities();
 
     mockMvc.perform(get("/api/dsl/objects/search")
-            .param("type", "helper")
+            .param("query", "sample")
+            .param("page", "1")
+            .param("size", "1")
             .accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$").isArray())
-            .andExpect(jsonPath("$[?(@.type=='helper')]").exists())
-            .andExpect(jsonPath("$[?(@.type!='helper')]").doesNotExist());
+            .andExpect(jsonPath("$.items.length()").value(1))
+            .andExpect(jsonPath("$.total").value(3))
+            .andExpect(jsonPath("$.offset").value(1))
+            .andExpect(jsonPath("$.limit").value(1));
   }
 
   @Test
-  void objectsSearchFiltersByDescription() throws Exception {
+  void objectsSearchDefaultsPageAndSize() throws Exception {
     registerSampleEntities();
 
-    mockMvc.perform(get("/api/dsl/objects/search")
-            .param("description", "greeting")
-            .accept(MediaType.APPLICATION_JSON))
+    mockMvc.perform(get("/api/dsl/objects/search").accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$").isArray())
-            .andExpect(jsonPath("$[?(@.name=='sampleHelper')]").exists())
-            .andExpect(jsonPath("$[?(@.name=='sampleFunction')]").exists())
-            .andExpect(jsonPath("$[?(@.name=='LoanDisbursement')]").doesNotExist());
-  }
-
-  @Test
-  void objectsSearchCombinesFilters() throws Exception {
-    registerSampleEntities();
-
-    mockMvc.perform(get("/api/dsl/objects/search")
-            .param("name", "sample")
-            .param("type", "function")
-            .accept(MediaType.APPLICATION_JSON))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$").isArray())
-            .andExpect(jsonPath("$[?(@.name=='sampleFunction')]").exists())
-            .andExpect(jsonPath("$[?(@.name=='sampleHelper')]").doesNotExist());
+            .andExpect(jsonPath("$.limit").value(50))
+            .andExpect(jsonPath("$.offset").value(0));
   }
 
   @Test
@@ -292,7 +147,8 @@ class DslIntrospectionResourceTest {
                     .exists())
             .andExpect(jsonPath("$.items[?(@.name=='sampleHelper' && @.type=='helper')]").exists())
             .andExpect(
-                    jsonPath("$.items[?(@.name=='sampleFunction' && @.type=='function')]").exists())
+                    jsonPath("$.items[?(@.name=='sampleFunction' && @.type=='function')]")
+                            .exists())
             .andExpect(jsonPath("$.total").value(4))
             .andExpect(jsonPath("$.offset").value(0))
             .andExpect(jsonPath("$.limit").value(50));

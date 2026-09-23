@@ -55,7 +55,7 @@ class RbacAuthorizationFilterTest {
   @ParameterizedTest
   @CsvSource({
       // (method, path) — exercised under ADMIN
-      "GET,    /api/dsl/processes",
+      "GET,    /api/dsl/objects/search",
       "POST,   /api/dsl/run/foo",
       "POST,   /api/dsl/preview/foo",
       "POST,   /api/dsl/explain/foo",
@@ -162,7 +162,7 @@ class RbacAuthorizationFilterTest {
 
   @ParameterizedTest
   @CsvSource({
-      "GET, /api/dsl/processes",
+      "GET, /api/dsl/objects/search",
       "GET, /api/dsl/definitions",
       "GET, /api/dsl/drafts/foo",
       "GET, /api/dsl/drafts/foo/history",
@@ -282,7 +282,7 @@ class RbacAuthorizationFilterTest {
     assertThat(filter.requiredRole(req("POST", "/api/dsl/change-requests/1/reject")))
             .isEqualTo(Role.AUTHOR);
     // reads
-    assertThat(filter.requiredRole(req("GET", "/api/dsl/processes"))).isEqualTo(Role.VIEWER);
+    assertThat(filter.requiredRole(req("GET", "/api/dsl/objects/search"))).isEqualTo(Role.VIEWER);
     assertThat(filter.requiredRole(req("GET", "/api/executions"))).isEqualTo(Role.VIEWER);
   }
 

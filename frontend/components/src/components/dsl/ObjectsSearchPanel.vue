@@ -10,19 +10,22 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  'update:name': [value: string]
-  'update:type': [value: string]
-  'update:description': [value: string]
+  'update:query': [value: string]
+  'update:mode': [value: string]
   search: []
   clear: []
   select: [result: ObjectSearchResult]
 }>()
 
 const open = defineModel<boolean>('open', { default: false })
+const query = defineModel<string>('query', { default: '' })
+const mode = defineModel<string>('mode', { default: 'exact' })
 
-const name = defineModel<string>('name', { default: '' })
-const type = defineModel<string>('type', { default: '' })
-const description = defineModel<string>('description', { default: '' })
+const MODES = [
+  { value: 'exact', label: 'Exact' },
+  { value: 'cosine', label: 'Cosine' },
+  { value: 'fuzzy', label: 'Fuzzy' },
+]
 
 function onSearch() {
   activeIndex.value = -1
@@ -82,30 +85,21 @@ function closePanel() {
     <div class="p-3 border-b border-gray-800">
       <div class="space-y-2">
         <input
-          v-model="name"
+          v-model="query"
           type="text"
-          placeholder="Name"
+          placeholder="Search query"
           class="w-full px-2 py-1.5 text-sm rounded bg-gray-800 text-gray-100 placeholder-gray-500 border border-gray-700 focus:outline-none focus:border-gray-500"
-          data-testid="objects-search-name-input"
+          data-testid="objects-search-query-input"
         >
         <select
-          v-model="type"
+          v-model="mode"
           class="w-full px-2 py-1.5 text-sm rounded bg-gray-800 text-gray-100 border border-gray-700 focus:outline-none focus:border-gray-500"
-          data-testid="objects-search-type-select"
+          data-testid="objects-search-mode-select"
         >
-          <option value="">All types</option>
-          <option value="process">Process</option>
-          <option value="transaction">Transaction</option>
-          <option value="helper">Helper</option>
-          <option value="function">Function</option>
+          <option v-for="m in MODES" :key="m.value" :value="m.value">
+            {{ m.label }}
+          </option>
         </select>
-        <input
-          v-model="description"
-          type="text"
-          placeholder="Description"
-          class="w-full px-2 py-1.5 text-sm rounded bg-gray-800 text-gray-100 placeholder-gray-500 border border-gray-700 focus:outline-none focus:border-gray-500"
-          data-testid="objects-search-description-input"
-        >
         <div class="flex gap-2">
           <button
             type="button"

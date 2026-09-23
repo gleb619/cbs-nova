@@ -9,7 +9,7 @@ import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.ExecutableDescriptor;
 import cbs.nova.dsl.helper.HelperSource;
 import cbs.nova.starter.model.DslIntrospectionModels.ConstructSchemaDto;
-import cbs.nova.starter.model.DslIntrospectionModels.HelperCatalogEntry;
+import cbs.nova.starter.model.DslIntrospectionModels.ObjectSearchResult;
 import cbs.nova.starter.model.DslIntrospectionModels.ConstructSchemaMode;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
@@ -54,44 +54,20 @@ class DslIntrospectionServiceTest {
   }
 
   @Test
-  void processesReturnsRegisteredNames() {
+  void searchObjectsReturnsAllEntityKinds() {
     GlobalManager.globalManager().registerProcess(
             Dsl.process("P1").execute(ctx -> Result.success("ok")).build());
-
-    assertThat(service.processes().names()).containsExactly("P1");
-  }
-
-  @Test
-  void processDetailIncludesVersionAndTaskQueue() {
-    GlobalManager.globalManager().registerProcess(
-            Dsl.process("P1")
-                    .version("v9")
-                    .taskQueue("q1")
-                    .input(String.class)
-                    .execute(ctx -> Result.success("ok"))
-                    .build());
-
-    var detail = service.processDetail("P1").orElseThrow();
-
-    assertThat(detail.version()).isEqualTo("v9");
-    assertThat(detail.taskQueue()).isEqualTo("q1");
-    assertThat(detail.inputType()).isEqualTo("String");
-    assertThat(detail.inputSchema()).isNotNull();
-  }
-
-  @Test
-  void transactionDetailIncludesTimeoutAndSchema() {
     GlobalManager.globalManager().registerTransaction(
-            Dsl.transaction("T1")
-                    .input(Integer.class)
-                    .execute(ctx -> Result.success("ok"))
-                    .build());
+            Dsl.transaction("T1").execute(ctx -> Result.success("ok")).build());
+    registerSampleHelper("H1", "helper desc", String.class, Integer.class);
 
-    var detail = service.transactionDetail("T1").orElseThrow();
+    PageResponse<ObjectSearchResult> page = service.searchObjects(0, 50, null,
+            cbs.nova.starter.model.DslIntrospectionModels.ObjectSearchMode.ALL);
 
-    assertThat(detail.startToCloseTimeoutMs()).isPositive();
-    assertThat(detail.inputType()).isEqualTo("Integer");
-    assertThat(detail.inputSchema()).isNotNull();
+    assertThat(page.items()).extracting("name", "type")
+            .contains(tuple("P1", "process"), tuple("T1", "transaction"),
+                    tuple("H1", "helper"));
+    assertThat(page.total()).isEqualTo(3);
   }
 
   @Test
@@ -449,12 +425,13 @@ class DslIntrospectionServiceTest {
   }
 
   @Test
-  void helpersReturnsPagedCatalog() {
+  void searchObjectsReturnsPagedResults() {
     registerSampleHelper("AHelper", "first helper", String.class, Integer.class);
     registerSampleHelper("BHelper", "second helper", String.class, String.class);
     registerSampleHelper("CHelper", "third helper", Long.class, Boolean.class);
 
-    PageResponse<HelperCatalogEntry> page = service.helpers(0, 2, null, null);
+    PageResponse<ObjectSearchResult> page = service.searchObjects(0, 2, null,
+            cbs.nova.starter.model.DslIntrospectionModels.ObjectSearchMode.ALL);
 
     assertThat(page.items()).hasSize(2);
     assertThat(page.total()).isEqualTo(3);
@@ -463,12 +440,13 @@ class DslIntrospectionServiceTest {
   }
 
   @Test
-  void helpersRespectsOffsetAndLimit() {
+  void searchObjectsRespectsPageAndSize() {
     registerSampleHelper("Alpha", "desc", String.class, Integer.class);
     registerSampleHelper("Beta", "desc", String.class, String.class);
     registerSampleHelper("Gamma", "desc", Long.class, Boolean.class);
 
-    PageResponse<HelperCatalogEntry> page = service.helpers(1, 1, null, null);
+    PageResponse<ObjectSearchResult> page = service.searchObjects(1, 1, null,
+            cbs.nova.starter.model.DslIntrospectionModels.ObjectSearchMode.ALL);
 
     assertThat(page.items()).hasSize(1);
     assertThat(page.items().get(0).name()).isEqualTo("Beta");
@@ -476,33 +454,40 @@ class DslIntrospectionServiceTest {
   }
 
   @Test
-  void helpersFiltersByName() {
+  void searchObjectsFiltersByQuery() {
     registerSampleHelper("FooHelper", "foo desc", String.class, Integer.class);
     registerSampleHelper("BarHelper", "bar desc", String.class, String.class);
 
-    PageResponse<HelperCatalogEntry> page = service.helpers(0, 10, "foo", "exact");
+    PageResponse<ObjectSearchResult> page = service.searchObjects(0, 10, "foo",
+            cbs.nova.starter.model.DslIntrospectionModels.ObjectSearchMode.EXACT);
 
     assertThat(page.total()).isEqualTo(1);
     assertThat(page.items().get(0).name()).isEqualTo("FooHelper");
   }
 
   @Test
-  void helpersFiltersByDescription() {
+  void searchObjectsMatchesDescriptionAndInputType() {
     registerSampleHelper("FooHelper", "matches this", String.class, Integer.class);
     registerSampleHelper("BarHelper", "no match", String.class, String.class);
 
-    PageResponse<HelperCatalogEntry> page = service.helpers(0, 10, "matches", "exact");
+    PageResponse<ObjectSearchResult> descPage = service.searchObjects(0, 10, "matches",
+            cbs.nova.starter.model.DslIntrospectionModels.ObjectSearchMode.EXACT);
+    assertThat(descPage.total()).isEqualTo(1);
+    assertThat(descPage.items().get(0).name()).isEqualTo("FooHelper");
 
-    assertThat(page.total()).isEqualTo(1);
-    assertThat(page.items().get(0).name()).isEqualTo("FooHelper");
+    PageResponse<ObjectSearchResult> typePage = service.searchObjects(0, 10, "Integer",
+            cbs.nova.starter.model.DslIntrospectionModels.ObjectSearchMode.EXACT);
+    assertThat(typePage.total()).isEqualTo(1);
+    assertThat(typePage.items().get(0).name()).isEqualTo("FooHelper");
   }
 
   @Test
-  void helpersFiltersByAllMode() {
+  void searchObjectsAllModeIgnoresQuery() {
     registerSampleHelper("FooHelper", "bar description", String.class, Integer.class);
     registerSampleHelper("BarHelper", "other", String.class, String.class);
 
-    PageResponse<HelperCatalogEntry> page = service.helpers(0, 10, "bar", "exact");
+    PageResponse<ObjectSearchResult> page = service.searchObjects(0, 10, "bar",
+            cbs.nova.starter.model.DslIntrospectionModels.ObjectSearchMode.ALL);
 
     assertThat(page.total()).isEqualTo(2);
   }

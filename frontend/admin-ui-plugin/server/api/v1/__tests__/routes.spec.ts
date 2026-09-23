@@ -91,16 +91,10 @@ const historyEntryHandler = (
 const historyDiffHandler = (
   await import('../generated/routes/dsl/drafts/[name]/history/[timestamp]/diff.get')
 ).default
-const helpersIndexHandler = (await import('../generated/routes/dsl/helpers.get')).default
-const processesIndexHandler = (await import('../generated/routes/dsl/processes.get')).default
-const processDetailHandler = (await import('../generated/routes/dsl/processes/[name].get')).default
-const transactionsIndexHandler = (await import('../generated/routes/dsl/transactions.get')).default
-const transactionDetailHandler = (await import('../generated/routes/dsl/transactions/[name].get'))
-  .default
+const searchObjectsHandler = (await import('../dsl/objects/search.get')).default
 const constructBodyHandler = (await import('../generated/routes/dsl/constructs/[name].get')).default
 const constructSchemaHandler = (await import('../dsl/schemas/[name].get')).default
 const objectStructureHandler = (await import('../dsl/structures/[name].get')).default
-const processDiagramHandler = (await import('../dsl/processes/[name]/diagram.get')).default
 const schedulesIndexHandler = (await import('../generated/routes/dsl/schedules.get')).default
 const schedulesCreateHandler = (await import('../generated/routes/dsl/schedules.post')).default
 const schedulesDeleteHandler = (
@@ -678,75 +672,6 @@ describe('info.get', () => {
   })
 })
 
-describe('dsl/helpers/index.get', () => {
-  it('GETs /api/dsl/helpers with no body and no opts', async () => {
-    await helpersIndexHandler(fakeEvent)
-    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
-    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/helpers')
-    expect(proxyToBackendMock.mock.calls[0][2]).toBeUndefined()
-  })
-
-  it('returns the backend NamesResponse verbatim', async () => {
-    const payload = { names: ['currentTimestamp', 'formatMessage'] }
-    proxyToBackendMock.mockResolvedValueOnce(payload)
-
-    const result = await helpersIndexHandler(fakeEvent)
-
-    expect(result).toEqual(payload)
-  })
-})
-
-describe('dsl/processes/index.get', () => {
-  it('GETs /api/dsl/processes with no body and no opts', async () => {
-    await processesIndexHandler(fakeEvent)
-    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
-    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/processes')
-    expect(proxyToBackendMock.mock.calls[0][2]).toBeUndefined()
-  })
-
-  it('returns the backend NamesResponse verbatim', async () => {
-    const payload = { names: ['LoanDisbursement', 'SampleProcess'] }
-    proxyToBackendMock.mockResolvedValueOnce(payload)
-
-    const result = await processesIndexHandler(fakeEvent)
-
-    expect(result).toEqual(payload)
-  })
-})
-
-describe('dsl/processes/[name].get', () => {
-  it('interpolates the :name router param into the backend path with GET (no opts)', async () => {
-    routerParams = { name: 'LoanDisbursement' }
-
-    await processDetailHandler(fakeEvent)
-
-    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
-    expect(proxyToBackendMock).toHaveBeenCalledWith(
-      fakeEvent,
-      '/api/dsl/processes/LoanDisbursement',
-    )
-    expect(proxyToBackendMock.mock.calls[0][2]).toBeUndefined()
-  })
-
-  it('returns the backend ProcessDetail verbatim', async () => {
-    routerParams = { name: 'SampleProcess' }
-    const payload = {
-      name: 'SampleProcess',
-      version: '1.0.0',
-      taskQueue: 'sample',
-      inputType: 'SampleIn',
-      outputType: 'SampleOut',
-      hasCompensation: false,
-      inputSchema: { type: 'object' },
-    }
-    proxyToBackendMock.mockResolvedValueOnce(payload)
-
-    const result = await processDetailHandler(fakeEvent)
-
-    expect(result).toEqual(payload)
-  })
-})
-
 describe('dsl/constructs/[name].get', () => {
   it('interpolates the :name router param into the backend path with GET (no opts)', async () => {
     routerParams = { name: 'LoanDisbursement' }
@@ -852,100 +777,27 @@ describe('dsl/structures/[name].get', () => {
   })
 })
 
-describe('dsl/transactions/index.get', () => {
-  it('GETs /api/dsl/transactions with no body and no opts', async () => {
-    await transactionsIndexHandler(fakeEvent)
-    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
-    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/transactions')
-    expect(proxyToBackendMock.mock.calls[0][2]).toBeUndefined()
-  })
+describe('dsl/objects/search.get', () => {
+  it('proxies the trimmed search params to the backend', async () => {
+    queryValue = { page: '2', size: '50', query: 'Loan', mode: 'exact' }
 
-  it('returns the backend NamesResponse verbatim', async () => {
-    const payload = { names: ['SampleTransaction'] }
-    proxyToBackendMock.mockResolvedValueOnce(payload)
-
-    const result = await transactionsIndexHandler(fakeEvent)
-
-    expect(result).toEqual(payload)
-  })
-})
-
-describe('dsl/transactions/[name].get', () => {
-  it('interpolates the :name router param into the backend path with GET (no opts)', async () => {
-    routerParams = { name: 'SampleTransaction' }
-
-    await transactionDetailHandler(fakeEvent)
+    await searchObjectsHandler(fakeEvent)
 
     expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
-    expect(proxyToBackendMock).toHaveBeenCalledWith(
-      fakeEvent,
-      '/api/dsl/transactions/SampleTransaction',
-    )
-    expect(proxyToBackendMock.mock.calls[0][2]).toBeUndefined()
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/objects/search', {
+      query: { page: '2', size: '50', query: 'Loan', mode: 'exact' },
+    })
   })
 
-  it('returns the backend TransactionDetail verbatim', async () => {
-    routerParams = { name: 'SampleTransaction' }
-    const payload = {
-      name: 'SampleTransaction',
-      version: '1.0.0',
-      taskQueue: 'sample',
-      inputType: 'SampleIn',
-      outputType: 'SampleOut',
-      hasCompensation: false,
-      startToCloseTimeoutMs: 30000,
-      inputSchema: { type: 'object' },
-    }
-    proxyToBackendMock.mockResolvedValueOnce(payload)
-
-    const result = await transactionDetailHandler(fakeEvent)
-
-    expect(result).toEqual(payload)
-  })
-})
-
-describe('dsl/processes/[name]/diagram.get', () => {
-  it('forwards the diagram request without a format query param by default', async () => {
-    routerParams = { name: 'LoanDisbursement' }
+  it('omits blank params from the backend query', async () => {
     queryValue = {}
 
-    await processDiagramHandler(fakeEvent)
+    await searchObjectsHandler(fakeEvent)
 
     expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
-    expect(proxyToBackendMock).toHaveBeenCalledWith(
-      fakeEvent,
-      '/api/dsl/processes/LoanDisbursement/diagram',
-    )
-    expect(proxyToBackendMock.mock.calls[0][2]).toBeUndefined()
-  })
-
-  it('forwards the format query param when provided', async () => {
-    routerParams = { name: 'LoanDisbursement' }
-    queryValue = { format: 'plantuml' }
-
-    await processDiagramHandler(fakeEvent)
-
-    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
-    expect(proxyToBackendMock).toHaveBeenCalledWith(
-      fakeEvent,
-      '/api/dsl/processes/LoanDisbursement/diagram',
-      { query: { format: 'plantuml' } },
-    )
-  })
-
-  it('returns the backend ProcessDiagramDto verbatim', async () => {
-    routerParams = { name: 'LoanDisbursement' }
-    queryValue = { format: 'mermaid' }
-    const payload = {
-      name: 'LoanDisbursement',
-      format: 'mermaid',
-      diagram: 'graph TD\n  Start([Start]) --> Execute[LoanDisbursement]',
-    }
-    proxyToBackendMock.mockResolvedValueOnce(payload)
-
-    const result = await processDiagramHandler(fakeEvent)
-
-    expect(result).toEqual(payload)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/objects/search', {
+      query: {},
+    })
   })
 })
 

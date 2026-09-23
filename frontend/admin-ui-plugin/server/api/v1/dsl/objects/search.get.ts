@@ -1,13 +1,14 @@
 import { defineEventHandler, getQuery } from 'h3'
 import { proxyToBackend } from '~/server/utils/httpClient'
+
 export default defineEventHandler(async (event) => {
-  const { name, type, description } = getQuery(event)
+  const { page, size, query, mode } = getQuery(event)
 
-  const query: Record<string, string> = {}
-  if (name && typeof name === 'string' && name.trim()) query.name = name.trim()
-  if (type && typeof type === 'string' && type.trim()) query.type = type.trim()
-  if (description && typeof description === 'string' && description.trim())
-    query.description = description.trim()
+  const backendQuery: Record<string, string> = {}
+  if (page && typeof page === 'string' && page.trim()) backendQuery.page = page.trim()
+  if (size && typeof size === 'string' && size.trim()) backendQuery.size = size.trim()
+  if (query && typeof query === 'string' && query.trim()) backendQuery.query = query.trim()
+  if (mode && typeof mode === 'string' && mode.trim()) backendQuery.mode = mode.trim()
 
-  return proxyToBackend(event, '/api/dsl/objects/search', { query })
+  return proxyToBackend(event, '/api/dsl/objects/search', { query: backendQuery })
 })

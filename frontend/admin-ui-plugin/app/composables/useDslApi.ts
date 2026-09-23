@@ -15,7 +15,7 @@ import {
   type NotificationRulePage,
   type NotificationTestPayload,
   type NotificationTestResult,
-  type HelpersResponse,
+  type HelperCatalogEntry,
   type ObjectStructureDto,
   type PromotionDefinition,
   type PromotionEnvironment,
@@ -35,14 +35,12 @@ import {
   explainDsl as bffExplainDsl,
   exportDefinitions as bffExportDefinitions,
   importDefinitions as bffImportDefinitions,
-  getProcessDiagram as bffGetProcessDiagram,
   listCompileDiagnostics as bffListCompileDiagnostics,
   listChangeRequests as bffListChangeRequests,
   listDefinitionTests as bffListDefinitionTests,
   listDefinitions as bffListDefinitions,
   listDomainEvents as bffListDomainEvents,
   listDrafts as bffListDrafts,
-  listHelpers as bffListHelpers,
   listPublishHistory as bffListPublishHistory,
   listSchedules as bffListSchedules,
   pauseSchedule as bffPauseSchedule,
@@ -83,15 +81,21 @@ export function useDslApi() {
   }
 
   async function searchObjects(
-    filters: { name?: string; type?: string; description?: string } = {},
+    params: { page?: number; size?: number; query?: string; mode?: string } = {},
   ) {
     const query: Record<string, string> = {}
-    if (filters.name?.trim()) query.name = filters.name.trim()
-    if (filters.type?.trim()) query.type = filters.type.trim()
-    if (filters.description?.trim()) query.description = filters.description.trim()
+    if (params.page !== undefined) query.page = String(params.page)
+    if (params.size !== undefined) query.size = String(params.size)
+    if (params.query?.trim()) query.query = params.query.trim()
+    if (params.mode?.trim()) query.mode = params.mode.trim()
 
-    log.debug('searching objects', { filters: query })
-    return bffSearchObjects({ query })
+    log.debug('searching objects', { query })
+    return bffSearchObjects({ query }) as Promise<{
+      items: HelperCatalogEntry[]
+      total: number
+      offset: number
+      limit: number
+    }>
   }
 
   async function preview(
@@ -180,14 +184,16 @@ export function useDslApi() {
   async function listHelpers(
     params: { search?: string; mode?: string; limit?: number; offset?: number } = {},
   ) {
-    const query: Record<string, string> = {}
-    if (params.search?.trim()) query.search = params.search.trim()
-    if (params.mode?.trim()) query.searchMode = params.mode.trim()
-    if (params.limit !== undefined) query.limit = String(params.limit)
-    if (params.offset !== undefined) query.offset = String(params.offset)
-
-    log.info('listHelpers request', { ...query })
-    return bffListHelpers({ query }) as Promise<HelpersResponse>
+    const page =
+      params.offset !== undefined && params.limit ? Math.floor(params.offset / params.limit) : 0
+    const size = params.limit ?? 100
+    log.info('listHelpers request', { ...params })
+    return searchObjects({
+      page,
+      size,
+      query: params.search,
+      mode: params.mode ?? 'exact',
+    })
   }
 
   async function exportDefinitions(includeDrafts?: boolean) {
@@ -511,14 +517,6 @@ export function useDslApi() {
     return bffDeleteSchedule(definition)
   }
 
-  async function getProcessDiagram(
-    name: string,
-    format: 'mermaid' | 'plantuml' | 'bpmn' = 'mermaid',
-  ) {
-    log.info('process diagram request', { name, format })
-    return bffGetProcessDiagram(name, { query: { format } })
-  }
-
   async function pauseSchedule(definition: string, reason?: string) {
     log.info('pauseSchedule request', { definition })
     return bffPauseSchedule(definition, { body: reason ? { reason } : undefined })
@@ -606,6 +604,5 @@ export function useDslApi() {
     fetchPromotionEnvironments,
     fetchPromotionDefinitions,
     promoteDefinitions,
-    getProcessDiagram,
   }
 }

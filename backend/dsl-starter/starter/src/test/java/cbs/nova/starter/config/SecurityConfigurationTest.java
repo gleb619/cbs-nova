@@ -77,10 +77,10 @@ class SecurityConfigurationTest {
 
     @Test
     void anonymousRequestToDslApiIsPermitted() throws Exception {
-      // /api/dsl/processes is read-only and unauthenticated by default.
-      HttpResponse<String> response = httpGet("/api/dsl/processes");
+      // /api/dsl/objects/search is read-only and unauthenticated by default.
+      HttpResponse<String> response = httpGet("/api/dsl/objects/search");
       assertThat(response.statusCode())
-              .as("default mode must serve /api/dsl/processes anonymously (must not be 401)")
+              .as("default mode must serve /api/dsl/objects/search anonymously (must not be 401)")
               .isNotEqualTo(401);
     }
 
@@ -136,7 +136,7 @@ class SecurityConfigurationTest {
 
     @Test
     void anonymousRequestToProtectedPathIsChallengedWith401() throws Exception {
-      HttpResponse<String> response = httpGet("/api/dsl/processes");
+      HttpResponse<String> response = httpGet("/api/dsl/objects/search");
       assertThat(response.statusCode())
               .as("missing/invalid token on protected path must return 401, not 500")
               .isEqualTo(401);
@@ -170,7 +170,7 @@ class SecurityConfigurationTest {
       MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext)
               .apply(springSecurity())
               .build();
-      mockMvc.perform(get("/api/dsl/processes").with(jwt()))
+      mockMvc.perform(get("/api/dsl/objects/search").with(jwt()))
               .andExpect(status().isOk());
     }
 
@@ -179,7 +179,7 @@ class SecurityConfigurationTest {
       MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext)
               .apply(springSecurity())
               .build();
-      mockMvc.perform(get("/api/dsl/processes"))
+      mockMvc.perform(get("/api/dsl/objects/search"))
               .andExpect(status().isUnauthorized())
               .andExpect(header().exists(HttpHeaders.WWW_AUTHENTICATE));
     }

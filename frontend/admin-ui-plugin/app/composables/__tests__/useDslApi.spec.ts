@@ -18,35 +18,37 @@ describe('useDslApi', () => {
     expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/definitions')
   })
 
-  it('listHelpers GETs /api/v1/dsl/helpers', async () => {
-    fetchMock.mockResolvedValueOnce({ names: [], helpers: [] })
+  it('listHelpers delegates to /api/v1/dsl/objects/search', async () => {
+    fetchMock.mockResolvedValueOnce({ items: [], total: 0, offset: 0, limit: 100 })
 
     const api = useDslApi()
-    const result = await api.listHelpers()
-
-    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/helpers')
-    expect(result).toEqual({ names: [], helpers: [] })
-  })
-
-  it('searchObjects GETs /api/v1/dsl/objects/search with all filters', async () => {
-    fetchMock.mockResolvedValueOnce([])
-
-    const api = useDslApi()
-    await api.searchObjects({ name: 'Foo', type: 'helper', description: 'bar' })
+    const result = await api.listHelpers({ search: 'foo', mode: 'exact', limit: 10, offset: 10 })
 
     expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/objects/search', {
-      query: { name: 'Foo', type: 'helper', description: 'bar' },
+      query: { page: '1', size: '10', query: 'foo', mode: 'exact' },
+    })
+    expect(result).toEqual({ items: [], total: 0, offset: 0, limit: 100 })
+  })
+
+  it('searchObjects GETs /api/v1/dsl/objects/search with page, size, query and mode', async () => {
+    fetchMock.mockResolvedValueOnce({ items: [], total: 0, offset: 0, limit: 50 })
+
+    const api = useDslApi()
+    await api.searchObjects({ page: 1, size: 25, query: 'Foo', mode: 'fuzzy' })
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/objects/search', {
+      query: { page: '1', size: '25', query: 'Foo', mode: 'fuzzy' },
     })
   })
 
-  it('searchObjects omits blank filters from the query', async () => {
-    fetchMock.mockResolvedValueOnce([])
+  it('searchObjects omits blank and undefined params from the query', async () => {
+    fetchMock.mockResolvedValueOnce({ items: [], total: 0, offset: 0, limit: 50 })
 
     const api = useDslApi()
-    await api.searchObjects({ name: '', type: 'process' })
+    await api.searchObjects({ query: '', mode: 'exact' })
 
     expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/objects/search', {
-      query: { type: 'process' },
+      query: { mode: 'exact' },
     })
   })
 

@@ -45,8 +45,8 @@ describe('ObjectsSearchPanel', () => {
     const dialog = wrapper.get('[role="dialog"]')
     expect(dialog.attributes('aria-label')).toBe('Object search')
 
-    expect(wrapper.find('input[placeholder="Name"]').exists()).toBe(true)
-    expect(wrapper.find('input[placeholder="Description"]').exists()).toBe(true)
+    expect(wrapper.find('input[placeholder="Search query"]').exists()).toBe(true)
+    expect(wrapper.find('select').exists()).toBe(true)
     expect(wrapper.find('select').exists()).toBe(true)
     expect(wrapper.findAll('button').some((b) => b.text() === 'Search')).toBe(true)
     expect(wrapper.findAll('button').some((b) => b.text() === 'Clear')).toBe(true)
@@ -80,28 +80,20 @@ describe('ObjectsSearchPanel', () => {
     expect(wrapper.text()).toContain('→')
   })
 
-  it('emits update:name when the name input changes', async () => {
+  it('emits update:query when the query input changes', async () => {
     wrapper = mountPanel({ results: [], open: true, isLoading: false })
 
-    await wrapper.find('input[placeholder="Name"]').setValue('Pay')
+    await wrapper.find('input[placeholder="Search query"]').setValue('Pay')
 
-    expect(wrapper.emitted('update:name')!.at(-1)).toEqual(['Pay'])
+    expect(wrapper.emitted('update:query')!.at(-1)).toEqual(['Pay'])
   })
 
-  it('emits update:type when the type select changes', async () => {
+  it('emits update:mode when the mode select changes', async () => {
     wrapper = mountPanel({ results: [], open: true, isLoading: false })
 
-    await wrapper.find('select').setValue('process')
+    await wrapper.find('select').setValue('fuzzy')
 
-    expect(wrapper.emitted('update:type')!.at(-1)).toEqual(['process'])
-  })
-
-  it('emits update:description when the description input changes', async () => {
-    wrapper = mountPanel({ results: [], open: true, isLoading: false })
-
-    await wrapper.find('input[placeholder="Description"]').setValue('helper')
-
-    expect(wrapper.emitted('update:description')!.at(-1)).toEqual(['helper'])
+    expect(wrapper.emitted('update:mode')!.at(-1)).toEqual(['fuzzy'])
   })
 
   it('emits search when the Search button is clicked', async () => {

@@ -69,11 +69,11 @@ public final class DslIntrospectionModels {
           String outputType) {
   }
 
-  public enum HelperSearchMode {
-    EXACT, COSINE, FUZZY;
+  public enum ObjectSearchMode {
+    EXACT, COSINE, FUZZY, ALL;
 
     @JsonCreator
-    public static HelperSearchMode from(@Nullable String value) {
+    public static ObjectSearchMode from(@Nullable String value) {
       if (value == null || value.isBlank()) {
         return EXACT;
       }
@@ -86,30 +86,7 @@ public final class DslIntrospectionModels {
     }
   }
 
-  public record ProcessDetail(
-          String name,
-          String version,
-          String taskQueue,
-          String inputType,
-          String outputType,
-          boolean hasCompensation,
-          String description,
-          Map<String, Object> inputSchema) {
-  }
-
-  public record TransactionDetail(
-          String name,
-          String version,
-          String taskQueue,
-          String inputType,
-          String outputType,
-          boolean hasCompensation,
-          String description,
-          long startToCloseTimeoutMs,
-          Map<String, Object> inputSchema) {
-  }
-
-  public record HelperSearchResult(
+  public record ObjectSearchResult(
           String name,
           String type,
           String description,
@@ -129,12 +106,6 @@ public final class DslIntrospectionModels {
           String type,
           @JsonInclude(JsonInclude.Include.NON_NULL) String code,
           List<StepDto> steps) {
-  }
-
-  public record ProcessDiagramDto(
-          String name,
-          String format,
-          String diagram) {
   }
 
   @JsonInclude(JsonInclude.Include.NON_NULL)

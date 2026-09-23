@@ -44,10 +44,10 @@ test('clicking a list row navigates to a rendered execution detail page', async 
   await page.waitForURL(/\/executions\/.+/)
 
   // The detail must actually render: the summary card, the run-again button,
-  // or the tab bar (Diagram is always present). `.first()` tolerates more
+  // or the tab bar (I/O Payload is always present). `.first()` tolerates more
   // than one being visible.
   const summary = page.getByTestId('execution-summary')
   const runAgain = page.getByTestId('run-again-button')
-  const diagramTab = page.getByRole('button', { name: 'Diagram', exact: true })
-  await expect(summary.or(runAgain).or(diagramTab).first()).toBeVisible({ timeout: 15_000 })
+  const payloadTab = page.getByRole('button', { name: 'I/O Payload', exact: true })
+  await expect(summary.or(runAgain).or(payloadTab).first()).toBeVisible({ timeout: 15_000 })
 })

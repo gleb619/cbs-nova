@@ -93,36 +93,6 @@ const expectedProxies: readonly ExpectedProxy[] = [
   },
   {
     method: 'GET',
-    backendPath: '/api/dsl/helpers',
-    bffPath: '/api/v1/dsl/helpers',
-  },
-  {
-    method: 'GET',
-    backendPath: '/api/dsl/processes',
-    bffPath: '/api/v1/dsl/processes',
-  },
-  {
-    method: 'GET',
-    backendPath: '/api/dsl/processes/{name}',
-    bffPath: '/api/v1/dsl/processes/{name}',
-  },
-  {
-    method: 'GET',
-    backendPath: '/api/dsl/processes/{name}/diagram',
-    bffPath: '/api/v1/dsl/processes/{name}/diagram',
-  },
-  {
-    method: 'GET',
-    backendPath: '/api/dsl/transactions',
-    bffPath: '/api/v1/dsl/transactions',
-  },
-  {
-    method: 'GET',
-    backendPath: '/api/dsl/transactions/{name}',
-    bffPath: '/api/v1/dsl/transactions/{name}',
-  },
-  {
-    method: 'GET',
     backendPath: '/api/dsl/constructs/{name}',
     bffPath: '/api/v1/dsl/constructs/{name}',
   },

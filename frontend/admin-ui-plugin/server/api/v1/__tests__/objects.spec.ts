@@ -35,24 +35,24 @@ beforeEach(() => {
 })
 
 describe('dsl/objects/search.get', () => {
-  it('forwards name, type, and description query params to /api/dsl/objects/search', async () => {
-    queryValue = { name: 'Foo', type: 'helper', description: 'bar baz' }
+  it('forwards page, size, query, and mode params to /api/dsl/objects/search', async () => {
+    queryValue = { page: '2', size: '50', query: 'Loan', mode: 'exact' }
 
     await searchHandler(fakeEvent)
 
     expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
     expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/objects/search', {
-      query: { name: 'Foo', type: 'helper', description: 'bar baz' },
+      query: { page: '2', size: '50', query: 'Loan', mode: 'exact' },
     })
   })
 
   it('omits blank query params from the backend request', async () => {
-    queryValue = { name: '  ', type: '', description: 'valid' }
+    queryValue = { page: '', size: '  ', query: 'valid', mode: '' }
 
     await searchHandler(fakeEvent)
 
     expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/objects/search', {
-      query: { description: 'valid' },
+      query: { query: 'valid' },
     })
   })
 
@@ -67,12 +67,12 @@ describe('dsl/objects/search.get', () => {
   })
 
   it('ignores unexpected query params', async () => {
-    queryValue = { name: 'Helper', unknown: 'ignored' }
+    queryValue = { query: 'Helper', unknown: 'ignored' }
 
     await searchHandler(fakeEvent)
 
     expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/objects/search', {
-      query: { name: 'Helper' },
+      query: { query: 'Helper' },
     })
   })
 })

@@ -1,16 +1,16 @@
 package cbs.nova.starter.converter;
 
+import cbs.nova.starter.model.DslIntrospectionModels.ObjectSearchMode;
 import cbs.nova.starter.model.RequestQueryModels.ExecutionListQuery;
-import cbs.nova.starter.model.RequestQueryModels.HelperCatalogQuery;
-import cbs.nova.starter.model.RequestQueryModels.IntrospectionSearchQuery;
+import cbs.nova.starter.model.RequestQueryModels.ObjectSearchQuery;
 import cbs.nova.starter.model.RequestQueryModels.WorkingSetQuery;
 import cbs.nova.starter.controller.Pagination;
 import cbs.nova.starter.core.StarterConstants;
 import org.springframework.stereotype.Component;
-import org.springframework.web.servlet.function.ServerRequest;
 
 /**
- * Translates a {@link ServerRequest} into typed query records.
+ * Translates a {@link org.springframework.web.servlet.function.ServerRequest} into typed query
+ * records.
  *
  * <p>
  * Hand-written on purpose: the mapping is not a bean property copy, so neither MapStruct nor
@@ -33,7 +33,8 @@ public class RequestQueryConverter {
    * {@code status} and {@code mode} pass through verbatim, and {@code correlationId} is trimmed
    * then blank-filtered.
    */
-  public ExecutionListQuery toExecutionListQuery(ServerRequest request) {
+  public ExecutionListQuery toExecutionListQuery(
+          org.springframework.web.servlet.function.ServerRequest request) {
     return new ExecutionListQuery(
             request.param("processName").filter(s -> !s.isBlank()).orElse(null),
             request.param("status").orElse(null),
@@ -43,30 +44,23 @@ public class RequestQueryConverter {
   }
 
   /**
-   * Extracts the three introspection search params as plain passthroughs.
+   * Extracts the unified object-search pagination, query text, and search mode.
    */
-  public IntrospectionSearchQuery toIntrospectionSearchQuery(ServerRequest request) {
-    return new IntrospectionSearchQuery(
-            request.param("name").orElse(null),
-            request.param("type").orElse(null),
-            request.param("description").orElse(null));
-  }
-
-  /**
-   * Extracts the helper-catalog filters. {@code text} is blank-filtered; {@code mode} is
-   * blank-filtered and defaults to {@code null} so the service can pick its own default.
-   */
-  public HelperCatalogQuery toHelperCatalogQuery(ServerRequest request) {
-    return new HelperCatalogQuery(
-            request.param("search").map(String::trim).filter(s -> !s.isBlank()).orElse(null),
-            request.param("searchMode").map(String::trim).filter(s -> !s.isBlank())
-                    .orElse(null));
+  public ObjectSearchQuery toObjectSearchQuery(
+          org.springframework.web.servlet.function.ServerRequest request) {
+    int page = Pagination.intParam(request, "page", 0);
+    int size = Pagination.intParam(request, "size", StarterConstants.DEFAULT_LIMIT);
+    int clampedSize = Pagination.clampLimit(size);
+    String query = request.param("query").map(String::trim).filter(s -> !s.isBlank()).orElse(null);
+    ObjectSearchMode mode = ObjectSearchMode.from(request.param("mode").orElse(null));
+    return new ObjectSearchQuery(Math.max(0, page), clampedSize, query, mode);
   }
 
   /**
    * Extracts the working-set pagination and filter parameters.
    */
-  public WorkingSetQuery toWorkingSetQuery(ServerRequest request) {
+  public WorkingSetQuery toWorkingSetQuery(
+          org.springframework.web.servlet.function.ServerRequest request) {
     int limit = Pagination.intParam(request, "limit", StarterConstants.DEFAULT_LIMIT);
     int offset = Pagination.intParam(request, "offset", StarterConstants.DEFAULT_OFFSET);
     return new WorkingSetQuery(

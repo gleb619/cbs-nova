@@ -175,14 +175,19 @@ function mirrorSelectionToDrafts() {
 // /api/dsl/objects/search into a single "working set" endpoint, this storage can
 // seed that request instead of a separate search call.
 const objectSearchFilters = useWorkbenchStorage<HelperSearchFilters>('object-search-filters', {
-  name: '',
-  type: '',
-  description: '',
+  query: '',
+  mode: 'exact',
 })
 
 const objectSearch = useHelperSearch({
-  fetch: async (filters: HelperSearchFilters) =>
-    (await dslApi.searchObjects(filters)) as ObjectSearchResult[],
+  fetch: async (filters: HelperSearchFilters) => {
+    const page = await dslApi.searchObjects({
+      query: filters.query,
+      mode: filters.mode,
+      size: 100,
+    })
+    return (page.items ?? []) as ObjectSearchResult[]
+  },
   debounceMs: 250,
   initialFilters: objectSearchFilters.value,
 })
@@ -908,9 +913,8 @@ onBeforeUnmount(() => {
 
       <DslObjectsSearchPanel
         v-model:open="objectsSearchOpen"
-        v-model:name="objectSearch.filters.value.name"
-        v-model:type="objectSearch.filters.value.type"
-        v-model:description="objectSearch.filters.value.description"
+        v-model:query="objectSearch.filters.value.query"
+        v-model:mode="objectSearch.filters.value.mode"
         :results="objectSearch.results.value"
         :is-loading="objectSearch.isLoading.value"
         :error="objectSearch.error.value"

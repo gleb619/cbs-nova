@@ -2,9 +2,9 @@ package cbs.nova.starter.converter;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import cbs.nova.starter.model.DslIntrospectionModels.ObjectSearchMode;
 import cbs.nova.starter.model.RequestQueryModels.ExecutionListQuery;
-import cbs.nova.starter.model.RequestQueryModels.HelperCatalogQuery;
-import cbs.nova.starter.model.RequestQueryModels.IntrospectionSearchQuery;
+import cbs.nova.starter.model.RequestQueryModels.ObjectSearchQuery;
 import cbs.nova.starter.model.RequestQueryModels.WorkingSetQuery;
 import java.util.List;
 import java.util.Map;
@@ -90,68 +90,54 @@ class RequestQueryConverterTest {
     assertThat(q.correlationId()).isNull();
   }
 
-  // --- toIntrospectionSearchQuery --------------------------------------------
+  // --- toObjectSearchQuery ----------------------------------------------------
 
   @Test
-  void introspectionSearchQueryAbsentAreNull() {
-    IntrospectionSearchQuery q = converter.toIntrospectionSearchQuery(request(Map.of()));
-    assertThat(q.name()).isNull();
-    assertThat(q.type()).isNull();
-    assertThat(q.description()).isNull();
+  void objectSearchQueryDefaultsPageSizeAndMode() {
+    ObjectSearchQuery q = converter.toObjectSearchQuery(request(Map.of()));
+    assertThat(q.page()).isEqualTo(0);
+    assertThat(q.size()).isEqualTo(50);
+    assertThat(q.query()).isNull();
+    assertThat(q.mode()).isEqualTo(ObjectSearchMode.EXACT);
   }
 
   @Test
-  void introspectionSearchQueryValuesPassThrough() {
-    IntrospectionSearchQuery q = converter.toIntrospectionSearchQuery(
-            request(Map.of("name", "x", "type", "y", "description", "z")));
-    assertThat(q.name()).isEqualTo("x");
-    assertThat(q.type()).isEqualTo("y");
-    assertThat(q.description()).isEqualTo("z");
+  void objectSearchQueryParsesPageSizeQueryAndMode() {
+    ObjectSearchQuery q = converter.toObjectSearchQuery(
+            request(Map.of("page", "1", "size", "10", "query", "foo", "mode", "fuzzy")));
+    assertThat(q.page()).isEqualTo(1);
+    assertThat(q.size()).isEqualTo(10);
+    assertThat(q.query()).isEqualTo("foo");
+    assertThat(q.mode()).isEqualTo(ObjectSearchMode.FUZZY);
   }
 
   @Test
-  void introspectionSearchQueryBlankValuesPassThrough() {
-    // No blank filter on the search endpoint — empty strings stay empty.
-    IntrospectionSearchQuery q = converter.toIntrospectionSearchQuery(
-            request(Map.of("name", "", "type", "", "description", "")));
-    assertThat(q.name()).isEqualTo("");
-    assertThat(q.type()).isEqualTo("");
-    assertThat(q.description()).isEqualTo("");
-  }
+  void objectSearchQueryTrimsQueryAndBlankBecomesNull() {
+    ObjectSearchQuery q = converter.toObjectSearchQuery(
+            request(Map.of("query", "  foo  ")));
+    assertThat(q.query()).isEqualTo("foo");
 
-  // --- toHelperCatalogQuery -------------------------------------------------
-
-  @Test
-  void helperCatalogQueryAbsentAreNull() {
-    HelperCatalogQuery q = converter.toHelperCatalogQuery(request(Map.of()));
-    assertThat(q.text()).isNull();
-    assertThat(q.mode()).isNull();
+    ObjectSearchQuery blank = converter.toObjectSearchQuery(
+            request(Map.of("query", "   ")));
+    assertThat(blank.query()).isNull();
   }
 
   @Test
-  void helperCatalogQueryValuesPassThrough() {
-    HelperCatalogQuery q = converter.toHelperCatalogQuery(
-            request(Map.of("search", "foo", "searchMode", "fuzzy")));
-    assertThat(q.text()).isEqualTo("foo");
-    assertThat(q.mode()).isEqualTo("fuzzy");
+  void objectSearchQueryClampsNegativePage() {
+    ObjectSearchQuery q = converter.toObjectSearchQuery(
+            request(Map.of("page", "-3", "size", "10")));
+    assertThat(q.page()).isEqualTo(0);
+    assertThat(q.size()).isEqualTo(10);
   }
 
   @Test
-  void helperCatalogQueryBlankValuesBecomeNull() {
-    HelperCatalogQuery q = converter.toHelperCatalogQuery(
-            request(Map.of("search", "   ", "searchMode", "  ")));
-    assertThat(q.text()).isNull();
-    assertThat(q.mode()).isNull();
+  void objectSearchQueryDefaultsUnknownModeToExact() {
+    ObjectSearchQuery q = converter.toObjectSearchQuery(
+            request(Map.of("mode", "unknown")));
+    assertThat(q.mode()).isEqualTo(ObjectSearchMode.EXACT);
   }
 
-  @Test
-  void helperCatalogQueryTextIsTrimmed() {
-    HelperCatalogQuery q = converter.toHelperCatalogQuery(
-            request(Map.of("search", "  foo  ")));
-    assertThat(q.text()).isEqualTo("foo");
-  }
-
-  // --- toWorkingSetQuery ----------------------------------------------------
+  // --- toWorkingSetQuery ------------------------------------------------------
 
   @Test
   void workingSetQueryDefaultsLimitAndOffset() {

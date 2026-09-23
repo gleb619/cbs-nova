@@ -540,23 +540,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/dsl/helpers": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List DSL helpers */
-        get: operations["listHelpers"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/dsl/hierarchy/{name}": {
         parameters: {
             query?: never;
@@ -741,57 +724,6 @@ export interface paths {
         put?: never;
         /** Preview a DSL process without side effects */
         post: operations["previewDsl"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/dsl/processes": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List DSL process names */
-        get: operations["listProcesses"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/dsl/processes/{name}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get DSL process detail */
-        get: operations["getProcessDetail"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/dsl/processes/{name}/diagram": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get DSL process diagram */
-        get: operations["getProcessDiagram"];
-        put?: never;
-        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1013,40 +945,6 @@ export interface paths {
         };
         /** Get DSL object structure */
         get: operations["getObjectStructure"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/dsl/transactions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List DSL transaction names */
-        get: operations["listTransactions"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/dsl/transactions/{name}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get DSL transaction detail */
-        get: operations["getTransactionDetail"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1433,28 +1331,6 @@ export interface components {
             markdown?: string;
             name?: string;
         };
-        HelperCatalogEntry: {
-            description?: string;
-            inputType?: string;
-            name?: string;
-            outputType?: string;
-        };
-        HelperCatalogPage: {
-            items?: components["schemas"]["HelperCatalogEntry"][];
-            /** Format: int32 */
-            limit?: number;
-            /** Format: int32 */
-            offset?: number;
-            /** Format: int64 */
-            total?: number;
-        };
-        HelperSearchResult: {
-            description?: string;
-            inputType?: string;
-            name?: string;
-            outputType?: string;
-            type?: string;
-        };
         HierarchyReport: {
             astTree?: components["schemas"]["CallNode"];
             callCounts?: {
@@ -1510,9 +1386,6 @@ export interface components {
             /** Format: int32 */
             pieceCount?: number;
         };
-        NamesResponse: {
-            names?: string[];
-        };
         ObjectDescriptor: unknown;
         ObjectStructureDto: {
             fields?: components["schemas"]["StructureFieldDto"][];
@@ -1566,23 +1439,6 @@ export interface components {
             output?: unknown;
             success?: boolean;
         };
-        ProcessDetail: {
-            description?: string;
-            hasCompensation?: boolean;
-            inputSchema?: {
-                [key: string]: unknown;
-            };
-            inputType?: string;
-            name?: string;
-            outputType?: string;
-            taskQueue?: string;
-            version?: string;
-        };
-        ProcessDiagramDto: {
-            diagram?: string;
-            format?: string;
-            name?: string;
-        };
         ProcessRunCount: {
             processName?: string;
             /** Format: int64 */
@@ -1614,20 +1470,6 @@ export interface components {
             isCompensation?: boolean;
             name?: string;
             stepType?: string;
-        };
-        TransactionDetail: {
-            description?: string;
-            hasCompensation?: boolean;
-            inputSchema?: {
-                [key: string]: unknown;
-            };
-            inputType?: string;
-            name?: string;
-            outputType?: string;
-            /** Format: int64 */
-            startToCloseTimeoutMs?: number;
-            taskQueue?: string;
-            version?: string;
         };
         TransactionExecutionDto: {
             /** Format: int64 */
@@ -2879,35 +2721,6 @@ export interface operations {
             };
         };
     };
-    listHelpers: {
-        parameters: {
-            query?: {
-                /** @description Maximum number of helpers to return (default 100) */
-                limit?: string;
-                /** @description Number of helpers to skip before returning results */
-                offset?: string;
-                /** @description Text to search among helpers */
-                search?: string;
-                /** @description Search mode: Exact, Cosine, Fuzzy */
-                searchMode?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Paged helper catalog */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HelperCatalogPage"];
-                };
-            };
-        };
-    };
     hierarchyDsl: {
         parameters: {
             query?: never;
@@ -3246,9 +3059,10 @@ export interface operations {
     searchObjects: {
         parameters: {
             query?: {
-                name?: string;
-                type?: string;
-                description?: string;
+                page?: string;
+                size?: string;
+                query?: string;
+                mode?: string;
             };
             header?: never;
             path?: never;
@@ -3262,7 +3076,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HelperSearchResult"];
+                    "application/json": components["schemas"]["PageResponse"];
                 };
             };
         };
@@ -3294,70 +3108,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ValidationErrorsResponse"];
-                };
-            };
-        };
-    };
-    listProcesses: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Process names */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NamesResponse"];
-                };
-            };
-        };
-    };
-    getProcessDetail: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                name: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Process detail */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProcessDetail"];
-                };
-            };
-        };
-    };
-    getProcessDiagram: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                name: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Process diagram */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProcessDiagramDto"];
                 };
             };
         };
@@ -3842,48 +3592,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ObjectStructureDto"];
-                };
-            };
-        };
-    };
-    listTransactions: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Transaction names */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NamesResponse"];
-                };
-            };
-        };
-    };
-    getTransactionDetail: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                name: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Transaction detail */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TransactionDetail"];
                 };
             };
         };

@@ -129,10 +129,6 @@ const EXCLUDED_OPERATIONS: Record<string, { reason: string; handRoute: string }>
     reason: 'query-param allowlist (offset/limit/type/aggregate*/correlationId/since)',
     handRoute: 'dsl/events.get.ts',
   },
-  getProcessDiagram: {
-    reason: 'forwards a trimmed `format` query param',
-    handRoute: 'dsl/processes/[name]/diagram.get.ts',
-  },
   getConstructSchema: {
     reason: 'rewrites the `mode` query param into the backend path suffix',
     handRoute: 'dsl/schemas/[name].get.ts',

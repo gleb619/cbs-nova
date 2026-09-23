@@ -16,6 +16,7 @@ import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.process.SignalDescriptor;
 import cbs.nova.dsl.transaction.TransactionDslObject;
 import cbs.nova.starter.controller.Pagination;
+import cbs.nova.starter.model.DslIntrospectionModels.ObjectSearchResult;
 import cbs.nova.starter.model.DslIntrospectionModels.WorkingSetResponse;
 import cbs.nova.starter.model.RequestQueryModels.WorkingSetQuery;
 import cbs.nova.starter.converter.DslIntrospectionMapper;
@@ -24,18 +25,13 @@ import cbs.nova.starter.model.DslIntrospectionModels.DefinitionMetaDto;
 import cbs.nova.starter.model.DslIntrospectionModels.DefinitionStatus;
 import cbs.nova.starter.model.DslIntrospectionModels.ConstructBodyDto;
 import cbs.nova.starter.model.DslIntrospectionModels.ConstructSchemaDto;
-import cbs.nova.starter.model.DslIntrospectionModels.HelperCatalogEntry;
-import cbs.nova.starter.model.DslIntrospectionModels.HelperSearchMode;
-import cbs.nova.starter.model.DslIntrospectionModels.HelperSearchResult;
+import cbs.nova.starter.model.DslIntrospectionModels.ObjectSearchMode;
 import cbs.nova.starter.model.PageResponse;
 import cbs.nova.starter.model.DslIntrospectionModels.LogicInfoDto;
 import cbs.nova.starter.model.DslIntrospectionModels.LogicStatus;
-import cbs.nova.starter.model.DslIntrospectionModels.NamesResponse;
 import cbs.nova.starter.model.DslIntrospectionModels.ObjectStructureDto;
-import cbs.nova.starter.model.DslIntrospectionModels.ProcessDetail;
 import cbs.nova.starter.model.DslIntrospectionModels.StepDto;
 import cbs.nova.starter.model.DslIntrospectionModels.StructureFieldDto;
-import cbs.nova.starter.model.DslIntrospectionModels.TransactionDetail;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -56,29 +52,10 @@ public class DslIntrospectionService {
   private final DslIntrospectionMapper mapper;
   private final DslDefinitionStatusResolver statusResolver;
 
-  public NamesResponse processes() {
-    return new NamesResponse(GlobalManager.globalManager().processNames());
-  }
-
-  public Optional<ProcessDetail> processDetail(String name) {
-    return GlobalManager.globalManager()
-            .findProcess(name)
-            .map(this::toProcessDetail);
-  }
-
-  public NamesResponse transactions() {
-    return new NamesResponse(GlobalManager.globalManager().transactionNames());
-  }
-
-  public Optional<TransactionDetail> transactionDetail(String name) {
-    return GlobalManager.globalManager()
-            .findTransaction(name)
-            .map(this::toTransactionDetail);
-  }
-
-  public List<HelperSearchResult> searchObjects(String name, String type, String description) {
+  public PageResponse<ObjectSearchResult> searchObjects(int page, int size, String query,
+          ObjectSearchMode mode) {
     var gm = GlobalManager.globalManager();
-    List<HelperSearchResult> results = new ArrayList<>();
+    List<ObjectSearchResult> results = new ArrayList<>();
     gm.processNames().forEach(n -> gm.describeProcess(n).ifPresent(d -> results.add(toResult(d))));
     gm.transactionNames()
             .forEach(n -> gm.describeTransaction(n).ifPresent(d -> results.add(toResult(d))));
@@ -86,50 +63,16 @@ public class DslIntrospectionService {
       gm.describeHelper(n).ifPresent(d -> results.add(toResult(n, d)));
       gm.describeFunction(n).ifPresent(d -> results.add(toResult(d)));
     });
-    return results.stream()
-            .filter(r -> matches(r, name, type, description))
-            .toList();
-  }
-
-  public PageResponse<HelperCatalogEntry> helpers(int offset, int limit, String search,
-          String mode) {
-    var gm = GlobalManager.globalManager();
-    HelperSearchMode searchMode = HelperSearchMode.from(mode);
-    List<HelperCatalogEntry> filtered = gm.helperNames().stream()
-            .map(n -> toHelperCatalogEntry(n, gm.describeHelper(n)))
-            .filter(e -> matchesHelper(e, search, searchMode))
+    List<ObjectSearchResult> filtered = results.stream()
+            .filter(r -> matches(r, query, mode))
             .toList();
     long total = filtered.size();
-    List<HelperCatalogEntry> page = filtered.stream()
+    int offset = Math.max(0, page) * size;
+    List<ObjectSearchResult> paged = filtered.stream()
             .skip(offset)
-            .limit(limit)
+            .limit(size)
             .toList();
-    return new PageResponse<>(page, total, offset, limit);
-  }
-
-  private HelperCatalogEntry toHelperCatalogEntry(String name,
-          Optional<ExecutableDescriptor> descriptorOpt) {
-    return descriptorOpt
-            .map(d -> new HelperCatalogEntry(
-                    name,
-                    d.description(),
-                    mapper.typeName(d.inputType()),
-                    mapper.typeName(d.outputType())))
-            .orElse(new HelperCatalogEntry(name, null, null, null));
-  }
-
-  private static boolean matchesHelper(HelperCatalogEntry entry, String search,
-          HelperSearchMode mode) {
-    if (search == null || search.isBlank()) {
-      return true;
-    }
-    String term = search.toLowerCase(Locale.ROOT);
-
-    return switch (mode) {
-      case EXACT -> HelperMatcher.exact().matches(term, entry);
-      //TODO: add two other impls for helper search for COSINE, FUZZY. Create own implementation without libs
-      default -> Boolean.FALSE;
-    };
+    return new PageResponse<>(paged, total, offset, size);
   }
 
   public Optional<ConstructBodyDto> constructBody(String name) {
@@ -462,14 +405,6 @@ public class DslIntrospectionService {
     return statuses.getOrDefault(name, DefinitionStatus.PUBLISHED);
   }
 
-  private ProcessDetail toProcessDetail(ProcessDslObject p) {
-    return mapper.toProcessDetail(p, inputSchema(p));
-  }
-
-  private TransactionDetail toTransactionDetail(TransactionDslObject t) {
-    return mapper.toTransactionDetail(t, inputSchema(t));
-  }
-
   private Map<String, Object> inputSchema(DslObject entity) {
     if (entity instanceof ProcessDslObject p) {
       return schemaForInput(p.inputType(), p.parameters());
@@ -480,29 +415,26 @@ public class DslIntrospectionService {
     return schemaForInput(null, null);
   }
 
-  private HelperSearchResult toResult(DslDescriptor descriptor) {
+  private ObjectSearchResult toResult(DslDescriptor descriptor) {
     return mapper.toHelperSearchResult(descriptor);
   }
 
-  private HelperSearchResult toResult(String name, ExecutableDescriptor descriptor) {
+  private ObjectSearchResult toResult(String name, ExecutableDescriptor descriptor) {
     return mapper.toHelperSearchResult(name, descriptor);
   }
 
-  private static boolean matches(HelperSearchResult result, String name, String type,
-          String description) {
-    if (name != null && !name.isBlank()
-            && !result.name().toLowerCase(Locale.ROOT).contains(name.toLowerCase(Locale.ROOT))) {
-      return false;
+  private static boolean matches(ObjectSearchResult result, String query,
+          ObjectSearchMode mode) {
+    if (query == null || query.isBlank() || mode == ObjectSearchMode.ALL) {
+      return true;
     }
-    if (type != null && !type.isBlank()
-            && !result.type().equalsIgnoreCase(type)) {
-      return false;
-    }
-    if (description != null && !description.isBlank()) {
-      String desc = result.description() != null ? result.description() : "";
-      return desc.toLowerCase(Locale.ROOT).contains(description.toLowerCase(Locale.ROOT));
-    }
-    return true;
+    String term = query.toLowerCase(Locale.ROOT);
+    String candidate = (result.name() + " " + result.type() + " "
+            + (result.description() == null ? "" : result.description()) + " "
+            + (result.inputType() == null ? "" : result.inputType()) + " "
+            + (result.outputType() == null ? "" : result.outputType()))
+            .toLowerCase(Locale.ROOT);
+    return candidate.contains(term);
   }
 
 }

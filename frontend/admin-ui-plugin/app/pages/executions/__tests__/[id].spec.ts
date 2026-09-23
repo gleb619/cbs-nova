@@ -10,28 +10,23 @@ const STASH_KEY = 'cbs.nova.run-again'
 // Mocks for the composables the page consumes.
 // ---------------------------------------------------------------------------
 
-const { useExecutionsMock, useDslApiMock, useExecutionsApiMock, navigateTo, dslApi, execApi } =
-  vi.hoisted(() => {
-    const navigateToSpy = vi.fn()
-    const api = { getProcessDiagram: vi.fn() }
-    const execApi = { getTransactions: vi.fn().mockResolvedValue([]) }
-    const useExecutionsMockFn = vi.fn(() => {
-      const harness = (globalThis as unknown as { __execDetailHarness?: unknown })
-        .__execDetailHarness
-      if (!harness) throw new Error('execution detail harness not installed yet')
-      return harness
-    })
-    const useDslApiMockFn = vi.fn(() => api)
-    const useExecutionsApiMockFn = vi.fn(() => execApi)
-    return {
-      useExecutionsMock: useExecutionsMockFn,
-      useDslApiMock: useDslApiMockFn,
-      useExecutionsApiMock: useExecutionsApiMockFn,
-      navigateTo: navigateToSpy,
-      dslApi: api,
-      execApi,
-    }
+const { useExecutionsMock, useExecutionsApiMock, navigateTo, execApi } = vi.hoisted(() => {
+  const navigateToSpy = vi.fn()
+  const execApi = { getTransactions: vi.fn().mockResolvedValue([]) }
+  const useExecutionsMockFn = vi.fn(() => {
+    const harness = (globalThis as unknown as { __execDetailHarness?: unknown })
+      .__execDetailHarness
+    if (!harness) throw new Error('execution detail harness not installed yet')
+    return harness
   })
+  const useExecutionsApiMockFn = vi.fn(() => execApi)
+  return {
+    useExecutionsMock: useExecutionsMockFn,
+    useExecutionsApiMock: useExecutionsApiMockFn,
+    navigateTo: navigateToSpy,
+    execApi,
+  }
+})
 
 interface ExecDetailHarness {
   selectedExecution: Ref<ExecutionDetail | null>
@@ -61,10 +56,6 @@ const harness: ExecDetailHarness = (() => {
 ;(globalThis as unknown as { __execDetailHarness?: ExecDetailHarness }).__execDetailHarness =
   harness
 
-vi.mock('@cbs/admin-ui-plugin/composables/useDslApi', () => ({
-  useDslApi: useDslApiMock,
-}))
-
 vi.mock('@cbs/admin-ui-plugin/composables/useExecutions', () => ({
   useExecutions: useExecutionsMock,
 }))
@@ -83,7 +74,7 @@ vi.mock('nuxt/app', () => ({
 
 // ---------------------------------------------------------------------------
 // Component stubs. The page's SFCs resolve by their short `name`, so the stub
-// keys must use those names (e.g. `ExecutionSummary`, `DiagramTab`). The
+// keys must use those names (e.g. `ExecutionSummary`, `PayloadTab`). The
 // summary stub renders the `actions` slot so the run-again button mounts.
 // ---------------------------------------------------------------------------
 
@@ -112,7 +103,6 @@ const componentStubs = {
   ErrorBanner: makeStub('ErrorBanner'),
   // These tab components are NOT imported by the page (auto-registered by the
   // Nuxt components dir), so they resolve by their template tag name.
-  ExecutionsDiagramTab: makeStub('ExecutionsDiagramTab'),
   ExecutionsPayloadTab: makeStub('ExecutionsPayloadTab'),
   ExecutionsMetadataTab: makeStub('ExecutionsMetadataTab'),
   ExecutionsLogsTab: makeStub('ExecutionsLogsTab'),
@@ -183,8 +173,6 @@ describe('executions/[id].vue run-again button', () => {
     harness.error.value = null
     harness.loadDetail.mockClear()
     harness.startPolling.mockClear()
-    dslApi.getProcessDiagram.mockReset()
-    dslApi.getProcessDiagram.mockResolvedValue({ diagram: 'graph TD' })
     execApi.getTransactions.mockReset()
     execApi.getTransactions.mockResolvedValue([])
     navigateTo.mockClear()
@@ -323,7 +311,6 @@ describe('executions/[id].vue run-again button', () => {
     const buttons = wrapper.findAll('button')
     const labels = buttons.map((b) => b.text().trim())
     expect(labels).not.toContain('Logs')
-    expect(labels).toContain('Diagram')
     expect(labels).toContain('I/O Payload')
     expect(labels).toContain('Errors')
 
@@ -350,8 +337,6 @@ describe('executions/[id].vue run-again button', () => {
       harness.selectedExecution.value = null
       harness.error.value = null
       harness.loadDetail.mockClear()
-      dslApi.getProcessDiagram.mockReset()
-      dslApi.getProcessDiagram.mockResolvedValue({ diagram: 'graph TD' })
       execApi.getTransactions.mockReset()
       execApi.getTransactions.mockResolvedValue([])
     })
@@ -411,7 +396,7 @@ describe('executions/[id].vue run-again button', () => {
       }
 
       await clickTab('Transactions')
-      await clickTab('Diagram')
+      await clickTab('I/O Payload')
       await clickTab('Transactions')
 
       expect(execApi.getTransactions).toHaveBeenCalledTimes(1)
@@ -428,8 +413,6 @@ describe('executions/[id].vue run-again button', () => {
       harness.loadDetail.mockClear()
       harness.startPolling.mockClear()
       harness.stopPolling.mockClear()
-      dslApi.getProcessDiagram.mockReset()
-      dslApi.getProcessDiagram.mockResolvedValue({ diagram: 'graph TD' })
     })
 
     afterEach(() => {
@@ -575,11 +558,9 @@ describe('executions/[id].vue run-again button', () => {
       harness.selectedExecution.value = null
       harness.error.value = null
       harness.loadDetail.mockClear()
-      dslApi.getProcessDiagram.mockReset()
-      dslApi.getProcessDiagram.mockResolvedValue({ diagram: 'graph TD' })
     })
 
-    it('falls back to the Diagram tab when the selected tab disappears', async () => {
+    it('falls back to the I/O Payload tab when the selected tab disappears', async () => {
       harness.selectedExecution.value = detail({
         logs: [{ timestamp: '2026-01-01T00:00:00Z', severity: 'info', message: 'hi' }],
       })
@@ -595,12 +576,12 @@ describe('executions/[id].vue run-again button', () => {
       expect(wrapper.find('[data-testid="ExecutionsLogsTab"]').exists()).toBe(true)
 
       // The refreshed payload no longer carries logs — the Logs tab vanishes
-      // and the visible panel falls back to Diagram instead of going blank.
+      // and the visible panel falls back to I/O Payload instead of going blank.
       harness.selectedExecution.value = detail()
       await flush()
 
       expect(wrapper.find('[data-testid="ExecutionsLogsTab"]').exists()).toBe(false)
-      expect(wrapper.find('[data-testid="ExecutionsDiagramTab"]').exists()).toBe(true)
+      expect(wrapper.find('[data-testid="ExecutionsPayloadTab"]').exists()).toBe(true)
 
       wrapper.unmount()
     })

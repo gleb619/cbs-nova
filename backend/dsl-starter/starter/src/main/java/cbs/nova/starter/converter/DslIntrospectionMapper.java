@@ -6,9 +6,7 @@ import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.transaction.TransactionDslObject;
 import cbs.nova.starter.model.DslIntrospectionModels.DefinitionMetaDto;
 import cbs.nova.starter.model.DslIntrospectionModels.DefinitionStatus;
-import cbs.nova.starter.model.DslIntrospectionModels.HelperSearchResult;
-import cbs.nova.starter.model.DslIntrospectionModels.ProcessDetail;
-import cbs.nova.starter.model.DslIntrospectionModels.TransactionDetail;
+import cbs.nova.starter.model.DslIntrospectionModels.ObjectSearchResult;
 import java.util.Map;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -23,49 +21,18 @@ public interface DslIntrospectionMapper {
     return type == null || type == Void.class ? null : type.getSimpleName();
   }
 
-  @Mapping(target = "inputType", expression = "java(typeName(source.inputType()))")
-  @Mapping(target = "outputType", expression = "java(typeName(source.outputType()))")
-  @Mapping(target = "hasCompensation", expression = "java(source.compensationLogic() != null)")
-  @Mapping(target = "description", expression = "java(source.description())")
-  @Mapping(target = "inputSchema", ignore = true)
-  ProcessDetail toProcessDetail(ProcessDslObject source);
-
-  @Mapping(target = "inputType", expression = "java(typeName(source.inputType()))")
-  @Mapping(target = "outputType", expression = "java(typeName(source.outputType()))")
-  @Mapping(target = "hasCompensation", expression = "java(source.compensationLogic() != null)")
-  @Mapping(target = "description", expression = "java(source.description())")
-  @Mapping(target = "inputSchema", source = "inputSchema")
-  ProcessDetail toProcessDetail(ProcessDslObject source, Map<String, Object> inputSchema);
-
-  @Mapping(target = "inputType", expression = "java(typeName(source.inputType()))")
-  @Mapping(target = "outputType", expression = "java(typeName(source.outputType()))")
-  @Mapping(target = "hasCompensation", expression = "java(source.compensationLogic() != null)")
-  @Mapping(target = "description", expression = "java(source.description())")
-  @Mapping(target = "startToCloseTimeoutMs", expression = "java(source.startToCloseTimeout().toMillis())")
-  @Mapping(target = "inputSchema", ignore = true)
-  TransactionDetail toTransactionDetail(TransactionDslObject source);
-
-  @Mapping(target = "inputType", expression = "java(typeName(source.inputType()))")
-  @Mapping(target = "outputType", expression = "java(typeName(source.outputType()))")
-  @Mapping(target = "hasCompensation", expression = "java(source.compensationLogic() != null)")
-  @Mapping(target = "description", expression = "java(source.description())")
-  @Mapping(target = "startToCloseTimeoutMs", expression = "java(source.startToCloseTimeout().toMillis())")
-  @Mapping(target = "inputSchema", source = "inputSchema")
-  TransactionDetail toTransactionDetail(TransactionDslObject source,
-          Map<String, Object> inputSchema);
-
   @Mapping(target = "name", expression = "java(source.name())")
   @Mapping(target = "type", expression = "java(source.type().name().toLowerCase(java.util.Locale.ROOT))")
   @Mapping(target = "description", expression = "java(source.description())")
   @Mapping(target = "inputType", expression = "java(typeName(source.inputType()))")
   @Mapping(target = "outputType", expression = "java(typeName(source.outputType()))")
-  HelperSearchResult toHelperSearchResult(DslDescriptor source);
+  ObjectSearchResult toHelperSearchResult(DslDescriptor source);
 
   @Mapping(target = "name", source = "name")
   @Mapping(target = "type", constant = "helper")
   @Mapping(target = "inputType", expression = "java(typeName(descriptor.inputType()))")
   @Mapping(target = "outputType", expression = "java(typeName(descriptor.outputType()))")
-  HelperSearchResult toHelperSearchResult(String name, ExecutableDescriptor descriptor);
+  ObjectSearchResult toHelperSearchResult(String name, ExecutableDescriptor descriptor);
 
   @Mapping(target = "type", constant = "process")
   @Mapping(target = "version", expression = "java(source.version())")

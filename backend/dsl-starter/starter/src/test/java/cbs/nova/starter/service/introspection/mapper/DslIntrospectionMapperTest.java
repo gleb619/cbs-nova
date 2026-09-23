@@ -11,13 +11,10 @@ import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.transaction.TransactionDslObject;
 import cbs.nova.starter.converter.DslIntrospectionMapper;
 import cbs.nova.starter.model.DslIntrospectionModels.DefinitionMetaDto;
-import cbs.nova.starter.model.DslIntrospectionModels.HelperSearchResult;
-import cbs.nova.starter.model.DslIntrospectionModels.ProcessDetail;
-import cbs.nova.starter.model.DslIntrospectionModels.TransactionDetail;
+import cbs.nova.starter.model.DslIntrospectionModels.ObjectSearchResult;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
 
-import java.time.Duration;
 import java.util.List;
 
 class DslIntrospectionMapperTest {
@@ -25,68 +22,12 @@ class DslIntrospectionMapperTest {
   private final DslIntrospectionMapper mapper = Mappers.getMapper(DslIntrospectionMapper.class);
 
   @Test
-  void mapsProcessDslObjectToDetail() {
-    ProcessDslObject process = Dsl.process("P")
-            .version("v2")
-            .taskQueue("tq")
-            .input(String.class)
-            .output(Integer.class)
-            .execute(ctx -> Result.success("ok"))
-            .build();
-
-    ProcessDetail detail = mapper.toProcessDetail(process);
-
-    assertThat(detail.name()).isEqualTo("P");
-    assertThat(detail.version()).isEqualTo("v2");
-    assertThat(detail.taskQueue()).isEqualTo("tq");
-    assertThat(detail.inputType()).isEqualTo("String");
-    assertThat(detail.outputType()).isEqualTo("Integer");
-    assertThat(detail.hasCompensation()).isFalse();
-    assertThat(detail.inputSchema()).isNull();
-  }
-
-  @Test
-  void mapsProcessDslObjectWithCompensation() {
-    ProcessDslObject process = Dsl.process("P")
-            .execute(ctx -> Result.success("ok"))
-            .compensation((ctx, history) -> ctx.log("ok"))
-            .build();
-
-    ProcessDetail detail = mapper.toProcessDetail(process);
-
-    assertThat(detail.hasCompensation()).isTrue();
-  }
-
-  @Test
-  void mapsTransactionDslObjectToDetail() {
-    TransactionDslObject tx = Dsl.transaction("T")
-            .version("v3")
-            .taskQueue("tq2")
-            .input(Long.class)
-            .output(String.class)
-            .startToCloseTimeout(Duration.ofMinutes(2))
-            .execute(ctx -> Result.success("ok"))
-            .build();
-
-    TransactionDetail detail = mapper.toTransactionDetail(tx);
-
-    assertThat(detail.name()).isEqualTo("T");
-    assertThat(detail.version()).isEqualTo("v3");
-    assertThat(detail.taskQueue()).isEqualTo("tq2");
-    assertThat(detail.inputType()).isEqualTo("Long");
-    assertThat(detail.outputType()).isEqualTo("String");
-    assertThat(detail.hasCompensation()).isFalse();
-    assertThat(detail.startToCloseTimeoutMs()).isEqualTo(120_000L);
-    assertThat(detail.inputSchema()).isNull();
-  }
-
-  @Test
   void mapsDslDescriptorToHelperSearchResult() {
     DslDescriptor descriptor = Descriptors.from("fn",
             new ExecutableDescriptor(
                     "fn", "desc", String.class, Integer.class, List.of()));
 
-    HelperSearchResult result = mapper.toHelperSearchResult(descriptor);
+    ObjectSearchResult result = mapper.toHelperSearchResult(descriptor);
 
     assertThat(result.name()).isEqualTo("fn");
     assertThat(result.type()).isEqualTo("function");
@@ -104,7 +45,7 @@ class DslIntrospectionMapperTest {
             Integer.class,
             List.of());
 
-    HelperSearchResult result = mapper.toHelperSearchResult("helperName", descriptor);
+    ObjectSearchResult result = mapper.toHelperSearchResult("helperName", descriptor);
 
     assertThat(result.name()).isEqualTo("helperName");
     assertThat(result.type()).isEqualTo("helper");

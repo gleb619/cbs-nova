@@ -600,66 +600,6 @@
         },
         "type": "object"
       },
-      "HelperCatalogEntry": {
-        "properties": {
-          "description": {
-            "type": "string"
-          },
-          "inputType": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "outputType": {
-            "type": "string"
-          }
-        },
-        "type": "object"
-      },
-      "HelperCatalogPage": {
-        "properties": {
-          "items": {
-            "items": {
-              "$ref": "#/components/schemas/HelperCatalogEntry"
-            },
-            "type": "array"
-          },
-          "limit": {
-            "format": "int32",
-            "type": "integer"
-          },
-          "offset": {
-            "format": "int32",
-            "type": "integer"
-          },
-          "total": {
-            "format": "int64",
-            "type": "integer"
-          }
-        },
-        "type": "object"
-      },
-      "HelperSearchResult": {
-        "properties": {
-          "description": {
-            "type": "string"
-          },
-          "inputType": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "outputType": {
-            "type": "string"
-          },
-          "type": {
-            "type": "string"
-          }
-        },
-        "type": "object"
-      },
       "HierarchyReport": {
         "properties": {
           "astTree": {
@@ -826,17 +766,6 @@
         },
         "type": "object"
       },
-      "NamesResponse": {
-        "properties": {
-          "names": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array"
-          }
-        },
-        "type": "object"
-      },
       "ObjectDescriptor": {},
       "ObjectStructureDto": {
         "properties": {
@@ -987,50 +916,6 @@
         },
         "type": "object"
       },
-      "ProcessDetail": {
-        "properties": {
-          "description": {
-            "type": "string"
-          },
-          "hasCompensation": {
-            "type": "boolean"
-          },
-          "inputSchema": {
-            "additionalProperties": {},
-            "type": "object"
-          },
-          "inputType": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "outputType": {
-            "type": "string"
-          },
-          "taskQueue": {
-            "type": "string"
-          },
-          "version": {
-            "type": "string"
-          }
-        },
-        "type": "object"
-      },
-      "ProcessDiagramDto": {
-        "properties": {
-          "diagram": {
-            "type": "string"
-          },
-          "format": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          }
-        },
-        "type": "object"
-      },
       "ProcessRunCount": {
         "properties": {
           "processName": {
@@ -1112,40 +997,6 @@
             "type": "string"
           },
           "stepType": {
-            "type": "string"
-          }
-        },
-        "type": "object"
-      },
-      "TransactionDetail": {
-        "properties": {
-          "description": {
-            "type": "string"
-          },
-          "hasCompensation": {
-            "type": "boolean"
-          },
-          "inputSchema": {
-            "additionalProperties": {},
-            "type": "object"
-          },
-          "inputType": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "outputType": {
-            "type": "string"
-          },
-          "startToCloseTimeoutMs": {
-            "format": "int64",
-            "type": "integer"
-          },
-          "taskQueue": {
-            "type": "string"
-          },
-          "version": {
             "type": "string"
           }
         },
@@ -2609,49 +2460,6 @@
         ]
       }
     },
-    "/api/dsl/helpers": {
-      "get": {
-        "operationId": "listHelpers",
-        "parameters": [
-          {
-            "description": "Maximum number of helpers to return (default 100)",
-            "in": "query",
-            "name": "limit"
-          },
-          {
-            "description": "Number of helpers to skip before returning results",
-            "in": "query",
-            "name": "offset"
-          },
-          {
-            "description": "Text to search among helpers",
-            "in": "query",
-            "name": "search"
-          },
-          {
-            "description": "Search mode: Exact, Cosine, Fuzzy",
-            "in": "query",
-            "name": "searchMode"
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HelperCatalogPage"
-                }
-              }
-            },
-            "description": "Paged helper catalog"
-          }
-        },
-        "summary": "List DSL helpers",
-        "tags": [
-          "DSL Introspection"
-        ]
-      }
-    },
     "/api/dsl/hierarchy/{name}": {
       "post": {
         "operationId": "hierarchyDsl",
@@ -3033,15 +2841,19 @@
         "parameters": [
           {
             "in": "query",
-            "name": "name"
+            "name": "page"
           },
           {
             "in": "query",
-            "name": "type"
+            "name": "size"
           },
           {
             "in": "query",
-            "name": "description"
+            "name": "query"
+          },
+          {
+            "in": "query",
+            "name": "mode"
           }
         ],
         "responses": {
@@ -3049,7 +2861,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HelperSearchResult"
+                  "$ref": "#/components/schemas/PageResponse"
                 }
               }
             },
@@ -3097,83 +2909,6 @@
         "summary": "Preview a DSL process without side effects",
         "tags": [
           "DSL Runtime"
-        ]
-      }
-    },
-    "/api/dsl/processes": {
-      "get": {
-        "operationId": "listProcesses",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/NamesResponse"
-                }
-              }
-            },
-            "description": "Process names"
-          }
-        },
-        "summary": "List DSL process names",
-        "tags": [
-          "DSL Introspection"
-        ]
-      }
-    },
-    "/api/dsl/processes/{name}": {
-      "get": {
-        "operationId": "getProcessDetail",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "name",
-            "required": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProcessDetail"
-                }
-              }
-            },
-            "description": "Process detail"
-          }
-        },
-        "summary": "Get DSL process detail",
-        "tags": [
-          "DSL Introspection"
-        ]
-      }
-    },
-    "/api/dsl/processes/{name}/diagram": {
-      "get": {
-        "operationId": "getProcessDiagram",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "name",
-            "required": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProcessDiagramDto"
-                }
-              }
-            },
-            "description": "Process diagram"
-          }
-        },
-        "summary": "Get DSL process diagram",
-        "tags": [
-          "DSL Introspection"
         ]
       }
     },
@@ -3718,55 +3453,6 @@
         ]
       }
     },
-    "/api/dsl/transactions": {
-      "get": {
-        "operationId": "listTransactions",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/NamesResponse"
-                }
-              }
-            },
-            "description": "Transaction names"
-          }
-        },
-        "summary": "List DSL transaction names",
-        "tags": [
-          "DSL Introspection"
-        ]
-      }
-    },
-    "/api/dsl/transactions/{name}": {
-      "get": {
-        "operationId": "getTransactionDetail",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "name",
-            "required": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TransactionDetail"
-                }
-              }
-            },
-            "description": "Transaction detail"
-          }
-        },
-        "summary": "Get DSL transaction detail",
-        "tags": [
-          "DSL Introspection"
-        ]
-      }
-    },
     "/api/dsl/working-set": {
       "get": {
         "operationId": "getWorkingSet",
@@ -4116,7 +3802,7 @@
   "servers": [
     {
       "description": "Generated server url",
-      "url": "http://localhost:8092"
+      "url": "http://localhost:8090"
     }
   ],
   "tags": [

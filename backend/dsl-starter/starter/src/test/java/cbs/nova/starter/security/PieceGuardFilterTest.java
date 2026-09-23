@@ -84,10 +84,10 @@ class PieceGuardFilterTest {
 
   @Test
   void routeAbsentFromManifestProceedsByteForByteUntouched() throws Exception {
-    when(manifestService.findByRoute("GET", "/api/dsl/processes"))
+    when(manifestService.findByRoute("GET", "/api/dsl/objects/search"))
             .thenReturn(Optional.empty());
 
-    MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/dsl/processes");
+    MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/dsl/objects/search");
     Invocation invocation = invoke(request, chainWriting(200, "hello"));
 
     assertThat(invocation.chainRan()).isTrue();
@@ -414,9 +414,11 @@ class PieceGuardFilterTest {
             new PropertiesFeatureFlagSource(
                     new CbsDslManifestProperties(true, "classpath:piece-manifest.yaml")),
             pipeline, null);
-    when(manifestService.findByRoute("GET", "/api/dsl/processes")).thenReturn(Optional.empty());
+    when(manifestService.findByRoute("GET", "/api/dsl/objects/search"))
+            .thenReturn(Optional.empty());
 
-    invoke(new MockHttpServletRequest("GET", "/api/dsl/processes"), chainWriting(200, "hello"));
+    invoke(new MockHttpServletRequest("GET", "/api/dsl/objects/search"),
+            chainWriting(200, "hello"));
 
     verify(pipeline, never()).onSuccess(any(), any(), any(), any(), any());
   }

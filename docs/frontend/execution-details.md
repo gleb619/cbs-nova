@@ -1,6 +1,6 @@
 # Execution Details UI
 
-The **Execution Details** page lets users inspect every run of a DSL Process, Transaction, or Helper after it has been started in **Run**, **Preview**, or **Explain** mode. It surfaces the execution trace, current status, input/output payloads, generated diagrams, metadata, logs, and compensation behavior in one place.
+The **Execution Details** page lets users inspect every run of a DSL Process, Transaction, or Helper after it has been started in **Run**, **Preview**, or **Explain** mode. It surfaces the execution trace, current status, input/output payloads, metadata, logs, and compensation behavior in one place. Diagrams live in the runner's explain/hierarchy output, not on this page.
 
 ## Execution list
 
@@ -92,15 +92,6 @@ Compensation steps are shown distinctly from normal forward steps:
 ## Tabs
 
 The detail view provides several tabs for deeper inspection.
-
-### Diagram
-
-Renders the Mermaid or BPMN diagram from the Explain report, or reconstructs one from the live execution trace in Run/Preview mode. The diagram is synchronized with the trace: clicking a step scrolls the trace to the matching entry, and vice versa.
-
-- Forward steps are drawn with solid connectors.
-- Conditional branches show decision diamonds with labels.
-- Parallel sections show forks and joins.
-- Compensation paths are drawn with dashed or highlighted connectors and labeled rollback nodes.
 
 ### I/O payload
 
