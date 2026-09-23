@@ -81,7 +81,7 @@ class DevDslRuntimeCachingTest {
             dryRunLoggingContext, bufferRegistry, defaultMaxEventsPerRun(),
             previewProperties, new CbsNovaFakesProperties(false, null),
             new RunScopedFakeConfig(Caffeine.newBuilder().build()),
-            new SimpleMeterRegistry(), new HierarchyDiagramRenderer(), null);
+            new SimpleMeterRegistry(), new HierarchyDiagramRenderer(), null, null);
     ExplainDslPipe explainPipe = new ExplainDslPipe(
             new CbsNovaExplainProperties(4000, "explain/", 128, 256, 4096));
     runtime = new DevDslRuntime(previewPipe, runPipe, hierarchyPipe, explainPipe);

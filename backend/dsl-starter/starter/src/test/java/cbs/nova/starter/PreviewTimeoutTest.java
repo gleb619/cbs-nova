@@ -186,6 +186,6 @@ class PreviewTimeoutTest {
             defaultMaxEventsPerRun(), properties,
             new CbsNovaFakesProperties(false, null),
             new RunScopedFakeConfig(Caffeine.newBuilder().build()), meterRegistry,
-            new HierarchyDiagramRenderer(), executor);
+            new HierarchyDiagramRenderer(), executor, null);
   }
 }

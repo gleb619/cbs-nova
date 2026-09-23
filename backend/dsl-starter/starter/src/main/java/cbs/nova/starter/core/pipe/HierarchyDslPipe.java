@@ -44,26 +44,6 @@ public final class HierarchyDslPipe implements DslExecutionPipe<HierarchyReport>
   private final ExecutorService executor;
   private final @Nullable ManifestObjectGuard objectGuard;
 
-  /**
-   * Legacy constructor used by tests that do not exercise object-level enforcement.
-   */
-  // TODO: remove constructor, update related tests
-  public HierarchyDslPipe(
-          ExternalCallRecorder recorder,
-          DryRunLoggingContext dryRunLoggingContext,
-          DryRunLogBufferRegistry bufferRegistry,
-          int maxEventsPerRun,
-          CbsNovaPreviewProperties previewProperties,
-          CbsNovaFakesProperties fakesProperties,
-          RunScopedFakeConfig runScopedFakeConfig,
-          MeterRegistry meterRegistry,
-          HierarchyDiagramRenderer diagramRenderer,
-          ExecutorService executor) {
-    this(recorder, dryRunLoggingContext, bufferRegistry, maxEventsPerRun, previewProperties,
-            fakesProperties, runScopedFakeConfig, meterRegistry, diagramRenderer, executor,
-            null);
-  }
-
   @Override
   public @NonNull Result<HierarchyReport> execute(@NonNull String name,
           @NonNull Context<?> ctx) {

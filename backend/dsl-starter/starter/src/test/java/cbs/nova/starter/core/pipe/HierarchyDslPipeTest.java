@@ -2,6 +2,8 @@ package cbs.nova.starter.core.pipe;
 
 import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -19,10 +21,12 @@ import cbs.nova.starter.core.recorder.ExternalCallRecorder;
 import cbs.nova.starter.logging.DryRunLogBufferRegistry;
 import cbs.nova.starter.logging.ThreadLocalDryRunLoggingContext;
 import cbs.nova.starter.reporting.HierarchyDiagramRenderer;
+import cbs.nova.starter.security.ManifestObjectGuard;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -110,10 +114,49 @@ class HierarchyDslPipeTest {
   }
 
   private HierarchyDslPipe newPipe(ExternalCallRecorder recorder) {
+    return newPipe(recorder, null);
+  }
+
+  private HierarchyDslPipe newPipe(ExternalCallRecorder recorder, ManifestObjectGuard objectGuard) {
     return new HierarchyDslPipe(recorder, dryRunLoggingContext, bufferRegistry,
             defaultMaxEventsPerRun(), previewProperties,
             new CbsNovaFakesProperties(false, null),
             new RunScopedFakeConfig(Caffeine.newBuilder().build()),
-            new SimpleMeterRegistry(), new HierarchyDiagramRenderer(), null);
+            new SimpleMeterRegistry(), new HierarchyDiagramRenderer(), null, objectGuard);
+  }
+
+  @Test
+  void objectGuardDenialSurfacesInReportErrors() {
+    GlobalManager.globalManager().registerHelper("auditLog",
+            (cbs.nova.dsl.Executable<Object, Object>) ctx -> Result.success("audited"));
+    GlobalManager.globalManager().registerProcess(
+            Dsl.process("GuardedHierarchyProcess")
+                    .input(Object.class)
+                    .output(Object.class)
+                    .execute(ctx -> Result.success("ok"))
+                    .preview(ctx -> {
+                      Result<?> helperResult = ctx.runHelper("auditLog");
+                      if (!helperResult.isSuccess()) {
+                        throw new IllegalStateException(helperResult.cause());
+                      }
+                      return Result.success(null);
+                    })
+                    .build());
+
+    ManifestObjectGuard guard = mock(ManifestObjectGuard.class);
+    when(guard.check(eq(ExecutionMode.HIERARCHY), any(), eq("helper"), eq("auditLog"),
+            any())).thenReturn(Optional.of(
+                    new ManifestObjectGuard.Denial("GuardedHierarchyProcess", "piece-1", "helper",
+                            "auditLog", "explicit deny piece matched")));
+
+    HierarchyDslPipe hierarchyPipe = newPipe(mock(ExternalCallRecorder.class), guard);
+
+    Result<HierarchyReport> result = hierarchyPipe.execute("GuardedHierarchyProcess",
+            SimpleContext.builder("payload").mode(ExecutionMode.HIERARCHY).runId("run-guard")
+                    .build());
+
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(result.value().errors()).hasSize(1);
+    assertThat(result.value().errors().get(0).message()).contains("Capability denied");
   }
 }
