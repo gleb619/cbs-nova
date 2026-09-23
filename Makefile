@@ -123,6 +123,7 @@ lint: ## Run all lint/format checks (backend Spotless + frontend Biome + kanban 
 # Aggregate test target — runs backend (dsl-platform + dsl-starter) and frontend suites.
 # Toggle tiers off with BE=0 (skip backend) or FE=0 (skip frontend). Default: both on.
 # The dsl-platform wrapper is canonical per CLAUDE.md and drives the dsl-starter build.
+# Frontend step regenerates the gitignored BFF routes first (fresh checkouts lack them).
 # Non-zero exit on any suite failure; the failing suite is reported in the recipe output.
 BE ?= 1
 FE ?= 1
@@ -142,7 +143,7 @@ test: ## Run backend (dsl-platform + dsl-starter) + frontend test suites; BE=0 /
 	fi; \
 	if [ "$(FE)" = "1" ]; then \
 		printf '\n==> frontend\n'; \
-		(cd frontend && pnpm test) || { printf '    [fail] frontend\n' >&2; exit 1; }; \
+		(cd frontend && pnpm -s gen:bff-routes && pnpm test) || { printf '    [fail] frontend\n' >&2; exit 1; }; \
 		printf '    [ok]   frontend\n'; \
 	else \
 		printf '==> skip frontend (FE=0)\n'; \
