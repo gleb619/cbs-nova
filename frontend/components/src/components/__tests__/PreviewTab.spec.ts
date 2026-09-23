@@ -171,7 +171,7 @@ describe('PreviewTab', () => {
 
     const wrapper = mountTab({ type: 'Process' }, undefined, fetchMock)
     await flushPromises()
-    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/schemas/demo')
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/processes/demo/schema')
     expect(wrapper.find('[data-testid="mode-form"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="mode-json"]').exists()).toBe(true)
   })
@@ -222,13 +222,13 @@ describe('PreviewTab', () => {
 
     const wrapper = mountTab({ type: 'Process' }, undefined, fetchMock)
     await flushPromises()
-    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/schemas/demo')
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/processes/demo/schema')
 
     fetchMock.mockClear()
     await wrapper.setProps({ name: 'other' })
     await flushPromises()
 
-    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/schemas/other')
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/processes/other/schema')
   })
 
   it('renders input type name from schema endpoint', async () => {

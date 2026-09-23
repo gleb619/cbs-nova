@@ -1348,34 +1348,6 @@
         ]
       }
     },
-    "/api/dsl/constructs/{name}": {
-      "get": {
-        "operationId": "getConstructBody",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "name",
-            "required": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ConstructBodyDto"
-                }
-              }
-            },
-            "description": "Construct body"
-          }
-        },
-        "summary": "Get DSL construct body",
-        "tags": [
-          "DSL Introspection"
-        ]
-      }
-    },
     "/api/dsl/definitions/export": {
       "get": {
         "operationId": "exportDefinitions",
@@ -3327,39 +3299,6 @@
         ]
       }
     },
-    "/api/dsl/schemas/{name}": {
-      "get": {
-        "operationId": "getConstructSchema",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "name",
-            "required": true
-          },
-          {
-            "description": "Schema mode: preview (default) or explain",
-            "in": "query",
-            "name": "mode"
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ConstructSchemaDto"
-                }
-              }
-            },
-            "description": "Construct schemas or explain report"
-          }
-        },
-        "summary": "Get DSL construct input/output schemas (preview) or explain report (mode=explain)",
-        "tags": [
-          "DSL Introspection"
-        ]
-      }
-    },
     "/api/dsl/signals/{runId}": {
       "post": {
         "operationId": "sendSignal",
@@ -3408,34 +3347,6 @@
         ]
       }
     },
-    "/api/dsl/structures/{name}": {
-      "get": {
-        "operationId": "getObjectStructure",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "name",
-            "required": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ObjectStructureDto"
-                }
-              }
-            },
-            "description": "Object structure"
-          }
-        },
-        "summary": "Get DSL object structure",
-        "tags": [
-          "DSL Introspection"
-        ]
-      }
-    },
     "/api/dsl/working-set": {
       "get": {
         "operationId": "getWorkingSet",
@@ -3474,6 +3385,113 @@
           }
         },
         "summary": "Get DSL working set",
+        "tags": [
+          "DSL Introspection"
+        ]
+      }
+    },
+    "/api/dsl/{type}/{name}/construct": {
+      "get": {
+        "operationId": "getConstructBody",
+        "parameters": [
+          {
+            "description": "Construct type: processes, transactions, functions or helpers",
+            "in": "path",
+            "name": "type",
+            "required": true
+          },
+          {
+            "in": "path",
+            "name": "name",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConstructBodyDto"
+                }
+              }
+            },
+            "description": "Construct body"
+          }
+        },
+        "summary": "Get DSL construct body",
+        "tags": [
+          "DSL Introspection"
+        ]
+      }
+    },
+    "/api/dsl/{type}/{name}/schema": {
+      "get": {
+        "operationId": "getConstructSchema",
+        "parameters": [
+          {
+            "description": "Construct type: processes, transactions, functions or helpers",
+            "in": "path",
+            "name": "type",
+            "required": true
+          },
+          {
+            "in": "path",
+            "name": "name",
+            "required": true
+          },
+          {
+            "description": "Schema mode: preview (default) or explain",
+            "in": "query",
+            "name": "mode"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConstructSchemaDto"
+                }
+              }
+            },
+            "description": "Construct schemas or explain report"
+          }
+        },
+        "summary": "Get DSL construct input/output schemas (preview) or explain report (mode=explain)",
+        "tags": [
+          "DSL Introspection"
+        ]
+      }
+    },
+    "/api/dsl/{type}/{name}/structure": {
+      "get": {
+        "operationId": "getObjectStructure",
+        "parameters": [
+          {
+            "description": "Construct type: processes, transactions, functions or helpers",
+            "in": "path",
+            "name": "type",
+            "required": true
+          },
+          {
+            "in": "path",
+            "name": "name",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObjectStructureDto"
+                }
+              }
+            },
+            "description": "Object structure"
+          }
+        },
+        "summary": "Get DSL object structure",
         "tags": [
           "DSL Introspection"
         ]

@@ -88,18 +88,18 @@ const expectedProxies: readonly ExpectedProxy[] = [
   },
   {
     method: 'GET',
-    backendPath: '/api/dsl/constructs/{name}',
-    bffPath: '/api/v1/dsl/constructs/{name}',
+    backendPath: '/api/dsl/{type}/{name}/construct',
+    bffPath: '/api/v1/dsl/{type}/{name}/construct',
   },
   {
     method: 'GET',
-    backendPath: '/api/dsl/schemas/{name}',
-    bffPath: '/api/v1/dsl/schemas/{name}',
+    backendPath: '/api/dsl/{type}/{name}/schema',
+    bffPath: '/api/v1/dsl/{type}/{name}/schema',
   },
   {
     method: 'GET',
-    backendPath: '/api/dsl/structures/{name}',
-    bffPath: '/api/v1/dsl/structures/{name}',
+    backendPath: '/api/dsl/{type}/{name}/structure',
+    bffPath: '/api/v1/dsl/{type}/{name}/structure',
   },
   // DslRuntimeRouterConfiguration
   {

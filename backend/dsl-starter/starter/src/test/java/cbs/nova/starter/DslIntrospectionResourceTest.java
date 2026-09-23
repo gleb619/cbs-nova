@@ -150,7 +150,8 @@ class DslIntrospectionResourceTest {
   @Test
   void constructSchemaEndpointReturnsInputAndOutputSchemasForProcess() throws Exception {
     mockMvc
-            .perform(get("/api/dsl/schemas/LoanDisbursement").accept(MediaType.APPLICATION_JSON))
+            .perform(get("/api/dsl/processes/LoanDisbursement/schema")
+                    .accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.name").value("LoanDisbursement"))
             .andExpect(jsonPath("$.type").value("process"))
@@ -163,7 +164,7 @@ class DslIntrospectionResourceTest {
     registerSampleEntities();
 
     mockMvc
-            .perform(get("/api/dsl/schemas/sampleHelper").accept(MediaType.APPLICATION_JSON))
+            .perform(get("/api/dsl/helpers/sampleHelper/schema").accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.name").value("sampleHelper"))
             .andExpect(jsonPath("$.type").value("helper"))
@@ -178,7 +179,8 @@ class DslIntrospectionResourceTest {
     registerSampleEntities();
 
     mockMvc
-            .perform(get("/api/dsl/schemas/sampleFunction").accept(MediaType.APPLICATION_JSON))
+            .perform(get("/api/dsl/functions/sampleFunction/schema")
+                    .accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.name").value("sampleFunction"))
             .andExpect(jsonPath("$.type").value("function"))
@@ -191,14 +193,14 @@ class DslIntrospectionResourceTest {
   @Test
   void constructSchemaEndpointReturns404ForUnknown() throws Exception {
     mockMvc
-            .perform(get("/api/dsl/schemas/Unknown").accept(MediaType.APPLICATION_JSON))
+            .perform(get("/api/dsl/processes/Unknown/schema").accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isNotFound());
   }
 
   @Test
   void constructSchemaEndpointReturnsSchemasForExplainMode() throws Exception {
     mockMvc
-            .perform(get("/api/dsl/schemas/LoanDisbursement")
+            .perform(get("/api/dsl/processes/LoanDisbursement/schema")
                     .param("mode", "explain")
                     .accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
@@ -220,7 +222,7 @@ class DslIntrospectionResourceTest {
     registerSampleEntities();
 
     mockMvc
-            .perform(get("/api/dsl/schemas/sampleFunction")
+            .perform(get("/api/dsl/functions/sampleFunction/schema")
                     .param("mode", "explain")
                     .accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
@@ -236,7 +238,8 @@ class DslIntrospectionResourceTest {
   @Test
   void constructSchemaEndpointDefaultsToPreviewSchemasWithoutMode() throws Exception {
     mockMvc
-            .perform(get("/api/dsl/schemas/LoanDisbursement").accept(MediaType.APPLICATION_JSON))
+            .perform(get("/api/dsl/processes/LoanDisbursement/schema")
+                    .accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.type").value("process"))
             .andExpect(jsonPath("$.inputSchema").exists());
@@ -245,7 +248,7 @@ class DslIntrospectionResourceTest {
   @Test
   void constructSchemaEndpointReturns404ForUnknownInExplainMode() throws Exception {
     mockMvc
-            .perform(get("/api/dsl/schemas/Unknown")
+            .perform(get("/api/dsl/processes/Unknown/schema")
                     .param("mode", "explain")
                     .accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isNotFound());
@@ -358,7 +361,7 @@ class DslIntrospectionResourceTest {
   @Test
   void structuresEndpointReturnsFlatFieldsForProcess() throws Exception {
     mockMvc
-            .perform(get("/api/dsl/structures/LoanDisbursement")
+            .perform(get("/api/dsl/processes/LoanDisbursement/structure")
                     .accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.name").value("LoanDisbursement"))
@@ -376,7 +379,7 @@ class DslIntrospectionResourceTest {
   @Test
   void structuresEndpointReportsDefaultLogicForProcess() throws Exception {
     mockMvc
-            .perform(get("/api/dsl/structures/LoanDisbursement")
+            .perform(get("/api/dsl/processes/LoanDisbursement/structure")
                     .accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.logic[?(@.kind=='execute')].status").value("configured"))
@@ -395,7 +398,7 @@ class DslIntrospectionResourceTest {
                     .build());
 
     mockMvc
-            .perform(get("/api/dsl/structures/ConfiguredLogicProcess")
+            .perform(get("/api/dsl/processes/ConfiguredLogicProcess/structure")
                     .accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.logic[?(@.kind=='execute')].status").value("configured"))
@@ -408,7 +411,8 @@ class DslIntrospectionResourceTest {
     registerSampleEntities();
 
     mockMvc
-            .perform(get("/api/dsl/structures/sampleHelper").accept(MediaType.APPLICATION_JSON))
+            .perform(get("/api/dsl/helpers/sampleHelper/structure")
+                    .accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.name").value("sampleHelper"))
             .andExpect(jsonPath("$.type").value("helper"))
@@ -421,7 +425,39 @@ class DslIntrospectionResourceTest {
   @Test
   void structuresEndpointReturns404ForUnknown() throws Exception {
     mockMvc
-            .perform(get("/api/dsl/structures/Unknown").accept(MediaType.APPLICATION_JSON))
+            .perform(get("/api/dsl/processes/Unknown/structure").accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isNotFound());
+  }
+
+  @Test
+  void structuresEndpointReturns404ForWrongType() throws Exception {
+    mockMvc
+            .perform(get("/api/dsl/transactions/LoanDisbursement/structure")
+                    .accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isNotFound());
+  }
+
+  @Test
+  void schemasEndpointReturns404ForWrongType() throws Exception {
+    mockMvc
+            .perform(get("/api/dsl/helpers/LoanDisbursement/schema")
+                    .accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isNotFound());
+  }
+
+  @Test
+  void schemasEndpointReturns404ForInvalidType() throws Exception {
+    mockMvc
+            .perform(get("/api/dsl/workflows/LoanDisbursement/schema")
+                    .accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isNotFound());
+  }
+
+  @Test
+  void constructsEndpointReturns404ForWrongType() throws Exception {
+    mockMvc
+            .perform(get("/api/dsl/functions/LoanDisbursement/construct")
+                    .accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isNotFound());
   }
 

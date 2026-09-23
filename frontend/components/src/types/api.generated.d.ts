@@ -111,23 +111,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/dsl/constructs/{name}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get DSL construct body */
-        get: operations["getConstructBody"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/dsl/definitions/export": {
         parameters: {
             query?: never;
@@ -885,23 +868,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/dsl/schemas/{name}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get DSL construct input/output schemas (preview) or explain report (mode=explain) */
-        get: operations["getConstructSchema"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/dsl/signals/{runId}": {
         parameters: {
             query?: never;
@@ -919,23 +885,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/dsl/structures/{name}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get DSL object structure */
-        get: operations["getObjectStructure"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/dsl/working-set": {
         parameters: {
             query?: never;
@@ -945,6 +894,57 @@ export interface paths {
         };
         /** Get DSL working set */
         get: operations["getWorkingSet"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/dsl/{type}/{name}/construct": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get DSL construct body */
+        get: operations["getConstructBody"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/dsl/{type}/{name}/schema": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get DSL construct input/output schemas (preview) or explain report (mode=explain) */
+        get: operations["getConstructSchema"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/dsl/{type}/{name}/structure": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get DSL object structure */
+        get: operations["getObjectStructure"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1713,28 +1713,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    getConstructBody: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                name: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Construct body */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ConstructBodyDto"];
                 };
             };
         };
@@ -3026,6 +3004,7 @@ export interface operations {
                 size?: string;
                 query?: string;
                 mode?: string;
+                type?: string;
             };
             header?: never;
             path?: never;
@@ -3472,31 +3451,6 @@ export interface operations {
             };
         };
     };
-    getConstructSchema: {
-        parameters: {
-            query?: {
-                /** @description Schema mode: preview (default) or explain */
-                mode?: string;
-            };
-            header?: never;
-            path: {
-                name: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Construct schemas or explain report */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ConstructSchemaDto"];
-                };
-            };
-        };
-    };
     sendSignal: {
         parameters: {
             query?: never;
@@ -3537,36 +3491,14 @@ export interface operations {
             };
         };
     };
-    getObjectStructure: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                name: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Object structure */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ObjectStructureDto"];
-                };
-            };
-        };
-    };
     getWorkingSet: {
         parameters: {
             query?: {
-                name?: string;
+                page?: string;
+                size?: string;
+                query?: string;
+                mode?: string;
                 type?: string;
-                description?: string;
-                limit?: string;
-                offset?: string;
             };
             header?: never;
             path?: never;
@@ -3581,6 +3513,81 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorkingSetResponse"];
+                };
+            };
+        };
+    };
+    getConstructBody: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Construct type: processes, transactions, functions or helpers */
+                type: string;
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Construct body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConstructBodyDto"];
+                };
+            };
+        };
+    };
+    getConstructSchema: {
+        parameters: {
+            query?: {
+                /** @description Schema mode: preview (default) or explain */
+                mode?: string;
+            };
+            header?: never;
+            path: {
+                /** @description Construct type: processes, transactions, functions or helpers */
+                type: string;
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Construct schemas or explain report */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConstructSchemaDto"];
+                };
+            };
+        };
+    };
+    getObjectStructure: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Construct type: processes, transactions, functions or helpers */
+                type: string;
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Object structure */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ObjectStructureDto"];
                 };
             };
         };

@@ -103,7 +103,7 @@ when exposing a new backend DSL path.
 | `/api/v1/info` | GET | `/actuator/info` | `server/api/v1/info.get.ts` |
 | `/api/v1/dsl/definitions` | GET | `/api/dsl/definitions` | `server/api/v1/dsl/definitions.get.ts` |
 | `/api/v1/dsl/reload` | POST | `/api/dsl/reload` | `server/api/v1/dsl/reload.post.ts` |
-| `/api/v1/dsl/objects/search` | GET | `/api/dsl/objects/search` (forwards `name`, `type`, `description` query params) | `server/api/v1/dsl/objects/search.get.ts` |
+| `/api/v1/dsl/objects/search` | GET | `/api/dsl/objects/search` (forwards `page`, `size`, `query`, `mode`, `type` query params) | `server/api/v1/dsl/objects/search.get.ts` |
 | `/api/v1/dsl/helpers` | GET | `/api/dsl/helpers` | `server/api/v1/dsl/helpers/index.get.ts` |
 | `/api/v1/dsl/processes` | GET | `/api/dsl/processes` | `server/api/v1/dsl/processes/index.get.ts` |
 | `/api/v1/dsl/processes/:name` | GET | `/api/dsl/processes/:name` | `server/api/v1/dsl/processes/[name].get.ts` |

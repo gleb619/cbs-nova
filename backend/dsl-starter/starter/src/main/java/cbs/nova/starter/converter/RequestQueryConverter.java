@@ -11,8 +11,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.function.ServerRequest;
 
 /**
- * Translates a {@link ServerRequest} into typed query
- * records.
+ * Translates a {@link ServerRequest} into typed query records.
  *
  * <p>
  * Hand-written on purpose: the mapping is not a bean property copy, so neither MapStruct nor

@@ -50,7 +50,7 @@ describe('useConstructSchema', () => {
     const { schema, loading } = mountUseConstructSchema({ name: 'Demo', type: 'Process' })
     await waitForNextTick()
     await waitForNextTick()
-    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/schemas/Demo')
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/processes/Demo/schema')
     expect(loading.value).toBe(false)
     expect(schema.value).toBeTruthy()
   })
@@ -60,7 +60,7 @@ describe('useConstructSchema', () => {
     mountUseConstructSchema({ name: 'Demo', type: 'Process' })
     await waitForNextTick()
     await waitForNextTick()
-    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/schemas/Demo')
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/processes/Demo/schema')
   })
 
   it('fetches schema with mode=explain when mode option is explain', async () => {
@@ -76,7 +76,7 @@ describe('useConstructSchema', () => {
     })
     await waitForNextTick()
     await waitForNextTick()
-    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/schemas/Demo?mode=explain')
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/processes/Demo/schema?mode=explain')
     expect(outputType.value).toBe('ExplainReport')
   })
 
@@ -92,7 +92,7 @@ describe('useConstructSchema', () => {
     mountUseConstructSchema({ name: 'Demo', type: 'Process', mode: 'explain' })
     await waitForNextTick()
     await waitForNextTick()
-    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/schemas/Demo?mode=explain')
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/processes/Demo/schema?mode=explain')
   })
 
   it('fetches transaction schema when type is Transaction', async () => {
@@ -100,7 +100,7 @@ describe('useConstructSchema', () => {
     const { schema } = mountUseConstructSchema({ name: 'Tx', type: 'Transaction' })
     await waitForNextTick()
     await waitForNextTick()
-    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/schemas/Tx')
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/transactions/Tx/schema')
     expect(schema.value).toBeTruthy()
   })
 
@@ -120,7 +120,7 @@ describe('useConstructSchema', () => {
     const { schema } = mountUseConstructSchema({ name: 'HelperA', type: 'Helper' })
     await waitForNextTick()
     await waitForNextTick()
-    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/schemas/HelperA')
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/helpers/HelperA/schema')
     expect(schema.value).toBeTruthy()
   })
 
@@ -129,7 +129,7 @@ describe('useConstructSchema', () => {
     const { schema } = mountUseConstructSchema({ name: 'FnA', type: 'Function' })
     await waitForNextTick()
     await waitForNextTick()
-    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/schemas/FnA')
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/functions/FnA/schema')
     expect(schema.value).toBeTruthy()
   })
 
@@ -192,7 +192,7 @@ describe('useConstructSchema', () => {
     const _second = mountUseConstructSchema({ name: 'Other', type: 'Process' })
     await waitForNextTick()
     await waitForNextTick()
-    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/schemas/Other')
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/processes/Other/schema')
   })
 
   it('reacts to name change via event', async () => {
@@ -200,7 +200,7 @@ describe('useConstructSchema', () => {
     const { schema, events } = mountUseConstructSchema({ name: 'Alpha', type: 'Process' })
     await waitForNextTick()
     await waitForNextTick()
-    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/schemas/Alpha')
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/processes/Alpha/schema')
 
     fetchMock.mockClear()
     fetchMock.mockResolvedValue({
@@ -209,7 +209,7 @@ describe('useConstructSchema', () => {
     events.emit('change', { name: 'Beta', type: 'Process' })
     await waitForNextTick()
     await waitForNextTick()
-    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/schemas/Beta')
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/processes/Beta/schema')
     expect(schema.value?.properties).toHaveProperty('beta')
   })
 
@@ -224,7 +224,7 @@ describe('useConstructSchema', () => {
     events.emit('change', { name: 'Demo', type: 'Helper' })
     await waitForNextTick()
     await waitForNextTick()
-    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/schemas/Demo')
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/helpers/Demo/schema')
     expect(schema.value).toBeTruthy()
   })
 
@@ -286,7 +286,7 @@ describe('useConstructSchema', () => {
     })
     await waitForNextTick()
     expect(fetchMock).toHaveBeenCalledTimes(1)
-    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/schemas/BatchProcessing')
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/processes/BatchProcessing/schema')
 
     resolveFetch({
       inputSchema: { type: 'object', properties: { x: { type: 'number' } } },

@@ -306,7 +306,8 @@ const structureError = ref<string | null>(null)
 const structureName = ref<string | null>(null)
 
 async function loadStructure(name: string, force = false) {
-  if (!name) {
+  const constructType = selectedConstruct.value?.type
+  if (!name || !constructType) {
     structure.value = null
     structureError.value = null
     structureName.value = null
@@ -317,7 +318,7 @@ async function loadStructure(name: string, force = false) {
   structureLoading.value = true
   structureError.value = null
   try {
-    structure.value = await dslApi.fetchObjectStructure(name)
+    structure.value = await dslApi.fetchObjectStructure(constructType, name)
   } catch (err) {
     structure.value = null
     structureError.value = (err as Error).message

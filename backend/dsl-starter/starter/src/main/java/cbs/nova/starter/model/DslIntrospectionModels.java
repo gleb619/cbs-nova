@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
@@ -23,6 +24,30 @@ public final class DslIntrospectionModels {
         case "explain" -> EXPLAIN;
         default -> throw new IllegalArgumentException("Unknown schema mode: " + value);
       };
+    }
+  }
+
+  public enum ConstructPathType {
+    PROCESSES("processes"), TRANSACTIONS("transactions"), FUNCTIONS("functions"), HELPERS(
+            "helpers");
+
+    private final String pathSegment;
+
+    ConstructPathType(String pathSegment) {
+      this.pathSegment = pathSegment;
+    }
+
+    public static @NonNull Optional<ConstructPathType> from(@Nullable String value) {
+      if (value == null || value.isBlank()) {
+        return Optional.empty();
+      }
+      String normalized = value.trim().toLowerCase(Locale.ROOT);
+      for (ConstructPathType type : values()) {
+        if (type.pathSegment.equals(normalized)) {
+          return Optional.of(type);
+        }
+      }
+      return Optional.empty();
     }
   }
 

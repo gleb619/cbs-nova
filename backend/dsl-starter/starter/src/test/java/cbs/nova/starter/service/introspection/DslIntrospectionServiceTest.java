@@ -9,6 +9,7 @@ import cbs.nova.dsl.DslObject.DslType;
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.ExecutableDescriptor;
 import cbs.nova.dsl.helper.HelperSource;
+import cbs.nova.starter.model.DslIntrospectionModels.ConstructPathType;
 import cbs.nova.starter.model.DslIntrospectionModels.ConstructSchemaDto;
 import cbs.nova.starter.model.DslIntrospectionModels.ObjectSearchResult;
 import cbs.nova.starter.model.DslIntrospectionModels.ConstructSchemaMode;
@@ -130,7 +131,8 @@ class DslIntrospectionServiceTest {
                     .build());
 
     var dto = (ConstructSchemaDto) service
-            .constructSchema("PSchema", ConstructSchemaMode.PREVIEW).orElseThrow();
+            .constructSchema(ConstructPathType.PROCESSES, "PSchema", ConstructSchemaMode.PREVIEW)
+            .orElseThrow();
 
     assertThat(dto.type()).isEqualTo("process");
     assertThat(dto.inputType()).isEqualTo("String");
@@ -149,7 +151,8 @@ class DslIntrospectionServiceTest {
                     .build());
 
     var dto = (ConstructSchemaDto) service
-            .constructSchema("TSchema", ConstructSchemaMode.PREVIEW).orElseThrow();
+            .constructSchema(ConstructPathType.TRANSACTIONS, "TSchema", ConstructSchemaMode.PREVIEW)
+            .orElseThrow();
 
     assertThat(dto.type()).isEqualTo("transaction");
     assertThat(dto.inputType()).isEqualTo("Long");
@@ -178,7 +181,8 @@ class DslIntrospectionServiceTest {
     });
 
     var dto = (ConstructSchemaDto) service
-            .constructSchema("HSchema", ConstructSchemaMode.PREVIEW).orElseThrow();
+            .constructSchema(ConstructPathType.HELPERS, "HSchema", ConstructSchemaMode.PREVIEW)
+            .orElseThrow();
 
     assertThat(dto.type()).isEqualTo("helper");
     assertThat(dto.inputType()).isEqualTo("String");
@@ -196,7 +200,8 @@ class DslIntrospectionServiceTest {
                     .build());
 
     var dto = (ConstructSchemaDto) service
-            .constructSchema("FSchema", ConstructSchemaMode.PREVIEW).orElseThrow();
+            .constructSchema(ConstructPathType.FUNCTIONS, "FSchema", ConstructSchemaMode.PREVIEW)
+            .orElseThrow();
 
     assertThat(dto.type()).isEqualTo("function");
     assertThat(dto.inputSchema()).isNotNull();
@@ -207,8 +212,62 @@ class DslIntrospectionServiceTest {
 
   @Test
   void constructSchemaReturnsEmptyForUnknown() {
-    assertThat(service.constructSchema("NoSuchConstruct", ConstructSchemaMode.PREVIEW)).isEmpty();
-    assertThat(service.constructSchema("NoSuchConstruct", ConstructSchemaMode.EXPLAIN)).isEmpty();
+    assertThat(service.constructSchema(ConstructPathType.PROCESSES, "NoSuchConstruct",
+            ConstructSchemaMode.PREVIEW)).isEmpty();
+    assertThat(service.constructSchema(ConstructPathType.PROCESSES, "NoSuchConstruct",
+            ConstructSchemaMode.EXPLAIN)).isEmpty();
+  }
+
+  @Test
+  void constructPathTypeParsesAllowedSegmentsCaseInsensitively() {
+    assertThat(ConstructPathType.from("processes")).contains(ConstructPathType.PROCESSES);
+    assertThat(ConstructPathType.from("Transactions")).contains(ConstructPathType.TRANSACTIONS);
+    assertThat(ConstructPathType.from("FUNCTIONS")).contains(ConstructPathType.FUNCTIONS);
+    assertThat(ConstructPathType.from(" helpers ")).contains(ConstructPathType.HELPERS);
+    assertThat(ConstructPathType.from("workflows")).isEmpty();
+    assertThat(ConstructPathType.from("")).isEmpty();
+    assertThat(ConstructPathType.from(null)).isEmpty();
+  }
+
+  @Test
+  void constructBodyResolvesOnlyWithinRequestedType() {
+    GlobalManager.globalManager().registerProcess(
+            Dsl.process("PBody").execute(ctx -> Result.success("ok")).build());
+    GlobalManager.globalManager().registerTransaction(
+            Dsl.transaction("TBody").execute(ctx -> Result.success("ok")).build());
+
+    assertThat(service.constructBody(ConstructPathType.PROCESSES, "PBody"))
+            .hasValueSatisfying(dto -> assertThat(dto.type()).isEqualTo("process"));
+    assertThat(service.constructBody(ConstructPathType.TRANSACTIONS, "TBody"))
+            .hasValueSatisfying(dto -> assertThat(dto.type()).isEqualTo("transaction"));
+    assertThat(service.constructBody(ConstructPathType.TRANSACTIONS, "PBody")).isEmpty();
+    assertThat(service.constructBody(ConstructPathType.FUNCTIONS, "PBody")).isEmpty();
+    assertThat(service.constructBody(ConstructPathType.HELPERS, "PBody")).isEmpty();
+  }
+
+  @Test
+  void constructSchemaResolvesOnlyWithinRequestedType() {
+    GlobalManager.globalManager().registerProcess(
+            Dsl.process("PScoped").execute(ctx -> Result.success("ok")).build());
+
+    assertThat(service.constructSchema(ConstructPathType.PROCESSES, "PScoped",
+            ConstructSchemaMode.PREVIEW)).isPresent();
+    assertThat(service.constructSchema(ConstructPathType.TRANSACTIONS, "PScoped",
+            ConstructSchemaMode.PREVIEW)).isEmpty();
+    assertThat(service.constructSchema(ConstructPathType.HELPERS, "PScoped",
+            ConstructSchemaMode.EXPLAIN)).isEmpty();
+  }
+
+  @Test
+  void objectStructureResolvesOnlyWithinRequestedType() {
+    GlobalManager.globalManager().registerProcess(
+            Dsl.process("PScopedStructure").execute(ctx -> Result.success("ok")).build());
+
+    assertThat(service.objectStructure(ConstructPathType.PROCESSES, "PScopedStructure"))
+            .isPresent();
+    assertThat(service.objectStructure(ConstructPathType.TRANSACTIONS, "PScopedStructure"))
+            .isEmpty();
+    assertThat(service.objectStructure(ConstructPathType.FUNCTIONS, "PScopedStructure")).isEmpty();
   }
 
   @Test
@@ -220,7 +279,9 @@ class DslIntrospectionServiceTest {
                     .execute(ctx -> Result.success("ok"))
                     .build());
 
-    var dto = service.constructSchema("PExplain", ConstructSchemaMode.EXPLAIN).orElseThrow();
+    var dto = service
+            .constructSchema(ConstructPathType.PROCESSES, "PExplain", ConstructSchemaMode.EXPLAIN)
+            .orElseThrow();
 
     assertThat(dto.type()).isEqualTo("process");
     assertThat(dto.inputType()).isEqualTo("String");
@@ -238,7 +299,8 @@ class DslIntrospectionServiceTest {
                     .execute(ctx -> Result.success("ok"))
                     .build());
 
-    var dto = service.constructSchema("TExplain", ConstructSchemaMode.EXPLAIN).orElseThrow();
+    var dto = service.constructSchema(ConstructPathType.TRANSACTIONS, "TExplain",
+            ConstructSchemaMode.EXPLAIN).orElseThrow();
 
     assertThat(dto.type()).isEqualTo("transaction");
     assertThat(dto.inputType()).isEqualTo("Long");
@@ -262,7 +324,9 @@ class DslIntrospectionServiceTest {
       }
     });
 
-    var dto = service.constructSchema("HExplain", ConstructSchemaMode.EXPLAIN).orElseThrow();
+    var dto = service
+            .constructSchema(ConstructPathType.HELPERS, "HExplain", ConstructSchemaMode.EXPLAIN)
+            .orElseThrow();
 
     assertThat(dto.type()).isEqualTo("helper");
     assertThat(dto.inputType()).isEqualTo("String");
@@ -279,7 +343,9 @@ class DslIntrospectionServiceTest {
                     .execute(ctx -> Result.success("ok"))
                     .build());
 
-    var dto = service.constructSchema("FExplain", ConstructSchemaMode.EXPLAIN).orElseThrow();
+    var dto = service
+            .constructSchema(ConstructPathType.FUNCTIONS, "FExplain", ConstructSchemaMode.EXPLAIN)
+            .orElseThrow();
 
     assertThat(dto.type()).isEqualTo("function");
     assertThat(dto.inputSchema()).isNotNull();
@@ -306,7 +372,7 @@ class DslIntrospectionServiceTest {
     GlobalManager.globalManager().registerProcess(
             Dsl.process("PLogic").execute(ctx -> Result.success("ok")).build());
 
-    var dto = service.objectStructure("PLogic").orElseThrow();
+    var dto = service.objectStructure(ConstructPathType.PROCESSES, "PLogic").orElseThrow();
 
     assertThat(dto.logic())
             .extracting(LogicInfoDto::kind, LogicInfoDto::status, LogicInfoDto::required)
@@ -325,7 +391,7 @@ class DslIntrospectionServiceTest {
                     .explain(ctx -> Result.success(ExplainReport.of("report")))
                     .build());
 
-    var dto = service.objectStructure("PLogicFull").orElseThrow();
+    var dto = service.objectStructure(ConstructPathType.PROCESSES, "PLogicFull").orElseThrow();
 
     assertThat(dto.logic())
             .extracting(LogicInfoDto::kind, LogicInfoDto::status, LogicInfoDto::required)
@@ -340,7 +406,7 @@ class DslIntrospectionServiceTest {
     GlobalManager.globalManager().registerTransaction(
             Dsl.transaction("TLogic").execute(ctx -> Result.success("ok")).build());
 
-    var dto = service.objectStructure("TLogic").orElseThrow();
+    var dto = service.objectStructure(ConstructPathType.TRANSACTIONS, "TLogic").orElseThrow();
 
     assertThat(dto.logic())
             .extracting(LogicInfoDto::kind, LogicInfoDto::status, LogicInfoDto::required)
@@ -355,7 +421,7 @@ class DslIntrospectionServiceTest {
     GlobalManager.globalManager().registerFunction(
             Dsl.function("FLogic").execute(ctx -> Result.success("ok")).build());
 
-    var dto = service.objectStructure("FLogic").orElseThrow();
+    var dto = service.objectStructure(ConstructPathType.FUNCTIONS, "FLogic").orElseThrow();
 
     assertThat(dto.type()).isEqualTo("function");
     assertThat(dto.logic())
@@ -375,7 +441,7 @@ class DslIntrospectionServiceTest {
       }
     });
 
-    var dto = service.objectStructure("HLogic").orElseThrow();
+    var dto = service.objectStructure(ConstructPathType.HELPERS, "HLogic").orElseThrow();
 
     assertThat(dto.type()).isEqualTo("helper");
     assertThat(dto.logic())

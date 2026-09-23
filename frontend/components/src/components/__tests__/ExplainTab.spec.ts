@@ -222,7 +222,7 @@ describe('ExplainTab', () => {
 
     const wrapper = mountTab({ type: 'Process' }, undefined, fetchMock)
     await flushPromises()
-    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/schemas/demo')
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/processes/demo/schema')
     expect(wrapper.find('[data-testid="mode-form"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="mode-json"]').exists()).toBe(true)
   })

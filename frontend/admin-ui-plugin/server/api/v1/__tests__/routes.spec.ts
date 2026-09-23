@@ -91,9 +91,11 @@ const historyDiffHandler = (
   await import('../generated/routes/dsl/drafts/[name]/history/[timestamp]/diff.get')
 ).default
 const searchObjectsHandler = (await import('../dsl/objects/search.get')).default
-const constructBodyHandler = (await import('../generated/routes/dsl/constructs/[name].get')).default
-const constructSchemaHandler = (await import('../dsl/schemas/[name].get')).default
-const objectStructureHandler = (await import('../dsl/structures/[name].get')).default
+const constructBodyHandler = (
+  await import('../generated/routes/dsl/[type]/[name]/construct.get')
+).default
+const constructSchemaHandler = (await import('../dsl/[type]/[name]/schema.get')).default
+const objectStructureHandler = (await import('../dsl/[type]/[name]/structure.get')).default
 const schedulesIndexHandler = (await import('../generated/routes/dsl/schedules.get')).default
 const schedulesCreateHandler = (await import('../generated/routes/dsl/schedules.post')).default
 const schedulesDeleteHandler = (
@@ -637,22 +639,22 @@ describe('info.get', () => {
   })
 })
 
-describe('dsl/constructs/[name].get', () => {
-  it('interpolates the :name router param into the backend path with GET (no opts)', async () => {
-    routerParams = { name: 'LoanDisbursement' }
+describe('dsl/[type]/[name]/construct.get', () => {
+  it('interpolates the :type and :name router params into the backend path with GET (no opts)', async () => {
+    routerParams = { type: 'processes', name: 'LoanDisbursement' }
 
     await constructBodyHandler(fakeEvent)
 
     expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
     expect(proxyToBackendMock).toHaveBeenCalledWith(
       fakeEvent,
-      '/api/dsl/constructs/LoanDisbursement',
+      '/api/dsl/processes/LoanDisbursement/construct',
     )
     expect(proxyToBackendMock.mock.calls[0][2]).toBeUndefined()
   })
 
   it('returns the backend ConstructBodyDto verbatim', async () => {
-    routerParams = { name: 'SampleProcess' }
+    routerParams = { type: 'processes', name: 'SampleProcess' }
     const payload = {
       name: 'SampleProcess',
       type: 'process',
@@ -667,19 +669,22 @@ describe('dsl/constructs/[name].get', () => {
   })
 })
 
-describe('dsl/schemas/[name].get', () => {
-  it('interpolates the :name router param into the backend path with GET (no opts)', async () => {
-    routerParams = { name: 'LoanDisbursement' }
+describe('dsl/[type]/[name]/schema.get', () => {
+  it('interpolates the :type and :name router params into the backend path with GET (no opts)', async () => {
+    routerParams = { type: 'processes', name: 'LoanDisbursement' }
 
     await constructSchemaHandler(fakeEvent)
 
     expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
-    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/schemas/LoanDisbursement')
+    expect(proxyToBackendMock).toHaveBeenCalledWith(
+      fakeEvent,
+      '/api/dsl/processes/LoanDisbursement/schema',
+    )
     expect(proxyToBackendMock.mock.calls[0][2]).toBeUndefined()
   })
 
   it('returns the backend ConstructSchemaDto verbatim', async () => {
-    routerParams = { name: 'SampleProcess' }
+    routerParams = { type: 'processes', name: 'SampleProcess' }
     const payload = {
       name: 'SampleProcess',
       type: 'process',
@@ -694,34 +699,42 @@ describe('dsl/schemas/[name].get', () => {
   })
 
   it('forwards the mode query param to the backend', async () => {
-    routerParams = { name: 'LoanDisbursement' }
+    routerParams = { type: 'processes', name: 'LoanDisbursement' }
     queryValue = { mode: 'explain' }
 
     await constructSchemaHandler(fakeEvent)
 
     expect(proxyToBackendMock).toHaveBeenCalledWith(
       fakeEvent,
-      '/api/dsl/schemas/LoanDisbursement?mode=explain',
+      '/api/dsl/processes/LoanDisbursement/schema?mode=explain',
     )
+  })
+
+  it('rejects an unknown construct type with 404 without proxying', async () => {
+    routerParams = { type: 'workflows', name: 'LoanDisbursement' }
+
+    await expect(constructSchemaHandler(fakeEvent)).rejects.toMatchObject({ statusCode: 404 })
+
+    expect(proxyToBackendMock).not.toHaveBeenCalled()
   })
 })
 
-describe('dsl/structures/[name].get', () => {
-  it('interpolates the :name router param into the backend path with GET (no opts)', async () => {
-    routerParams = { name: 'BatchProcessing' }
+describe('dsl/[type]/[name]/structure.get', () => {
+  it('interpolates the :type and :name router params into the backend path with GET (no opts)', async () => {
+    routerParams = { type: 'processes', name: 'BatchProcessing' }
 
     await objectStructureHandler(fakeEvent)
 
     expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
     expect(proxyToBackendMock).toHaveBeenCalledWith(
       fakeEvent,
-      '/api/dsl/structures/BatchProcessing',
+      '/api/dsl/processes/BatchProcessing/structure',
     )
     expect(proxyToBackendMock.mock.calls[0][2]).toBeUndefined()
   })
 
   it('returns the backend ObjectStructureDto verbatim', async () => {
-    routerParams = { name: 'BatchProcessing' }
+    routerParams = { type: 'processes', name: 'BatchProcessing' }
     const payload = {
       name: 'BatchProcessing',
       type: 'process',
@@ -740,17 +753,25 @@ describe('dsl/structures/[name].get', () => {
 
     expect(result).toEqual(payload)
   })
+
+  it('rejects an unknown construct type with 404 without proxying', async () => {
+    routerParams = { type: 'workflows', name: 'BatchProcessing' }
+
+    await expect(objectStructureHandler(fakeEvent)).rejects.toMatchObject({ statusCode: 404 })
+
+    expect(proxyToBackendMock).not.toHaveBeenCalled()
+  })
 })
 
 describe('dsl/objects/search.get', () => {
   it('proxies the trimmed search params to the backend', async () => {
-    queryValue = { page: '2', size: '50', query: 'Loan', mode: 'exact' }
+    queryValue = { page: '2', size: '50', query: 'Loan', mode: 'exact', type: 'function' }
 
     await searchObjectsHandler(fakeEvent)
 
     expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
     expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/objects/search', {
-      query: { page: '2', size: '50', query: 'Loan', mode: 'exact' },
+      query: { page: '2', size: '50', query: 'Loan', mode: 'exact', type: 'function' },
     })
   })
 

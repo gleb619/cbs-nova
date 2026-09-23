@@ -1,6 +1,7 @@
 package cbs.nova.starter.controller;
 
 import cbs.nova.starter.converter.RequestQueryConverter;
+import cbs.nova.starter.model.DslIntrospectionModels.ConstructPathType;
 import cbs.nova.starter.model.DslIntrospectionModels.ConstructSchemaMode;
 import cbs.nova.starter.model.DslIntrospectionModels.ObjectSearchResult;
 import cbs.nova.starter.model.DslIntrospectionModels.WorkingSetResponse;
@@ -24,23 +25,26 @@ public class DslIntrospectionHandler {
   }
 
   public ServerResponse constructBody(ServerRequest request) {
+    var type = ConstructPathType.from(request.pathVariable("type"));
     String name = request.pathVariable("name");
-    return service.constructBody(name)
+    return type.flatMap(t -> service.constructBody(t, name))
             .map(b -> ServerResponse.ok().body(b))
             .orElse(ServerResponse.notFound().build());
   }
 
   public ServerResponse constructSchema(ServerRequest request) {
+    var type = ConstructPathType.from(request.pathVariable("type"));
     String name = request.pathVariable("name");
     ConstructSchemaMode mode = ConstructSchemaMode.from(request.param("mode").orElse(null));
-    return service.constructSchema(name, mode)
+    return type.flatMap(t -> service.constructSchema(t, name, mode))
             .map(s -> ServerResponse.ok().body(s))
             .orElse(ServerResponse.notFound().build());
   }
 
   public ServerResponse objectStructure(ServerRequest request) {
+    var type = ConstructPathType.from(request.pathVariable("type"));
     String name = request.pathVariable("name");
-    return service.objectStructure(name)
+    return type.flatMap(t -> service.objectStructure(t, name))
             .map(s -> ServerResponse.ok().body(s))
             .orElse(ServerResponse.notFound().build());
   }

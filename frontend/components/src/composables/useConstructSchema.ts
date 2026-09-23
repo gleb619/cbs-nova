@@ -5,6 +5,13 @@ import { createEmitter } from '../utils/createEmitter'
 export type ConstructType = 'Process' | 'Transaction' | 'Helper' | 'Function'
 export type SchemaFetchMode = 'preview' | 'explain'
 
+const PLURAL_TYPES: Record<ConstructType, string> = {
+  Process: 'processes',
+  Transaction: 'transactions',
+  Helper: 'helpers',
+  Function: 'functions',
+}
+
 interface SchemaCacheEntry {
   inputSchema: JsonSchema | null
   outputSchema: JsonSchema | null
@@ -112,8 +119,10 @@ export function useConstructSchema({
   }
 
   function endpoint() {
+    const plural = type.value ? PLURAL_TYPES[type.value] : null
+    if (!plural) return ''
     const suffix = mode.value === 'explain' ? '?mode=explain' : ''
-    return `/api/v1/dsl/schemas/${encodeURIComponent(name.value)}${suffix}`
+    return `/api/v1/dsl/${plural}/${encodeURIComponent(name.value)}/schema${suffix}`
   }
 
   function emptyEntry(): SchemaCacheEntry {

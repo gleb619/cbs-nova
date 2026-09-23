@@ -46,21 +46,27 @@ public class DslIntrospectionRouterConfiguration {
               @Parameter(name = "query", in = ParameterIn.QUERY),
               @Parameter(name = "mode", in = ParameterIn.QUERY),
               @Parameter(name = "type", in = ParameterIn.QUERY)}, responses = @ApiResponse(responseCode = "200", description = "Search results", content = @Content(mediaType = "application/json", schema = @Schema(implementation = PageResponse.class))))),
-      @RouterOperation(path = "/api/dsl/constructs/{name}", beanClass = DslIntrospectionHandler.class, beanMethod = "constructBody", method = RequestMethod.GET, operation = @Operation(operationId = "getConstructBody", summary = "Get DSL construct body", tags = {
-          "DSL Introspection"}, parameters = @Parameter(name = "name", in = ParameterIn.PATH), responses = @ApiResponse(responseCode = "200", description = "Construct body", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ConstructBodyDto.class))))),
-      @RouterOperation(path = "/api/dsl/schemas/{name}", beanClass = DslIntrospectionHandler.class, beanMethod = "constructSchema", method = RequestMethod.GET, operation = @Operation(operationId = "getConstructSchema", summary = "Get DSL construct input/output schemas (preview) or explain report (mode=explain)", tags = {
-          "DSL Introspection"}, parameters = {@Parameter(name = "name", in = ParameterIn.PATH),
+      @RouterOperation(path = "/api/dsl/{type}/{name}/construct", beanClass = DslIntrospectionHandler.class, beanMethod = "constructBody", method = RequestMethod.GET, operation = @Operation(operationId = "getConstructBody", summary = "Get DSL construct body", tags = {
+          "DSL Introspection"}, parameters = {
+              @Parameter(name = "type", in = ParameterIn.PATH, description = "Construct type: processes, transactions, functions or helpers"),
+              @Parameter(name = "name", in = ParameterIn.PATH)}, responses = @ApiResponse(responseCode = "200", description = "Construct body", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ConstructBodyDto.class))))),
+      @RouterOperation(path = "/api/dsl/{type}/{name}/schema", beanClass = DslIntrospectionHandler.class, beanMethod = "constructSchema", method = RequestMethod.GET, operation = @Operation(operationId = "getConstructSchema", summary = "Get DSL construct input/output schemas (preview) or explain report (mode=explain)", tags = {
+          "DSL Introspection"}, parameters = {
+              @Parameter(name = "type", in = ParameterIn.PATH, description = "Construct type: processes, transactions, functions or helpers"),
+              @Parameter(name = "name", in = ParameterIn.PATH),
               @Parameter(name = "mode", in = ParameterIn.QUERY, description = "Schema mode: preview (default) or explain")}, responses = @ApiResponse(responseCode = "200", description = "Construct schemas or explain report", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ConstructSchemaDto.class))))),
-      @RouterOperation(path = "/api/dsl/structures/{name}", beanClass = DslIntrospectionHandler.class, beanMethod = "objectStructure", method = RequestMethod.GET, operation = @Operation(operationId = "getObjectStructure", summary = "Get DSL object structure", tags = {
-          "DSL Introspection"}, parameters = @Parameter(name = "name", in = ParameterIn.PATH), responses = @ApiResponse(responseCode = "200", description = "Object structure", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ObjectStructureDto.class)))))
+      @RouterOperation(path = "/api/dsl/{type}/{name}/structure", beanClass = DslIntrospectionHandler.class, beanMethod = "objectStructure", method = RequestMethod.GET, operation = @Operation(operationId = "getObjectStructure", summary = "Get DSL object structure", tags = {
+          "DSL Introspection"}, parameters = {
+              @Parameter(name = "type", in = ParameterIn.PATH, description = "Construct type: processes, transactions, functions or helpers"),
+              @Parameter(name = "name", in = ParameterIn.PATH)}, responses = @ApiResponse(responseCode = "200", description = "Object structure", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ObjectStructureDto.class)))))
   })
   public RouterFunction<ServerResponse> dslIntrospectionRouter(DslIntrospectionHandler handler) {
     return RouterFunctions.route()
             .GET("/api/dsl/working-set", handler::workingSet)
             .GET("/api/dsl/objects/search", handler::searchObjects)
-            .GET("/api/dsl/constructs/{name}", handler::constructBody)
-            .GET("/api/dsl/schemas/{name}", handler::constructSchema)
-            .GET("/api/dsl/structures/{name}", handler::objectStructure)
+            .GET("/api/dsl/{type}/{name}/construct", handler::constructBody)
+            .GET("/api/dsl/{type}/{name}/schema", handler::constructSchema)
+            .GET("/api/dsl/{type}/{name}/structure", handler::objectStructure)
             .build();
   }
 }

@@ -134,8 +134,8 @@ const EXCLUDED_OPERATIONS: Record<string, { reason: string; handRoute: string }>
     handRoute: 'dsl/events.get.ts',
   },
   getConstructSchema: {
-    reason: 'rewrites the `mode` query param into the backend path suffix',
-    handRoute: 'dsl/schemas/[name].get.ts',
+    reason: 'validates the construct `type` segment and rewrites the `mode` query param into the backend path suffix',
+    handRoute: 'dsl/[type]/[name]/schema.get.ts',
   },
   listExecutions: {
     reason: 'query-param allowlist and entityName→processName rewrite',
@@ -221,8 +221,8 @@ const EXCLUDED_OPERATIONS: Record<string, { reason: string; handRoute: string }>
     handRoute: 'dsl/signals/[runId].post.ts',
   },
   getObjectStructure: {
-    reason: 'plain proxy but kept hand-written alongside structures surface',
-    handRoute: 'dsl/structures/[name].get.ts',
+    reason: 'validates the construct `type` segment; kept hand-written alongside structures surface',
+    handRoute: 'dsl/[type]/[name]/structure.get.ts',
   },
 }
 

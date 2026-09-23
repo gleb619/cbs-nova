@@ -488,7 +488,7 @@ describe('RunResultPanel', () => {
     )
     await flushPromises()
 
-    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/schemas/demo?mode=explain')
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/processes/demo/schema?mode=explain')
     expect(wrapper.text()).toContain('ExplainReport')
 
     await wrapper.find('[data-testid="mode-schema"]').trigger('click')
@@ -506,8 +506,8 @@ describe('RunResultPanel', () => {
     mountPanel({ type: 'Process' }, fetchMock)
     await flushPromises()
 
-    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/schemas/demo')
-    expect(fetchMock).not.toHaveBeenCalledWith('/api/v1/dsl/schemas/demo?mode=explain')
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/processes/demo/schema')
+    expect(fetchMock).not.toHaveBeenCalledWith('/api/v1/dsl/processes/demo/schema?mode=explain')
   })
 
   it('formats string results that contain compact JSON', async () => {
@@ -749,7 +749,7 @@ describe('RunResultPanel', () => {
     )
     await flushPromises()
 
-    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/schemas/demo?mode=explain')
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/processes/demo/schema?mode=explain')
     const toggle = wrapper.find('[data-testid="mode-schema"]')
     expect(toggle.exists()).toBe(true)
 

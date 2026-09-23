@@ -67,7 +67,9 @@ import {
 export function useDslApi() {
   const log = useClientLogger('dsl')
 
-  async function getDefinitions(filters: { page?: number; size?: number; query?: string; mode?: string; type?: string } = {}) {
+  async function getDefinitions(
+    filters: { page?: number; size?: number; query?: string; mode?: string; type?: string } = {},
+  ) {
     log.debug('fetching definitions')
     const query: Record<string, string> = {}
     if (filters.page !== undefined) query.page = String(filters.page)
@@ -407,11 +409,23 @@ export function useDslApi() {
     })) as NotificationTestResult
   }
 
-  async function fetchObjectStructure(name: string): Promise<ObjectStructureDto | null> {
-    log.info('fetchObjectStructure request', { name })
+  const CONSTRUCT_TYPE_SEGMENTS: Record<string, string> = {
+    process: 'processes',
+    transaction: 'transactions',
+    helper: 'helpers',
+    function: 'functions',
+  }
+
+  async function fetchObjectStructure(
+    type: string,
+    name: string,
+  ): Promise<ObjectStructureDto | null> {
+    const segment = CONSTRUCT_TYPE_SEGMENTS[type.toLowerCase()]
+    if (!segment) return null
+    log.info('fetchObjectStructure request', { type, name })
     try {
       return (await $fetch(
-        `/api/v1/dsl/structures/${encodeURIComponent(name)}`,
+        `/api/v1/dsl/${segment}/${encodeURIComponent(name)}/structure`,
       )) as ObjectStructureDto
     } catch (err) {
       if (extractApiError(err).status === 404) return null

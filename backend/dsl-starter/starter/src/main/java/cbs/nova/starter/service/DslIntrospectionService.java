@@ -21,6 +21,7 @@ import cbs.nova.starter.model.DslIntrospectionModels.ObjectSearchResult;
 import cbs.nova.starter.model.DslIntrospectionModels.WorkingSetResponse;
 import cbs.nova.starter.model.RequestQueryModels.ObjectSearchQuery;
 import cbs.nova.starter.converter.DslIntrospectionMapper;
+import cbs.nova.starter.model.DslIntrospectionModels.ConstructPathType;
 import cbs.nova.starter.model.DslIntrospectionModels.ConstructSchemaMode;
 import cbs.nova.starter.model.DslIntrospectionModels.DefinitionMetaDto;
 import cbs.nova.starter.model.DslIntrospectionModels.DefinitionStatus;
@@ -77,43 +78,41 @@ public class DslIntrospectionService {
     return new PageResponse<>(paged, total, offset, size);
   }
 
-  public Optional<ConstructBodyDto> constructBody(String name) {
+  public Optional<ConstructBodyDto> constructBody(ConstructPathType type, String name) {
     var gm = GlobalManager.globalManager();
-    var processOpt = gm.findProcess(name);
-    if (processOpt.isPresent()) {
-      var p = processOpt.get();
-      var code = gm.findGeneratedProcess(name).map(GeneratedClassDescriptor::executeJson)
-              .orElse(null);
-      var steps = List.<StepDto>of();
-      return Optional.of(new ConstructBodyDto(p.name(), "process", code, steps));
-    }
-    var txOpt = gm.findTransaction(name);
-    if (txOpt.isPresent()) {
-      var t = txOpt.get();
-      var code = gm.findGeneratedTransaction(name).map(GeneratedClassDescriptor::executeJson)
-              .orElse(null);
-      return Optional.of(new ConstructBodyDto(t.name(), "transaction", code, List.of()));
-    }
-    return Optional.empty();
+    return switch (type) {
+      case PROCESSES -> gm.findProcess(name).map(p -> new ConstructBodyDto(
+              p.name(), "process", gm.findGeneratedProcess(name)
+                      .map(GeneratedClassDescriptor::executeJson).orElse(null),
+              List.<StepDto>of()));
+      case TRANSACTIONS -> gm.findTransaction(name).map(t -> new ConstructBodyDto(
+              t.name(), "transaction", gm.findGeneratedTransaction(name)
+                      .map(GeneratedClassDescriptor::executeJson).orElse(null),
+              List.of()));
+      case FUNCTIONS, HELPERS -> Optional.empty();
+    };
   }
 
-  public Optional<ConstructSchemaDto> constructSchema(String name, ConstructSchemaMode mode) {
+  public Optional<ConstructSchemaDto> constructSchema(ConstructPathType type, String name,
+          ConstructSchemaMode mode) {
     if (mode == ConstructSchemaMode.EXPLAIN) {
-      return explainSchema(name);
+      return explainSchema(type, name);
     }
-    return previewSchema(name);
+    return previewSchema(type, name);
   }
 
-  private Optional<ConstructSchemaDto> previewSchema(String name) {
+  private Optional<ConstructSchemaDto> previewSchema(ConstructPathType type, String name) {
     var gm = GlobalManager.globalManager();
-    return gm.findProcess(name).map(this::toSchemaDto)
-            .or(() -> gm.findTransaction(name).map(this::toSchemaDto))
-            .or(() -> gm.describeHelper(name).map(d -> toSchemaDto(name, d)))
-            .or(() -> gm.describeFunction(name).map(this::toSchemaDto));
+    return switch (type) {
+      case PROCESSES -> gm.findProcess(name).map(this::toSchemaDto);
+      case TRANSACTIONS -> gm.findTransaction(name).map(this::toSchemaDto);
+      case FUNCTIONS -> gm.describeFunction(name).map(this::toSchemaDto);
+      case HELPERS -> gm.describeHelper(name).map(d -> toSchemaDto(name, d));
+    };
   }
 
-  private Optional<ConstructSchemaDto> explainSchema(String name) {
-    return previewSchema(name).map(dto -> new ConstructSchemaDto(
+  private Optional<ConstructSchemaDto> explainSchema(ConstructPathType type, String name) {
+    return previewSchema(type, name).map(dto -> new ConstructSchemaDto(
             dto.name(),
             dto.type(),
             dto.inputType(),
@@ -123,13 +122,15 @@ public class DslIntrospectionService {
             explainReportSchema()));
   }
 
-  public Optional<ObjectStructureDto> objectStructure(String name) {
+  public Optional<ObjectStructureDto> objectStructure(ConstructPathType type, String name) {
     var gm = GlobalManager.globalManager();
-    return gm.findProcess(name).map(this::processStructure)
-            .or(() -> gm.findTransaction(name).map(this::transactionStructure))
-            .or(() -> gm.describeHelper(name)
-                    .map(d -> executableStructure(name, "helper", d, helperLogic())))
-            .or(() -> gm.findFunction(name).map(this::functionStructure));
+    return switch (type) {
+      case PROCESSES -> gm.findProcess(name).map(this::processStructure);
+      case TRANSACTIONS -> gm.findTransaction(name).map(this::transactionStructure);
+      case FUNCTIONS -> gm.findFunction(name).map(this::functionStructure);
+      case HELPERS -> gm.describeHelper(name)
+              .map(d -> executableStructure(name, "helper", d, helperLogic()));
+    };
   }
 
   private ObjectStructureDto processStructure(ProcessDslObject process) {
