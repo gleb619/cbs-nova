@@ -67,7 +67,16 @@ public class HelperInstanceResolverConfig {
           @Override
           public @NonNull Result<FileLatchOut> execute(@NonNull Context<FileLatchIn> ctx) {
             LATCH_ENTERED.countDown();
-            Workflow.sleep(Duration.ofSeconds(10));
+            try {
+              Workflow.sleep(Duration.ofSeconds(10));
+            } catch (Exception e) {
+              try {
+                Thread.sleep(Duration.ofSeconds(10).toMillis());
+              } catch (InterruptedException ex) {
+                Thread.currentThread().interrupt();
+              }
+            }
+
             return Result.success(new FileLatchOut(ctx.body().payload()));
           }
         };
