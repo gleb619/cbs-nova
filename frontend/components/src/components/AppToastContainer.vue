@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useToast, type NotificationKind } from '../composables/useToast'
+import { type NotificationKind, useToast } from '../composables/useToast'
 
 const { activeToasts, dismiss } = useToast()
 

@@ -1,6 +1,6 @@
 import { resetSavedDraftsState, useSavedDrafts } from '@cbs/components'
 import { flushPromises, mount } from '@vue/test-utils'
-import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
+import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest'
 import { defineComponent, h, nextTick, Suspense, type VNode } from 'vue'
 import AdminLayout from '../admin.vue'
 

@@ -21,6 +21,7 @@ import cbs.nova.starter.converter.DslIntrospectionMapper;
 import cbs.nova.starter.model.DslIntrospectionModels.DefinitionMetaDto;
 import cbs.nova.starter.model.DslIntrospectionModels.DefinitionStatus;
 import cbs.nova.starter.model.PageResponse;
+import cbs.nova.starter.model.RequestQueryModels.WorkingSetQuery;
 import cbs.nova.starter.model.DslIntrospectionModels.LogicInfoDto;
 import cbs.nova.starter.model.DslIntrospectionModels.LogicStatus;
 import cbs.nova.starter.service.DslDefinitionStatusResolver;
@@ -71,7 +72,7 @@ class DslIntrospectionServiceTest {
   }
 
   @Test
-  void definitionsMapsProcessAndTransaction() {
+  void workingSetMapsProcessAndTransaction() {
     GlobalManager.globalManager().registerProcess(
             Dsl.process("P2")
                     .version("v1")
@@ -89,7 +90,7 @@ class DslIntrospectionServiceTest {
                     .execute(ctx -> Result.success("ok"))
                     .build());
 
-    var definitions = service.definitions();
+    var definitions = service.workingSet(new WorkingSetQuery(500, 0, null, null, null)).items();
 
     assertThat(definitions).extracting("name").contains("P2", "T2");
     assertThat(definitions)
@@ -385,7 +386,7 @@ class DslIntrospectionServiceTest {
   }
 
   @Test
-  void definitionsPropagateHelperFilenameFromHelperSource() {
+  void workingSetPropagateHelperFilenameFromHelperSource() {
     GlobalManager.globalManager().registerHelper("helperWithFile",
             new Executable<String, Integer>() {
               @Override
@@ -409,7 +410,8 @@ class DslIntrospectionServiceTest {
             new HelperSource.Entry("helperWithFile", "HelperWithFile.java"),
             new HelperSource.Entry("functionWithFile", "FunctionWithFile.java")));
 
-    List<DefinitionMetaDto> definitions = service.definitions();
+    List<DefinitionMetaDto> definitions = service
+            .workingSet(new WorkingSetQuery(500, 0, null, null, null)).items();
 
     assertThat(definitions)
             .anySatisfy(d -> {

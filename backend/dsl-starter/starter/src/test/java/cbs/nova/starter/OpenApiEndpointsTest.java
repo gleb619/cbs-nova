@@ -36,7 +36,6 @@ class OpenApiEndpointsTest {
             .contains("/api/dsl/explain/{name}")
             .contains("/api/dsl/reload")
             .contains("/api/dsl/objects/search")
-            .contains("/api/dsl/definitions")
             .contains("/api/dsl/working-set");
   }
 

@@ -1,7 +1,7 @@
 import { mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import AppToastContainer from '../AppToastContainer.vue'
 import { resetNotificationsState, useNotifications } from '../../composables/useNotifications'
+import AppToastContainer from '../AppToastContainer.vue'
 
 // The container teleports into <body>; stub Teleport so it renders in place.
 const mountContainer = () => mount(AppToastContainer, { global: { stubs: { teleport: true } } })

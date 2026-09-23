@@ -1,7 +1,6 @@
-import { setResponseHeader, setResponseStatus, type H3Event, type HTTPMethod } from 'h3'
+import { type H3Event, type HTTPMethod, setResponseHeader, setResponseStatus } from 'h3'
 import { buildBackendHeaders } from './backendHeaders'
-import { useBackendConfig } from './config'
-import { useAuthConfig } from './config'
+import { useAuthConfig, useBackendConfig } from './config'
 import {
   attachAuth,
   clearOidcSession,

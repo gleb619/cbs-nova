@@ -135,46 +135,6 @@ class DslIntrospectionResourceTest {
   }
 
   @Test
-  void definitionsEndpointAggregatesAllEntityKinds() throws Exception {
-    registerSampleEntities();
-
-    mockMvc.perform(get("/api/dsl/definitions").accept(MediaType.APPLICATION_JSON))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.items").isArray())
-            .andExpect(jsonPath("$.items[?(@.name=='LoanDisbursement' && @.type=='process')]")
-                    .exists())
-            .andExpect(jsonPath("$.items[?(@.name=='SampleTransaction' && @.type=='transaction')]")
-                    .exists())
-            .andExpect(jsonPath("$.items[?(@.name=='sampleHelper' && @.type=='helper')]").exists())
-            .andExpect(
-                    jsonPath("$.items[?(@.name=='sampleFunction' && @.type=='function')]")
-                            .exists())
-            .andExpect(jsonPath("$.total").value(4))
-            .andExpect(jsonPath("$.offset").value(0))
-            .andExpect(jsonPath("$.limit").value(50));
-  }
-
-  @Test
-  void definitionsEndpointExposesInputSchemaForProcess() throws Exception {
-    registerSampleEntities();
-
-    mockMvc.perform(get("/api/dsl/definitions").accept(MediaType.APPLICATION_JSON))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.items[?(@.name=='LoanDisbursement')].inputSchema").exists());
-  }
-
-  @Test
-  void definitionsEndpointOmitsInputSchemaForHelper() throws Exception {
-    registerSampleEntities();
-
-    mockMvc.perform(get("/api/dsl/definitions").accept(MediaType.APPLICATION_JSON))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.items[?(@.name=='sampleHelper')].inputSchema").doesNotExist())
-            .andExpect(jsonPath("$.items[?(@.name=='sampleFunction')].inputSchema").doesNotExist())
-            .andExpect(jsonPath("$.items[?(@.name=='LoanDisbursement')].inputSchema").exists());
-  }
-
-  @Test
   void constructSchemaEndpointReturnsInputAndOutputSchemasForProcess() throws Exception {
     mockMvc
             .perform(get("/api/dsl/schemas/LoanDisbursement").accept(MediaType.APPLICATION_JSON))
@@ -276,16 +236,6 @@ class DslIntrospectionResourceTest {
                     .param("mode", "explain")
                     .accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isNotFound());
-  }
-
-  @Test
-  void definitionsEndpointReturnsOnlyTheSetupProcessWhenNoSamplesRegistered() throws Exception {
-    mockMvc.perform(get("/api/dsl/definitions").accept(MediaType.APPLICATION_JSON))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.items.length()").value(1))
-            .andExpect(jsonPath("$.items[?(@.name=='LoanDisbursement' && @.type=='process')]")
-                    .exists())
-            .andExpect(jsonPath("$.total").value(1));
   }
 
   @Test

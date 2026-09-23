@@ -2,8 +2,8 @@ import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
 import type { TraceStep } from '../../types/execution'
 import CompensationLane from '../executions/CompensationLane.vue'
-import ExecutionsTraceNode from '../executions/TraceNode.vue'
 import ExecutionsStatusBadge from '../executions/StatusBadge.vue'
+import ExecutionsTraceNode from '../executions/TraceNode.vue'
 
 function step(overrides: Partial<TraceStep> = {}): TraceStep {
   return {

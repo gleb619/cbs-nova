@@ -25,11 +25,11 @@ vi.mock('../useClientLogger', () => {
 })
 
 // eslint-disable-next-line import/first
+import { useApprovals } from '../useApprovals'
+// eslint-disable-next-line import/first
 import * as loggerModule from '../useClientLogger'
 // eslint-disable-next-line import/first
 import * as apiModule from '../useDslApi'
-// eslint-disable-next-line import/first
-import { useApprovals } from '../useApprovals'
 
 type ApiMock = {
   fetchChangeRequests: ReturnType<typeof vi.fn>

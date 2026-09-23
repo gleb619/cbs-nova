@@ -1376,27 +1376,6 @@
         ]
       }
     },
-    "/api/dsl/definitions": {
-      "get": {
-        "operationId": "listDefinitions",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PageResponse"
-                }
-              }
-            },
-            "description": "Definitions"
-          }
-        },
-        "summary": "List DSL definitions",
-        "tags": [
-          "DSL Introspection"
-        ]
-      }
-    },
     "/api/dsl/definitions/export": {
       "get": {
         "operationId": "exportDefinitions",

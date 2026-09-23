@@ -12,7 +12,7 @@
 // The resulting SBOM is written to `../build/sbom/frontend.cdx.json` at the
 // worktree root.
 import { spawnSync } from 'node:child_process'
-import { mkdirSync, existsSync } from 'node:fs'
+import { existsSync, mkdirSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 

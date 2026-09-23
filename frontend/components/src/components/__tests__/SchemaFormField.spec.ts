@@ -1,8 +1,8 @@
 import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
 import { nextTick } from 'vue'
-import SchemaFormField from '../dsl/SchemaFormField.vue'
 import type { JsonSchema } from '../../types/jsonSchema'
+import SchemaFormField from '../dsl/SchemaFormField.vue'
 import { createSchemaFieldEventBus, SCHEMA_FIELD_EVENTS_KEY } from '../dsl/schemaFieldEvents'
 
 function mountField(props: Record<string, unknown> = {}) {

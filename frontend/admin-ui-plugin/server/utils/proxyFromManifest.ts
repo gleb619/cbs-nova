@@ -1,5 +1,5 @@
-import { getRouterParam, readBody, type H3Event } from 'h3'
-import { proxyToBackend, type ProxyOptions } from './httpClient'
+import { getRouterParam, type H3Event, readBody } from 'h3'
+import { type ProxyOptions, proxyToBackend } from './httpClient'
 
 /**
  * T561 — a single OpenAPI-derived BFF proxy route.

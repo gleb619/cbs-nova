@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
 import { marked } from 'marked'
+import { computed, ref } from 'vue'
 import { useLocalStorageState } from '../../composables/useLocalStorageState'
 import type { DslConstruct } from '../../types/dsl'
 import CbsSpinner from '../CbsSpinner.vue'

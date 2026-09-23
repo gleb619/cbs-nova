@@ -18,9 +18,7 @@ const props = withDefaults(
   { align: 'right', menuId: undefined },
 )
 
-const emit = defineEmits<{
-  (e: 'select', item: DropdownMenuItem): void
-}>()
+const emit = defineEmits<(e: 'select', item: DropdownMenuItem) => void>()
 
 const isOpen = ref(false)
 const focusedIndex = ref(0)

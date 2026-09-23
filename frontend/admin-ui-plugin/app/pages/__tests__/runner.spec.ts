@@ -1,4 +1,4 @@
-import { mount, flushPromises } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, h, nextTick, type Ref } from 'vue'
 import RunnerPage from '../runner.vue'

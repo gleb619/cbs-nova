@@ -1,7 +1,7 @@
+import type { ChangeRequest } from '@cbs/components'
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Ref } from 'vue'
-import type { ChangeRequest } from '@cbs/components'
 import ApprovalsPage from '../approvals.vue'
 
 // ---------------------------------------------------------------------------

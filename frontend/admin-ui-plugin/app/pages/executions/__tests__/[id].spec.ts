@@ -14,8 +14,7 @@ const { useExecutionsMock, useExecutionsApiMock, navigateTo, execApi } = vi.hois
   const navigateToSpy = vi.fn()
   const execApi = { getTransactions: vi.fn().mockResolvedValue([]) }
   const useExecutionsMockFn = vi.fn(() => {
-    const harness = (globalThis as unknown as { __execDetailHarness?: unknown })
-      .__execDetailHarness
+    const harness = (globalThis as unknown as { __execDetailHarness?: unknown }).__execDetailHarness
     if (!harness) throw new Error('execution detail harness not installed yet')
     return harness
   })

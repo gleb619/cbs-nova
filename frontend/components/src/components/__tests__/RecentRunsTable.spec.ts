@@ -1,8 +1,8 @@
 import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
 import type { Execution } from '../../types/execution'
-import StatusBadge from '../executions/StatusBadge.vue'
 import RecentRunsTable from '../dashboard/RecentRunsTable.vue'
+import StatusBadge from '../executions/StatusBadge.vue'
 
 // The table renders status cells through ExecutionsStatusBadge (Nuxt
 // auto-resolves it inside the plugin app); register the real component so the

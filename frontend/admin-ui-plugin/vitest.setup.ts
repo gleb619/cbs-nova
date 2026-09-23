@@ -1,4 +1,4 @@
-import { vi, beforeEach, type Mock } from 'vitest'
+import { beforeEach, type Mock, vi } from 'vitest'
 import { computed, onUnmounted, readonly, ref, watch } from 'vue'
 import { __resetRouterStub } from './vitest.vue-router-stub'
 

@@ -1,5 +1,5 @@
+import { onUnmounted, type Ref, ref } from 'vue'
 import { createEmitter } from '../utils/createEmitter'
-import { onUnmounted, ref, type Ref } from 'vue'
 
 export interface IntervalEmitterEvents {
   /** Fired on every visible tick. */

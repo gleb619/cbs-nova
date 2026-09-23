@@ -1,4 +1,4 @@
-import { deleteCookie, getCookie, setCookie, type H3Event } from 'h3'
+import { deleteCookie, getCookie, type H3Event, setCookie } from 'h3'
 import { useAuthConfig } from './config'
 
 export type OidcMetadata = {
@@ -349,11 +349,11 @@ export function expiringSoon(accessToken: string, bufferSeconds = 60): boolean {
 }
 
 export {
-  TXN_COOKIE,
   AT_COOKIE,
+  REFRESH_TOKEN_MAX_AGE_SECONDS,
   RT_COOKIE,
   RT_PREV_COOKIE,
-  SESSION_START_COOKIE,
-  REFRESH_TOKEN_MAX_AGE_SECONDS,
   RT_PREV_MAX_AGE_SECONDS,
+  SESSION_START_COOKIE,
+  TXN_COOKIE,
 }

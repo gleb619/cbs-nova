@@ -45,7 +45,6 @@ vi.mock('h3', async (importOriginal) => {
 
 // Import after the mock + globals are in place.
 const healthHandler = (await import('../health.get')).default
-const definitionsHandler = (await import('../generated/routes/dsl/definitions.get')).default
 const reloadHandler = (await import('../generated/routes/dsl/reload.post')).default
 const manifestGuardHandler = (await import('../dsl/manifest/guard.get')).default
 const auditHandler = (await import('../dsl/audit.get')).default
@@ -147,40 +146,6 @@ describe('health.get', () => {
     const result = await healthHandler(fakeEvent)
     expect(result).toEqual({ status: 'ok', bff: 'admin-ui-plugin' })
     expect(proxyToBackendMock).not.toHaveBeenCalled()
-  })
-})
-
-describe('dsl/definitions.get', () => {
-  it('GETs /api/dsl/definitions with no body', async () => {
-    await definitionsHandler(fakeEvent)
-    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
-    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/definitions')
-    // No opts (3rd arg) → no method override, no body.
-    expect(proxyToBackendMock.mock.calls[0][2]).toBeUndefined()
-  })
-
-  it('returns the paged backend body verbatim (200 path, no reshaping)', async () => {
-    const aggregated = {
-      items: [
-        { name: 'LoanDisbursement', type: 'process', inputSchema: { type: 'object' } },
-        { name: 'SampleTransaction', type: 'transaction' },
-        { name: 'sampleHelper', type: 'helper' },
-        { name: 'sampleFunction', type: 'function' },
-      ],
-      total: 4,
-      offset: 0,
-      limit: 50,
-    }
-    proxyToBackendMock.mockResolvedValueOnce(aggregated)
-
-    const result = await definitionsHandler(fakeEvent)
-
-    // BFF is a thin passthrough — the paged envelope is produced by the
-    // backend DslIntrospectionHandler. See T382.
-    expect(result).toEqual(aggregated)
-    expect(
-      (result as { items?: Array<{ type: string }> }).items?.map((d) => d.type).sort(),
-    ).toEqual(['function', 'helper', 'process', 'transaction'])
   })
 })
 

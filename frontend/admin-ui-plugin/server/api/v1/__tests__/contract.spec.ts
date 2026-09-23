@@ -31,14 +31,14 @@ function loadFixture(name: string): unknown {
   return JSON.parse(raw) as unknown
 }
 
-const definitionsFixture = loadFixture('definitions.json')
+const workingSetFixture = loadFixture('working-set.json')
 const draftsFixture = loadFixture('drafts.json')
 const executionsFixture = loadFixture('executions.json')
 const executionsStatsFixture = loadFixture('executions-stats.json')
 const schedulesFixture = loadFixture('schedules.json')
 
 // Import handlers after mocks are hoisted.
-const definitionsHandler = (await import('../generated/routes/dsl/definitions.get')).default
+const workingSetHandler = (await import('../generated/routes/dsl/working-set.get')).default
 const draftsHandler = (await import('../generated/routes/dsl/drafts.get')).default
 const executionsHandler = (await import('../executions/index.get')).default
 const executionsStatsHandler = (await import('../generated/routes/executions/stats.get')).default
@@ -59,10 +59,10 @@ type RouteCase = {
 
 const routes: RouteCase[] = [
   {
-    fixtureName: 'definitions.json',
-    name: 'GET /api/v1/dsl/definitions',
-    handler: definitionsHandler,
-    fixture: definitionsFixture,
+    fixtureName: 'working-set.json',
+    name: 'GET /api/v1/dsl/working-set',
+    handler: workingSetHandler,
+    fixture: workingSetFixture,
     deltas: [],
   },
   {

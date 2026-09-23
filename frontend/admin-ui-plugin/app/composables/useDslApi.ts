@@ -1,13 +1,13 @@
 import { useClientLogger } from '@cbs/admin-ui-plugin/composables/useClientLogger'
-import type { DefinitionHistoryEntry, HistoryDiffResponse } from '../components/DslHistoryPanel.vue'
 import {
-  type CreateNotificationRulePayload,
   type ChangeRequest,
+  type CreateNotificationRulePayload,
   type DefinitionTestCase,
   type DefinitionTestRunReport,
   type DiagnosticsPage,
   type DomainEventPage,
   type DomainEventQuery,
+  type HelperCatalogEntry,
   type NotificationChannel,
   type NotificationFireLogPage,
   type NotificationFireLogQuery,
@@ -15,18 +15,20 @@ import {
   type NotificationRulePage,
   type NotificationTestPayload,
   type NotificationTestResult,
-  type HelperCatalogEntry,
   type ObjectStructureDto,
+  type PromoteResult,
   type PromotionDefinition,
   type PromotionEnvironment,
   type PromotionRequest,
-  type PromoteResult,
   unwrapList,
   type WebhookDeliveryPage,
   type WebhookDeliveryQuery,
 } from '@cbs/components'
 import { $fetch } from 'ofetch'
+import type { DefinitionHistoryEntry, HistoryDiffResponse } from '../components/DslHistoryPanel.vue'
+import { extractApiError } from '../utils/extractApiError'
 import {
+  type BffRequestInit,
   approveChangeRequest as bffApproveChangeRequest,
   createSchedule as bffCreateSchedule,
   deleteDraft as bffDeleteDraft,
@@ -34,11 +36,11 @@ import {
   diffPublishHistoryEntry as bffDiffPublishHistoryEntry,
   explainDsl as bffExplainDsl,
   exportDefinitions as bffExportDefinitions,
+  getWorkingSet as bffGetWorkingSet,
   importDefinitions as bffImportDefinitions,
-  listCompileDiagnostics as bffListCompileDiagnostics,
   listChangeRequests as bffListChangeRequests,
+  listCompileDiagnostics as bffListCompileDiagnostics,
   listDefinitionTests as bffListDefinitionTests,
-  listDefinitions as bffListDefinitions,
   listDomainEvents as bffListDomainEvents,
   listDrafts as bffListDrafts,
   listPublishHistory as bffListPublishHistory,
@@ -60,9 +62,7 @@ import {
   searchObjects as bffSearchObjects,
   submitChangeRequest as bffSubmitChangeRequest,
   writeDslFileByName as bffWriteDslFileByName,
-  type BffRequestInit,
 } from './generated/useBffApi'
-import { extractApiError } from '../utils/extractApiError'
 
 export function useDslApi() {
   const log = useClientLogger('dsl')
@@ -70,7 +70,7 @@ export function useDslApi() {
   async function getDefinitions() {
     log.debug('fetching definitions')
     try {
-      const result = await bffListDefinitions()
+      const result = await bffGetWorkingSet()
       const list = unwrapList(result)
       log.info('definitions loaded', { count: list.length })
       return result

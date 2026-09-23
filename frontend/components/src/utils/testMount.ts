@@ -1,4 +1,4 @@
-import { mount, type MountingOptions } from '@vue/test-utils'
+import { type MountingOptions, mount } from '@vue/test-utils'
 import type { Component } from 'vue'
 
 export function mountTyped<Props extends object = object>(

@@ -1,8 +1,8 @@
 import { mount, type VueWrapper } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { nextTick } from 'vue'
-import DropdownMenu from '../dropdownMenu/DropdownMenu.vue'
 import type { DropdownMenuItem } from '../dropdownMenu/DropdownMenu.vue'
+import DropdownMenu from '../dropdownMenu/DropdownMenu.vue'
 
 const items: DropdownMenuItem[] = [
   { label: 'Alpha', value: 'a' },

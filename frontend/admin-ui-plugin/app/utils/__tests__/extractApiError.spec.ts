@@ -1,5 +1,5 @@
 import { createError } from 'h3'
-import { FetchError, createFetchError } from 'ofetch'
+import { createFetchError, FetchError } from 'ofetch'
 import { describe, expect, it } from 'vitest'
 import { extractApiError } from '../extractApiError'
 

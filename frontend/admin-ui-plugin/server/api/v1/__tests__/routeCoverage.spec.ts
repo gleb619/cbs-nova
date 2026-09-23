@@ -52,11 +52,6 @@ const expectedProxies: readonly ExpectedProxy[] = [
   // DslIntrospectionRouterConfiguration
   {
     method: 'GET',
-    backendPath: '/api/dsl/definitions',
-    bffPath: '/api/v1/dsl/definitions',
-  },
-  {
-    method: 'GET',
     backendPath: '/api/dsl/definitions/{name}/tests',
     bffPath: '/api/v1/dsl/definitions/{name}/tests',
   },

@@ -6,11 +6,11 @@ import {
 } from '../../composables/useConstructSchema'
 import {
   __resetExplainHistoryForTests,
-  EXPLAIN_HISTORY_STORAGE_NAMESPACE,
   EXPLAIN_HISTORY_STORAGE_KEY,
+  EXPLAIN_HISTORY_STORAGE_NAMESPACE,
 } from '../../composables/usePreviewHistory'
-import ExplainTab from '../dsl/ExplainTab.vue'
 import type { RunnerOutput } from '../../types/runner'
+import ExplainTab from '../dsl/ExplainTab.vue'
 
 function mountTab(
   props: Record<string, unknown> = {},

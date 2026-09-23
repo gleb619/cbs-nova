@@ -28,8 +28,8 @@ import {
   DslDiagnosticsHistoryPanel,
   DslDraftRestoreBanner,
   DslHelperCatalog,
-  DslObjectsSearchPanel,
   DslMetadataPanel,
+  DslObjectsSearchPanel,
   DslPlainConstructList,
   ErrorBanner,
   HotkeyTooltip,
@@ -170,10 +170,10 @@ function mirrorSelectionToDrafts() {
   draftsSelectedName.value = state.value.selectedName ?? null
 }
 
-// TBD — object search filters are persisted so the user's previous query is
-// restored on the next visit. Once the backend unifies /api/dsl/definitions and
-// /api/dsl/objects/search into a single "working set" endpoint, this storage can
-// seed that request instead of a separate search call.
+// Object search filters are persisted so the user's previous query is
+// restored on the next visit. The workbench now loads the DSL working set
+// (/api/dsl/working-set); this storage can later seed that request instead of
+// a separate /api/dsl/objects/search call.
 const objectSearchFilters = useWorkbenchStorage<HelperSearchFilters>('object-search-filters', {
   query: '',
   mode: 'exact',

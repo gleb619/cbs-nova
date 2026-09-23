@@ -9,13 +9,13 @@ describe('useDslApi', () => {
     fetchMock.mockResolvedValue(undefined)
   })
 
-  it('getDefinitions calls GET /api/v1/dsl/definitions', async () => {
+  it('getDefinitions calls GET /api/v1/dsl/working-set', async () => {
     fetchMock.mockResolvedValueOnce([])
 
     const api = useDslApi()
     await api.getDefinitions()
 
-    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/definitions')
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/working-set')
   })
 
   it('listHelpers delegates to /api/v1/dsl/objects/search', async () => {

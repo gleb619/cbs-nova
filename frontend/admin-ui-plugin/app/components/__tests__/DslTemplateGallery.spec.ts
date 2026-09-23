@@ -1,7 +1,7 @@
 import { mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it } from 'vitest'
-import DslTemplateGallery from '../DslTemplateGallery.vue'
 import { DSL_TEMPLATES, type DslTemplate } from '../../utils/dslTemplates'
+import DslTemplateGallery from '../DslTemplateGallery.vue'
 
 describe('DslTemplateGallery', () => {
   beforeEach(() => {

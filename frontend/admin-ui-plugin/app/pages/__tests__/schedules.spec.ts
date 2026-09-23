@@ -1,8 +1,8 @@
-import { mount, flushPromises } from '@vue/test-utils'
+import type { CreateSchedulePayload, ScheduleSummary } from '@cbs/components'
+import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, h, nextTick, type Ref } from 'vue'
 import SchedulesPage from '../schedules.vue'
-import type { CreateSchedulePayload, ScheduleSummary } from '@cbs/components'
 
 // ---------------------------------------------------------------------------
 // Harness for `useSchedules()` consumed by the schedules page.

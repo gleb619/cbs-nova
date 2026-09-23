@@ -1,7 +1,7 @@
+import type { PromoteResult, PromotionDefinition } from '@cbs/components'
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Ref } from 'vue'
-import type { PromotionDefinition, PromoteResult } from '@cbs/components'
 import PromotePage from '../promote.vue'
 
 interface PromotionHarness {
@@ -97,7 +97,7 @@ afterEach(() => {
 describe('promote page (T569)', () => {
   it('loads environments on mount and shows empty-config guidance when none exist', async () => {
     const harness = installHarness({
-      environments: (function () {
+      environments: (() => {
         const vue = require('vue') as typeof import('vue')
         return vue.ref<Array<{ name: string }>>([])
       })(),

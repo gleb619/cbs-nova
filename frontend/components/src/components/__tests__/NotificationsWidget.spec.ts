@@ -1,7 +1,7 @@
 import { mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import NotificationsWidget from '../NotificationsWidget.vue'
 import { resetNotificationsState, useNotifications } from '../../composables/useNotifications'
+import NotificationsWidget from '../NotificationsWidget.vue'
 
 const mountWidget = (props: Record<string, unknown> = {}) =>
   mount(NotificationsWidget, {

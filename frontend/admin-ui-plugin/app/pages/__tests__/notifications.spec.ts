@@ -1,12 +1,12 @@
-import { mount, flushPromises } from '@vue/test-utils'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { defineComponent, h, nextTick, type Ref } from 'vue'
-import NotificationsPage from '../notifications.vue'
 import type {
   NotificationFireLogPage,
   NotificationRule,
   NotificationTestResult,
 } from '@cbs/components'
+import { flushPromises, mount } from '@vue/test-utils'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { defineComponent, h, nextTick, type Ref } from 'vue'
+import NotificationsPage from '../notifications.vue'
 
 // ---------------------------------------------------------------------------
 // Harness for `useNotifications()` consumed by the notifications page.

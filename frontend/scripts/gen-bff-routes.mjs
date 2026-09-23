@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import { execFileSync } from 'node:child_process'
+import { existsSync, mkdtempSync } from 'node:fs'
 /**
  * T561 — runner for the OpenAPI-driven BFF proxy route generator.
  *
@@ -14,8 +16,6 @@
  * useful to prove the check fails when openapi.json changes shape.
  */
 import { createRequire } from 'node:module'
-import { execFileSync } from 'node:child_process'
-import { existsSync, mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'

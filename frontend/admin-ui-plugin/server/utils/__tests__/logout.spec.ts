@@ -1,6 +1,6 @@
-import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
-import { performLogout } from '../logout'
+import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest'
 import { useAuthConfig } from '../config'
+import { performLogout } from '../logout'
 import { clearOidcSession, discoverOidc, readSession } from '../oidcSession'
 
 const callbackUrl = 'http://localhost:3000/api/v1/auth/callback'

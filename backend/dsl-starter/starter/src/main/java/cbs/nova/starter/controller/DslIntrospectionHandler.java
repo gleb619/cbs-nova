@@ -5,7 +5,6 @@ import cbs.nova.starter.model.DslIntrospectionModels.ConstructSchemaMode;
 import cbs.nova.starter.model.DslIntrospectionModels.ObjectSearchResult;
 import cbs.nova.starter.model.DslIntrospectionModels.WorkingSetResponse;
 import cbs.nova.starter.model.PageResponse;
-import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.service.DslIntrospectionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.servlet.function.ServerRequest;
@@ -50,20 +49,5 @@ public class DslIntrospectionHandler {
     var q = queryConverter.toWorkingSetQuery(request);
     WorkingSetResponse response = service.workingSet(q);
     return ServerResponse.ok().body(response);
-  }
-
-  public ServerResponse definitions(ServerRequest request) {
-    int limit = Pagination.intParam(request, "limit", StarterConstants.DEFAULT_LIMIT);
-    int offset = Pagination.intParam(request, "offset", StarterConstants.DEFAULT_OFFSET);
-    int pageSize = Pagination.clampLimit(limit);
-    int skip = Pagination.clampOffset(offset);
-
-    var aggregate = service.definitions();
-    long total = aggregate.size();
-    var paged = aggregate.stream()
-            .skip(skip)
-            .limit(pageSize)
-            .toList();
-    return ServerResponse.ok().body(new PageResponse<>(paged, total, skip, pageSize));
   }
 }

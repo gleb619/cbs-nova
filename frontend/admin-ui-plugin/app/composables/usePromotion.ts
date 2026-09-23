@@ -1,6 +1,6 @@
 import { useClientLogger } from '@cbs/admin-ui-plugin/composables/useClientLogger'
 import { useDslApi } from '@cbs/admin-ui-plugin/composables/useDslApi'
-import type { PromotionDefinition, PromotionEnvironment, PromoteResult } from '@cbs/components'
+import type { PromoteResult, PromotionDefinition, PromotionEnvironment } from '@cbs/components'
 import { ref } from 'vue'
 import { extractApiError } from '../utils/extractApiError'
 

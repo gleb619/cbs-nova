@@ -1,10 +1,10 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { DslConstruct } from '../../types/dsl'
 import {
-  DSL_SCHEMA_FETCH_KEY,
   __resetConstructSchemaCache,
+  DSL_SCHEMA_FETCH_KEY,
 } from '../../composables/useConstructSchema'
+import type { DslConstruct } from '../../types/dsl'
 import BodyEditor from '../dsl/BodyEditor.vue'
 import CodeTab from '../dsl/CodeTab.vue'
 import StructureTab from '../dsl/StructureTab.vue'
@@ -37,8 +37,8 @@ const construct: DslConstruct = {
 }
 
 import ExplainTab from '../dsl/ExplainTab.vue'
-import RunResultPanel from '../dsl/RunResultPanel.vue'
 import PreviewTab from '../dsl/PreviewTab.vue'
+import RunResultPanel from '../dsl/RunResultPanel.vue'
 
 const defaultFetchMock = vi.fn().mockResolvedValue({})
 

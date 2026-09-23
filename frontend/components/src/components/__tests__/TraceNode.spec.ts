@@ -1,8 +1,8 @@
 import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
 import type { TraceStep } from '../../types/execution'
-import TraceNode from '../executions/TraceNode.vue'
 import ExecutionsStatusBadge from '../executions/StatusBadge.vue'
+import TraceNode from '../executions/TraceNode.vue'
 
 function step(overrides: Partial<TraceStep> = {}): TraceStep {
   return { id: 's1', stepType: 'Process', name: 'Root', status: 'Completed', ...overrides }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { resolveRuntimeConfig, type ExistingRuntimeConfig } from '../moduleRuntimeConfig'
 import type { ModuleOptions } from '../../../module'
+import { type ExistingRuntimeConfig, resolveRuntimeConfig } from '../moduleRuntimeConfig'
 
 describe('resolveRuntimeConfig', () => {
   it('produces every documented default from all-empty input', () => {

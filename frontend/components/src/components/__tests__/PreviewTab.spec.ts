@@ -5,8 +5,8 @@ import {
   DSL_SCHEMA_FETCH_KEY,
 } from '../../composables/useConstructSchema'
 import { __resetPreviewHistoryForTests } from '../../composables/usePreviewHistory'
-import PreviewTab from '../dsl/PreviewTab.vue'
 import type { RunnerOutput } from '../../types/runner'
+import PreviewTab from '../dsl/PreviewTab.vue'
 
 function mountTab(
   props: Record<string, unknown> = {},

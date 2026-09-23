@@ -1,8 +1,8 @@
-import { mount, flushPromises } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { defineComponent, h, nextTick, Suspense, type Ref } from 'vue'
-import DashboardPage from '../index.vue'
+import { defineComponent, h, nextTick, type Ref, Suspense } from 'vue'
 import type { DashboardStats, DashboardTimeseries, Execution } from '~/types'
+import DashboardPage from '../index.vue'
 
 // ---------------------------------------------------------------------------
 // Harness for `useDashboardStats()` consumed by the dashboard page.

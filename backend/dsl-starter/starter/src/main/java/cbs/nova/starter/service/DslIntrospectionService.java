@@ -282,10 +282,6 @@ public class DslIntrospectionService {
     return new StructureFieldDto(path, mapper.typeName(type), "class", description);
   }
 
-  public List<DefinitionMetaDto> definitions() {
-    return allDefinitionMetas();
-  }
-
   public WorkingSetResponse workingSet(WorkingSetQuery query) {
     int pageSize = Pagination.clampLimit(query.limit());
     int skip = Pagination.clampOffset(query.offset());
