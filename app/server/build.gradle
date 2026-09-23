@@ -1,7 +1,7 @@
 plugins {
     id 'java'
-    id 'org.springframework.boot' version '4.0.4'
-    id 'io.spring.dependency-management' version '1.1.7'
+    alias(libs.plugins.spring.boot)
+    alias(libs.plugins.spring.dm)
 }
 
 group = 'cbs.nova'
@@ -13,14 +13,14 @@ repositories {
 }
 
 dependencies {
-    implementation 'cbs.nova:starter:0.0.1-SNAPSHOT'
-    implementation 'cbs.nova:app-dsl:0.0.1-SNAPSHOT'
+    implementation libs.cbs.nova.starter
+    implementation libs.cbs.nova.app.dsl
 
-    implementation 'org.springframework.boot:spring-boot-starter-web'
-    implementation 'org.springframework.boot:spring-boot-starter-actuator'
-    runtimeOnly 'com.h2database:h2'
+    implementation libs.spring.boot.starter.web
+    implementation libs.spring.boot.starter.actuator
+    runtimeOnly libs.h2
 
-    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation libs.spring.boot.starter.test
 }
 
 java {

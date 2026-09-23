@@ -1,0 +1,32 @@
+[versions]
+java = "25"
+temporal = "1.27.0"
+avaje-jsonb = "3.4"
+avaje-jsonb-generator = "3.4"
+junit = "5.12.2"
+junit-platform = "1.12.2"
+assertj = "3.27.3"
+cbs-nova = "0.0.1-SNAPSHOT"
+
+# plugins
+cbs-nova-dsl = "0.0.1-SNAPSHOT"
+
+[libraries]
+# -- cbs.nova (local snapshots) --
+cbs-nova-dsl-api = { module = "cbs.nova:dsl-api", version.ref = "cbs-nova" }
+cbs-nova-dsl-runtime = { module = "cbs.nova:dsl", version.ref = "cbs-nova" }
+
+# -- Temporal --
+temporal-sdk = { module = "io.temporal:temporal-sdk", version.ref = "temporal" }
+
+# -- Json --
+avaje-jsonb = { module = "io.avaje:avaje-jsonb", version.ref = "avaje-jsonb" }
+avaje-jsonb-generator = { module = "io.avaje:avaje-jsonb-generator", version.ref = "avaje-jsonb-generator" }
+
+# -- JUnit --
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junit-platform" }
+assertj = { module = "org.assertj:assertj-core", version.ref = "assertj" }
+
+[plugins]
+cbs-nova-dsl = { id = "cbs.nova.dsl", version.ref = "cbs-nova-dsl" }

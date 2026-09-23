@@ -1,0 +1,25 @@
+[versions]
+java = "25"
+cbs-nova = "0.0.1-SNAPSHOT"
+h2 = "2.4.240"
+
+# plugins
+spring-boot = "4.0.4"
+spring-dm = "1.1.7"
+
+[libraries]
+# -- cbs.nova (local snapshots) --
+cbs-nova-starter = { module = "cbs.nova:starter", version.ref = "cbs-nova" }
+cbs-nova-app-dsl = { module = "cbs.nova:app-dsl", version.ref = "cbs-nova" }
+
+# -- Spring Boot --
+spring-boot-starter-web = { module = "org.springframework.boot:spring-boot-starter-web" }
+spring-boot-starter-actuator = { module = "org.springframework.boot:spring-boot-starter-actuator" }
+spring-boot-starter-test = { module = "org.springframework.boot:spring-boot-starter-test" }
+
+# -- Databases --
+h2 = { module = "com.h2database:h2", version.ref = "h2" }
+
+[plugins]
+spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot" }
+spring-dm = { id = "io.spring.dependency-management", version.ref = "spring-dm" }

@@ -1,7 +1,7 @@
 plugins {
   id 'java'
   id 'maven-publish'
-  id 'cbs.nova.dsl' version '0.0.1-SNAPSHOT'
+  alias(libs.plugins.cbs.nova.dsl)
 }
 
 group = 'cbs.nova'
@@ -13,15 +13,15 @@ repositories {
 }
 
 dependencies {
-  implementation 'cbs.nova:dsl-api:0.0.1-SNAPSHOT'
-  implementation 'cbs.nova:dsl:0.0.1-SNAPSHOT'
-  implementation 'io.temporal:temporal-sdk:1.27.0'
-  implementation 'io.avaje:avaje-jsonb:3.4'
-  annotationProcessor 'io.avaje:avaje-jsonb-generator:3.4'
+  implementation libs.cbs.nova.dsl.api
+  implementation libs.cbs.nova.dsl.runtime
+  implementation libs.temporal.sdk
+  implementation libs.avaje.jsonb
+  annotationProcessor libs.avaje.jsonb.generator
 
-  testImplementation 'org.junit.jupiter:junit-jupiter:5.12.2'
-  testImplementation 'org.assertj:assertj-core:3.27.3'
-  testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.12.2'
+  testImplementation libs.junit.jupiter
+  testImplementation libs.assertj
+  testRuntimeOnly libs.junit.platform.launcher
 }
 
 dslCompile {
