@@ -138,6 +138,24 @@ jobs:
       - name: Run dsl-plugins tests
         run: backend/dsl-platform/gradlew -p backend/dsl-plugins test --no-daemon
 
+  scripts-tests:
+    # Pure-unit pytest suite for scripts/src/cbs_cli/ (test_classify,
+    # test_lint_kanban, test_openapi_diff). No Docker / network — runs entirely
+    # off pip + the repo's own fixtures.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install pytest
+        run: pip install pytest
+
+      - name: Run scripts pytest suite
+        run: python3 -m pytest scripts/test/ -q
+
   secret-scan:
     # Pinned Docker image (zricethezav/gitleaks:v8.24.3) so the scan
     # reproduces bit-for-bit against the exact version we validate
