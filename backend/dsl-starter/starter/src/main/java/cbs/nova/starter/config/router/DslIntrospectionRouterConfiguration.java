@@ -12,6 +12,7 @@ import cbs.nova.starter.model.DslIntrospectionModels.NamesResponse;
 import cbs.nova.starter.model.DslIntrospectionModels.ObjectStructureDto;
 import cbs.nova.starter.model.DslIntrospectionModels.ProcessDetail;
 import cbs.nova.starter.model.DslIntrospectionModels.ProcessDiagramDto;
+import cbs.nova.starter.model.DslIntrospectionModels.WorkingSetResponse;
 import cbs.nova.starter.model.DslIntrospectionModels.TransactionDetail;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -50,6 +51,14 @@ public class DslIntrospectionRouterConfiguration {
           "DSL Introspection"}, responses = @ApiResponse(responseCode = "200", description = "Transaction names", content = @Content(mediaType = "application/json", schema = @Schema(implementation = NamesResponse.class))))),
       @RouterOperation(path = "/api/dsl/transactions/{name}", beanClass = DslIntrospectionHandler.class, beanMethod = "transactionDetail", method = RequestMethod.GET, operation = @Operation(operationId = "getTransactionDetail", summary = "Get DSL transaction detail", tags = {
           "DSL Introspection"}, parameters = @Parameter(name = "name", in = ParameterIn.PATH), responses = @ApiResponse(responseCode = "200", description = "Transaction detail", content = @Content(mediaType = "application/json", schema = @Schema(implementation = TransactionDetail.class))))),
+      @RouterOperation(path = "/api/dsl/working-set", beanClass = DslIntrospectionHandler.class, beanMethod = "workingSet", method = RequestMethod.GET, operation = @Operation(operationId = "getWorkingSet", summary = "Get DSL working set", tags = {
+          "DSL Introspection"}, parameters = {
+              @Parameter(name = "name", in = ParameterIn.QUERY),
+              @Parameter(name = "type", in = ParameterIn.QUERY),
+              @Parameter(name = "description", in = ParameterIn.QUERY),
+              @Parameter(name = "limit", in = ParameterIn.QUERY),
+              @Parameter(name = "offset", in = ParameterIn.QUERY)
+          }, responses = @ApiResponse(responseCode = "200", description = "Working set", content = @Content(mediaType = "application/json", schema = @Schema(implementation = WorkingSetResponse.class))))),
       @RouterOperation(path = "/api/dsl/objects/search", beanClass = DslIntrospectionHandler.class, beanMethod = "searchObjects", method = RequestMethod.GET, operation = @Operation(operationId = "searchObjects", summary = "Search DSL objects", tags = {
           "DSL Introspection"}, parameters = {
               @Parameter(name = "name", in = ParameterIn.QUERY),
@@ -77,6 +86,7 @@ public class DslIntrospectionRouterConfiguration {
             .GET("/api/dsl/processes/{name}/diagram", handler::processDiagram)
             .GET("/api/dsl/transactions", handler::transactions)
             .GET("/api/dsl/transactions/{name}", handler::transactionDetail)
+            .GET("/api/dsl/working-set", handler::workingSet)
             .GET("/api/dsl/objects/search", handler::searchObjects)
             .GET("/api/dsl/helpers", handler::helpers)
             .GET("/api/dsl/constructs/{name}", handler::constructBody)

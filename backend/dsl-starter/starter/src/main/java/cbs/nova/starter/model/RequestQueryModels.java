@@ -17,4 +17,12 @@ public final class RequestQueryModels {
           String type,
           String description) {
   }
+
+  public record WorkingSetQuery(
+          String name,
+          String type,
+          String description,
+          int limit,
+          int offset) {
+  }
 }

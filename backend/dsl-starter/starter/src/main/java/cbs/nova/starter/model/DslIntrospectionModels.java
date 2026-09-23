@@ -116,6 +116,13 @@ public final class DslIntrospectionModels {
           String diagram) {
   }
 
+  public record WorkingSetResponse(
+          List<DefinitionMetaDto> items,
+          long total,
+          int offset,
+          int limit) {
+  }
+
   @JsonInclude(JsonInclude.Include.NON_NULL)
   public record ObjectStructureDto(
           String name,

@@ -6,6 +6,7 @@ import cbs.nova.starter.model.DslIntrospectionModels.ConstructSchemaMode;
 import cbs.nova.starter.model.DslIntrospectionModels.DefinitionMetaDto;
 import cbs.nova.starter.model.DslIntrospectionModels.HelperSearchResult;
 import cbs.nova.starter.model.DslIntrospectionModels.ProcessDiagramDto;
+import cbs.nova.starter.model.DslIntrospectionModels.WorkingSetResponse;
 import cbs.nova.starter.model.PageResponse;
 import cbs.nova.starter.reporting.HierarchyDiagramRenderer;
 import cbs.nova.starter.service.DslIntrospectionService;
@@ -85,6 +86,11 @@ public class DslIntrospectionHandler {
             .orElse(ServerResponse.notFound().build());
   }
 
+  public ServerResponse workingSet(ServerRequest request) {
+    var q = queryConverter.toWorkingSetQuery(request);
+    WorkingSetResponse response = service.workingSet(q);
+    return ServerResponse.ok().body(response);
+  }
   public ServerResponse definitions(ServerRequest request) {
     int limit = Pagination.intParam(request, "limit", StarterConstants.DEFAULT_LIMIT);
     int offset = Pagination.intParam(request, "offset", StarterConstants.DEFAULT_OFFSET);

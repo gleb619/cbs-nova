@@ -1055,6 +1055,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/dsl/working-set": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get DSL working set */
+        get: operations["getWorkingSet"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/executions": {
         parameters: {
             query?: never;
@@ -1274,6 +1291,22 @@ export interface components {
         DefinitionBundleEntry: {
             definition?: components["schemas"]["DraftRequest"];
             source?: string;
+        };
+        DefinitionMetaDto: {
+            description?: string;
+            filePath?: string;
+            hasCompensation?: boolean;
+            inputSchema?: {
+                [key: string]: unknown;
+            };
+            inputType?: string;
+            name?: string;
+            outputType?: string;
+            /** @enum {string} */
+            status?: "Published" | "Draft" | "Modified";
+            taskQueue?: string;
+            type?: string;
+            version?: string;
         };
         DefinitionTestCase: {
             caseName?: string;
@@ -1599,6 +1632,15 @@ export interface components {
         };
         ValidationErrorsResponse: {
             errors?: components["schemas"]["ValidationError"][];
+        };
+        WorkingSetResponse: {
+            items?: components["schemas"]["DefinitionMetaDto"][];
+            /** Format: int32 */
+            limit?: number;
+            /** Format: int32 */
+            offset?: number;
+            /** Format: int64 */
+            total?: number;
         };
     };
     responses: never;
@@ -3818,6 +3860,32 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TransactionDetail"];
+                };
+            };
+        };
+    };
+    getWorkingSet: {
+        parameters: {
+            query?: {
+                name?: string;
+                type?: string;
+                description?: string;
+                limit?: string;
+                offset?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Working set */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkingSetResponse"];
                 };
             };
         };

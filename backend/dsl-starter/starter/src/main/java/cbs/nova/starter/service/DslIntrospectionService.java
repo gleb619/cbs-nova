@@ -15,6 +15,9 @@ import cbs.nova.dsl.model.ExplainReport;
 import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.process.SignalDescriptor;
 import cbs.nova.dsl.transaction.TransactionDslObject;
+import cbs.nova.starter.controller.Pagination;
+import cbs.nova.starter.model.DslIntrospectionModels.WorkingSetResponse;
+import cbs.nova.starter.model.RequestQueryModels.WorkingSetQuery;
 import cbs.nova.starter.converter.DslIntrospectionMapper;
 import cbs.nova.starter.model.DslIntrospectionModels.ConstructSchemaMode;
 import cbs.nova.starter.model.DslIntrospectionModels.DefinitionMetaDto;
@@ -316,6 +319,21 @@ public class DslIntrospectionService {
   }
 
   public List<DefinitionMetaDto> definitions() {
+    return allDefinitionMetas();
+  }
+
+  public WorkingSetResponse workingSet(WorkingSetQuery query) {
+    int pageSize = Pagination.clampLimit(query.limit());
+    int skip = Pagination.clampOffset(query.offset());
+    List<DefinitionMetaDto> filtered = allDefinitionMetas().stream()
+            .filter(d -> matches(d, query.name(), query.type(), query.description()))
+            .toList();
+    long total = filtered.size();
+    List<DefinitionMetaDto> paged = filtered.stream().skip(skip).limit(pageSize).toList();
+    return new WorkingSetResponse(paged, total, skip, pageSize);
+  }
+
+  private List<DefinitionMetaDto> allDefinitionMetas() {
     var gm = GlobalManager.globalManager();
     Set<String> allNames = new HashSet<>();
     gm.processNames().forEach(allNames::add);
@@ -324,23 +342,37 @@ public class DslIntrospectionService {
     Map<String, DefinitionStatus> statuses = statusResolver.resolveAll(allNames);
 
     List<DefinitionMetaDto> aggregate = new ArrayList<>();
-    gm.processNames().forEach(n -> gm.findProcess(n).ifPresent(p -> {
-      aggregate.add(mapper.toProcessDefinitionMeta(p, inputSchema(p), status(n, statuses),
-              gm.findFilename(n).orElse(null)));
-    }));
-    gm.transactionNames().forEach(n -> gm.findTransaction(n).ifPresent(t -> {
-      aggregate.add(mapper.toTransactionDefinitionMeta(t, inputSchema(t), status(n, statuses),
-              gm.findFilename(n).orElse(null)));
-    }));
+    gm.processNames().forEach(n -> gm.findProcess(n).ifPresent(p -> aggregate.add(
+            mapper.toProcessDefinitionMeta(p, inputSchema(p), status(n, statuses),
+                    gm.findFilename(n).orElse(null)))));
+    gm.transactionNames().forEach(n -> gm.findTransaction(n).ifPresent(t -> aggregate.add(
+            mapper.toTransactionDefinitionMeta(t, inputSchema(t), status(n, statuses),
+                    gm.findFilename(n).orElse(null)))));
     gm.helperNames().forEach(n -> {
-      gm.describeHelper(n)
-              .ifPresent(d -> aggregate.add(mapper.toHelperDefinitionMeta(n, d,
-                      null, status(n, statuses), gm.findFilename(n).orElse(null))));
-      gm.describeFunction(n)
-              .ifPresent(d -> aggregate.add(mapper.toFunctionDefinitionMeta(d,
-                      null, status(n, statuses), gm.findFilename(n).orElse(null))));
+      gm.describeHelper(n).ifPresent(d -> aggregate.add(
+              mapper.toHelperDefinitionMeta(n, d, null, status(n, statuses),
+                      gm.findFilename(n).orElse(null))));
+      gm.describeFunction(n).ifPresent(d -> aggregate.add(
+              mapper.toFunctionDefinitionMeta(d, null, status(n, statuses),
+                      gm.findFilename(n).orElse(null))));
     });
     return aggregate;
+  }
+
+  private static boolean matches(DefinitionMetaDto dto, String name, String type,
+          String description) {
+    if (name != null && !name.isBlank()
+            && !dto.name().toLowerCase(Locale.ROOT).contains(name.toLowerCase(Locale.ROOT))) {
+      return false;
+    }
+    if (type != null && !type.isBlank() && !dto.type().equalsIgnoreCase(type)) {
+      return false;
+    }
+    if (description != null && !description.isBlank()) {
+      String desc = dto.description() != null ? dto.description() : "";
+      return desc.toLowerCase(Locale.ROOT).contains(description.toLowerCase(Locale.ROOT));
+    }
+    return true;
   }
 
   private ConstructSchemaDto toSchemaDto(ProcessDslObject process) {

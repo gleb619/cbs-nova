@@ -215,6 +215,50 @@
         },
         "type": "object"
       },
+      "DefinitionMetaDto": {
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "filePath": {
+            "type": "string"
+          },
+          "hasCompensation": {
+            "type": "boolean"
+          },
+          "inputSchema": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "inputType": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "outputType": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "Published",
+              "Draft",
+              "Modified"
+            ],
+            "type": "string"
+          },
+          "taskQueue": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "DefinitionTestCase": {
         "properties": {
           "caseName": {
@@ -1125,6 +1169,29 @@
               "$ref": "#/components/schemas/ValidationError"
             },
             "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "WorkingSetResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DefinitionMetaDto"
+            },
+            "type": "array"
+          },
+          "limit": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "offset": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "total": {
+            "format": "int64",
+            "type": "integer"
           }
         },
         "type": "object"
@@ -3647,6 +3714,49 @@
         ]
       }
     },
+    "/api/dsl/working-set": {
+      "get": {
+        "operationId": "getWorkingSet",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "name"
+          },
+          {
+            "in": "query",
+            "name": "type"
+          },
+          {
+            "in": "query",
+            "name": "description"
+          },
+          {
+            "in": "query",
+            "name": "limit"
+          },
+          {
+            "in": "query",
+            "name": "offset"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkingSetResponse"
+                }
+              }
+            },
+            "description": "Working set"
+          }
+        },
+        "summary": "Get DSL working set",
+        "tags": [
+          "DSL Introspection"
+        ]
+      }
+    },
     "/api/executions": {
       "get": {
         "operationId": "listExecutions",
@@ -3953,7 +4063,7 @@
   "servers": [
     {
       "description": "Generated server url",
-      "url": "http://localhost:8090"
+      "url": "http://localhost:8092"
     }
   ],
   "tags": [
