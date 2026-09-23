@@ -13,15 +13,17 @@ import org.jspecify.annotations.NonNull;
 /**
  * Splits an YAML frontmatter block from the body of an explain markdown file.
  *
- * <p>The implementation delegates to the {@code flexmark-ext-yaml-front-matter} extension, which
- * is the canonical Java parser for the {@code --- ... ---} metadata block used by markdown
- * static-site generators. Frontmatter is parsed structurally (no regex on raw text); quoting
- * around values is stripped to mirror YAML semantics; comments inside the block are ignored.
+ * <p>
+ * The implementation delegates to the {@code flexmark-ext-yaml-front-matter} extension, which is
+ * the canonical Java parser for the {@code --- ... ---} metadata block used by markdown static-site
+ * generators. Frontmatter is parsed structurally (no regex on raw text); quoting around values is
+ * stripped to mirror YAML semantics; comments inside the block are ignored.
  *
- * <p>Lenient fallbacks match the previous hand-rolled reader and are pinned by tests:
+ * <p>
+ * Lenient fallbacks match the previous hand-rolled reader and are pinned by tests:
  * <ul>
- * <li>no opening {@code ---} at the start of the document — empty metadata and the source
- *     returned unchanged;
+ * <li>no opening {@code ---} at the start of the document — empty metadata and the source returned
+ * unchanged;
  * <li>opening {@code ---} without a matching closing marker — treated as no frontmatter;
  * <li>body is trimmed of leading/trailing blank lines.
  * </ul>
@@ -29,8 +31,8 @@ import org.jspecify.annotations.NonNull;
 public final class ExplainResourceFrontmatter {
 
   private static final Parser PARSER = Parser.builder()
-      .extensions(List.of(YamlFrontMatterExtension.create()))
-      .build();
+          .extensions(List.of(YamlFrontMatterExtension.create()))
+          .build();
 
   private ExplainResourceFrontmatter() {
   }
@@ -39,8 +41,8 @@ public final class ExplainResourceFrontmatter {
   }
 
   /**
-   * Splits frontmatter from body. When no frontmatter is present, returns an empty metadata map
-   * and the input unchanged.
+   * Splits frontmatter from body. When no frontmatter is present, returns an empty metadata map and
+   * the input unchanged.
    */
   public static @NonNull Parsed parse(@NonNull String source) {
     var document = PARSER.parse(source);
