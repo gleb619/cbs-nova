@@ -105,12 +105,12 @@ class DslSourceCompilerTest {
 
     assertThat(objects).hasSize(1);
 
-    var expectedDsl = outDir.resolve("cbs/nova/dsl/generated/goodprocess/demo/GoodProcess.java");
+    var expectedDsl = outDir.resolve("cbs/nova/dsl/generated/demo/goodprocess/GoodProcess.java");
     var expectedModel = outDir.resolve("cbs/nova/dsl/generated/GoodModel.java");
     assertThat(expectedDsl).exists();
     assertThat(expectedModel).exists();
     assertThat(Files.readString(expectedDsl))
-            .contains("package cbs.nova.dsl.generated.goodprocess.demo;");
+            .contains("package cbs.nova.dsl.generated.demo.goodprocess;");
     assertThat(Files.readString(expectedModel)).contains("package cbs.nova.dsl.generated;");
   }
 

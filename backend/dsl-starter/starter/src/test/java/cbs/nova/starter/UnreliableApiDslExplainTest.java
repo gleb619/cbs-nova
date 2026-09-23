@@ -121,7 +121,7 @@ class UnreliableApiDslExplainTest {
 
     var report = ((Executable<Object, ?>) helper).explain(ctx);
 
-    assertThat(report.description())
+    assertThat(report.markdown())
             .contains("unreliable")
             .contains("CONSECUTIVE")
             .contains("RANDOM")

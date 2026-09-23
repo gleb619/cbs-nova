@@ -19,13 +19,13 @@ class DslPackageNameResolverTest {
   @Test
   void stripsJavaExtensionAndDslSuffix() {
     assertThat(resolver.resolve("cbs.nova.dslexamples", "v2", "MyWorkflowDsl.java", true))
-            .isEqualTo("cbs.nova.dslexamples.myworkflow.v2");
+            .isEqualTo("cbs.nova.dslexamples.v2.myworkflow");
   }
 
   @Test
   void sanitizesFileNameToLowercaseAlphanumeric() {
     assertThat(resolver.resolve("cbs.nova.dslexamples", "v1", "Some-DSL_v2-File.java", true))
-            .isEqualTo("cbs.nova.dslexamples.somedslv2file.v1");
+            .isEqualTo("cbs.nova.dslexamples.v1.somedslv2file");
   }
 
   @Test

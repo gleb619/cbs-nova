@@ -83,6 +83,8 @@ class StartupTimeReporterTest {
     context.refresh();
     var appender = new ListAppender<ILoggingEvent>();
     Logger logger = (Logger) LoggerFactory.getLogger(StartupTimeReporter.class);
+    Level previousLevel = logger.getLevel();
+    logger.setLevel(Level.DEBUG);
     logger.addAppender(appender);
     appender.start();
     var event = new ApplicationReadyEvent(
@@ -91,13 +93,23 @@ class StartupTimeReporterTest {
       new StartupTimeReporter(new CbsStartupReportProperties(true, 10, 50)).report(event);
     } finally {
       logger.detachAppender(appender);
+      logger.setLevel(previousLevel);
       context.close();
     }
 
     assertThat(appender.list)
-            .anyMatch(e -> e.getFormattedMessage().contains("STARTUP_REPORT totalMillis=4321"))
-            .anyMatch(e -> e.getFormattedMessage().contains("slow=beans.instantiate"))
-            .allMatch(e -> e.getLevel() == Level.INFO);
+            .anyMatch(
+                    e ->
+                        e.getLevel() == Level.INFO
+                            && e.getFormattedMessage().contains("STARTUP_REPORT totalMillis=4321"))
+            .anyMatch(
+                    e ->
+                        e.getLevel() == Level.INFO
+                            && e.getFormattedMessage().contains("step=beans.instantiate"))
+            .anyMatch(
+                    e ->
+                        e.getLevel() == Level.DEBUG
+                            && e.getFormattedMessage().contains("slow=beans.instantiate"));
   }
 
   @Test

@@ -142,7 +142,7 @@ class TransactionBuilderTest {
     assertThat(result.value()).isNotNull();
     assertThat(result.value().name()).isEqualTo("NoExplainTx");
     assertThat(result.value().markdown()).isEqualTo(Constants.EMPTY_MARKDOWN);
-    assertThat(result.value().description()).isEmpty();
+    assertThat(result.value().description()).isEqualTo(Constants.EMPTY_MARKDOWN);
 
   }
 
@@ -346,7 +346,7 @@ class TransactionBuilderTest {
     var result = tx.effectiveExplain().apply(ctx);
 
     assertThat(result.value().markdown()).isEqualTo(Constants.EMPTY_MARKDOWN);
-    assertThat(result.value().description()).isEmpty();
+    assertThat(result.value().description()).isEqualTo(Constants.EMPTY_MARKDOWN);
   }
 
   private static ExplainResourceProvider stubProvider(

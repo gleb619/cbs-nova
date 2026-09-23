@@ -49,7 +49,7 @@ class DslCompilerTest {
             .build();
     DslCompiler.compile(options);
 
-    var dir = outDir.resolve("cbs/nova/dsl/generated/loandisbursement/v1");
+    var dir = outDir.resolve("cbs/nova/dsl/generated/v1/loandisbursement");
     assertThat(dir.resolve("LoanDisbursementProcessWorkflow.java")).exists();
     assertThat(dir.resolve("LoanDisbursementProcessDefinition.java")).exists();
     assertThat(dir.resolve("LoanDisbursementGeneratedClassProvider.java")).exists();
@@ -89,7 +89,7 @@ class DslCompilerTest {
             .build();
     DslCompiler.compile(options);
 
-    var dir = outDir.resolve("cbs/nova/dsl/generated/kyccheck/v1");
+    var dir = outDir.resolve("cbs/nova/dsl/generated/v1/kyccheck");
     assertThat(dir.resolve("KycCheckTransactionActivity.java")).exists();
     assertThat(dir.resolve("KycCheckTransactionDefinition.java")).exists();
     assertThat(dir.resolve("KycCheckGeneratedClassProvider.java")).exists();
@@ -138,16 +138,16 @@ class DslCompilerTest {
             .build();
     DslCompiler.compile(options);
 
-    assertThat(outDir.resolve("cbs/nova/dsl/codegen/test/testprocess/abc1234/TestModels.class"))
+    assertThat(outDir.resolve("cbs/nova/dsl/codegen/test/abc1234/testprocess/TestModels.class"))
             .exists();
-    assertThat(outDir.resolve("cbs/nova/dsl/codegen/test/testprocess/abc1234/TestProcess.class"))
+    assertThat(outDir.resolve("cbs/nova/dsl/codegen/test/abc1234/testprocess/TestProcess.class"))
             .exists();
     assertThat(outDir.resolve("cbs/nova/dsl/codegen/test/GeneratedDslDefinitionProvider.class"))
             .exists();
 
-    var preprocessedDslDir = outDir.resolve("cbs/nova/dsl/codegen/test/testprocess/abc1234");
+    var preprocessedDslDir = outDir.resolve("cbs/nova/dsl/codegen/test/abc1234/testprocess");
     assertThat(preprocessedDslDir.resolve("TestProcess.java")).exists();
-    var generatedDir = outDir.resolve("cbs/nova/dsl/codegen/test/versionedprocess/abc1234");
+    var generatedDir = outDir.resolve("cbs/nova/dsl/codegen/test/abc1234/versionedprocess");
     assertThat(generatedDir.resolve("VersionedProcessProcessWorkflow.java")).exists();
     assertThat(generatedDir.resolve("VersionedProcessProcessDefinition.java")).exists();
     assertThat(Files.readString(generatedDir.resolve("VersionedProcessProcessDefinition.java")))
@@ -190,7 +190,7 @@ class DslCompilerTest {
             .build();
     DslCompiler.compile(options);
 
-    var dir = outDir.resolve("cbs/nova/dsl/generated/paramprocess/v1");
+    var dir = outDir.resolve("cbs/nova/dsl/generated/v1/paramprocess");
     assertThat(dir.resolve("ParamProcessProcessWorkflow.java")).exists();
     assertThat(dir.resolve("ParamProcessProcessDefinition.java")).exists();
   }

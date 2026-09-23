@@ -137,7 +137,7 @@ class DevDslRuntimeTest {
     var ctx = SimpleContext.builder("input").mode(ExecutionMode.EXPLAIN).build();
     var report = runtime.explain("Ping", ctx);
     assertThat(report.name()).isEqualTo("Ping");
-    assertThat(report.description()).isEqualTo("Process: Ping");
+    assertThat(report.description()).isEqualTo(Constants.EMPTY_MARKDOWN);
     assertThat(report.markdown()).isNotBlank();
     assertThat(report.children()).isEmpty();
   }
@@ -203,7 +203,7 @@ class DevDslRuntimeTest {
     var functionReport = runtime.explain("DefaultFn", ctx);
 
     assertThat(processReport.name()).isEqualTo("Ping");
-    assertThat(processReport.description()).isEqualTo("Process: Ping");
+    assertThat(processReport.description()).isEqualTo(Constants.EMPTY_MARKDOWN);
     assertThat(transactionReport.name()).isEqualTo("DefaultTx");
     assertThat(functionReport.name()).isEqualTo("DefaultFn");
   }
@@ -270,7 +270,7 @@ class DevDslRuntimeTest {
     var report = runtime.explain("TrackedProcess", ctx);
 
     assertThat(report.name()).isEqualTo("TrackedProcess");
-    assertThat(report.description()).isEqualTo("Process: TrackedProcess");
+    assertThat(report.description()).isEqualTo(Constants.EMPTY_MARKDOWN);
   }
 
   @Test

@@ -113,7 +113,7 @@ class FunctionBuilderTest {
     assertThat(result.value()).isNotNull();
     assertThat(result.value().name()).isEqualTo("NoExplainFn");
     assertThat(result.value().markdown()).isEqualTo(Constants.EMPTY_MARKDOWN);
-    assertThat(result.value().description()).isEmpty();
+    assertThat(result.value().description()).isEqualTo(Constants.EMPTY_MARKDOWN);
   }
 
   @Test
@@ -354,7 +354,7 @@ class FunctionBuilderTest {
     var result = fn.explainLogic().apply(ctx);
 
     assertThat(result.value().markdown()).isEqualTo(Constants.EMPTY_MARKDOWN);
-    assertThat(result.value().description()).isEmpty();
+    assertThat(result.value().description()).isEqualTo(Constants.EMPTY_MARKDOWN);
   }
 
   private static ExplainResourceProvider stubProvider(

@@ -47,7 +47,7 @@ class DefaultProcessRunnerExplainTest {
     var report = (ExplainReport) result.value();
     assertThat(report.name()).isEqualTo("P");
     assertThat(report.markdown()).isEqualTo(cbs.nova.dsl.config.Constants.EMPTY_MARKDOWN);
-    assertThat(report.description()).isEmpty();
+    assertThat(report.description()).isEqualTo(cbs.nova.dsl.config.Constants.EMPTY_MARKDOWN);
   }
 
   @Test

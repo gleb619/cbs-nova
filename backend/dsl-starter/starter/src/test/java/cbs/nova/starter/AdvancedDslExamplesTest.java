@@ -1,5 +1,6 @@
 package cbs.nova.starter;
 
+import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -34,6 +35,7 @@ import cbs.nova.starter.config.properties.CbsNovaLoggingProperties.Level;
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.helper.*;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import java.lang.reflect.InvocationTargetException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -415,6 +417,15 @@ class AdvancedDslExamplesTest {
       }
       if (helperClass == MetricHelper.class) {
         return new MetricHelper(null);
+      }
+
+      try {
+        var o = helperClass.getConstructor().newInstance();
+        if (o instanceof Executable exe) {
+          return exe;
+        }
+      } catch (Exception e) {
+        throw new RuntimeException(e);
       }
 
       throw new IllegalStateException("Cannot instantiate helper " + helperClass.getName());

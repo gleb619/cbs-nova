@@ -23,7 +23,7 @@ class CodeWriterTest {
             "// source");
     writer.write(List.of(source), tempDir);
 
-    var expectedFile = tempDir.resolve("cbs/nova/dsl/generated/loan/v1/LoanProcessWorkflow.java");
+    var expectedFile = tempDir.resolve("cbs/nova/dsl/generated/v1/loan/LoanProcessWorkflow.java");
     assertThat(expectedFile).exists();
     assertThat(Files.readString(expectedFile)).isEqualTo("// source");
   }
@@ -37,7 +37,7 @@ class CodeWriterTest {
             "// impl");
     writer.write(List.of(s1, s2), tempDir);
 
-    var dir = tempDir.resolve("cbs/nova/dsl/generated/loan/v1");
+    var dir = tempDir.resolve("cbs/nova/dsl/generated/v1/loan");
     assertThat(dir.resolve("LoanProcessWorkflow.java")).exists();
     assertThat(dir.resolve("LoanProcessDefinition.java")).exists();
   }

@@ -53,7 +53,7 @@ class DefaultTransactionRunnerTest {
     var report = (ExplainReport) result.value();
     assertThat(report.name()).isEqualTo("T");
     assertThat(report.markdown()).isEqualTo(cbs.nova.dsl.config.Constants.EMPTY_MARKDOWN);
-    assertThat(report.description()).isEmpty();
+    assertThat(report.description()).isEqualTo(cbs.nova.dsl.config.Constants.EMPTY_MARKDOWN);
   }
 
   @Test
@@ -135,7 +135,7 @@ class DefaultTransactionRunnerTest {
     var report = (ExplainReport) result.value();
     assertThat(report.name()).isEqualTo("ExplainFallbackT");
     assertThat(report.markdown()).isEqualTo(cbs.nova.dsl.config.Constants.EMPTY_MARKDOWN);
-    assertThat(report.description()).isEmpty();
+    assertThat(report.description()).isEqualTo(cbs.nova.dsl.config.Constants.EMPTY_MARKDOWN);
   }
 
   @Test

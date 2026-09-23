@@ -29,7 +29,9 @@ public final class DefaultExplainLogic<C> implements Function<C, Result<ExplainR
             ExplainReport.builder()
                     .name(name)
                     .description(GlobalManager.globalManager().description(name)
-                            .orElse(fallbackDescription == null ? Constants.EMPTY_MARKDOWN : fallbackDescription))
+                            .orElse(fallbackDescription == null
+                                    ? Constants.EMPTY_MARKDOWN
+                                    : fallbackDescription))
                     .markdown(GlobalManager.globalManager().resolveExplainContent(name))
                     .build());
   }
