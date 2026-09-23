@@ -70,6 +70,27 @@ String authorizeUrl = "https://auth.example.com/authorize?response_type=code"
 
 `urlDecode` is the inverse, with the same `charset` / `form` arguments.
 
+### Escape markup before interpolating untrusted runtime data
+
+`htmlEscape` escapes the five markup-significant characters `& < > " '` per HTML5, so untrusted
+values can be safely placed into HTML text or attribute content (apostrophe becomes `&#39;`).
+
+```java
+HtmlEscapeOut safe = ctx.runHelper("htmlEscape",
+        new HtmlEscapeIn(userProvidedComment))
+        .as(HtmlEscapeOut.class);
+// <p> + safe.result() + </p>  → cannot break out of the markup
+```
+
+`xmlEscape` is the XML 1.0 equivalent for the same five characters, rendering the apostrophe as
+`&apos;` for XML text and attribute content.
+
+```java
+XmlEscapeOut safe = ctx.runHelper("xmlEscape",
+        new XmlEscapeIn(rawElementValue))
+        .as(XmlEscapeOut.class);
+```
+
 ---
 
 ## Hashing
