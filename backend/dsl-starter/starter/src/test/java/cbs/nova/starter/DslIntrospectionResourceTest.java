@@ -402,6 +402,110 @@ class DslIntrospectionResourceTest {
   }
 
   @Test
+  void workingSetEndpointReturnsAllEntitiesWithoutFilters() throws Exception {
+    registerSampleEntities();
+
+    mockMvc.perform(get("/api/dsl/working-set").accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.items").isArray())
+            .andExpect(jsonPath("$.items.length()").value(4))
+            .andExpect(jsonPath("$.items[?(@.name=='LoanDisbursement' && @.type=='process')]")
+                    .exists())
+            .andExpect(jsonPath("$.items[?(@.name=='SampleTransaction' && @.type=='transaction')]")
+                    .exists())
+            .andExpect(jsonPath("$.items[?(@.name=='sampleHelper' && @.type=='helper')]")
+                    .exists())
+            .andExpect(jsonPath("$.items[?(@.name=='sampleFunction' && @.type=='function')]")
+                    .exists())
+            .andExpect(jsonPath("$.total").value(4))
+            .andExpect(jsonPath("$.offset").value(0))
+            .andExpect(jsonPath("$.limit").value(50));
+  }
+
+  @Test
+  void workingSetEndpointFiltersByName() throws Exception {
+    registerSampleEntities();
+
+    mockMvc.perform(get("/api/dsl/working-set")
+            .param("name", "sample")
+            .accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.items.length()").value(3))
+            .andExpect(jsonPath("$.total").value(3))
+            .andExpect(jsonPath("$.items[?(@.name=='SampleTransaction')]").exists())
+            .andExpect(jsonPath("$.items[?(@.name=='sampleHelper')]").exists())
+            .andExpect(jsonPath("$.items[?(@.name=='sampleFunction')]").exists())
+            .andExpect(jsonPath("$.items[?(@.name=='LoanDisbursement')]").doesNotExist());
+  }
+
+  @Test
+  void workingSetEndpointFiltersByType() throws Exception {
+    registerSampleEntities();
+
+    mockMvc.perform(get("/api/dsl/working-set")
+            .param("type", "helper")
+            .accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.items.length()").value(1))
+            .andExpect(jsonPath("$.total").value(1))
+            .andExpect(jsonPath("$.items[0].name").value("sampleHelper"));
+  }
+
+  @Test
+  void workingSetEndpointFiltersByDescription() throws Exception {
+    registerSampleEntities();
+
+    mockMvc.perform(get("/api/dsl/working-set")
+            .param("description", "greeting")
+            .accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.items.length()").value(2))
+            .andExpect(jsonPath("$.total").value(2));
+  }
+
+  @Test
+  void workingSetEndpointCombinesFiltersAndPaginates() throws Exception {
+    registerSampleEntities();
+
+    mockMvc.perform(get("/api/dsl/working-set")
+            .param("name", "sample")
+            .param("type", "function")
+            .param("limit", "1")
+            .param("offset", "0")
+            .accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.items.length()").value(1))
+            .andExpect(jsonPath("$.total").value(1))
+            .andExpect(jsonPath("$.items[0].name").value("sampleFunction"))
+            .andExpect(jsonPath("$.limit").value(1))
+            .andExpect(jsonPath("$.offset").value(0));
+  }
+
+  @Test
+  void workingSetEndpointPaginatesWithOffset() throws Exception {
+    registerSampleEntities();
+
+    mockMvc.perform(get("/api/dsl/working-set")
+            .param("name", "sample")
+            .param("limit", "1")
+            .param("offset", "1")
+            .accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.items.length()").value(1))
+            .andExpect(jsonPath("$.total").value(3))
+            .andExpect(jsonPath("$.offset").value(1))
+            .andExpect(jsonPath("$.limit").value(1));
+  }
+
+  @Test
+  void workingSetEndpointDefaultsLimitAndOffset() throws Exception {
+    mockMvc.perform(get("/api/dsl/working-set").accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.limit").value(50))
+            .andExpect(jsonPath("$.offset").value(0));
+  }
+
+  @Test
   void structuresEndpointReturnsFlatFieldsForProcess() throws Exception {
     mockMvc
             .perform(get("/api/dsl/structures/LoanDisbursement")
