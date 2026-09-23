@@ -1,7 +1,7 @@
 package cbs.nova.server.config;
 
 import cbs.nova.dsl.GlobalManager;
-import cbs.nova.dsl.DefinitionLoader;
+import cbs.nova.dsl.utils.DefinitionLoader;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Bean;
