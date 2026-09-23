@@ -370,9 +370,9 @@ The starter ships a paired Temporal **signal / query** bridge so an external cal
 
 #### DSL author surface
 
-`ProcessBuilder<I, O>.signal(String name, Class<T> payloadType)` ([`ProcessBuilder.java:119`](../../backend/dsl-platform/dsl/src/main/java/cbs/nova/dsl/process/ProcessBuilder.java)) appends a `SignalDescriptor(name, payloadType)` (an immutable `record` — [`SignalDescriptor.java:5`](../../backend/dsl-platform/dsl-api/src/main/java/cbs/nova/dsl/process/SignalDescriptor.java)) to the in-flight `signals` list. Declarations are surfaced in two places: `ProcessDescriptor.signals` (the descriptor that drives codegen) and `ProcessDslObject.signals` (the runtime `DslObject`) — both built from the same builder-side list in `ProcessBuilder.build()` ([`ProcessBuilder.java:153`](../../backend/dsl-platform/dsl/src/main/java/cbs/nova/dsl/process/ProcessBuilder.java)).
+`ProcessBuilder<I, O>.signal(String name, Class<T> payloadType)` ([`ProcessBuilder.java:119`](../backend/dsl-platform/dsl/src/main/java/cbs/nova/dsl/process/ProcessBuilder.java)) appends a `SignalDescriptor(name, payloadType)` (an immutable `record` — [`SignalDescriptor.java:5`](../backend/dsl-platform/dsl-api/src/main/java/cbs/nova/dsl/process/SignalDescriptor.java)) to the in-flight `signals` list. Declarations are surfaced in two places: `ProcessDescriptor.signals` (the descriptor that drives codegen) and `ProcessDslObject.signals` (the runtime `DslObject`) — both built from the same builder-side list in `ProcessBuilder.build()` ([`ProcessBuilder.java:153`](../backend/dsl-platform/dsl/src/main/java/cbs/nova/dsl/process/ProcessBuilder.java)).
 
-A process awaiting a signal in its `execute(...)` lambda calls one of three default helpers on `ProcessContext<T>` ([`ProcessContext.java:50`](../../backend/dsl-platform/dsl-api/src/main/java/cbs/nova/dsl/process/ProcessContext.java)):
+A process awaiting a signal in its `execute(...)` lambda calls one of three default helpers on `ProcessContext<T>` ([`ProcessContext.java:50`](../backend/dsl-platform/dsl-api/src/main/java/cbs/nova/dsl/process/ProcessContext.java)):
 
 ```java
 T approve = ctx.awaitSignal("approval", Map.class);   // blocking, throws if no awaiter
@@ -380,26 +380,26 @@ Map<String,Object> payload = ctx.getSignalPayload("approval", Map.class);  // nu
 boolean hit = ctx.signalReceived("approval");         // boolean check
 ```
 
-All three resolve a `SignalAwaiter` ([`SignalAwaiter.java:6`](../../backend/dsl-platform/dsl-api/src/main/java/cbs/nova/dsl/process/SignalAwaiter.java)) from the request metadata under `Constants.SIGNAL_AWAITER_METADATA_KEY = "cbs.nova.dsl.signalAwaiter"` ([`Constants.java:26`](../../backend/dsl-platform/dsl-api/src/main/java/cbs/nova/dsl/config/Constants.java)). `awaitSignal` is blocking on the Temporal event loop and throws `IllegalStateException` if no awaiter is bound — i.e. the call site is running outside a generated workflow (preview runs never publish; see *Known gaps*). `getSignalPayload` and `signalReceived` degrade gracefully (`null` / `false`) when no awaiter is present, which is exactly the preview-mode path: `ProcessBuilder.signal(...)` declarations are ignored by preview because no `SignalBuffer` is ever installed.
+All three resolve a `SignalAwaiter` ([`SignalAwaiter.java:6`](../backend/dsl-platform/dsl-api/src/main/java/cbs/nova/dsl/process/SignalAwaiter.java)) from the request metadata under `Constants.SIGNAL_AWAITER_METADATA_KEY = "cbs.nova.dsl.signalAwaiter"` ([`Constants.java:26`](../backend/dsl-platform/dsl-api/src/main/java/cbs/nova/dsl/config/Constants.java)). `awaitSignal` is blocking on the Temporal event loop and throws `IllegalStateException` if no awaiter is bound — i.e. the call site is running outside a generated workflow (preview runs never publish; see *Known gaps*). `getSignalPayload` and `signalReceived` degrade gracefully (`null` / `false`) when no awaiter is present, which is exactly the preview-mode path: `ProcessBuilder.signal(...)` declarations are ignored by preview because no `SignalBuffer` is ever installed.
 
 #### Generated Temporal mechanics
 
-`ProcessCodeGenerator.generateInterface(...)` ([`ProcessCodeGenerator.java:64`](../../backend/dsl-platform/dsl-codegen/src/main/java/cbs/nova/dsl/codegen/generator/ProcessCodeGenerator.java)) emits one `[NAME]ProcessWorkflow` interface that, for every declared signal, adds an `@SignalMethod void <name>(<PayloadType> payload);` line ([`signalInterfaceMethods`, line 195](../../backend/dsl-platform/dsl-codegen/src/main/java/cbs/nova/dsl/codegen/generator/ProcessCodeGenerator.java)) and a sibling `@QueryMethod java.util.Map<String, Object> dslSignalState();` for the query side.
+`ProcessCodeGenerator.generateInterface(...)` ([`ProcessCodeGenerator.java:64`](../backend/dsl-platform/dsl-codegen/src/main/java/cbs/nova/dsl/codegen/generator/ProcessCodeGenerator.java)) emits one `[NAME]ProcessWorkflow` interface that, for every declared signal, adds an `@SignalMethod void <name>(<PayloadType> payload);` line ([`signalInterfaceMethods`, line 195](../backend/dsl-platform/dsl-codegen/src/main/java/cbs/nova/dsl/codegen/generator/ProcessCodeGenerator.java)) and a sibling `@QueryMethod java.util.Map<String, Object> dslSignalState();` for the query side.
 
-The generated `[NAME]ProcessDefinition` impl ([`generateImpl`, line 108](../../backend/dsl-platform/dsl-codegen/src/main/java/cbs/nova/dsl/codegen/generator/ProcessCodeGenerator.java)) holds a `private final SignalBuffer signalBuffer = new SignalBuffer();` — a private static inner class generated verbatim by [`signalBufferClass()`, line 216](../../backend/dsl-platform/dsl-codegen/src/main/java/cbs/nova/dsl/codegen/generator/ProcessCodeGenerator.java). The inner class implements `cbs.nova.dsl.process.SignalAwaiter` and provides:
+The generated `[NAME]ProcessDefinition` impl ([`generateImpl`, line 108](../backend/dsl-platform/dsl-codegen/src/main/java/cbs/nova/dsl/codegen/generator/ProcessCodeGenerator.java)) holds a `private final SignalBuffer signalBuffer = new SignalBuffer();` — a private static inner class generated verbatim by [`signalBufferClass()`, line 216](../backend/dsl-platform/dsl-codegen/src/main/java/cbs/nova/dsl/codegen/generator/ProcessCodeGenerator.java). The inner class implements `cbs.nova.dsl.process.SignalAwaiter` and provides:
 
-- `receive(name, payload)` — wired into each generated `@SignalMethod` ([`signalImplMethods`, line 205](../../backend/dsl-platform/dsl-codegen/src/main/java/cbs/nova/dsl/codegen/generator/ProcessCodeGenerator.java)), puts the payload into a `ConcurrentHashMap` and adds `name` to a `ConcurrentHashMap.newKeySet()` of received names.
+- `receive(name, payload)` — wired into each generated `@SignalMethod` ([`signalImplMethods`, line 205](../backend/dsl-platform/dsl-codegen/src/main/java/cbs/nova/dsl/codegen/generator/ProcessCodeGenerator.java)), puts the payload into a `ConcurrentHashMap` and adds `name` to a `ConcurrentHashMap.newKeySet()` of received names.
 - `snapshot()` — wired into the generated `dslSignalState()` query; returns `Map.copyOf(payloads)`.
 - `awaitSignal(name, type)` — blocks on `io.temporal.workflow.Workflow.await(() -> received.contains(name))` then `type.cast(payloads.get(name))`.
 - `getSignalPayload` / `signalReceived` — non-blocking peeks, both returning `null` / `false` when the signal has not arrived.
 
-The generated `execute(...)` body installs the buffer into the per-run metadata immediately before dispatch (`metadata.put("cbs.nova.dsl.signalAwaiter", signalBuffer);`, [`ProcessCodeGenerator.java:122`](../../backend/dsl-platform/dsl-codegen/src/main/java/cbs/nova/dsl/codegen/generator/ProcessCodeGenerator.java)). After that point, any `ctx.awaitSignal(...)` resolves the awaiter and blocks until the corresponding `@SignalMethod` runs in a Temporal worker turn.
+The generated `execute(...)` body installs the buffer into the per-run metadata immediately before dispatch (`metadata.put("cbs.nova.dsl.signalAwaiter", signalBuffer);`, [`ProcessCodeGenerator.java:122`](../backend/dsl-platform/dsl-codegen/src/main/java/cbs/nova/dsl/codegen/generator/ProcessCodeGenerator.java)). After that point, any `ctx.awaitSignal(...)` resolves the awaiter and blocks until the corresponding `@SignalMethod` runs in a Temporal worker turn.
 
 When `signals` is empty the codegen falls through cleanly: no buffer is created, the metadata line is omitted, the interface methods collapse to nothing, and the `@QueryMethod dslSignalState()` is still emitted (allowing the query route to return an empty map on signal-less processes — see `DslSignalService.querySignalState`).
 
 #### Exact routes
 
-Sourced from [`DslSignalsRouterConfiguration`](../../backend/dsl-starter/starter/src/main/java/cbs/nova/starter/config/router/DslSignalsRouterConfiguration.java) (handler = [`DslSignalsHandler`](../../backend/dsl-starter/starter/src/main/java/cbs/nova/starter/controller/DslSignalsHandler.java), service = [`DslSignalService`](../../backend/dsl-starter/starter/src/main/java/cbs/nova/starter/service/DslSignalService.java)):
+Sourced from [`DslSignalsRouterConfiguration`](../backend/dsl-starter/starter/src/main/java/cbs/nova/starter/config/router/DslSignalsRouterConfiguration.java) (handler = [`DslSignalsHandler`](../backend/dsl-starter/starter/src/main/java/cbs/nova/starter/controller/DslSignalsHandler.java), service = [`DslSignalService`](../backend/dsl-starter/starter/src/main/java/cbs/nova/starter/service/DslSignalService.java)):
 
 | Verb | Path | Handler | Purpose |
 |---|---|---|---|
@@ -410,7 +410,7 @@ Each error path uses the unified [`ErrorResponse`](../backend/dsl-platform/dsl-a
 
 #### Request / response shapes
 
-From [`DslSignalsHandler.java:68`](../../backend/dsl-starter/starter/src/main/java/cbs/nova/starter/controller/DslSignalsHandler.java):
+From [`DslSignalsHandler.java:68`](../backend/dsl-starter/starter/src/main/java/cbs/nova/starter/controller/DslSignalsHandler.java):
 
 ```java
 public record SignalRequest(@NonNull String signalName, @Nullable Object payload) {}
@@ -420,7 +420,7 @@ The handler builds the `SignalRequest` by `objectMapper.readValue(request.body(S
 
 #### Delivery + query flow
 
-Traced from [`DslSignalService`](../../backend/dsl-starter/starter/src/main/java/cbs/nova/starter/service/DslSignalService.java):
+Traced from [`DslSignalService`](../backend/dsl-starter/starter/src/main/java/cbs/nova/starter/service/DslSignalService.java):
 
 **Deliver (`sendSignal`).** Called from `DslSignalsHandler.sendSignal` with the parsed body:
 
@@ -441,14 +441,14 @@ Traced from [`DslSignalService`](../../backend/dsl-starter/starter/src/main/java
 The signal/query surface sits under `/api/*`, so:
 
 - **API-key filter** (`ApiKeyAuthFilterConfiguration` → `/api/*`) gates the route when `cbs.dsl.auth.enabled=true`; missing/invalid `X-Api-Key` → `401 UNAUTHORIZED`. With `enabled=false` (default) the filter is not registered and the routes are anonymous.
-- **RBAC filter** (`RbacAuthorizationFilter` → `/api/*`) — the explicit rule for signals is `POST /api/dsl/signals/**` → `Role.RUNNER` ([`RbacAuthorizationFilter.java:52`](../../backend/dsl-starter/starter/src/main/java/cbs/nova/starter/security/RbacAuthorizationFilter.java)). The query route `GET /api/dsl/queries/**` has no explicit rule and falls through to the documented read-default of `Role.VIEWER` ([`RbacAuthorizationFilter.java:131`](../../backend/dsl-starter/starter/src/main/java/cbs/nova/starter/security/RbacAuthorizationFilter.java)). Service-to-service API-key callers are mapped to `Role.ADMIN` by `RoleResolver`, so an API key satisfies the send route and the query route regardless.
+- **RBAC filter** (`RbacAuthorizationFilter` → `/api/*`) — the explicit rule for signals is `POST /api/dsl/signals/**` → `Role.RUNNER` ([`RbacAuthorizationFilter.java:52`](../backend/dsl-starter/starter/src/main/java/cbs/nova/starter/security/RbacAuthorizationFilter.java)). The query route `GET /api/dsl/queries/**` has no explicit rule and falls through to the documented read-default of `Role.VIEWER` ([`RbacAuthorizationFilter.java:131`](../backend/dsl-starter/starter/src/main/java/cbs/nova/starter/security/RbacAuthorizationFilter.java)). Service-to-service API-key callers are mapped to `Role.ADMIN` by `RoleResolver`, so an API key satisfies the send route and the query route regardless.
 - **OIDC / JWT resource-server** (`cbs.security.oidc.enabled=true`) requires a valid JWT on the same `/api/dsl/**` path; RBAC then resolves the role from the configured claim (default `roles`).
 
 The signal route is **not** in `RateLimitFilter.RULES` — send is not currently rate-limited. The query route is a read, so all rate-limit exceptions cover it.
 
 #### Piece manifest
 
-The starter manifest at [`app/dsl/src/main/resources/piece-manifest.yaml`](../../app/dsl/src/main/resources/piece-manifest.yaml) registers one piece for the signal surface (`app/dsl/src/main/resources/piece-manifest.yaml:95-107`):
+The starter manifest at [`app/dsl/src/main/resources/piece-manifest.yaml`](../app/dsl/src/main/resources/piece-manifest.yaml) registers one piece for the signal surface (`app/dsl/src/main/resources/piece-manifest.yaml:95-107`):
 
 | Piece id | Target | Pre-check | Post-check | Fail mode |
 |---|---|---|---|---|
@@ -459,21 +459,21 @@ The query route `GET /api/dsl/queries/{runId}` is not declared as a manifest pie
 #### BFF pointer
 
 The Nuxt BFF exposes matching proxies at:
-- `POST /api/v1/dsl/signals/{runId}` → [`frontend/admin-ui-plugin/server/api/v1/dsl/signals/[runId].post.ts`](../../frontend/admin-ui-plugin/server/api/v1/dsl/signals/[runId].post.ts) (`json: true`).
-- `GET /api/v1/dsl/queries/{runId}` → [`frontend/admin-ui-plugin/server/api/v1/dsl/queries/[runId].get.ts`](../../frontend/admin-ui-plugin/server/api/v1/dsl/queries/[runId].get.ts) (`json: false`, raw-state pass-through).
+- `POST /api/v1/dsl/signals/{runId}` → [`frontend/admin-ui-plugin/server/api/v1/dsl/signals/[runId].post.ts`](../frontend/admin-ui-plugin/server/api/v1/dsl/signals/[runId].post.ts) (`json: true`).
+- `GET /api/v1/dsl/queries/{runId}` → [`frontend/admin-ui-plugin/server/api/v1/dsl/queries/[runId].get.ts`](../frontend/admin-ui-plugin/server/api/v1/dsl/queries/[runId].get.ts) (`json: false`, raw-state pass-through).
 
 Both are explicit Nitro files (no generic catch-all); `curl http://localhost:3000/api/v1/dsl/signals/<runId>` reaches the same handler. The BFF-generated OpenAPI types at `components/src/types/api.generated.d.ts:774,905` mount them as `querySignalState` (GET) and `sendSignal` (POST) in the generated SDK.
 
 #### Example + IT pointer
 
-- **Example DSL** — [`backend/dsl-starter/dsl-examples/src/dsl/SignalProbeDsl.java`](../../backend/dsl-starter/dsl-examples/src/dsl/SignalProbeDsl.java): one declare (`Dsl.process("SignalProbe").signal("approval", Map.class)`) and one await (`ctx.awaitSignal("approval", Map.class)`); the lambda branches on the payload's `"approved"` flag and returns a string result. No published route or RBAC profile — it is a codegen + execution probe only.
-- **Integration test** — [`backend/dsl-starter/starter/src/integrationTest/java/cbs/nova/dsl/example/integration/SignalProbeDslIntegrationTest.java`](../../backend/dsl-starter/starter/src/integrationTest/java/cbs/nova/dsl/example/integration/SignalProbeDslIntegrationTest.java) (224 lines) stands up Testcontainers Temporal + Postgres and exercises two paths:
-  - `workflowBranchesOnSignal()` ([`SignalProbeDslIntegrationTest.java:122`](../../backend/dsl-starter/starter/src/integrationTest/java/cbs/nova/dsl/example/integration/SignalProbeDslIntegrationTest.java)) — starts `SignalProbe` through the generated `DslTemporalProcess` stub, awaits inside the workflow, and delivers the signal via `WorkflowClient.newUntypedWorkflowStub(runId).signal("approval", payload)`; asserts `"approved=true:alice:request-body"`.
-  - `dslSignalServiceSendsSignal()` ([`SignalProbeDslIntegrationTest.java:158`](../../backend/dsl-starter/starter/src/integrationTest/java/cbs/nova/dsl/example/integration/SignalProbeDslIntegrationTest.java)) — same scenario but goes through `DslSignalService.sendSignal(runId, "approval", payload)` with a stub `DslRunRepository` that returns a `RUNNING` row; asserts `"approved=true:bob:svc-body"`.
+- **Example DSL** — [`backend/dsl-starter/dsl-examples/src/dsl/SignalProbeDsl.java`](../backend/dsl-starter/dsl-examples/src/dsl/SignalProbeDsl.java): one declare (`Dsl.process("SignalProbe").signal("approval", Map.class)`) and one await (`ctx.awaitSignal("approval", Map.class)`); the lambda branches on the payload's `"approved"` flag and returns a string result. No published route or RBAC profile — it is a codegen + execution probe only.
+- **Integration test** — [`backend/dsl-starter/starter/src/integrationTest/java/cbs/nova/dsl/example/integration/SignalProbeDslIntegrationTest.java`](../backend/dsl-starter/starter/src/integrationTest/java/cbs/nova/dsl/example/integration/SignalProbeDslIntegrationTest.java) (224 lines) stands up Testcontainers Temporal + Postgres and exercises two paths:
+  - `workflowBranchesOnSignal()` ([`SignalProbeDslIntegrationTest.java:122`](../backend/dsl-starter/starter/src/integrationTest/java/cbs/nova/dsl/example/integration/SignalProbeDslIntegrationTest.java)) — starts `SignalProbe` through the generated `DslTemporalProcess` stub, awaits inside the workflow, and delivers the signal via `WorkflowClient.newUntypedWorkflowStub(runId).signal("approval", payload)`; asserts `"approved=true:alice:request-body"`.
+  - `dslSignalServiceSendsSignal()` ([`SignalProbeDslIntegrationTest.java:158`](../backend/dsl-starter/starter/src/integrationTest/java/cbs/nova/dsl/example/integration/SignalProbeDslIntegrationTest.java)) — same scenario but goes through `DslSignalService.sendSignal(runId, "approval", payload)` with a stub `DslRunRepository` that returns a `RUNNING` row; asserts `"approved=true:bob:svc-body"`.
 
 #### FE pointer
 
-The signals panel is not yet a dedicated page/section in [`architecture-ui.md`](architecture-ui.md). It currently surfaces inside the **Executions detail** view — [`frontend/admin-ui-plugin/app/pages/executions/[id].vue`](../../frontend/admin-ui-plugin/app/pages/executions/[id].vue) at `data-testid="signal-panel"` carries a two-input form (`signalName`, JSON `signalPayload`), a `querySignalState` button, and a `sendSignal` button that calls the BFF routes above. A dedicated `docs/architecture-ui.md` subsection for signals is the T610 page-sync follow-up.
+The signals panel is not yet a dedicated page/section in [`architecture-ui.md`](architecture-ui.md). It currently surfaces inside the **Executions detail** view — [`frontend/admin-ui-plugin/app/pages/executions/[id].vue`](../frontend/admin-ui-plugin/app/pages/executions/[id].vue) at `data-testid="signal-panel"` carries a two-input form (`signalName`, JSON `signalPayload`), a `querySignalState` button, and a `sendSignal` button that calls the BFF routes above. A dedicated `docs/architecture-ui.md` subsection for signals is the T610 page-sync follow-up.
 
 #### Known gaps
 
