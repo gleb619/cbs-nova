@@ -204,6 +204,20 @@ if (!Boolean.TRUE.equals(ok.matched())) {
 }
 ```
 
+### Convert between camel/kebab/snake/title case
+
+`caseConvert` with `mode` `"camel"`, `"kebab"`, `"snake"`, or `"title"` maps a name between
+REST fields (camelCase), URLs/headers (kebab-case), DB columns/env vars (snake_case), and human
+reports (Title Case). Input is split on non-alphanumeric characters and camel-case boundaries,
+so already-cased input round-trips: acronyms stay grouped (`parseXML` → `parse_xml`) and digits
+stay attached (`v2Api` → `v2_api`).
+
+```java
+CaseConvertOut column = ctx.runHelper("caseConvert",
+        new CaseConvertIn("v2Api", "snake"))
+        .as(CaseConvertOut.class);   // "v2_api"
+```
+
 ### Fill a message template
 
 `formatMessage` takes `(template, params)` — a named-placeholder template plus a `Map`.
