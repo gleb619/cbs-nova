@@ -120,6 +120,34 @@ typecheck: ## Typecheck the frontend packages
 lint: ## Run all lint/format checks (backend Spotless + frontend Biome + kanban check); non-zero exit on any failure
 	@python3 $(SCRIPT) lint all
 
+# Aggregate test target — runs backend (dsl-platform + dsl-starter) and frontend suites.
+# Toggle tiers off with BE=0 (skip backend) or FE=0 (skip frontend). Default: both on.
+# The dsl-platform wrapper is canonical per CLAUDE.md and drives the dsl-starter build.
+# Non-zero exit on any suite failure; the failing suite is reported in the recipe output.
+BE ?= 1
+FE ?= 1
+
+.PHONY: test
+test: ## Run backend (dsl-platform + dsl-starter) + frontend test suites; BE=0 / FE=0 to skip a tier; non-zero exit on failure
+	@set -euo pipefail; \
+	if [ "$(BE)" = "1" ]; then \
+		printf '\n==> backend/dsl-platform\n'; \
+		backend/dsl-platform/gradlew -p backend/dsl-platform test || { printf '    [fail] backend/dsl-platform\n' >&2; exit 1; }; \
+		printf '    [ok]   backend/dsl-platform\n'; \
+		printf '\n==> backend/dsl-starter\n'; \
+		backend/dsl-platform/gradlew -p backend/dsl-starter test || { printf '    [fail] backend/dsl-starter\n' >&2; exit 1; }; \
+		printf '    [ok]   backend/dsl-starter\n'; \
+	else \
+		printf '==> skip backend (BE=0)\n'; \
+	fi; \
+	if [ "$(FE)" = "1" ]; then \
+		printf '\n==> frontend\n'; \
+		(cd frontend && pnpm test) || { printf '    [fail] frontend\n' >&2; exit 1; }; \
+		printf '    [ok]   frontend\n'; \
+	else \
+		printf '==> skip frontend (FE=0)\n'; \
+	fi
+
 .PHONY: lint-backend
 lint-backend: ## Backend format check (spotlessCheck on dsl-platform, dsl-starter, dsl-plugins)
 	@python3 $(SCRIPT) lint-backend
