@@ -137,3 +137,26 @@ jobs:
 
       - name: Run dsl-plugins tests
         run: backend/dsl-platform/gradlew -p backend/dsl-plugins test --no-daemon
+
+  secret-scan:
+    # Pinned Docker image (zricethezav/gitleaks:v8.24.3) so the scan
+    # reproduces bit-for-bit against the exact version we validate
+    # locally. No `:latest` — see .gitleaks.toml for the ruleset,
+    # which extends the upstream default and whitelists the dummies
+    # in three unit-test fixtures (each entry comments the fixture).
+    runs-on: ubuntu-latest
+    steps:
+      # fetch-depth: 0 lets gitleaks scan the full branch history
+      # instead of just HEAD; actions/checkout gives it a clean
+      # single-ref repo, so git mode "just works" on CI runners.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run gitleaks
+        run: >-
+          docker run --rm
+          -v "${{ github.workspace }}:/repo"
+          -w /repo
+          zricethezav/gitleaks:v8.24.3
+          detect --source /repo --config /repo/.gitleaks.toml
