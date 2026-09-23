@@ -113,6 +113,10 @@ const EXCLUDED_OPERATIONS: Record<string, { reason: string; handRoute: string }>
     reason: 'trims filters and omits blank ones from the query',
     handRoute: 'dsl/objects/search.get.ts',
   },
+  getWorkingSet: {
+    reason: 'query-param allowlist (page/size/query/mode/type)',
+    handRoute: 'dsl/working-set.get.ts',
+  },
   listAuditEntries: {
     reason: 'query-param allowlist (offset/limit/action)',
     handRoute: 'dsl/audit.get.ts',

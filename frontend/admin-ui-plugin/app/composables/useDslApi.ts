@@ -67,10 +67,16 @@ import {
 export function useDslApi() {
   const log = useClientLogger('dsl')
 
-  async function getDefinitions() {
+  async function getDefinitions(filters: { page?: number; size?: number; query?: string; mode?: string; type?: string } = {}) {
     log.debug('fetching definitions')
+    const query: Record<string, string> = {}
+    if (filters.page !== undefined) query.page = String(filters.page)
+    if (filters.size !== undefined) query.size = String(filters.size)
+    if (filters.query?.trim()) query.query = filters.query.trim()
+    if (filters.mode?.trim()) query.mode = filters.mode.trim()
+    if (filters.type?.trim()) query.type = filters.type.trim()
     try {
-      const result = await bffGetWorkingSet()
+      const result = await bffGetWorkingSet(Object.keys(query).length > 0 ? { query } : {})
       const list = unwrapList(result)
       log.info('definitions loaded', { count: list.length })
       return result
@@ -81,13 +87,14 @@ export function useDslApi() {
   }
 
   async function searchObjects(
-    params: { page?: number; size?: number; query?: string; mode?: string } = {},
+    params: { page?: number; size?: number; query?: string; mode?: string; type?: string } = {},
   ) {
     const query: Record<string, string> = {}
     if (params.page !== undefined) query.page = String(params.page)
     if (params.size !== undefined) query.size = String(params.size)
     if (params.query?.trim()) query.query = params.query.trim()
     if (params.mode?.trim()) query.mode = params.mode.trim()
+    if (params.type?.trim()) query.type = params.type.trim()
 
     log.debug('searching objects', { query })
     return bffSearchObjects({ query }) as Promise<{
