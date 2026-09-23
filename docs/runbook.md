@@ -624,6 +624,317 @@ docker exec -i $(docker ps -qf name=postgres) psql -U nova -d nova \
 xdg-open http://localhost:8233  # or the URL behind your tunnel
 ```
 
+## Publish via the approval gate
+
+Use the two-person change-request approval gate when an `AUTHOR` cannot publish a draft on
+their own — `cbs.dsl.approval.required=true` (off by default; when off, `POST
+/api/v1/dsl/drafts/{name}/publish` behaves exactly like before). The gate is opt-in per deploy:
+set `cbs.dsl.approval.required=true`, restart, and any direct publish from a caller below
+`Role.OPERATOR` is rejected — see [§ Publish approval gate
+(T568)](architecture-backend.md#observability--operations) for the property and the
+audit-trail semantics. AUTHORs write the draft and submit a change request; a second
+principal at `Role.AUTHOR`+ approves and the gate delegates publishing to the existing
+`publishPayload` flow (same audit row, `actor=approver`).
+
+Source: `ChangeRequestRouterConfiguration` (handler `ChangeRequestHandler`, service
+`ChangeRequestService`, entity `ChangeRequestEntity`); RBAC table in
+[`RbacAuthorizationFilter`](../backend/dsl-starter/starter/src/main/java/cbs/nova/starter/security/RbacAuthorizationFilter.java).
+BFF proxies under [`frontend/admin-ui-plugin/server/api/v1/dsl/drafts/[name]/change-request/`](../frontend/admin-ui-plugin/server/api/v1/dsl/drafts/)
+(`change-request.post`) and
+[`change-requests/[id]/approve.post`](../frontend/admin-ui-plugin/server/api/v1/dsl/change-requests/),
+`/reject.post`. Use the BFF paths (`/api/v1/...`) so the browser's `X-Api-Key` / JWT / RBAC
+posture is applied consistently; backend at `:8090` exposes the same routes at
+`/api/dsl/...` and behaves identically.
+
+### Submit the change request
+
+An AUTHOR (or higher) snapshots the current draft into a `dsl_change_request` row
+(`PENDING`); any prior `PENDING` row for the same definition is marked `SUPERSEDED`.
+
+```bash
+curl -sS -X POST http://localhost:3000/api/v1/dsl/drafts/LoanDsl/change-request
+```
+
+Returns `201 Created` with the `ChangeRequestEntity` body — fields: `id`,
+`definitionName`, `draftContent` (the raw draft JSON snapshot, not surfaced by
+default), `requestedBy`, `requestedAt`, `status:"PENDING"`, `approvedBy:null`,
+`approvedAt:null`, `comment:null`. The submit always emits an audit row
+`CHANGE_REQUEST_CREATE` (`actor` = current actor, `outcome` = `SUCCESS` / `FAILURE`,
+target = `change-request:<id>`). **No request body** — the snapshot is read from the
+draft file under `csb.dsl.source-dir/.workbench/drafts/<name>.json`.
+
+### List pending change requests
+
+```bash
+curl -sS 'http://localhost:3000/api/v1/dsl/change-requests?definitionName=LoanDsl&status=PENDING' | jq
+```
+
+Returns `200 OK` with a `ChangeRequestEntity[]` list, newest first. Both query
+parameters are optional and exact-match; `status` is one of
+`PENDING | APPROVED | REJECTED | SUPERSEDED` (case-insensitive; an unknown value
+returns `400 BAD_REQUEST` with `code:"INVALID_REQUEST"` and a message naming the
+expected set). RBAC reads default to `Role.VIEWER`. Backend at `:8090`:
+`/api/dsl/change-requests`.
+
+### Approve and publish
+
+A second principal at `Role.AUTHOR`+ approves the request — **never the requester**
+(`ADMIN` is exempt). On success the service marks the row `APPROVED`, then delegates
+to `DslDraftHandler.publishPayload` so the publish flow is not duplicated.
+
+```bash
+curl -sS -X POST http://localhost:3000/api/v1/dsl/change-requests/42/approve \
+  -H 'Content-Type: application/json' \
+  -d '{"comment":"looks good — banking hours"}'
+```
+
+Body is an optional `{comment}` record (`CommentRequest`); on approve the `comment`
+is copied onto the row's `dsl_change_request.comment` column and returned on a
+later `GET /api/dsl/change-requests`. On success the response is `200 OK` with the
+`DraftResponse` from the publish path (`name`, `status:"Published"`, `location`,
+`reloaded`, `loadResult`, `reloadError`, `diagnostics`, `savedAt` — same shape as a
+direct `POST /publish`).
+
+### Reject a change request
+
+```bash
+curl -sS -X POST http://localhost:3000/api/v1/dsl/change-requests/42/reject \
+  -H 'Content-Type: application/json' \
+  -d '{"comment":"breaking change — defer to Q4"}'
+```
+
+Returns `200 OK` with the rejected `ChangeRequestEntity`
+(`status:"REJECTED"`, `comment` populated, `approvedBy:null`, `approvedAt:null`). Same
+rank + self-approval guards as `approve`; **no publish** happens.
+
+### Direct-publish behaviour under the gate
+
+When `cbs.dsl.approval.required=true`, `POST /api/v1/dsl/drafts/{name}/publish` from a
+caller below `Role.OPERATOR` returns immediately:
+
+```http
+HTTP/1.1 403 Forbidden
+Content-Type: application/json
+
+{
+  "code": "FORBIDDEN",
+  "message": "publish requires approval",
+  "entityName": "LoanDsl",
+  "runId": null,
+  "correlationId": null,
+  "exceptionId": null
+}
+```
+
+ADMIN and OPERATOR callers bypass the gate (`operator.satisfies(OPERATOR)` is `true`).
+The publish is still audited as `DEFINITION_PUBLISH` with `outcome:"FAILURE"` and
+`details={"error":"publish requires approval"}`.
+
+### Common failure cases
+
+| Symptom | HTTP | Cause | Fix |
+|---|---|---|---|
+| `403 FORBIDDEN "publish requires approval"` (direct publish under gate) | 403 | `cbs.dsl.approval.required=true` and the caller is below `OPERATOR`. | Use the change-request flow above; an ADMIN/OPERATOR can still publish directly. |
+| `404 NOT_FOUND` on `POST /change-request` | 404 | No draft file under `csb.dsl.source-dir/.workbench/drafts/<safe(name)>.json` for this definition. | Save a draft first (`POST /api/v1/dsl/drafts/{name}/save`), then re-submit. |
+| `409 CONFLICT "csb.dsl.source-dir is not configured"` | 409 | `cbs.dsl.source-dir` is blank. | Set the property in `application.yml` and restart. The draft store has nowhere to look. |
+| `403 FORBIDDEN` on submit | 403 | RBAC: submit requires `Role.AUTHOR`. | Re-authenticate as a principal at `AUTHOR+` (or use the API key, which `RoleResolver` maps to `ADMIN`). |
+| `403 FORBIDDEN` on approve/reject with message "Change request requester cannot approve or reject their own request" | 403 | Caller is the requester and is not `ADMIN`. The gate is two-person by design. | Have a different principal approve, or escalate to `ADMIN`. |
+| `403 FORBIDDEN` on approve/reject with message "Role AUTHOR is required to decide change requests …" | 403 | Caller rank `< AUTHOR` (VIEWER / RUNNER). | Use an `AUTHOR+` principal. The requester's rank is re-checked at the approve/reject boundary, not just at submit. |
+| `404 NOT_FOUND "No change request: <id>"` | 404 | Unknown or already-deleted id (path-var `id` is `Long.parseLong`). | List first (`GET /change-requests`) and use the returned id. |
+| `409 CONFLICT "Change request <id> is <status> and can no longer be decided"` | 409 | Already `APPROVED` / `REJECTED` / `SUPERSEDED`; the gate is single-decision. | No retry possible — open a new change request. Re-submitting with a fresh draft auto-supersedes the prior `PENDING`. |
+| `400 INVALID_REQUEST "Invalid value for query parameter 'status': …"` | 400 | Typo on `?status=` (only `PENDING`/`APPROVED`/`REJECTED`/`SUPERSEDED` accepted). | Correct the value (case-insensitive). |
+| `401 UNAUTHORIZED` (going direct to backend) | 401 | `cbs.dsl.auth.enabled=true` and the `X-Api-Key` is missing/invalid. The BFF forwards it via `proxyToBackend`. | Supply the configured `X-Api-Key`. |
+
+### Verifying the audit trail
+
+Every submit / approve / reject and every gated publish attempt writes a `dsl_audit`
+row. Verify end-to-end:
+
+```bash
+# 1. List change requests after the round-trip
+curl -sS 'http://localhost:3000/api/v1/dsl/change-requests?definitionName=LoanDsl' | jq
+
+# 2. Inspect the audit log for that change-request id
+docker exec -i $(docker ps -qf name=postgres) psql -U nova -d nova \
+  -c "SELECT actor, action, target, outcome, details FROM dsl_audit \
+      WHERE target LIKE 'change-request:42' \
+      ORDER BY at DESC LIMIT 10;"
+
+# 3. Confirm the publish itself happened (reloaded=true on the approve's response,
+#    or a DEFINITION_PUBLISH SUCCESS row in dsl_audit with actor=<approver>)
+docker exec -i $(docker ps -qf name=postgres) psql -U nova -d nova \
+  -c "SELECT actor, action, target, outcome FROM dsl_audit \
+      WHERE action='DEFINITION_PUBLISH' AND target='LoanDsl' \
+      ORDER BY at DESC LIMIT 5;"
+```
+
+The approve path records `actor=approver` on the publish audit row (the original
+requester never lands on the publish row). Migration `V11__change_requests.sql`
+provides the `dsl_change_request` table and the supporting index; see the auth
+posture in [§ Security / production profile](architecture-backend.md#production-secure-default-profile-t413)
+for how RBAC interacts with the API-key and OIDC filters.
+
+## Signal a running process
+
+Deliver a Temporal signal to a running DSL workflow that declared it, and read back
+the buffered payloads via the runtime query. The DSL author declares the signal with
+`ProcessBuilder.signal(name, payloadType)`; the generator emits an `@SignalMethod` and
+a sibling `@QueryMethod dslSignalState()` on the workflow interface, both routed through
+the same RBAC / auth / OIDC stack as run and preview. Full design in [§ Signals
+(T567)](architecture-backend.md#signals-t567); the integration test
+[`SignalProbeDslIntegrationTest`](../backend/dsl-starter/starter/src/integrationTest/java/cbs/nova/dsl/example/integration/SignalProbeDslIntegrationTest.java)
+exercises both paths end-to-end.
+
+Source: `DslSignalsHandler` + `DslSignalService`, routes mounted by
+`DslSignalsRouterConfiguration`. BFF proxies:
+
+- `POST /api/v1/dsl/signals/{runId}` → [`frontend/admin-ui-plugin/server/api/v1/dsl/signals/[runId].post.ts`](../frontend/admin-ui-plugin/server/api/v1/dsl/signals/[runId].post.ts)
+  (`json: true`).
+- `GET /api/v1/dsl/queries/{runId}` → [`frontend/admin-ui-plugin/server/api/v1/dsl/queries/[runId].get.ts`](../frontend/admin-ui-plugin/server/api/v1/dsl/queries/[runId].get.ts)
+  (`json: false`, raw-state pass-through).
+
+Backend at `:8090` exposes the same routes at `/api/dsl/signals/{runId}` and
+`/api/dsl/queries/{runId}`; pick whichever your client can reach. The browser must
+never be pointed at Spring Boot directly — CORS + token exposure.
+
+### Declare the signal in the DSL
+
+The process must declare the signal it wants to await; otherwise the generated
+`@SignalMethod` is missing and Temporal surfaces a generic RuntimeException as `5xx`.
+The full example lives at
+[`SignalProbeDsl`](../backend/dsl-starter/dsl-examples/src/dsl/SignalProbeDsl.java);
+minimum shape:
+
+```java
+import cbs.nova.dsl.Dsl;
+import java.util.Map;
+
+List<DslObject> define() {
+  return Dsl.process("SignalProbe")
+          .input(String.class)
+          .output(String.class)
+          .signal("approval", Map.class)
+          .execute(ctx -> {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> payload =
+                (Map<String, Object>) ctx.awaitSignal("approval", Map.class);
+            return Result.success(payload.get("approved") + ":" + payload.get("reviewer"));
+          })
+          .buildList();
+}
+```
+
+`ProcessBuilder.signal(name, payloadType)` declares; `ctx.awaitSignal(name, type)`
+blocks on Temporal's `Workflow.await`. Three await helpers exist on
+`ProcessContext` — `awaitSignal` (blocking, throws if no awaiter is bound),
+`getSignalPayload` (nullable peek), `signalReceived` (boolean check) — and all three
+degrade gracefully in preview because no `SignalBuffer` is installed. Preview-mode
+signals are **inert**: a `signal(...)` declaration is ignored by preview / hierarchy /
+explain; only a real Temporal run reaches the dispatcher.
+
+### Send the signal
+
+Start a run first (`POST /api/v1/dsl/run/SignalProbe`, captured in the Executions
+list), capture the runId, then deliver:
+
+```bash
+curl -sS -X POST http://localhost:3000/api/v1/dsl/signals/<runId> \
+  -H 'Content-Type: application/json' \
+  -d '{
+        "signalName": "approval",
+        "payload": {"approved": true, "reviewer": "alice"}
+      }'
+```
+
+Body shape (`DslSignalsHandler.SignalRequest`): `signalName` (required, string),
+`payload` (optional — Jackson treats an absent field as `null`, and the handler
+forwards to `WorkflowStub.signal(name)` when no payload is provided). On success
+returns `200 OK` with the inline envelope:
+
+```json
+{
+  "runId": "<runId>",
+  "signalName": "approval",
+  "status": "sent"
+}
+```
+
+`"sent"` means Temporal *accepted* the signal — **not** that the workflow has
+observed it yet (`Workflow.await` unblocks on the next workflow task turn). For
+guaranteed at-least-once on the workflow side, follow up with the query below.
+
+### Read back the buffered payloads
+
+```bash
+curl -sS http://localhost:3000/api/v1/dsl/queries/<runId> | jq .signalState
+```
+
+Returns `200 OK` with:
+
+```json
+{
+  "runId": "<runId>",
+  "signalState": {
+    "approval": {"approved": true, "reviewer": "alice"}
+  }
+}
+```
+
+Each entry is the last payload captured by the generated `@SignalMethod` handler —
+the per-name snapshot, not a queue. The query method is `WorkflowStub.query(
+"dslSignalState", Map.class)`; an empty `Map.of()` is returned on a Temporal
+disconnect or closed-workflow error and the WARN is logged (`DslSignalService`).
+
+### RBAC notes
+
+- `POST /api/dsl/signals/**` → `Role.RUNNER` (RBAC filter; see
+  [`RbacAuthorizationFilter`](../backend/dsl-starter/starter/src/main/java/cbs/nova/starter/security/RbacAuthorizationFilter.java) line 52).
+- `GET /api/dsl/queries/**` → no explicit rule; reads default to `Role.VIEWER`
+  (RBAC filter line 131).
+- API-key callers are mapped to `Role.ADMIN` by `RoleResolver`, so an API key
+  satisfies both routes regardless of the explicit rule.
+- The `POST /api/dsl/signals/**` route is **not** in `RateLimitFilter.RULES` — send is
+  not currently rate-limited; reads are exempt anyway.
+
+### Common failure cases
+
+| Symptom | HTTP | Cause | Fix |
+|---|---|---|---|
+| `404 NOT_FOUND "Execution run not found: <id>"` on `POST /signals/{runId}` | 404 | The runId has no row in `dsl_runs` (typo or never submitted). | List runs (`GET /api/v1/executions`); the runId is `run-<UUID>` per `SimpleContext.generateRunId()`. |
+| `409 CONFLICT "Execution run is not running: <id> (status COMPLETED)"` (or `FAILED` / `STALE` / `CANCELLED`) | 409 | The run is terminal — signals are only delivered to `RUNNING` workflows. | Nothing to do against this runId. Start a fresh run; signals are bound to a single execution. |
+| `404 NOT_FOUND "Execution run not found: <id>"` on `GET /queries/{runId}` | 404 | Same as above — unknown runId. | Same as above. |
+| `200 OK {"runId": "...", "signalState": {}}` on the query | 200 | Run is registered but not currently `RUNNING` (Temporal-side termination isn't reflected yet in `dsl_runs.status`) **or** the workflow never declared any signals (the handler still emits the `@QueryMethod` so the empty map is the only state). | Confirm `dsl_runs.status='RUNNING'`; if it is, the codegen fell through cleanly with no declared signals — check the DSL source. |
+| `5xx` with `"SignalNotRegistered"` (or similar Temporal RuntimeException) in the response body | 5xx | The signal name was not declared in the process — `@SignalMethod <name>` does not exist on the generated workflow. | Only send signal names listed by `ProcessBuilder.signal(...)` for that definition; check the DSL source. The FE panel sends whatever name the operator types; the runbook says "follow the DSL". |
+| `5xx` "Internal Server Error" with no client message | 5xx | Temporal disconnect — `WorkflowClient.newUntypedWorkflowStub` threw on `signal(...)` and the handler rethrew. The WARN is logged. | Restore Temporal (incident #1) and retry; the same runId picks up because signals are addressed by workflow id. |
+| `400 "Invalid signal request body: …"` | 400 | Body is not the expected `SignalRequest{ signalName, payload? }` shape — `signalName` absent, or the JSON itself is malformed. | Reshape as `{"signalName":"<name>","payload":{...}}` (payload optional). |
+| `401 UNAUTHORIZED` (going direct to backend) | 401 | `cbs.dsl.auth.enabled=true` and the `X-Api-Key` is missing/invalid. The BFF forwards it via `proxyToBackend`. | Supply the configured `X-Api-Key`. |
+| `403 FORBIDDEN` mentioning `RUNNER` (send route) | 403 | `cbs.dsl.auth.rbac.enabled=true` and the caller is `VIEWER`. | Re-authenticate as `RUNNER+`, or use the API key (`ADMIN`). |
+| `403 FORBIDDEN` mentioning `VIEWER` (query route) | 403 | RBAC defaults reads to `VIEWER`; `VIEWER` satisfies this. If seen, an upstream filter (api-key or OIDC) is failing first. | Check the `X-Api-Key` or JWT before assuming RBAC. |
+
+### Verifying a signal was observed
+
+```bash
+# 1. The run row stays RUNNING (or transitions to COMPLETED if the signal unblocked
+#    and the workflow ended). Confirm status, then look up the buffered payload:
+curl -sS http://localhost:3000/api/v1/dsl/queries/<runId> | \
+  jq '.signalState.approval'
+
+# 2. Tail app logs for the signal trace:
+docker compose -f app/docker-compose.yml logs app | \
+  grep -E "Sent signal approval to run <runId>|Failed to send signal"
+
+# 3. Temporal UI (Workflow id = "<runId>") shows the signal event in the workflow
+#    history between the start and the await unblock — useful when the response said
+#    "sent" but the workflow never observed it (race against Workflow.await unblock).
+xdg-open http://localhost:8233  # search by workflow id == runId
+```
+
+A successful round-trip: send returns `"status":"sent"` **and** the query returns the
+buffered payload. A `"sent"` without a follow-up query is a weak guarantee — the
+workflow unblocks on the next task turn, which can be hundreds of milliseconds later
+under load. For long-lived awaits prefer polling the query rather than relying on the
+send response alone.
+
 ## Maintaining this runbook
 
 Every new ops-relevant change (a scheduled job, a new failure mode, a new external dependency)
