@@ -149,6 +149,78 @@ const EXCLUDED_OPERATIONS: Record<string, { reason: string; handRoute: string }>
     reason: 'SSE stream via h3 proxyRequest (long-lived, no JSON envelope)',
     handRoute: 'executions/[id]/events.get.ts',
   },
+  logs: {
+    reason: 'uses h3 proxyRequest with explicit buildBackendHeaders (json: false) for non-JSON log body',
+    handRoute: 'dsl/dry-run/[traceId]/logs.get.ts',
+  },
+  hierarchyDsl: {
+    reason: 'forwards the request body via readBody() — not in BODY_OPERATIONS set',
+    handRoute: 'dsl/hierarchy/[name].post.ts',
+  },
+  getManifestGuard: {
+    reason: 'plain proxy but kept hand-written as part of the manifest subsystem; no behavior change requested',
+    handRoute: 'dsl/manifest/guard.get.ts',
+  },
+  listNotificationChannels: {
+    reason: 'plain proxy but kept hand-written alongside notifications surface',
+    handRoute: 'dsl/notifications/channels/index.get.ts',
+  },
+  listNotificationFireLog: {
+    reason: 'query-param allowlist (offset/limit/ruleId)',
+    handRoute: 'dsl/notifications/fire-log/index.get.ts',
+  },
+  toggleNotificationRule: {
+    reason: 'forwards the request body via readBody() — not in BODY_OPERATIONS set',
+    handRoute: 'dsl/notifications/rules/[id]/enabled.post.ts',
+  },
+  deleteNotificationRule: {
+    reason: 'plain proxy but kept hand-written alongside notifications surface',
+    handRoute: 'dsl/notifications/rules/[id].delete.ts',
+  },
+  getNotificationRule: {
+    reason: 'plain proxy but kept hand-written alongside notifications surface',
+    handRoute: 'dsl/notifications/rules/[id].get.ts',
+  },
+  updateNotificationRule: {
+    reason: 'forwards the request body via readBody() — not in BODY_OPERATIONS set',
+    handRoute: 'dsl/notifications/rules/[id].put.ts',
+  },
+  listNotificationRules: {
+    reason: 'query-param allowlist (offset/limit)',
+    handRoute: 'dsl/notifications/rules/index.get.ts',
+  },
+  createNotificationRule: {
+    reason: 'forwards the request body via readBody() — not in BODY_OPERATIONS set',
+    handRoute: 'dsl/notifications/rules/index.post.ts',
+  },
+  testNotificationRules: {
+    reason: 'forwards the request body via readBody() — not in BODY_OPERATIONS set',
+    handRoute: 'dsl/notifications/test/index.post.ts',
+  },
+  promotionDefinitions: {
+    reason: 'query-param allowlist (env)',
+    handRoute: 'dsl/promote/definitions.get.ts',
+  },
+  promotionEnvironments: {
+    reason: 'plain proxy but kept hand-written alongside promote surface',
+    handRoute: 'dsl/promote/environments.get.ts',
+  },
+  promote: {
+    reason: 'forwards both request body and inbound query string',
+    handRoute: 'dsl/promote/index.post.ts',
+  },
+  querySignalState: {
+    reason: 'uses h3 proxyRequest with explicit buildBackendHeaders (json: false) for raw signal-state response',
+    handRoute: 'dsl/queries/[runId].get.ts',
+  },
+  sendSignal: {
+    reason: 'uses h3 proxyRequest with explicit buildBackendHeaders (json: true) for signal send',
+    handRoute: 'dsl/signals/[runId].post.ts',
+  },
+  getObjectStructure: {
+    reason: 'plain proxy but kept hand-written alongside structures surface',
+    handRoute: 'dsl/structures/[name].get.ts',
+  },
 }
 
 /**

@@ -67,7 +67,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List DSL publish change requests, optionally filtered by definition name and status */
+        /** List change requests, optionally filtered by definitionName and status */
         get: operations["listChangeRequests"];
         put?: never;
         post?: never;
@@ -86,7 +86,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Approve a pending change request, triggering the DSL publish */
+        /** Approve a pending change request and publish its snapshot */
         post: operations["approveChangeRequest"];
         delete?: never;
         options?: never;
@@ -103,7 +103,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Reject a pending change request with a required comment */
+        /** Reject a pending change request */
         post: operations["rejectChangeRequest"];
         delete?: never;
         options?: never;
@@ -275,7 +275,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Submit the current draft of a definition for publish approval */
+        /** Submit a change request snapshotting the current draft for approval */
         post: operations["submitChangeRequest"];
         delete?: never;
         options?: never;
@@ -379,6 +379,23 @@ export interface paths {
         put?: never;
         /** Persist a Workbench draft construct to disk */
         post: operations["saveDraft"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/dsl/dry-run/{traceId}/logs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Stream live dry-run log lines for a single trace/run id */
+        get: operations["logs"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -540,6 +557,162 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/dsl/hierarchy/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Return a structured call-graph report of a DSL process */
+        post: operations["hierarchyDsl"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/dsl/manifest/guard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Button-target piece guard verdicts resolved for the current principal (no check internals) */
+        get: operations["getManifestGuard"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/dsl/manifest/reload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reload and validate the piece manifest YAML */
+        post: operations["reloadManifest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/dsl/notifications/channels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List available notification channel types */
+        get: operations["listNotificationChannels"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/dsl/notifications/fire-log": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List notification rule firing audit rows, newest first */
+        get: operations["listNotificationFireLog"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/dsl/notifications/rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List notification rules, match order (priority desc) */
+        get: operations["listNotificationRules"];
+        put?: never;
+        /** Create a notification rule */
+        post: operations["createNotificationRule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/dsl/notifications/rules/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a notification rule by id */
+        get: operations["getNotificationRule"];
+        /** Replace a notification rule */
+        put: operations["updateNotificationRule"];
+        post?: never;
+        /** Delete a notification rule */
+        delete: operations["deleteNotificationRule"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/dsl/notifications/rules/{id}/enabled": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Enable or disable a notification rule */
+        post: operations["toggleNotificationRule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/dsl/notifications/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Test-match a synthetic event against the enabled rules and report results */
+        post: operations["testNotificationRules"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/dsl/objects/search": {
         parameters: {
             query?: never;
@@ -625,6 +798,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/dsl/promote": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Promote a definition bundle from one environment to another (dry-run or apply) */
+        post: operations["promote"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/dsl/promote/definitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List definitions selectable in a source environment */
+        get: operations["promotionDefinitions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/dsl/promote/environments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List configured promotion environments */
+        get: operations["promotionEnvironments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/dsl/queries/{runId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Query current signal state of a running DSL process */
+        get: operations["querySignalState"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/dsl/reload": {
         parameters: {
             query?: never;
@@ -691,7 +932,8 @@ export interface paths {
         delete: operations["deleteSchedule"];
         options?: never;
         head?: never;
-        patch?: never;
+        /** Update the cron/timezone of the Temporal schedule for a DSL definition */
+        patch: operations["updateSchedule"];
         trace?: never;
     };
     "/api/dsl/schedules/{definition}/pause": {
@@ -735,8 +977,42 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get DSL construct input/output schemas */
+        /** Get DSL construct input/output schemas (preview) or explain report (mode=explain) */
         get: operations["getConstructSchema"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/dsl/signals/{runId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Send a signal to a running DSL process */
+        post: operations["sendSignal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/dsl/structures/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get DSL object structure */
+        get: operations["getObjectStructure"];
         put?: never;
         post?: never;
         delete?: never;
@@ -938,7 +1214,7 @@ export interface components {
             output?: unknown;
             success?: boolean;
         };
-        ChangeRequest: {
+        ChangeRequestEntity: {
             /** Format: date-time */
             approvedAt?: string;
             approvedBy?: string;
@@ -1035,6 +1311,15 @@ export interface components {
             type?: string;
             version?: string;
         };
+        DslDescriptor: {
+            hasSideEffects?: boolean;
+            heartbeatTimeout?: string;
+            objectDescriptor?: components["schemas"]["ObjectDescriptor"];
+            parameters?: components["schemas"]["ParameterDescriptor"][];
+            startToCloseTimeout?: string;
+            taskQueue?: string;
+            version?: string;
+        };
         DslRequest: {
             body?: unknown;
             metadata?: {
@@ -1042,9 +1327,9 @@ export interface components {
             };
         };
         ErrorEntry: {
-            code?: string;
+            field?: string;
             message?: string;
-            stackTrace?: string;
+            pieceId?: string;
         };
         ErrorResponse: {
             code?: string;
@@ -1058,6 +1343,13 @@ export interface components {
             message?: string;
             runId?: string;
             suggestion?: string;
+        };
+        ExecutableDescriptor: {
+            description?: string;
+            hasSideEffects?: boolean;
+            name?: string;
+            parameters?: components["schemas"]["ParameterDescriptor"][];
+            previewBehavior?: string;
         };
         ExecutionDto: {
             completedAt?: string;
@@ -1118,6 +1410,28 @@ export interface components {
             outputType?: string;
             type?: string;
         };
+        HierarchyReport: {
+            astTree?: components["schemas"]["CallNode"];
+            callCounts?: {
+                [key: string]: number;
+            };
+            children?: components["schemas"]["HierarchyReport"][];
+            description?: string;
+            dryRunLogs?: {
+                [key: string]: unknown;
+            }[];
+            dslDescriptor?: components["schemas"]["DslDescriptor"];
+            errors?: components["schemas"]["ErrorResponse"][];
+            executableDescriptor?: components["schemas"]["ExecutableDescriptor"];
+            executionTrace?: string[];
+            externalCalls?: {
+                [key: string]: unknown;
+            }[];
+            hasCompensation?: boolean;
+            mermaidDiagram?: string;
+            metrics?: components["schemas"]["PreviewMetricsSnapshot"];
+            name?: string;
+        };
         ImportBundleResult: {
             diagnostics?: components["schemas"]["CompileDiagnostic"][];
             dryRun?: boolean;
@@ -1134,8 +1448,32 @@ export interface components {
             name?: string;
             outcome?: string;
         };
+        LogicInfoDto: {
+            description?: string;
+            kind?: string;
+            required?: boolean;
+            /** @enum {string} */
+            status?: "configured" | "default";
+        };
+        ManifestGuardEntry: {
+            allowed?: boolean;
+            id?: string;
+            reason?: string;
+        };
+        ManifestReloadResponse: {
+            errors?: components["schemas"]["ErrorEntry"][];
+            /** Format: int32 */
+            pieceCount?: number;
+        };
         NamesResponse: {
             names?: string[];
+        };
+        ObjectDescriptor: unknown;
+        ObjectStructureDto: {
+            fields?: components["schemas"]["StructureFieldDto"][];
+            logic?: components["schemas"]["LogicInfoDto"][];
+            name?: string;
+            type?: string;
         };
         PageResponse: {
             items?: unknown[];
@@ -1145,6 +1483,11 @@ export interface components {
             offset?: number;
             /** Format: int64 */
             total?: number;
+        };
+        ParameterDescriptor: {
+            name?: string;
+            /** @enum {string} */
+            type?: "STRING" | "NUMBER" | "BOOLEAN" | "OBJECT";
         };
         PreviewMetricsSnapshot: {
             callCounts?: {
@@ -1173,7 +1516,7 @@ export interface components {
             }[];
             metrics?: components["schemas"]["PreviewMetricsSnapshot"];
             /** @enum {string} */
-            mode?: "RUN" | "PREVIEW" | "EXPLAIN" | "COMPENSATION";
+            mode?: "RUN" | "PREVIEW" | "EXPLAIN" | "HIERARCHY" | "COMPENSATION";
             name?: string;
             output?: unknown;
             success?: boolean;
@@ -1200,12 +1543,26 @@ export interface components {
             /** Format: int64 */
             runCount?: number;
         };
+        PromotionDefinition: {
+            name?: string;
+            status?: string;
+            type?: string;
+        };
+        PromotionEnvironment: {
+            name?: string;
+        };
         ServerResponse: unknown;
         StepDto: {
             id?: string;
             inputMapping?: string;
             name?: string;
             type?: string;
+        };
+        StructureFieldDto: {
+            description?: string;
+            path?: string;
+            type?: string;
+            value?: string;
         };
         TraceStepDto: {
             id?: string;
@@ -1365,7 +1722,9 @@ export interface operations {
     listChangeRequests: {
         parameters: {
             query?: {
+                /** @description Optional exact definition name filter */
                 definitionName?: string;
+                /** @description Optional status filter (PENDING, APPROVED, REJECTED, SUPERSEDED) */
                 status?: string;
             };
             header?: never;
@@ -1374,13 +1733,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Change requests matching the filters */
+            /** @description Matching change requests, newest first */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ChangeRequest"][];
+                    "application/json": components["schemas"]["ChangeRequestEntity"];
                 };
             };
         };
@@ -1389,24 +1748,40 @@ export interface operations {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                id: string;
-            };
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Change request approved; publish triggered */
+            /** @description Publish result of the approved snapshot */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ChangeRequest"];
+                    "*/*": components["schemas"]["ServerResponse"];
                 };
             };
-            /** @description Unknown change request id */
+            /** @description Caller rank too low or self-approval */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No change request with the given id */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Change request is not pending */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1420,24 +1795,40 @@ export interface operations {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                id: string;
-            };
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Change request rejected */
+            /** @description The rejected change request */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ChangeRequest"];
+                    "application/json": components["schemas"]["ChangeRequestEntity"];
                 };
             };
-            /** @description Unknown change request id */
+            /** @description Caller rank too low or self-rejection */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No change request with the given id */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Change request is not pending */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1761,23 +2152,21 @@ export interface operations {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                name: string;
-            };
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Change request created for the current draft */
-            200: {
+            /** @description Change request created */
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ChangeRequest"];
+                    "application/json": components["schemas"]["ChangeRequestEntity"];
                 };
             };
-            /** @description No draft found for the given name */
+            /** @description No draft exists for the definition */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2016,6 +2405,38 @@ export interface operations {
             };
             /** @description Source directory not configured or not found */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    logs: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Trace/run id (X-Request-Id used for the preview/explain call) */
+                traceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description SSE stream of dry-run log events */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": unknown;
+                };
+            };
+            /** @description Malformed trace id */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2424,6 +2845,341 @@ export interface operations {
             };
         };
     };
+    hierarchyDsl: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Hierarchy report */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HierarchyReport"];
+                };
+            };
+            /** @description Input validation or execution failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidationErrorsResponse"];
+                };
+            };
+        };
+    };
+    getManifestGuard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Per-piece allow/deny verdicts for button targets */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManifestGuardEntry"][];
+                };
+            };
+            /** @description Unexpected resolution failure */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    reloadManifest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reload successful */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManifestReloadResponse"];
+                };
+            };
+            /** @description Manifest validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManifestReloadResponse"];
+                };
+            };
+            /** @description Manifest reload is disabled or not configured */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unexpected reload failure */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    listNotificationChannels: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Static channel catalogue; email is a placeholder */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ServerResponse"];
+                };
+            };
+        };
+    };
+    listNotificationFireLog: {
+        parameters: {
+            query?: {
+                /** @description Optional exact rule id filter */
+                ruleId?: string;
+                /** @description Maximum number of rows to return */
+                limit?: string;
+                /** @description Number of matching rows to skip before returning results */
+                offset?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageResponse"];
+                };
+            };
+        };
+    };
+    listNotificationRules: {
+        parameters: {
+            query?: {
+                /** @description Maximum number of rules to return */
+                limit?: string;
+                /** @description Number of matching rules to skip before returning results */
+                offset?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageResponse"];
+                };
+            };
+        };
+    };
+    createNotificationRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Rule created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ServerResponse"];
+                };
+            };
+        };
+    };
+    getNotificationRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The rule */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ServerResponse"];
+                };
+            };
+            /** @description No rule with the given id */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    updateNotificationRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The updated rule */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ServerResponse"];
+                };
+            };
+            /** @description No rule with the given id */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    deleteNotificationRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Rule deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ServerResponse"];
+                };
+            };
+            /** @description No rule with the given id */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    toggleNotificationRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The updated rule */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ServerResponse"];
+                };
+            };
+            /** @description No rule with the given id */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    testNotificationRules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Matched rule ids and per-action results; nothing is persisted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ServerResponse"];
+                };
+            };
+        };
+    };
     searchObjects: {
         parameters: {
             query?: {
@@ -2539,6 +3295,124 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProcessDiagramDto"];
+                };
+            };
+        };
+    };
+    promote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Dry-run diff or apply result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportBundleResult"];
+                };
+            };
+            /** @description Invalid request or bundle validation failure */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Source or target environment not configured */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    promotionDefinitions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Definitions in the environment */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PromotionDefinition"];
+                };
+            };
+            /** @description Environment not configured or directory missing */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    promotionEnvironments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Environment names */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PromotionEnvironment"];
+                };
+            };
+        };
+    };
+    querySignalState: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                runId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Signal state */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ServerResponse"];
+                };
+            };
+            /** @description Run not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
@@ -2708,6 +3582,44 @@ export interface operations {
             };
         };
     };
+    updateSchedule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Schedule updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string;
+                };
+            };
+            /** @description Invalid cron or timezone */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Schedule not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     pauseSchedule: {
         parameters: {
             query?: never;
@@ -2786,6 +3698,71 @@ export interface operations {
     };
     getConstructSchema: {
         parameters: {
+            query?: {
+                /** @description Schema mode: preview (default) or explain */
+                mode?: string;
+            };
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Construct schemas or explain report */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConstructSchemaDto"];
+                };
+            };
+        };
+    };
+    sendSignal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                runId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Signal sent */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ServerResponse"];
+                };
+            };
+            /** @description Run not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Run is not running */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    getObjectStructure: {
+        parameters: {
             query?: never;
             header?: never;
             path: {
@@ -2795,13 +3772,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Construct schemas */
+            /** @description Object structure */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ConstructSchemaDto"];
+                    "application/json": components["schemas"]["ObjectStructureDto"];
                 };
             };
         };

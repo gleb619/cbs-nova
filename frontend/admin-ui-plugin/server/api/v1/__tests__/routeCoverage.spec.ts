@@ -284,6 +284,11 @@ const expectedProxies: readonly ExpectedProxy[] = [
     backendPath: '/api/dsl/manifest/guard',
     bffPath: '/api/v1/dsl/manifest/guard',
   },
+  {
+    method: 'POST',
+    backendPath: '/api/dsl/manifest/reload',
+    bffPath: '/api/v1/dsl/manifest/reload',
+  },
   // DslAuditRouterConfiguration
   {
     method: 'GET',
