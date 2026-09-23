@@ -16,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.slf4j.MDC;
 
+import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -83,37 +84,94 @@ public class HttpCallHelper implements Executable<HttpCallIn, HttpCallOut> {
     }
 
     HttpClient selectedClient = clientsByPolicy.get(call.redirectPolicy());
-    long startedAt = System.nanoTime();
     logRequest(request);
-    try {
-      HttpResponse<String> response = selectedClient.send(request, BodyHandlers.ofString());
-      Result<HttpCallOut> redirectRejection = validateRedirectTarget(request, response, call);
-      if (redirectRejection != null) {
-        return redirectRejection;
-      }
-      int status = response.statusCode();
-      Map<String, String> headers = collectHeaders(response);
-      String body = response.body();
-      long durationMs = durationMillis(startedAt);
-      logResponse(request, status, durationMs);
+    // Single attempt when maxAttempts resolves to 1 — preserves the pre-T628 byte-for-byte
+    // behaviour. The loop body runs exactly once, producing the same Result shape as today.
+    int maxAttempts = call.maxAttempts();
+    long backoffMillis = call.retryBackoffMillis();
+    for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+      long startedAt = System.nanoTime();
+      try {
+        HttpResponse<String> response = selectedClient.send(request, BodyHandlers.ofString());
+        Result<HttpCallOut> redirectRejection = validateRedirectTarget(request, response, call);
+        if (redirectRejection != null) {
+          return redirectRejection;
+        }
+        int status = response.statusCode();
+        Map<String, String> headers = collectHeaders(response);
+        String body = response.body();
+        long durationMs = durationMillis(startedAt);
+        logResponse(request, status, durationMs);
 
-      if (call.isValidStatus(status)) {
-        return Result.success(new HttpCallOut(status, headers, body, true, null));
+        if (call.isValidStatus(status)) {
+          return Result.success(new HttpCallOut(status, headers, body, true, null));
+        }
+        // Non-2xx: retry on 5xx + 429 only; everything else (4xx) fails fast.
+        if (attempt < maxAttempts && call.isRetryableStatus(status)) {
+          logRetry(request, status, attempt, maxAttempts, durationMs);
+          sleepBackoff(backoffMillis);
+          continue;
+        }
+        return Result.failure(new HttpCallFailure(status, body, headers,
+                "httpCall %s %s returned non-2xx status %d".formatted(
+                        call.method(), call.url(), status)));
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        logFailure(request, e, startedAt);
+        return Result.failure(new HttpCallTransportException(
+                "httpCall interrupted: " + e.getMessage(), e));
+      } catch (IOException e) {
+        long durationMs = durationMillis(startedAt);
+        logFailure(request, e, startedAt);
+        if (attempt < maxAttempts) {
+          logRetry(request, -1, attempt, maxAttempts, durationMs);
+          sleepBackoff(backoffMillis);
+          continue;
+        }
+        return Result.failure(new HttpCallTransportException(
+                "httpCall %s %s failed: %s".formatted(
+                        call.method(), call.url(), describeCause(e)),
+                e));
+      } catch (Exception e) {
+        logFailure(request, e, startedAt);
+        return Result.failure(new HttpCallTransportException(
+                "httpCall %s %s failed: %s".formatted(
+                        call.method(), call.url(), describeCause(e)),
+                e));
       }
-      return Result.failure(new HttpCallFailure(status, body, headers,
-              "httpCall %s %s returned non-2xx status %d".formatted(
-                      call.method(), call.url(), status)));
+    }
+    // Unreachable: the loop returns on every iteration when maxAttempts >= 1, but keep the
+    // compiler happy.
+    throw new IllegalStateException("httpCall retry loop exited without returning");
+  }
+
+  private void sleepBackoff(long backoffMillis) {
+    if (backoffMillis <= 0) {
+      return;
+    }
+    try {
+      Thread.sleep(backoffMillis);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
-      logFailure(request, e, startedAt);
-      return Result.failure(new HttpCallTransportException(
-              "httpCall interrupted: " + e.getMessage(), e));
-    } catch (Exception e) {
-      logFailure(request, e, startedAt);
-      return Result.failure(new HttpCallTransportException(
-              "httpCall %s %s failed: %s".formatted(
-                      call.method(), call.url(), describeCause(e)),
-              e));
+      // Propagate as retry-loop exit; outer loop's IOException handler isn't reached for an
+      // interrupted sleep, but we want interrupt-status preserved. The next iteration will
+      // surface the interrupt via the send() path; if there are no further attempts the caller
+      // sees HttpCallTransportException just like any other transport failure.
+      throw new RuntimeException("httpCall retry backoff interrupted", e);
+    }
+  }
+
+  private void logRetry(HttpRequest request, int lastStatusOrMinus, int attempt,
+          int maxAttempts, long durationMs) {
+    if (!isHttpLevelEnabled(Level.WARN)) {
+      return;
+    }
+    if (lastStatusOrMinus >= 0) {
+      log.warn("httpCall retry {}/{} after status {} for {} {} ({}ms); backing off",
+              attempt, maxAttempts, lastStatusOrMinus, request.method(), request.uri(), durationMs);
+    } else {
+      log.warn("httpCall retry {}/{} after transport failure for {} {} ({}ms); backing off",
+              attempt, maxAttempts, request.method(), request.uri(), durationMs);
     }
   }
 

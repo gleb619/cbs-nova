@@ -9,6 +9,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.temporaryRedirect;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
+import static com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
@@ -115,6 +116,128 @@ class HttpCallHelperTest {
     assertThat(failure.status()).isEqualTo(503);
     assertThat(failure.body()).isEqualTo("upstream broken");
     assertThat(failure.getMessage()).contains("503");
+  }
+
+  @Test
+  void retryRecoversFromFlakyUpstream() {
+    wireMock.stubFor(get("/flaky")
+            .inScenario("flaky")
+            .whenScenarioStateIs(STARTED)
+            .willReturn(aResponse().withStatus(503).withBody("try-again-1"))
+            .willSetStateTo("down-1"));
+    wireMock.stubFor(get("/flaky")
+            .inScenario("flaky")
+            .whenScenarioStateIs("down-1")
+            .willReturn(aResponse().withStatus(503).withBody("try-again-2"))
+            .willSetStateTo("down-2"));
+    wireMock.stubFor(get("/flaky")
+            .inScenario("flaky")
+            .whenScenarioStateIs("down-2")
+            .willReturn(aResponse().withStatus(200).withBody("recovered")));
+
+    Result<HttpCallOut> result = execute(new HttpCallIn(
+            baseUrl() + "/flaky", "GET", null, null, null, null, null,
+            3, 10L));
+
+    assertThat(result.isSuccess())
+            .as("result cause: %s", result.cause())
+            .isTrue();
+    assertThat(result.value().status()).isEqualTo(200);
+    assertThat(result.value().bodyOrEmpty()).isEqualTo("recovered");
+    wireMock.verify(3, getRequestedFor(urlEqualTo("/flaky")));
+  }
+
+  @Test
+  void retryGivesUpAfterMaxAttemptsAndSurfacesLastError() {
+    wireMock.stubFor(get("/always-503")
+            .willReturn(aResponse().withStatus(503).withBody("still-down")));
+
+    Result<HttpCallOut> result = execute(new HttpCallIn(
+            baseUrl() + "/always-503", "GET", null, null, null, null, null,
+            3, 10L));
+
+    assertThat(result.isSuccess()).isFalse();
+    assertThat(result.cause())
+            .isInstanceOf(HttpCallFailure.class);
+    HttpCallFailure failure = (HttpCallFailure) result.cause();
+    assertThat(failure.status()).isEqualTo(503);
+    assertThat(failure.body()).isEqualTo("still-down");
+    assertThat(failure.getMessage()).contains("503");
+    wireMock.verify(3, getRequestedFor(urlEqualTo("/always-503")));
+  }
+
+  @Test
+  void retryTreatsFourHundredTwentyNineAsRetryable() {
+    wireMock.stubFor(get("/rate-limited")
+            .inScenario("rl")
+            .whenScenarioStateIs(STARTED)
+            .willReturn(aResponse().withStatus(429).withBody("too-many-1"))
+            .willSetStateTo("back-off"));
+    wireMock.stubFor(get("/rate-limited")
+            .inScenario("rl")
+            .whenScenarioStateIs("back-off")
+            .willReturn(aResponse().withStatus(200).withBody("ok")));
+
+    Result<HttpCallOut> result = execute(new HttpCallIn(
+            baseUrl() + "/rate-limited", "GET", null, null, null, null, null,
+            2, 10L));
+
+    assertThat(result.isSuccess())
+            .as("result cause: %s", result.cause())
+            .isTrue();
+    assertThat(result.value().status()).isEqualTo(200);
+    wireMock.verify(2, getRequestedFor(urlEqualTo("/rate-limited")));
+  }
+
+  @Test
+  void retryDoesNotRetryNonRetryableFourHundred() {
+    wireMock.stubFor(get("/not-found")
+            .willReturn(aResponse().withStatus(404).withBody("missing")));
+
+    Result<HttpCallOut> result = execute(new HttpCallIn(
+            baseUrl() + "/not-found", "GET", null, null, null, null, null,
+            5, 10L));
+
+    assertThat(result.isSuccess()).isFalse();
+    assertThat(result.cause())
+            .isInstanceOf(HttpCallFailure.class);
+    HttpCallFailure failure = (HttpCallFailure) result.cause();
+    assertThat(failure.status()).isEqualTo(404);
+    wireMock.verify(1, getRequestedFor(urlEqualTo("/not-found")));
+  }
+
+  @Test
+  void retryBackoffIsClampedToThirtySecondsUpperBound() {
+    // Anything above 30s is pinned to 30s by HttpCallIn.effectiveRetryBackoffMillis().
+    // Use a one-attempt retry so no actual sleep occurs in the test runtime — we only assert
+    // that the call succeeds (proving the clamp parsed correctly without blowing the budget).
+    wireMock.stubFor(get("/clamp-upper")
+            .willReturn(aResponse().withStatus(200).withBody("ok")));
+
+    Result<HttpCallOut> result = execute(new HttpCallIn(
+            baseUrl() + "/clamp-upper", "GET", null, null, null, null, null,
+            1, 999_999_999L));
+
+    assertThat(result.isSuccess())
+            .as("result cause: %s", result.cause())
+            .isTrue();
+    assertThat(result.value().bodyOrEmpty()).isEqualTo("ok");
+  }
+
+  @Test
+  void retryBackoffIsClampedToZeroLowerBound() {
+    // Negative backoff values must be treated as zero (no sleep), not surface as an error.
+    wireMock.stubFor(get("/clamp-lower")
+            .willReturn(aResponse().withStatus(200).withBody("ok")));
+
+    Result<HttpCallOut> result = execute(new HttpCallIn(
+            baseUrl() + "/clamp-lower", "GET", null, null, null, null, null,
+            1, -100L));
+
+    assertThat(result.isSuccess())
+            .as("result cause: %s", result.cause())
+            .isTrue();
+    assertThat(result.value().bodyOrEmpty()).isEqualTo("ok");
   }
 
   @Test

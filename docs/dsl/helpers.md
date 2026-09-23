@@ -597,9 +597,9 @@ FormatNumberOut compact = ctx.runHelper("formatNumber",
 
 ## HTTP integration
 
-`httpCall` (`HttpCallIn(url, method, headers, body, queryParams, timeoutMillis)`) is the one
-helper with a real external side effect. Combine it with the encoders/hashers above rather than
-hand-building canonical strings.
+`httpCall` (`HttpCallIn(url, method, headers, body, timeoutMillis, followRedirects, validStatuses,
+maxAttempts, retryBackoffMillis)`) is the one helper with a real external side effect. Combine it
+with the encoders/hashers above rather than hand-building canonical strings.
 
 Common shape — sign, then send:
 
@@ -648,6 +648,32 @@ HttpCallOut resp = ctx.runHelper("httpCall",
 
 In **Preview mode** `httpCall` is intercepted and recorded, not sent — see
 [`preview-mode.md`](preview-mode.md).
+
+### Retries on `httpCall`
+
+`HttpCallIn` accepts two optional opt-in retry fields. Both default to `null`, which preserves the
+historical single-attempt behaviour — no existing caller changes:
+
+| Field | Default | Meaning |
+| --- | --- | --- |
+| `maxAttempts` | `null` (treated as `1`) | Total attempts cap. `null` or any value `<= 1` = single attempt. Values `>= 2` enable retries on transport failure (IOException / timeouts) and on retryable HTTP statuses (any `5xx` and `429`). Other `4xx` statuses fail fast and are not retried. |
+| `retryBackoffMillis` | `null` (no sleep) | Fixed (non-exponential) delay inserted between retry attempts. `null` collapses to `0` (no sleep). Any value is clamped to the inclusive range `[0, 30000]` ms — values above 30 seconds are pinned to 30 seconds, negative values pinned to zero (the call never rejects on backoff; clamping is silent). The clamp is shared by `HttpCallIn.effectiveRetryBackoffMillis()`. |
+
+When `maxAttempts` resolves to `1` the helper takes exactly one try and surfaces the same error
+shape it always has — `HttpCallFailure` for non-2xx status, `HttpCallTransportException` for
+transport failure. When `maxAttempts >= 2` and every attempt fails, the final failure is the last
+attempt's error (most recent status body for `HttpCallFailure`, last `IOException` for the
+transport case), so call sites that already inspect the cause keep working unchanged.
+
+```java
+// 3 attempts total on flaky upstream, 200ms fixed backoff between tries
+HttpCallOut resp = ctx.runHelper("httpCall",
+        new HttpCallIn("https://flaky.partner.example/orders", "POST",
+                Map.of("Content-Type", "application/json"),
+                body, null, null, null,
+                3, 200L))
+        .as(HttpCallOut.class);
+```
 
 ### Schema-validate a record or payload with `schemaValidate`
 
