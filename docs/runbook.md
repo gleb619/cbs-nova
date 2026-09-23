@@ -774,6 +774,190 @@ provides the `dsl_change_request` table and the supporting index; see the auth
 posture in [§ Security / production profile](architecture-backend.md#production-secure-default-profile-t413)
 for how RBAC interacts with the API-key and OIDC filters.
 
+## Promote a definition between environments
+
+Copy a bundle of published definition markers from one configured environment workbench
+directory to another, without redeploying the DSL module. Backed by
+[`DslPromoteHandler`](../backend/dsl-starter/starter/src/main/java/cbs/nova/starter/controller/DslPromoteHandler.java)
+(routes in
+[`DslPromoteRouterConfiguration`](../backend/dsl-starter/starter/src/main/java/cbs/nova/starter/config/router/DslPromoteRouterConfiguration.java),
+logic in
+[`DslDefinitionBundleService`](../backend/dsl-starter/starter/src/main/java/cbs/nova/starter/service/DslDefinitionBundleService.java));
+architecture detail in [§ Environment promotion (T569)](architecture-backend.md#environment-promotion-t569).
+Part of the [Epic 5 — Authoring experience & DSL lifecycle](roadmap.md#epic-5--authoring-experience--dsl-lifecycle)
+roadmap.
+
+The bundle carries **metadata only** — published (and optionally draft) markers from
+`.workbench/published` / `.workbench/drafts` under the source `basePath`. It does **not** contain
+DSL source code; the corresponding generated `.java` files must be deployed to the target
+separately. The target environment is **not** reloaded — it picks up its markers on its own reload
+cycle. Apply **overwrites** existing target markers with the same name (published wins per name).
+
+Use the BFF paths (`/api/v1/dsl/promote*`) so the browser's `X-Api-Key` / JWT / RBAC posture
+is applied consistently. The backend at `:8090` exposes the same routes at `/api/dsl/promote*`
+and behaves identically; pick whichever your client can reach.
+
+### Prerequisites — configure the environments
+
+Environments are opt-in and empty by default; until at least one is configured the promote
+endpoints report `404 ENV_NOT_FOUND`. Each environment maps to a filesystem root holding the
+standard `.workbench` marker layout (relative `basePath` values resolve against
+`cbs.dsl.source-dir`):
+
+```yaml
+cbs:
+  dsl:
+    promotion:
+      environments:
+        dev:
+          base-path: /srv/dsl/dev      # relative paths resolve against cbs.dsl.source-dir
+        staging:
+          base-path: /srv/dsl/staging
+```
+
+Config keys: `cbs.dsl.promotion.environments.<name>.base-path` (see
+[`DslProperties.Promotion`](../backend/dsl-starter/starter/src/main/java/cbs/nova/starter/config/properties/DslProperties.java)).
+There is no Temporal namespace/cluster mapping — promotion moves markers between directories on
+the shared filesystem (cross-host HTTP promotion is a follow-up). Related:
+`cbs.dsl.bundles.require-digest` (default `false`) — when true, bundles without a digest are
+rejected with `BUNDLE_DIGEST_MISSING`.
+
+### List environments
+
+```bash
+curl -sS http://localhost:3000/api/v1/dsl/promote/environments | jq
+```
+
+Returns `200 OK` with a `PromotionEnvironment[]` — sorted names of the configured environments:
+
+```json
+[{"name":"dev"},{"name":"staging"}]
+```
+
+### List promotable definitions in a source environment
+
+```bash
+curl -sS 'http://localhost:3000/api/v1/dsl/promote/definitions?env=dev' | jq
+```
+
+Returns `200 OK` with a `PromotionDefinition[]` (`name`, `type`, `status`), sorted by name.
+Returns `404 ErrorResponse` (`code:"ENV_NOT_FOUND"`) when `env` is unknown or its directory is
+missing. RBAC reads default to `Role.VIEWER`; only `POST /api/dsl/promote` requires
+`Role.OPERATOR` (see
+[`RbacAuthorizationFilter`](../backend/dsl-starter/starter/src/main/java/cbs/nova/starter/security/RbacAuthorizationFilter.java)).
+
+### Dry-run the promotion
+
+Always dry-run first: `?dryRun=true` computes the diff against the target without writing
+anything.
+
+```bash
+curl -sS -X POST 'http://localhost:3000/api/v1/dsl/promote?dryRun=true' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "source": "dev",
+    "target": "staging",
+    "definitions": ["monthly-closing"],
+    "includeDrafts": false
+  }' | jq
+```
+
+Body (`PromotionRequest`):
+
+- `source` (required) — environment name to export from.
+- `target` (required) — environment name to import into; must differ from `source`.
+- `definitions` (optional) — subset of the source's definitions; absent/empty promotes everything.
+- `includeDrafts` (optional) — also consider draft markers on the source (published wins per name).
+
+Returns `200 OK` with an `ImportBundleResult` (`dryRun:true`). `published` counts entries that
+would change (`created`/`updated`); `failed` counts `skipped` (invalid) entries — nothing was
+written and no reload happened (`reloaded:false`):
+
+```json
+{
+  "dryRun": true,
+  "reloaded": false,
+  "published": 2,
+  "failed": 0,
+  "results": [
+    {"name": "LoanDsl", "outcome": "created"},
+    {"name": "monthly-closing", "outcome": "updated", "message": "definition differs (±128 bytes)"}
+  ]
+}
+```
+
+Diff outcomes: `created` (no target marker), `unchanged` (canonical equal — not counted in
+`published`), `updated` (differs, or existing marker unreadable and will be overwritten),
+`skipped` (invalid entry: missing or blank name).
+
+### Apply the promotion
+
+Repeat the same call without `?dryRun=` (default `false`). Each entry is snapshotted in the
+target's history, applied (status forced to `Published`), and re-verified against the bundle
+digest; per-entry failure yields `outcome:"failed"` without aborting the rest.
+
+```bash
+curl -sS -X POST http://localhost:3000/api/v1/dsl/promote \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "source": "dev",
+    "target": "staging",
+    "definitions": ["monthly-closing"],
+    "includeDrafts": false
+  }' | jq
+```
+
+Returns `200 OK` with `dryRun:false`; `published` counts entries with `outcome:"published"`,
+`failed` counts per-entry failures:
+
+```json
+{
+  "dryRun": false,
+  "reloaded": false,
+  "published": 1,
+  "failed": 0,
+  "results": [
+    {"name": "monthly-closing", "outcome": "published"}
+  ]
+}
+```
+
+`reloaded` stays `false` — the target environment is not reloaded by this call.
+
+### Common failure cases
+
+| Symptom | HTTP | Cause | Fix |
+|---|---|---|---|
+| `400 INVALID_REQUEST "malformed promotion request JSON"` | 400 | Body is not valid JSON. | Fix the request body. |
+| `400 INVALID_REQUEST "source and target are required"` | 400 | Blank `source` or `target`. | Set both in the body. |
+| `400 INVALID_REQUEST "source and target must differ"` | 400 | `source == target`. | Pick two distinct environments. |
+| `404 ENV_NOT_FOUND "environment not configured: <name>"` | 404 | `source`, `target`, or the `?env=` param names an unknown environment. | List environments (`GET /api/v1/dsl/promote/environments`) and use a configured name; add it to `cbs.dsl.promotion.environments` otherwise. |
+| `404 ENV_NOT_FOUND "environment directory does not exist: <dir>"` | 404 | The environment's `base-path` directory is missing on the filesystem. | Create the directory (with the `.workbench` layout) or fix `base-path`. |
+| `400 BAD_REQUEST "BUNDLE_DIGEST_MISSING"` / `"BUNDLE_DIGEST_MISMATCH"` | 400 | Bundle digest verification failed (digest also enforced when `cbs.dsl.bundles.require-digest=true`). | Re-export/retry; on apply, mismatch means the target markers do not match the bundle — investigate concurrent writes. |
+| `403 FORBIDDEN "Role OPERATOR is required for POST /api/dsl/promote …"` | 403 | `cbs.dsl.auth.rbac.enabled=true` and the caller's role is `< OPERATOR` (e.g. `VIEWER`, `RUNNER`, `AUTHOR`). | Use a principal mapped to `OPERATOR` or `ADMIN` (API-key callers are `ADMIN`). |
+| `401 UNAUTHORIZED` (going direct to backend) | 401 | `cbs.dsl.auth.enabled=true` and the `X-Api-Key` is missing/invalid. | Supply the configured `X-Api-Key`. The BFF forwards it via `proxyToBackend`. |
+| Apply reports `failed` entries | 200 | Per-entry apply failure (e.g. marker write error); the rest of the bundle still applied. | Read the entry's `message`; fix the cause and re-apply. |
+
+### Verifying the promotion audit trail
+
+Every apply (dry-run included) writes a `dsl_audit` row with `action="PROMOTION"`,
+`target=<target environment>`, and details `{source, target, definitions, digest, count}` on
+success or `{source, target, error}` on failure:
+
+```bash
+# 1. Confirm the target markers landed
+curl -sS 'http://localhost:3000/api/v1/dsl/promote/definitions?env=staging' | jq
+
+# 2. Inspect the audit log for the target environment
+docker exec -i $(docker ps -qf name=postgres) psql -U nova -d nova \
+  -c "SELECT actor, action, target, outcome, details FROM dsl_audit \
+      WHERE action='PROMOTION' AND target='staging' \
+      ORDER BY at DESC LIMIT 10;"
+```
+
+Prefer the UI? The Promote page (`/nova-admin`) previews the same diff and applies it in one
+flow — see [§ Promote page](architecture-ui.md#promote-page-t569) for the page contract.
+
 ## Signal a running process
 
 Deliver a Temporal signal to a running DSL workflow that declared it, and read back
