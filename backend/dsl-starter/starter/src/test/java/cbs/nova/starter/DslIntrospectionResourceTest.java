@@ -6,8 +6,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Dsl;
-import cbs.nova.dsl.DslDescriptor;
-import cbs.nova.dsl.DslObject.DslType;
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.ExecutableDescriptor;
 import cbs.nova.dsl.GlobalManager;
@@ -103,9 +101,7 @@ class DslIntrospectionResourceTest {
                     .value("A greeting helper"))
             .andExpect(jsonPath("$.helpers[?(@.name=='sampleHelper')].inputType").value("String"))
             .andExpect(jsonPath("$.helpers[?(@.name=='sampleHelper')].outputType").value("String"))
-            .andExpect(jsonPath("$.helpers[?(@.name=='sampleHelper')].hasSideEffects").value(false))
-            .andExpect(jsonPath("$.helpers[?(@.name=='sampleHelper')].previewBehavior")
-                    .doesNotExist());
+            ;
   }
 
   @Test
@@ -460,7 +456,6 @@ class DslIntrospectionResourceTest {
             .andExpect(jsonPath("$.type").value("helper"))
             .andExpect(jsonPath("$.fields[?(@.path=='inputType')].value").value("String"))
             .andExpect(jsonPath("$.fields[?(@.path=='inputType')].type").value("class"))
-            .andExpect(jsonPath("$.fields[?(@.path=='hasSideEffects')].value").value("false"))
             .andExpect(jsonPath("$.logic[?(@.kind=='execute')].status").value("configured"))
             .andExpect(jsonPath("$.logic[?(@.kind=='preview')].status").value("default"));
   }
@@ -486,9 +481,7 @@ class DslIntrospectionResourceTest {
                             "A greeting function",
                             String.class,
                             String.class,
-                            false,
-                            null,
-                            List.of())))
+                        List.of())))
             .build();
     GlobalManager.globalManager().registerFunction(sampleFunction);
   }
@@ -507,9 +500,7 @@ class DslIntrospectionResourceTest {
               "A greeting helper",
               String.class,
               String.class,
-              false,
-              null,
-              List.of());
+          List.of());
     }
   }
 }

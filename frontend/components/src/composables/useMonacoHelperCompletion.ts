@@ -19,7 +19,7 @@ export function buildHelperCompletionItems({
     detail:
       entry.inputType || entry.outputType
         ? `${entry.inputType ?? '?'} \u2192 ${entry.outputType ?? 'void'}`
-        : (entry.previewBehavior ?? ''),
+        : '',
     documentation: entry.description ?? '',
     insertText: entry.name,
     range: wordRange,

@@ -12,18 +12,11 @@ import org.jspecify.annotations.Nullable;
 @Builder
 public record DslDescriptor(
         @NonNull ObjectDescriptor objectDescriptor,
-        @Builder.Default boolean hasSideEffects,
-        @Builder.Default @NonNull List<ParameterDescriptor> parameters,
+        @NonNull List<ParameterDescriptor> parameters,
         @Nullable String taskQueue,
         @Nullable String version,
         @Nullable Duration startToCloseTimeout,
         @Nullable Duration heartbeatTimeout) {
-
-  public DslDescriptor {
-    if (parameters == null) {
-      parameters = List.of();
-    }
-  }
 
   public @NonNull String name() {
     return objectDescriptor.name();

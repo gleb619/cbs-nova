@@ -58,9 +58,8 @@ public final class DslIntrospectionModels {
           String name,
           String description,
           String inputType,
-          String outputType,
-          boolean hasSideEffects,
-          String previewBehavior) {
+          String outputType
+  ) {
   }
 
   public record HelpersResponse(List<String> names, List<HelperCatalogEntry> helpers) {

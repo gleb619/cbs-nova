@@ -24,7 +24,6 @@ public final class Descriptors {
   public static DslDescriptor from(@NonNull String name, @NonNull ExecutableDescriptor helper) {
     return DslDescriptor.builder()
             .objectDescriptor(new HelperObjectDescriptor(name, helper))
-            .hasSideEffects(helper.hasSideEffects())
             .parameters(helper.parameters())
             .taskQueue(null)
             .version(null)

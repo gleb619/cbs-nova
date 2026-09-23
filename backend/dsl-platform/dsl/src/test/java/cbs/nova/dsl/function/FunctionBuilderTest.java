@@ -256,7 +256,6 @@ class FunctionBuilderTest {
             .build();
     var custom = DslDescriptor.builder()
             .objectDescriptor(objectDescriptor)
-            .hasSideEffects(false)
             .parameters(List.of())
             .taskQueue(null)
             .version(null)

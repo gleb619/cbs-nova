@@ -73,7 +73,6 @@ class ProcessPreviewDescribeTest {
     assertThat(desc.type()).isEqualTo(DslObject.DslType.PROCESS);
     assertThat(desc.inputType()).isEqualTo(String.class);
     assertThat(desc.outputType()).isEqualTo(String.class);
-    assertThat(desc.hasSideEffects()).isFalse();
     assertThat(desc.taskQueue()).isEqualTo("P-queue");
     assertThat(desc.version()).isEqualTo("v1");
     assertThat(desc.parameters()).isEmpty();
@@ -91,7 +90,6 @@ class ProcessPreviewDescribeTest {
 
     DslDescriptor desc = process.descriptor();
     assertThat(process.compensationLogic()).isNotNull();
-    assertThat(desc.hasSideEffects()).isTrue();
   }
 
 }

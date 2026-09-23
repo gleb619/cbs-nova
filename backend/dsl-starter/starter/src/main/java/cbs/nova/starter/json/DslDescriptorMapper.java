@@ -16,7 +16,7 @@ import tools.jackson.databind.module.SimpleModule;
  * {@link DslDescriptor} exposes fluent accessors ({@code name()} instead of {@code getName()}) plus
  * a raw {@code objectDescriptor} getter, so a plain {@code JsonMapper} would serialize the wrong
  * shape. An explicit {@link ValueSerializer} pins the exact property set and order — alphabetical:
- * description, hasSideEffects, heartbeatTimeout, inputType, name, outputType, parameters,
+ * description, heartbeatTimeout, inputType, name, outputType, parameters,
  * startToCloseTimeout, taskQueue, type, version — matching the serialized form previously produced
  * via the {@code DslDescriptorMixIn}.
  */
@@ -40,7 +40,6 @@ public final class DslDescriptorMapper {
             throws JacksonException {
       gen.writeStartObject();
       ctxt.defaultSerializeProperty("description", value.description(), gen);
-      ctxt.defaultSerializeProperty("hasSideEffects", value.hasSideEffects(), gen);
       ctxt.defaultSerializeProperty("heartbeatTimeout", value.heartbeatTimeout(), gen);
       ctxt.defaultSerializeProperty("inputType", value.inputType(), gen);
       ctxt.defaultSerializeProperty("name", value.name(), gen);

@@ -46,8 +46,8 @@ class HierarchyDiagramRendererTest {
             List.of(),
             Map.of(),
             false,
-            new ExecutableDescriptor(processName, null, String.class, String.class, false, null,
-                    List.of()),
+            new ExecutableDescriptor(processName, null, String.class, String.class,
+                List.of()),
             DslDescriptor.builder()
                     .objectDescriptor(new ObjectDescriptor() {
                       @Override
@@ -75,7 +75,6 @@ class HierarchyDiagramRendererTest {
                         return String.class;
                       }
                     })
-                    .hasSideEffects(false)
                     .parameters(List.of())
                     .taskQueue(null)
                     .version(null)
@@ -133,7 +132,6 @@ class HierarchyDiagramRendererTest {
                         return String.class;
                       }
                     })
-                    .hasSideEffects(false)
                     .parameters(List.of())
                     .taskQueue(null)
                     .version(null)

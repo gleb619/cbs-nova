@@ -24,7 +24,6 @@ public record FunctionDescriptor(
   public DslDescriptor toDslDescriptor() {
     return DslDescriptor.builder()
             .objectDescriptor(this)
-            .hasSideEffects(false)
             .parameters(List.of())
             .build();
   }

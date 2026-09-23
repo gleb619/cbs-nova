@@ -5,33 +5,25 @@
       "name": "currentTimestamp",
       "description": "Returns the current ISO timestamp",
       "inputType": "void",
-      "outputType": "string",
-      "hasSideEffects": false,
-      "previewBehavior": "constant"
+      "outputType": "string"
     },
     {
       "name": "formatDate",
       "description": "Formats a date string with a pattern",
       "inputType": "FormatDateIn",
-      "outputType": "FormatDateOut",
-      "hasSideEffects": false,
-      "previewBehavior": "deterministic"
+      "outputType": "FormatDateOut"
     },
     {
       "name": "formatNumber",
       "description": "Formats a numeric value with a locale-aware pattern",
       "inputType": "FormatNumberIn",
-      "outputType": "FormatNumberOut",
-      "hasSideEffects": false,
-      "previewBehavior": "deterministic"
+      "outputType": "FormatNumberOut"
     },
     {
       "name": "httpCall",
       "description": null,
       "inputType": null,
-      "outputType": null,
-      "hasSideEffects": true,
-      "previewBehavior": null
+      "outputType": null
     }
   ]
 }

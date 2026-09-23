@@ -9,15 +9,12 @@ const helpers: HelperCatalogEntry[] = [
     description: 'Parses a date string',
     inputType: 'String',
     outputType: 'Date',
-    hasSideEffects: false,
   },
   {
     name: 'SendEmail',
     description: 'Sends an email',
     inputType: 'Order',
     outputType: 'Boolean',
-    hasSideEffects: true,
-    previewBehavior: 'noop',
   },
 ]
 
@@ -37,7 +34,7 @@ describe('HelperCatalog', () => {
     expect(wrapper.find('[data-testid="helper-catalog"]').exists()).toBe(true)
   })
 
-  it('renders helper rows with name, I/O types, description and preview behavior', () => {
+  it('renders helper rows with name, I/O types and description', () => {
     wrapper = mountCatalog({ helpers, loading: false })
 
     const rows = wrapper.findAll('[data-testid="helper-catalog-item"]')
@@ -50,23 +47,12 @@ describe('HelperCatalog', () => {
     expect(rows[1].text()).toContain('Order')
     expect(rows[1].text()).toContain('Boolean')
     expect(rows[1].text()).toContain('Sends an email')
-    expect(rows[1].text()).toContain('preview: noop')
-  })
-
-  it('shows the side-effect badge only for helpers with hasSideEffects', () => {
-    wrapper = mountCatalog({ helpers, loading: false })
-
-    const rows = wrapper.findAll('[data-testid="helper-catalog-item"]')
-    expect(rows[0].find('[data-testid="helper-catalog-sideeffect"]').exists()).toBe(false)
-    const sideEffectBadge = rows[1].find('[data-testid="helper-catalog-sideeffect"]')
-    expect(sideEffectBadge.exists()).toBe(true)
-    expect(sideEffectBadge.text()).toContain('side effect')
   })
 
   it('filters the list by name substring', async () => {
     wrapper = mountCatalog({ helpers, loading: false })
 
-    await wrapper.find('[data-testid="helper-catalog-search"]').setValue('send')
+    await wrapper.find('[data-testid="helper-catalog-filter"]').setValue('send')
 
     const rows = wrapper.findAll('[data-testid="helper-catalog-item"]')
     expect(rows).toHaveLength(1)
@@ -98,7 +84,7 @@ describe('HelperCatalog', () => {
   it('renders a no-match state when the search filters everything out', async () => {
     wrapper = mountCatalog({ helpers, loading: false })
 
-    await wrapper.find('[data-testid="helper-catalog-search"]').setValue('xyz')
+    await wrapper.find('[data-testid="helper-catalog-filter"]').setValue('xyz')
 
     expect(wrapper.find('[data-testid="helper-catalog-no-match"]').exists()).toBe(true)
     expect(wrapper.text()).toContain('No helpers match.')

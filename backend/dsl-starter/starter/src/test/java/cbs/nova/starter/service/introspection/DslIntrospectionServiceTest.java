@@ -193,9 +193,7 @@ class DslIntrospectionServiceTest {
                 "A helper",
                 String.class,
                 Integer.class,
-                false,
-                null,
-                List.of());
+            List.of());
       }
     });
 
@@ -280,7 +278,7 @@ class DslIntrospectionServiceTest {
       @Override
       public ExecutableDescriptor describe() {
         return new ExecutableDescriptor(
-                "HExplain", "A helper", String.class, Integer.class, false, null, List.of());
+                "HExplain", "A helper", String.class, Integer.class, List.of());
       }
     });
 
@@ -420,8 +418,8 @@ class DslIntrospectionServiceTest {
               @Override
               public ExecutableDescriptor describe() {
                 return new ExecutableDescriptor(
-                        "helperWithFile", "A helper", String.class, Integer.class, false, null,
-                        List.of());
+                        "helperWithFile", "A helper", String.class, Integer.class,
+                    List.of());
               }
             });
     GlobalManager.globalManager().registerFunction(

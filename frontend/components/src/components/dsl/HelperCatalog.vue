@@ -20,7 +20,7 @@ const filtered = computed(() => {
 <template>
   <div data-testid="helper-catalog" class="flex flex-col h-full overflow-hidden">
     <div class="px-4 py-3 border-b border-gray-800 flex items-center gap-3">
-      <h2 class="font-semibold text-gray-100">Helper Catalog</h2>
+      <h2 class="font-semibold text-gray-100">Catalog</h2>
       <input
         v-model="search"
         data-testid="helper-catalog-search"
@@ -64,13 +64,6 @@ const filtered = computed(() => {
         >
           <div class="flex items-center justify-between gap-2">
             <span class="font-medium text-gray-100 truncate">{{ helper.name }}</span>
-            <span
-              v-if="helper.hasSideEffects"
-              data-testid="helper-catalog-sideeffect"
-              class="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 whitespace-nowrap"
-            >
-              side effect
-            </span>
           </div>
           <div class="text-xs text-gray-500 mt-1">
             {{ helper.inputType || '—' }}
@@ -78,9 +71,6 @@ const filtered = computed(() => {
           </div>
           <div v-if="helper.description" class="text-xs text-gray-400 mt-1">
             {{ helper.description }}
-          </div>
-          <div v-if="helper.previewBehavior" class="text-xs text-gray-500 mt-1">
-            preview: {{ helper.previewBehavior }}
           </div>
         </li>
       </ul>

@@ -273,7 +273,6 @@ class ProcessBuilderTest {
     var desc = process.descriptor();
     assertThat(desc.name()).isEqualTo("DefaultDescProc");
     assertThat(desc.type()).isEqualTo(DslType.PROCESS);
-    assertThat(desc.hasSideEffects()).isTrue();
     assertThat(desc.inputType()).isEqualTo(String.class);
     assertThat(desc.taskQueue()).isEqualTo("DefaultDescProc-queue");
     assertThat(desc.version()).isEqualTo("v1");
@@ -287,7 +286,6 @@ class ProcessBuilderTest {
             .execute(ctx -> Result.success(null))
             .build();
     assertThat(process.compensationLogic()).isNull();
-    assertThat(process.descriptor().hasSideEffects()).isFalse();
   }
 
   @Test

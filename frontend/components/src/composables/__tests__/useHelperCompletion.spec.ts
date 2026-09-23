@@ -7,9 +7,8 @@ const sampleCatalog = [
     description: 'Time-ordered UUID',
     inputType: 'UuidV7In',
     outputType: 'UuidV7Out',
-    hasSideEffects: false,
   },
-  { name: 'base64', description: 'Encode/decode base64', hasSideEffects: false },
+  { name: 'base64', description: 'Encode/decode base64' },
 ]
 
 describe('useHelperCompletion', () => {

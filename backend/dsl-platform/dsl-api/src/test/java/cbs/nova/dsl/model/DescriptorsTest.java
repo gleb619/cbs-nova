@@ -18,9 +18,7 @@ class DescriptorsTest {
             "does things",
             String.class,
             Integer.class,
-            true,
-            "delegates to execute",
-            List.of(ParameterDescriptor.ofString("input")));
+        List.of(ParameterDescriptor.ofString("input")));
 
     DslDescriptor descriptor = Descriptors.from("lookupName", helper);
 
@@ -29,22 +27,21 @@ class DescriptorsTest {
     assertThat(descriptor.description()).isEqualTo("does things");
     assertThat(descriptor.inputType()).isEqualTo(String.class);
     assertThat(descriptor.outputType()).isEqualTo(Integer.class);
-    assertThat(descriptor.hasSideEffects()).isTrue();
     assertThat(descriptor.parameters()).containsExactly(ParameterDescriptor.ofString("input"));
   }
 
   @Test
   void usesExplicitNameVerbatimEvenWhenHelperNameDiffersOrIsNull() {
-    var named = new ExecutableDescriptor("helperName", null, null, null, false, null, List.of());
+    var named = new ExecutableDescriptor("helperName", null, null, null, List.of());
     assertThat(Descriptors.from("explicit", named).name()).isEqualTo("explicit");
 
-    var anonymous = new ExecutableDescriptor(null, null, null, null, false, null, List.of());
+    var anonymous = new ExecutableDescriptor(null, null, null, null, List.of());
     assertThat(Descriptors.from("", anonymous).name()).isEmpty();
   }
 
   @Test
   void leavesProcessOnlyFieldsNull() {
-    var helper = new ExecutableDescriptor("h", null, null, null, false, null, List.of());
+    var helper = new ExecutableDescriptor("h", null, null, null, List.of());
 
     DslDescriptor descriptor = Descriptors.from("h", helper);
 
@@ -56,7 +53,7 @@ class DescriptorsTest {
 
   @Test
   void objectDescriptorIsImmutableAndExposesSameValues() {
-    var helper = new ExecutableDescriptor(null, "d", String.class, null, false, null, List.of());
+    var helper = new ExecutableDescriptor(null, "d", String.class, null, List.of());
 
     ObjectDescriptor objectDescriptor = Descriptors.from("n", helper).objectDescriptor();
 

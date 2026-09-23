@@ -1,11 +1,11 @@
 import type * as Monaco from 'monaco-editor'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DslConstruct } from '../../types/dsl'
-import { buildHelperCompletionItems } from '../useMonacoHelperCompletion'
 import {
   buildConstructCompletionItems,
   useMonacoConstructCompletion,
 } from '../useMonacoConstructCompletion'
+import { buildHelperCompletionItems } from '../useMonacoHelperCompletion'
 
 // Fixture constructs payload — mirrors DslConstruct rows from the workbench
 // store (loaded via GET /api/v1/dsl/definitions).
@@ -122,11 +122,7 @@ describe('buildConstructCompletionItems', () => {
   it('produces no label overlap with helper completion items', () => {
     const helperItems = buildHelperCompletionItems({
       wordRange,
-      catalog: [
-        { name: 'uuidV7', hasSideEffects: false },
-        { name: 'base64', hasSideEffects: false },
-        { name: 'httpCall', hasSideEffects: true },
-      ],
+      catalog: [{ name: 'uuidV7' }, { name: 'base64' }, { name: 'httpCall' }],
     })
     const constructItems = buildConstructCompletionItems({
       wordRange,

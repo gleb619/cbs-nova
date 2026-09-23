@@ -7,7 +7,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import cbs.nova.dsl.CallNode;
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Dsl;
-import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.DslObject;
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.ExecutableDescriptor;
@@ -68,7 +67,7 @@ class HierarchyReportStageTest {
                     .execute(c -> Result.success("ok"))
                     .describe(() -> Descriptors.from(fnName,
                             new ExecutableDescriptor(
-                                    fnName, null, null, null, false, null, List.of())))
+                                    fnName, null, null, null, List.of())))
                     .build());
 
     DslPipeContext pipeContext = pipeContext(fnName, ExecutionMode.PREVIEW);

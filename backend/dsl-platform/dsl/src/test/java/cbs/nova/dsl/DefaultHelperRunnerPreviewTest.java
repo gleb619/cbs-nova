@@ -41,8 +41,6 @@ class DefaultHelperRunnerPreviewTest {
     assertThat(desc.name()).isEqualTo("mock");
     assertThat(desc.inputType()).isEqualTo(String.class);
     assertThat(desc.outputType()).isEqualTo(String.class);
-    assertThat(desc.hasSideEffects()).isFalse();
-    assertThat(desc.previewBehavior()).isEqualTo("preview returns PREVIEW_MOCK");
     assertThat(desc.parameters()).hasSize(1);
     assertThat(desc.parameters().get(0).name()).isEqualTo("in");
   }
@@ -78,9 +76,7 @@ class DefaultHelperRunnerPreviewTest {
               "mock helper",
               String.class,
               String.class,
-              false,
-              "preview returns PREVIEW_MOCK",
-              List.of(ParameterDescriptor.ofString("in")));
+          List.of(ParameterDescriptor.ofString("in")));
     }
   }
 }

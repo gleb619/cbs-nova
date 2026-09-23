@@ -178,7 +178,6 @@ public final class FunctionBuilder<I, O> implements ObjectBuilder<FunctionDslObj
             .build();
     return DslDescriptor.builder()
             .objectDescriptor(objectDescriptor)
-            .hasSideEffects(false)
             .parameters(parameters)
             .taskQueue(DEFAULT_TASK_QUEUE)
             .version(DEFAULT_VERSION)

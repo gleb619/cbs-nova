@@ -177,7 +177,7 @@ class PreviewCacheKeyBuilderTest {
     public ExecutableDescriptor describe() {
       return new ExecutableDescriptor(
               "echo", "Echo helper", Object.class, Object.class,
-              true, "delegates to execute", List.of());
+          List.of());
     }
   }
 }

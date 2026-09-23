@@ -7,13 +7,10 @@ const uuidV7 = {
   description: 'Time-ordered UUID',
   inputType: 'UuidV7In',
   outputType: 'UuidV7Out',
-  hasSideEffects: false,
 }
-const base64 = { name: 'base64', description: 'base64 codec', hasSideEffects: false }
+const base64 = { name: 'base64', description: 'base64 codec' }
 const httpCall = {
   name: 'httpCall',
-  hasSideEffects: true,
-  previewBehavior: 'recorded in preview',
 }
 
 const sampleCatalog = [uuidV7, base64, httpCall]
@@ -48,25 +45,16 @@ describe('buildHelperCompletionItems', () => {
   it('falls back to "?" input and "void" output when output type is missing', () => {
     const [item] = buildHelperCompletionItems({
       wordRange,
-      catalog: [{ name: 'noop', inputType: 'SomeInput', hasSideEffects: false }],
+      catalog: [{ name: 'noop', inputType: 'SomeInput' }],
     })
 
     expect(item.detail).toBe('SomeInput → void')
   })
 
-  it('uses previewBehavior as detail when types are absent and previewBehavior present', () => {
+  it('falls back to an empty detail when neither types nor description are present', () => {
     const [item] = buildHelperCompletionItems({
       wordRange,
-      catalog: [httpCall],
-    })
-
-    expect(item.detail).toBe('recorded in preview')
-  })
-
-  it('falls back to an empty detail when neither types nor previewBehavior are present', () => {
-    const [item] = buildHelperCompletionItems({
-      wordRange,
-      catalog: [{ name: 'noop', hasSideEffects: false }],
+      catalog: [{ name: 'noop' }],
     })
 
     expect(item.detail).toBe('')

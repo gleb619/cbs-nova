@@ -246,7 +246,6 @@ public final class TransactionBuilder<I, O> implements ObjectBuilder<Transaction
             .build();
     return DslDescriptor.builder()
             .objectDescriptor(objectDescriptor)
-            .hasSideEffects(true)
             .parameters(parameters != null ? parameters : List.of())
             .taskQueue(taskQueue)
             .version(version)

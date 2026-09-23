@@ -23,7 +23,7 @@ class HierarchyReportTest {
     Map<String, Object> call = Map.of("name", "log");
     Map<String, Integer> counts = Map.of("log", 2);
     var executable = new ExecutableDescriptor(
-            "echo", "Echoes", String.class, String.class, false, null, List.of());
+            "echo", "Echoes", String.class, String.class, List.of());
     var dsl = descriptor("echo", DslObject.DslType.PROCESS);
     var ast = new CallNode("echo", CallKind.PROCESS, null, null, true, List.of(), List.of());
 
@@ -110,7 +110,7 @@ class HierarchyReportTest {
     assertThat(left).isNotEqualTo(differentDescription);
 
     var executable = new ExecutableDescriptor(
-            "e", null, null, null, false, null, List.of());
+            "e", null, null, null, List.of());
     var differentExecutable = new HierarchyReport(
             "n", "d", trace, calls, counts, false, executable, null, null, List.of(), null,
             List.of(), List.of(), null);
@@ -322,7 +322,6 @@ class HierarchyReportTest {
                 return null;
               }
             })
-            .hasSideEffects(false)
             .parameters(List.of())
             .taskQueue(null)
             .version(null)

@@ -74,8 +74,6 @@ public interface Executable<IN, OUT>
     var output = descriptor.outputType() != null
             ? descriptor.outputType().getSimpleName()
             : "untyped";
-    var sideEffects = descriptor.hasSideEffects() ? "has side effects" : "side-effect free";
-    return "Helper `" + descriptor.name() + "`: input `" + input + "`, output `" + output + "`, "
-            + sideEffects;
+    return "Helper `" + descriptor.name() + "`: input `" + input + "`, output `" + output;
   }
 }

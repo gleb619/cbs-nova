@@ -203,7 +203,7 @@ public final class ProcessBuilder<I, O> implements ObjectBuilder<ProcessDslObjec
           @Nullable Class<?> inputType,
           @Nullable Class<?> outputType,
           @NonNull List<ParameterDescriptor> parameters,
-          boolean hasSideEffects,
+          boolean hasCompensation,
           @Nullable String description,
           @NonNull List<SignalDescriptor> signals) {
     var objectDescriptor = ProcessDescriptor.builder()
@@ -213,14 +213,13 @@ public final class ProcessBuilder<I, O> implements ObjectBuilder<ProcessDslObjec
             .taskQueue(taskQueue)
             .inputType(inputType)
             .outputType(outputType)
-            .hasCompensation(hasSideEffects)
+            .hasCompensation(hasCompensation)
             .helperRefs(List.of())
             .transactionRefs(List.of())
             .signals(signals)
             .build();
     return DslDescriptor.builder()
             .objectDescriptor(objectDescriptor)
-            .hasSideEffects(hasSideEffects)
             .parameters(parameters)
             .taskQueue(taskQueue)
             .version(version)

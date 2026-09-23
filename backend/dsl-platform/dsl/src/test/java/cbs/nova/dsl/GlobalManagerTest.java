@@ -532,7 +532,6 @@ class GlobalManagerTest {
                               .build();
                       return DslDescriptor.builder()
                               .objectDescriptor(od)
-                              .hasSideEffects(false)
                               .parameters(List.of())
                               .taskQueue(null)
                               .version(null)
@@ -562,9 +561,7 @@ class GlobalManagerTest {
                 "A helpful helper",
                 String.class,
                 String.class,
-                false,
-                null,
-                List.of());
+            List.of());
       }
     });
 

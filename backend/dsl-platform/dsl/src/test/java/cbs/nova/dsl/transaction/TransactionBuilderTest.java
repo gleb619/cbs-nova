@@ -225,7 +225,6 @@ class TransactionBuilderTest {
             .build();
     var custom = DslDescriptor.builder()
             .objectDescriptor(objectDescriptor)
-            .hasSideEffects(false)
             .parameters(List.of())
             .taskQueue("custom-queue")
             .version("v9")
@@ -248,7 +247,6 @@ class TransactionBuilderTest {
     var desc = tx.describe();
     assertThat(desc.name()).isEqualTo("PayTx");
     assertThat(desc.type()).isEqualTo(DslType.TRANSACTION);
-    assertThat(desc.hasSideEffects()).isTrue();
     assertThat(desc.inputType()).isEqualTo(String.class);
     assertThat(desc.taskQueue()).isEqualTo("PayTx-queue");
     assertThat(desc.version()).isEqualTo("v1");
@@ -259,7 +257,6 @@ class TransactionBuilderTest {
     var tx = Dsl.transaction("PayTx")
             .execute(ctx -> Result.success(null))
             .build();
-    assertThat(tx.describe().hasSideEffects()).isTrue();
   }
 
   @Test

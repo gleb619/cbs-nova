@@ -16,76 +16,62 @@ class ExecutableDescriptorTest {
             "Echoes input",
             String.class,
             String.class,
-            true,
-            "returns input unchanged",
-            params);
+        params);
 
     assertThat(descriptor.name()).isEqualTo("echo");
     assertThat(descriptor.description()).isEqualTo("Echoes input");
     assertThat(descriptor.inputType()).isEqualTo(String.class);
     assertThat(descriptor.outputType()).isEqualTo(String.class);
-    assertThat(descriptor.hasSideEffects()).isTrue();
-    assertThat(descriptor.previewBehavior()).isEqualTo("returns input unchanged");
     assertThat(descriptor.parameters()).containsExactly(ParameterDescriptor.ofString("input"));
   }
 
   @Test
   void nullableComponentsAcceptNull() {
     var descriptor = new ExecutableDescriptor(
-            null, null, null, null, false, null, List.of());
+            null, null, null, null, List.of());
 
     assertThat(descriptor.name()).isNull();
     assertThat(descriptor.description()).isNull();
     assertThat(descriptor.inputType()).isNull();
     assertThat(descriptor.outputType()).isNull();
-    assertThat(descriptor.previewBehavior()).isNull();
   }
 
   @Test
   void parametersAcceptEmptyList() {
     var descriptor = new ExecutableDescriptor(
-            "noop", null, null, null, false, null, List.of());
+            "noop", null, null, null, List.of());
 
     assertThat(descriptor.parameters()).isEmpty();
-  }
-
-  @Test
-  void hasSideEffectsFlagRoundtrips() {
-    var on = new ExecutableDescriptor("a", null, null, null, true, null, List.of());
-    var off = new ExecutableDescriptor("a", null, null, null, false, null, List.of());
-
-    assertThat(on.hasSideEffects()).isTrue();
-    assertThat(off.hasSideEffects()).isFalse();
   }
 
   @Test
   void equalsAndHashCodeBasedOnAllComponents() {
     var params = List.of(ParameterDescriptor.ofString("x"));
     var left = new ExecutableDescriptor(
-            "n", "d", String.class, String.class, true, "p", params);
+            "n", "d", String.class, String.class, params);
     var right = new ExecutableDescriptor(
-            "n", "d", String.class, String.class, true, "p",
-            List.of(ParameterDescriptor.ofString("x")));
+            "n", "d", String.class, String.class,
+        List.of(ParameterDescriptor.ofString("x")));
 
     assertThat(left).isEqualTo(right).hasSameHashCodeAs(right);
 
     var differentName = new ExecutableDescriptor(
-            "other", "d", String.class, String.class, true, "p", params);
+            "other", "d", String.class, String.class, params);
     assertThat(left).isNotEqualTo(differentName);
 
     var differentSideEffects = new ExecutableDescriptor(
-            "n", "d", String.class, String.class, false, "p", params);
+            "n", "d", String.class, String.class, params);
     assertThat(left).isNotEqualTo(differentSideEffects);
   }
 
   @Test
   void toStringContainsComponentNames() {
     var descriptor = new ExecutableDescriptor(
-            "n", "d", String.class, String.class, true, "p", List.of());
+            "n", "d", String.class, String.class, List.of());
 
     String text = descriptor.toString();
     assertThat(text)
             .contains("name", "description", "inputType", "outputType",
-                    "hasSideEffects", "previewBehavior", "parameters");
+                    "parameters");
   }
 }

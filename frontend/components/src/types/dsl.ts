@@ -54,8 +54,6 @@ export interface HelperCatalogEntry {
   description?: string
   inputType?: string
   outputType?: string
-  hasSideEffects: boolean
-  previewBehavior?: string
 }
 
 export interface HelpersResponse {

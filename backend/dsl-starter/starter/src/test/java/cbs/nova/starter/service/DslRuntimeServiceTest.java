@@ -323,7 +323,7 @@ class DslRuntimeServiceTest {
                       ctx -> Result.success(new ExplainReport("Synthetic", "test", "", List.of())))
               .descriptor(Descriptors.from("Synthetic",
                       new ExecutableDescriptor(
-                              "Synthetic", null, null, null, false, null, List.of())))
+                              "Synthetic", null, null, null, List.of())))
               .build();
       GlobalManager.globalManager().registerProcess(process);
 
@@ -368,7 +368,7 @@ class DslRuntimeServiceTest {
                       ctx -> Result.success(new ExplainReport("Synthetic", "test", "", List.of())))
               .descriptor(Descriptors.from("Synthetic",
                       new ExecutableDescriptor(
-                              "Synthetic", null, null, null, false, null, List.of())))
+                              "Synthetic", null, null, null, List.of())))
               .build();
       GlobalManager.globalManager().registerProcess(process);
 

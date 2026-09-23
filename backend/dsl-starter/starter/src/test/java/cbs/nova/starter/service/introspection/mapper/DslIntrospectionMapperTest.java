@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.DslDescriptor;
-import cbs.nova.dsl.DslObject.DslType;
 import cbs.nova.dsl.ExecutableDescriptor;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.model.Descriptors;
@@ -85,7 +84,7 @@ class DslIntrospectionMapperTest {
   void mapsDslDescriptorToHelperSearchResult() {
     DslDescriptor descriptor = Descriptors.from("fn",
             new ExecutableDescriptor(
-                    "fn", "desc", String.class, Integer.class, false, null, List.of()));
+                    "fn", "desc", String.class, Integer.class, List.of()));
 
     HelperSearchResult result = mapper.toHelperSearchResult(descriptor);
 
@@ -103,9 +102,7 @@ class DslIntrospectionMapperTest {
             "desc",
             String.class,
             Integer.class,
-            false,
-            null,
-            List.of());
+        List.of());
 
     HelperSearchResult result = mapper.toHelperSearchResult("helperName", descriptor);
 
@@ -176,7 +173,7 @@ class DslIntrospectionMapperTest {
   void mapsDslDescriptorToDefinitionMetaDto() {
     DslDescriptor descriptor = Descriptors.from("fn",
             new ExecutableDescriptor(
-                    "fn", "desc", String.class, Integer.class, false, null, List.of()));
+                    "fn", "desc", String.class, Integer.class, List.of()));
 
     DefinitionMetaDto dto = mapper.toFunctionDefinitionMeta(descriptor);
 
@@ -198,9 +195,7 @@ class DslIntrospectionMapperTest {
             "desc",
             String.class,
             Integer.class,
-            false,
-            null,
-            List.of());
+        List.of());
 
     DefinitionMetaDto dto = mapper.toHelperDefinitionMeta("helperName", descriptor);
 

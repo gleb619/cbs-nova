@@ -45,7 +45,7 @@ class ExplainSupportTest {
       @Override
       public ExecutableDescriptor describe() {
         return new ExecutableDescriptor(
-                "lengthOf", null, String.class, Integer.class, false, null, List.of());
+                "lengthOf", null, String.class, Integer.class, List.of());
       }
     };
 

@@ -16,7 +16,6 @@ import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.process.SignalDescriptor;
 import cbs.nova.dsl.transaction.TransactionDslObject;
 import cbs.nova.starter.converter.DslIntrospectionMapper;
-import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.model.DslIntrospectionModels.ConstructSchemaMode;
 import cbs.nova.starter.model.DslIntrospectionModels.DefinitionMetaDto;
 import cbs.nova.starter.model.DslIntrospectionModels.DefinitionStatus;
@@ -38,7 +37,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -105,10 +103,9 @@ public class DslIntrospectionService {
                     name,
                     d.description(),
                     mapper.typeName(d.inputType()),
-                    mapper.typeName(d.outputType()),
-                    d.hasSideEffects(),
-                    d.previewBehavior()))
-            .orElse(new HelperCatalogEntry(name, null, null, null, false, null));
+                    mapper.typeName(d.outputType())
+            ))
+            .orElse(new HelperCatalogEntry(name, null, null, null));
   }
 
   public Optional<ConstructBodyDto> constructBody(String name) {
@@ -220,22 +217,22 @@ public class DslIntrospectionService {
   private ObjectStructureDto executableStructure(String name, String type,
           ExecutableDescriptor descriptor, List<LogicInfoDto> logic) {
     return executableStructure(name, type, descriptor.description(),
-            descriptor.inputType(), descriptor.outputType(), descriptor.hasSideEffects(),
-            descriptor.parameters(), logic);
+            descriptor.inputType(), descriptor.outputType(),
+        descriptor.parameters(), logic);
   }
 
   private ObjectStructureDto functionStructure(FunctionDslObject function) {
     var descriptor = function.descriptor();
     return executableStructure(function.name(), "function", descriptor.description(),
-            descriptor.inputType(), descriptor.outputType(), descriptor.hasSideEffects(),
-            descriptor.parameters(),
+            descriptor.inputType(), descriptor.outputType(),
+        descriptor.parameters(),
             builderLogic(function.previewLogic(), function.executeLogic(),
                     function.explainLogic()));
   }
 
   private ObjectStructureDto executableStructure(String name, String type, String description,
-          Class<?> inputType, Class<?> outputType, boolean hasSideEffects,
-          List<ParameterDescriptor> parameters, List<LogicInfoDto> logic) {
+          Class<?> inputType, Class<?> outputType,
+      List<ParameterDescriptor> parameters, List<LogicInfoDto> logic) {
     List<StructureFieldDto> fields = new ArrayList<>();
     fields.add(scalar("name", name, "Unique DSL " + type + " identifier"));
     fields.add(scalar("description", description,
@@ -244,8 +241,6 @@ public class DslIntrospectionService {
             "Input payload type the " + type + " accepts"));
     fields.add(classField("outputType", outputType,
             "Return type of the " + type));
-    fields.add(scalar("hasSideEffects", hasSideEffects,
-            "True if the " + type + " performs non-idempotent side effects"));
     fields.addAll(parameterRows("parameters", parameters,
             "Named parameters the " + type + " accepts"));
     return new ObjectStructureDto(name, type, fields, logic);

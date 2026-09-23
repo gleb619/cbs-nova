@@ -10,13 +10,11 @@ public record ExecutableDescriptor(
         @Nullable String description,
         @Nullable Class<?> inputType,
         @Nullable Class<?> outputType,
-        boolean hasSideEffects,
-        @Nullable String previewBehavior,
         @NonNull List<ParameterDescriptor> parameters) {
 
   public static ExecutableDescriptor empty() {
-    return new ExecutableDescriptor(null, null, null, null, true, "delegates to execute",
-            List.of());
+    return new ExecutableDescriptor(null, null, null, null,
+        List.of());
   }
 
 }

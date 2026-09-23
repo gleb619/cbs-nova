@@ -164,8 +164,8 @@ class InputValidatorTest {
 
       @Override
       public ExecutableDescriptor describe() {
-        return new ExecutableDescriptor(name, null, inputType, String.class, false,
-                "delegates to execute", List.of(ParameterDescriptor.ofString("name")));
+        return new ExecutableDescriptor(name, null, inputType, String.class,
+            List.of(ParameterDescriptor.ofString("name")));
       }
     });
   }
