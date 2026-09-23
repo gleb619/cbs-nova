@@ -52,7 +52,7 @@ A **Nuxt module** that installs the full CBS Nova admin UI into any host Nuxt ap
 
 The module is the primary entry point (`module.ts`). When activated it:
 
-- registers pages (Dashboard, Runner, DSL Workbench, Executions) via `extendPages`,
+- registers pages (Dashboard, Runner, Schedules, Activity, Webhooks, Notifications, Approvals, Promote, DSL Workbench, Executions list, Executions detail) via `extendPages` — see the `cbs-admin-*` entries at `frontend/admin-ui-plugin/module.ts:352`,
 - registers the default shell layout (sidebar + top bar) via `addLayout`,
 - adds `@pinia/nuxt` if not already present,
 - injects the global Tailwind stylesheet,
@@ -243,6 +243,140 @@ The Executions page lists past and in-flight DSL runs. Before `T200` it had no w
   (`public.stalePollMs`, default `5000`ms). Polling pauses while the browser tab is hidden (Page Visibility API) and
   fires one immediate re-check when the tab becomes visible again. As soon as a poll observes any status other than
   `Stale`, the composable pushes the new status into the caller's ref and stops — no further polling for that run.
+
+## Schedules page
+
+The Schedules page lists Temporal cron schedules keyed by a published DSL definition. Schedules are the operator-facing
+view of Temporal's "start a workflow on a cron" surface; creation / pause / resume / delete are wired through the same
+DSL BFF used by the rest of the admin UI.
+
+- **Page (`frontend/admin-ui-plugin/app/pages/schedules.vue`)** — renders a single `DslScheduleList` panel from
+  `@cbs/components`, passing through schedules, loading, error, and the per-definition pausing flag.
+- **Composable (`useSchedules` in `frontend/admin-ui-plugin/app/composables/useSchedules.ts`)** — wraps
+  `useDslApi`; exposes `{ schedules, loading, error, pausing, load, create, remove, pause, resume }`. Every mutation
+  re-runs `load()`; `pause` and `resume` toggle a per-definition `pausing` ref so the row can disable itself while the
+  request is in flight. `notifySchedulesChanged()` is fired after `load()` so other surfaces (e.g. the workbench
+  publish action) can invalidate their cache.
+- **BFF routes** — OpenAPI-generated from `docs/openapi.json` (`/api/dsl/schedules*`); mounted by
+  `module.ts`'s programmatic handler loop. The browser-visible paths are:
+  - `GET /api/v1/dsl/schedules` — `listSchedules`.
+  - `POST /api/v1/dsl/schedules` — `createSchedule` (body is the `CreateSchedulePayload` shape).
+  - `DELETE /api/v1/dsl/schedules/{definition}` — `deleteSchedule`.
+  - `POST /api/v1/dsl/schedules/{definition}/pause` — `pauseSchedule` (optional `{ reason }` body).
+  - `POST /api/v1/dsl/schedules/{definition}/resume` — `resumeSchedule` (optional `{ reason }` body).
+
+## Activity page
+
+The Activity page is the engine's append-only domain-event feed — runs, drafts and reloads, newest first. It is the
+counterpart to the backend `GET /api/dsl/events` audit surface.
+
+- **Page (`frontend/admin-ui-plugin/app/pages/activity.vue`)** — renders the `ActivityFeed` panel from
+  `@cbs/components`, wiring three props: `fetchEvents` (the BFF query function), `executionLink(aggregateId)` (always
+  returns `/executions/{aggregateId}`), and `linkComponent` (resolved `NuxtLink` so the panel can deep-link into the
+  Executions detail view without coupling to Nuxt).
+- **Composable** — no dedicated composable; the page calls `useDslApi().fetchEvents(query)` directly.
+  `useDslApi.fetchEvents` (`frontend/admin-ui-plugin/app/composables/useDslApi.ts:273`) maps
+  `DomainEventQuery` (`type`, `aggregateType`, `aggregateId`, `correlationId`, `since`, `limit`, `offset`) onto a
+  BFF query string.
+- **BFF route** — hand-written, not yet covered by `docs/openapi.json`:
+  `GET /api/v1/dsl/events` (`frontend/admin-ui-plugin/server/api/v1/dsl/events.get.ts`) proxies
+  `/api/dsl/events` with optional `offset`, `limit`, `type`, `aggregateType`, `aggregateId`, `correlationId`, `since`.
+
+## Webhooks page
+
+The Webhooks page lists delivery outcomes for run-completion webhook subscriptions, newest first. The page is read-only:
+it surfaces the backend's own delivery log so operators can see which sinks succeeded and which retried / failed.
+
+- **Page (`frontend/admin-ui-plugin/app/pages/webhooks.vue`)** — wraps the `WebhookDeliveriesPanel` from
+  `@cbs/components` inside a single white card; passes `dslApi.fetchWebhookDeliveries` as the panel's `fetchPage`
+  prop. The panel handles its own paging, filters, and `subscriptionId` query.
+- **Composable** — no dedicated composable; `useDslApi.fetchWebhookDeliveries(query)` is called directly. It maps
+  `WebhookDeliveryQuery` (`subscriptionId`, `limit`, `offset`) onto a BFF query string.
+- **BFF route** — hand-written, not yet covered by `docs/openapi.json`:
+  `GET /api/v1/dsl/webhooks/deliveries` (`frontend/admin-ui-plugin/server/api/v1/dsl/webhooks/deliveries.get.ts`)
+  proxies `/api/dsl/webhooks/deliveries` with optional `offset`, `limit`, `subscriptionId`.
+
+## Notifications page
+
+The Notifications page manages notification rules that match domain events and fan out to webhook / email / Slack /
+PagerDuty sinks, and shows the recent fire log so operators can see which rules actually fired.
+
+- **Page (`frontend/admin-ui-plugin/app/pages/notifications.vue`)** — renders the `DslNotificationRuleList` panel
+  from `@cbs/components`. The panel handles rules CRUD UI, the per-rule enable/disable toggle, the "test rule"
+  modal, and the embedded fire-log table. The page only forwards data and re-emits the panel's events.
+- **Composable (`useNotifications` in `frontend/admin-ui-plugin/app/composables/useNotifications.ts`)** — wraps
+  `useDslApi`. State surface: `{ rules, loading, error, fireLog, fireLogLoading, fireLogError, testing, testResult }`.
+  Actions: `load()` (rules), `loadFireLog(offset, ruleId)` with a 25-row page (`FIRE_LOG_PAGE_SIZE`), `create`,
+  `update`, `toggleEnabled`, `remove`, `test` (synthetic event payload).
+- **BFF routes** — hand-written, not yet covered by `docs/openapi.json`:
+  - `GET /api/v1/dsl/notifications/rules?offset=&limit=` — `server/api/v1/dsl/notifications/rules/index.get.ts`.
+  - `POST /api/v1/dsl/notifications/rules` — `server/api/v1/dsl/notifications/rules/index.post.ts`.
+  - `GET /api/v1/dsl/notifications/rules/{id}` — `server/api/v1/dsl/notifications/rules/[id].get.ts`.
+  - `PUT /api/v1/dsl/notifications/rules/{id}` — `server/api/v1/dsl/notifications/rules/[id].put.ts`.
+  - `DELETE /api/v1/dsl/notifications/rules/{id}` — `server/api/v1/dsl/notifications/rules/[id].delete.ts`.
+  - `POST /api/v1/dsl/notifications/rules/{id}/enabled` — `server/api/v1/dsl/notifications/rules/[id]/enabled.post.ts`
+    (body `{ enabled: boolean }`).
+  - `GET /api/v1/dsl/notifications/channels` — `server/api/v1/dsl/notifications/channels/index.get.ts`
+    (returns the sink catalog so the rule editor can render a channel dropdown).
+  - `GET /api/v1/dsl/notifications/fire-log?ruleId=&offset=&limit=` — `server/api/v1/dsl/notifications/fire-log/index.get.ts`.
+  - `POST /api/v1/dsl/notifications/test` — `server/api/v1/dsl/notifications/test/index.post.ts`.
+
+## Approvals page (`T568`)
+
+The Approvals page is the operator inbox for change requests submitted from the DSL Workbench. Approving a request
+publishes the snapshot the requester captured; rejecting records the reason and never publishes. The page exists only
+when `cbs.dsl.approval.required=true` (see [`architecture-backend.md`](architecture-backend.md#observability--operations) —
+"Publish approval gate (T568)" bullet) — otherwise there is nothing to approve.
+
+- **Page (`frontend/admin-ui-plugin/app/pages/approvals.vue`)** — a custom inline table (no shared panel yet) that
+  filters by `status` (`PENDING` / `APPROVED` / `REJECTED` / `SUPERSEDED`), sorts so pending rows surface first and
+  ties break by newest `requestedAt`, and shows status-specific badge colors. Reject is a two-step inline confirm:
+  first click arms the row, the operator types a required reason, and `confirmReject` calls the API.
+- **Composables** —
+  - `useApprovals` (`frontend/admin-ui-plugin/app/composables/useApprovals.ts`) — wraps `useDslApi`; state
+    `{ items, loading, error }`, actions `load(definitionName?, status?)`, `submit(name)`, `approve(id, comment?)`,
+    `reject(id, comment)`. Every mutation re-runs `load()`.
+  - `useManifestGuard` (`frontend/admin-ui-plugin/app/composables/useManifestGuard.ts`, T551 — see the
+    [Manifest button guard](#manifest-button-guard-t551) section below) gates the row's Approve / Reject buttons with
+    `guardAllowed('workbench-approve')`. The composable is defense-in-depth UX sugar; the security boundary is the
+    server-side `PieceGuardFilter` re-evaluation at execution time.
+- **BFF routes** — mixed: the list endpoint is hand-written, the rest are OpenAPI-generated.
+  - `GET /api/v1/dsl/change-requests?definitionName=&status=` —
+    `server/api/v1/dsl/change-requests/index.get.ts`.
+  - `POST /api/v1/dsl/drafts/{name}/change-request` — `submitChangeRequest` (snapshot the current draft).
+  - `POST /api/v1/dsl/change-requests/{id}/approve` — `approveChangeRequest` (optional `{ comment }` body).
+  - `POST /api/v1/dsl/change-requests/{id}/reject` — `rejectChangeRequest` (`comment` required by the backend).
+
+## Promote page (`T569`)
+
+The Promote page moves published definition bundles between environments — preview the diff, then apply. It is the
+operator UI over the backend's `cbs.dsl.promotion.environments.<name>.base-path` config (see
+[`architecture-backend.md`](architecture-backend.md#environment-promotion-t569)).
+
+- **Page (`frontend/admin-ui-plugin/app/pages/promote.vue`)** — three-step flow:
+  - **Select source / target environments** (the target dropdown excludes the source env via
+    `selectableTargets`). An "Include drafts" checkbox toggles whether unpublished drafts ride along.
+  - **Pick definitions to promote** — checkbox list of published definitions in the source env, with a
+    "Select all / Clear all" toggle. Empty selection promotes all definitions.
+  - **Preview diff then apply** — `DslPromotionDiffTable` renders per-definition `outcome` (`created` /
+    `updated` / `unchanged`); the apply button is enabled only when at least one result has `created` or
+    `updated`. After a successful apply the result block links to `GET /api/v1/dsl/audit?action=PROMOTION`.
+- **Composable (`usePromotion` in `frontend/admin-ui-plugin/app/composables/usePromotion.ts`)** — wraps
+  `useDslApi`. State: `{ environments, environmentsLoading/Error, definitions, definitionsLoading/Error, preview,
+  previewLoading/Error, applying, applyError, applyResult }`. Actions: `loadEnvironments()`, `loadDefinitions(env)`,
+  `runPreview(payload)` (calls `promoteDefinitions(payload, true)`), `apply(payload)` (`promoteDefinitions(payload,
+  false)`), `reset()` (clears preview / apply state when source / target / selection changes).
+- **BFF routes** — hand-written, not yet covered by `docs/openapi.json`:
+  - `GET /api/v1/dsl/promote/environments` — `server/api/v1/dsl/promote/environments.get.ts` (returns the
+    promotion-target catalog configured on the backend).
+  - `GET /api/v1/dsl/promote/definitions?env=<name>` — `server/api/v1/dsl/promote/definitions.get.ts`
+    (returns the published definitions visible in the source env).
+  - `POST /api/v1/dsl/promote?dryRun=true` — `server/api/v1/dsl/promote/index.post.ts` (preview; body is
+    `{ source, target, definitions?, includeDrafts? }`, returns `PromoteResult` with a `results` array).
+  - `POST /api/v1/dsl/promote` — same handler, no `dryRun` query param (apply; returns
+    `{ published, failed, results }`).
+  - The page also links to `GET /api/v1/dsl/audit?action=PROMOTION`
+    (`server/api/v1/dsl/audit.get.ts`) for the post-apply audit deep-link.
 
 ## DSL Workbench editor
 
