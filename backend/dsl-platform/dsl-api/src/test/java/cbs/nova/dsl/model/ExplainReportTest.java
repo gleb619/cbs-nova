@@ -4,6 +4,7 @@ import static cbs.nova.dsl.config.Constants.EMPTY_MARKDOWN;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.utils.ExplainReports;
+import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -52,10 +53,13 @@ class ExplainReportTest {
   }
 
   @Test
-  void addChildAppendsWithoutMutatingOriginal() {
+  void childrenListIsCopiedOnConstruction() {
     var parent = ExplainReport.builder().name("parent").description("p-desc").markdown("").build();
     var child = ExplainReport.builder().name("child").description("c-desc").markdown("").build();
-    var withChild = parent.addChild(child);
+    var children = new ArrayList<>(List.of(child));
+    var withChild = ExplainReport.builder().name("parent").description("p-desc").markdown("")
+            .children(children).build();
+    children.clear();
     assertThat(parent.children()).isEmpty();
     assertThat(withChild.children()).containsExactly(child);
   }
@@ -66,10 +70,10 @@ class ExplainReportTest {
             .build();
     var sharedRight = ExplainReport.builder().name("shared").description("right").markdown("")
             .build();
-    var left = ExplainReport.builder().name("n").description("l").markdown("").build()
-            .withChildren(List.of(sharedLeft));
-    var right = ExplainReport.builder().name("n").description("r").markdown("").build()
-            .withChildren(List.of(sharedRight));
+    var left = ExplainReport.builder().name("n").description("l").markdown("")
+            .children(List.of(sharedLeft)).build();
+    var right = ExplainReport.builder().name("n").description("r").markdown("")
+            .children(List.of(sharedRight)).build();
     var merged = ExplainReports.merge(left, right);
     assertThat(merged.children()).hasSize(1);
     assertThat(merged.children().get(0).description()).contains("left").contains("right");
@@ -80,9 +84,9 @@ class ExplainReportTest {
     var helper = ExplainReport.builder().name("helper").description("helper-desc")
             .markdown("graph TD\n  H").build();
     var shared = ExplainReport.builder().name("shared").description("shared-desc").markdown("")
-            .build().addChild(helper);
-    var root = ExplainReport.builder().name("root").description("root-desc").markdown("").build()
-            .withChildren(List.of(shared, shared));
+            .children(List.of(helper)).build();
+    var root = ExplainReport.builder().name("root").description("root-desc").markdown("")
+            .children(List.of(shared, shared)).build();
 
     var markdown = ExplainReports.toMarkdown(root, 10_000);
 
@@ -101,8 +105,8 @@ class ExplainReportTest {
             .build();
     var child2 = ExplainReport.builder().name("child2").description("d".repeat(20)).markdown("")
             .build();
-    var root = ExplainReport.builder().name("root").description("root-desc").markdown("").build()
-            .withChildren(List.of(child1, child2));
+    var root = ExplainReport.builder().name("root").description("root-desc").markdown("")
+            .children(List.of(child1, child2)).build();
 
     var rootSectionLength = "## root\n\nroot-desc".length();
     var markdown = ExplainReports.toMarkdown(root, rootSectionLength + 5);

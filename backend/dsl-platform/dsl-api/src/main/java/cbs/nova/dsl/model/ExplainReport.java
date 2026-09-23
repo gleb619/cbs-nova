@@ -45,22 +45,4 @@ public record ExplainReport(
             .build();
   }
 
-  // TODO: add usage in source code, not only in test ones
-  @Deprecated(forRemoval = true)
-  public @NonNull ExplainReport withChildren(@NonNull List<ExplainReport> children) {
-    return ExplainReport.builder()
-            .name(name)
-            .description(description)
-            .markdown(markdown)
-            .children(children)
-            .build();
-  }
-
-  // TODO: add usage in source code, not only in test ones
-  @Deprecated(forRemoval = true)
-  public @NonNull ExplainReport addChild(@NonNull ExplainReport child) {
-    var next = new ArrayList<>(children);
-    next.add(child);
-    return withChildren(next);
-  }
 }
