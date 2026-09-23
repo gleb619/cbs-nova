@@ -78,7 +78,7 @@ class DslStarterIntegrationTest {
             bufferRegistry, defaultMaxEventsPerRun(), previewProperties,
             new CbsNovaFakesProperties(false, null),
             new RunScopedFakeConfig(Caffeine.newBuilder().build()),
-            new SimpleMeterRegistry(), new HierarchyDiagramRenderer(), null);
+            new SimpleMeterRegistry(), new HierarchyDiagramRenderer(), null, null);
     var explainPipe = new ExplainDslPipe(
             new CbsNovaExplainProperties(4000, "explain/", 128, 256, 4096));
     var runtime = new DevDslRuntime(previewPipe, runPipe, hierarchyPipe, explainPipe);
