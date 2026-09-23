@@ -1345,6 +1345,7 @@ export interface components {
             version?: string;
         };
         DslDescriptor: {
+            hasSideEffects?: boolean;
             heartbeatTimeout?: string;
             objectDescriptor?: components["schemas"]["ObjectDescriptor"];
             parameters?: components["schemas"]["ParameterDescriptor"][];
@@ -1378,8 +1379,10 @@ export interface components {
         };
         ExecutableDescriptor: {
             description?: string;
+            hasSideEffects?: boolean;
             name?: string;
             parameters?: components["schemas"]["ParameterDescriptor"][];
+            previewBehavior?: string;
         };
         ExecutionDto: {
             completedAt?: string;
