@@ -1,6 +1,5 @@
 {
-  "names": ["currentTimestamp", "formatDate", "formatNumber", "httpCall", "uuidV7"],
-  "helpers": [
+  "items": [
     {
       "name": "currentTimestamp",
       "description": "Returns the current ISO timestamp",
@@ -25,5 +24,8 @@
       "inputType": null,
       "outputType": null
     }
-  ]
+  ],
+  "total": 5,
+  "offset": 0,
+  "limit": 100
 }

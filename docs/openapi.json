@@ -1195,6 +1195,46 @@
           }
         },
         "type": "object"
+      },
+      "HelperCatalogEntry": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "inputType": {
+            "type": "string"
+          },
+          "outputType": {
+            "type": "string"
+          }
+        }
+      },
+      "HelperCatalogPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HelperCatalogEntry"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "offset": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "limit": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
       }
     }
   },
@@ -2581,16 +2621,38 @@
     "/api/dsl/helpers": {
       "get": {
         "operationId": "listHelpers",
+        "parameters": [
+          {
+            "description": "Maximum number of helpers to return (default 100)",
+            "in": "query",
+            "name": "limit"
+          },
+          {
+            "description": "Number of helpers to skip before returning results",
+            "in": "query",
+            "name": "offset"
+          },
+          {
+            "description": "Text to search among helpers",
+            "in": "query",
+            "name": "search"
+          },
+          {
+            "description": "Search mode: Exact, Cosine, Fuzzy",
+            "in": "query",
+            "name": "searchMode"
+          }
+        ],
         "responses": {
           "200": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HelperSearchResult"
+                  "$ref": "#/components/schemas/HelperCatalogPage"
                 }
               }
             },
-            "description": "Helper catalog"
+            "description": "Paged helper catalog"
           }
         },
         "summary": "List DSL helpers",

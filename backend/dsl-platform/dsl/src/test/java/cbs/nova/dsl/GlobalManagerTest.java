@@ -561,7 +561,7 @@ class GlobalManagerTest {
                 "A helpful helper",
                 String.class,
                 String.class,
-            List.of());
+                List.of());
       }
     });
 

@@ -25,8 +25,9 @@ import cbs.nova.starter.model.DslIntrospectionModels.DefinitionStatus;
 import cbs.nova.starter.model.DslIntrospectionModels.ConstructBodyDto;
 import cbs.nova.starter.model.DslIntrospectionModels.ConstructSchemaDto;
 import cbs.nova.starter.model.DslIntrospectionModels.HelperCatalogEntry;
+import cbs.nova.starter.model.DslIntrospectionModels.HelperSearchMode;
 import cbs.nova.starter.model.DslIntrospectionModels.HelperSearchResult;
-import cbs.nova.starter.model.DslIntrospectionModels.HelpersResponse;
+import cbs.nova.starter.model.PageResponse;
 import cbs.nova.starter.model.DslIntrospectionModels.LogicInfoDto;
 import cbs.nova.starter.model.DslIntrospectionModels.LogicStatus;
 import cbs.nova.starter.model.DslIntrospectionModels.NamesResponse;
@@ -90,13 +91,20 @@ public class DslIntrospectionService {
             .toList();
   }
 
-  public HelpersResponse helpers() {
+  public PageResponse<HelperCatalogEntry> helpers(int offset, int limit, String search,
+          String mode) {
     var gm = GlobalManager.globalManager();
-    var names = gm.helperNames();
-    var helpers = names.stream()
+    HelperSearchMode searchMode = HelperSearchMode.from(mode);
+    List<HelperCatalogEntry> filtered = gm.helperNames().stream()
             .map(n -> toHelperCatalogEntry(n, gm.describeHelper(n)))
+            .filter(e -> matchesHelper(e, search, searchMode))
             .toList();
-    return new HelpersResponse(names, helpers);
+    long total = filtered.size();
+    List<HelperCatalogEntry> page = filtered.stream()
+            .skip(offset)
+            .limit(limit)
+            .toList();
+    return new PageResponse<>(page, total, offset, limit);
   }
 
   private HelperCatalogEntry toHelperCatalogEntry(String name,
@@ -106,9 +114,22 @@ public class DslIntrospectionService {
                     name,
                     d.description(),
                     mapper.typeName(d.inputType()),
-                    mapper.typeName(d.outputType())
-            ))
+                    mapper.typeName(d.outputType())))
             .orElse(new HelperCatalogEntry(name, null, null, null));
+  }
+
+  private static boolean matchesHelper(HelperCatalogEntry entry, String search,
+          HelperSearchMode mode) {
+    if (search == null || search.isBlank()) {
+      return true;
+    }
+    String term = search.toLowerCase(Locale.ROOT);
+
+    return switch (mode) {
+      case EXACT -> HelperMatcher.exact().matches(term, entry);
+      //TODO: add two other impls for helper search for COSINE, FUZZY. Create own implementation without libs
+      default -> Boolean.FALSE;
+    };
   }
 
   public Optional<ConstructBodyDto> constructBody(String name) {
@@ -221,21 +242,21 @@ public class DslIntrospectionService {
           ExecutableDescriptor descriptor, List<LogicInfoDto> logic) {
     return executableStructure(name, type, descriptor.description(),
             descriptor.inputType(), descriptor.outputType(),
-        descriptor.parameters(), logic);
+            descriptor.parameters(), logic);
   }
 
   private ObjectStructureDto functionStructure(FunctionDslObject function) {
     var descriptor = function.descriptor();
     return executableStructure(function.name(), "function", descriptor.description(),
             descriptor.inputType(), descriptor.outputType(),
-        descriptor.parameters(),
+            descriptor.parameters(),
             builderLogic(function.previewLogic(), function.executeLogic(),
                     function.explainLogic()));
   }
 
   private ObjectStructureDto executableStructure(String name, String type, String description,
           Class<?> inputType, Class<?> outputType,
-      List<ParameterDescriptor> parameters, List<LogicInfoDto> logic) {
+          List<ParameterDescriptor> parameters, List<LogicInfoDto> logic) {
     List<StructureFieldDto> fields = new ArrayList<>();
     fields.add(scalar("name", name, "Unique DSL " + type + " identifier"));
     fields.add(scalar("description", description,

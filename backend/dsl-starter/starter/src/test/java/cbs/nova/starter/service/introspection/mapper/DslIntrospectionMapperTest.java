@@ -102,7 +102,7 @@ class DslIntrospectionMapperTest {
             "desc",
             String.class,
             Integer.class,
-        List.of());
+            List.of());
 
     HelperSearchResult result = mapper.toHelperSearchResult("helperName", descriptor);
 
@@ -195,7 +195,7 @@ class DslIntrospectionMapperTest {
             "desc",
             String.class,
             Integer.class,
-        List.of());
+            List.of());
 
     DefinitionMetaDto dto = mapper.toHelperDefinitionMeta("helperName", descriptor);
 

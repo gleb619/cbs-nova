@@ -37,7 +37,8 @@ public class HelperSpiProcessor extends AbstractProcessor {
 
   private static final String RESOLVER_CLASS = "GeneratedHelperResolver";
   private static final String INSTANCE_RESOLVER_CLASS = "GeneratedHelperInstanceResolver";
-  //TODO: remove a GeneratedHelperSource, reuse a GeneratedHelperResolver and GeneratedHelperInstanceResolver, for
+  // TODO: remove a GeneratedHelperSource, reuse a GeneratedHelperResolver and
+  // GeneratedHelperInstanceResolver, for
   // filename resolving
   private static final String SOURCE_CLASS = "GeneratedHelperSource";
   private static final String HELPER_ANNOTATION = "cbs.nova.dsl.annotation.Helper";

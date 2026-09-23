@@ -47,7 +47,7 @@ class HierarchyDiagramRendererTest {
             Map.of(),
             false,
             new ExecutableDescriptor(processName, null, String.class, String.class,
-                List.of()),
+                    List.of()),
             DslDescriptor.builder()
                     .objectDescriptor(new ObjectDescriptor() {
                       @Override

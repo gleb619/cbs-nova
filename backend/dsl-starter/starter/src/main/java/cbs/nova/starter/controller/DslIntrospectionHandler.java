@@ -4,6 +4,7 @@ import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.converter.RequestQueryConverter;
 import cbs.nova.starter.model.DslIntrospectionModels.ConstructSchemaMode;
 import cbs.nova.starter.model.DslIntrospectionModels.DefinitionMetaDto;
+import cbs.nova.starter.model.DslIntrospectionModels.HelperCatalogEntry;
 import cbs.nova.starter.model.DslIntrospectionModels.HelperSearchResult;
 import cbs.nova.starter.model.DslIntrospectionModels.ProcessDiagramDto;
 import cbs.nova.starter.model.DslIntrospectionModels.WorkingSetResponse;
@@ -61,7 +62,15 @@ public class DslIntrospectionHandler {
   }
 
   public ServerResponse helpers(ServerRequest request) {
-    return ServerResponse.ok().body(service.helpers());
+    int limit = Pagination.intParam(request, "limit", StarterConstants.HELPERS_DEFAULT_LIMIT);
+    int offset = Pagination.intParam(request, "offset", StarterConstants.DEFAULT_OFFSET);
+    int pageSize = Pagination.clampLimit(limit);
+    int skip = Pagination.clampOffset(offset);
+    var query = queryConverter.toHelperCatalogQuery(request);
+
+    PageResponse<HelperCatalogEntry> page = service.helpers(skip, pageSize,
+            query.text(), query.mode());
+    return ServerResponse.ok().body(page);
   }
 
   public ServerResponse constructBody(ServerRequest request) {

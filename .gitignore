@@ -165,3 +165,4 @@ __pycache__/
 *.pyc
 /dsl-workbench-objectname.png
 /.playwright-mcp/*.yml
+/frontend/admin-ui-plugin/@cbs/components/.nuxt/

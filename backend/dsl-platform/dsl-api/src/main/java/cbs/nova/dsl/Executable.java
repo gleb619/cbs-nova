@@ -43,7 +43,7 @@ public interface Executable<IN, OUT>
 
   @Override
   @Deprecated
-  //TODO: remove impl, instead add a some decorator in PipeStage
+  // TODO: remove impl, instead add a some decorator in PipeStage
   default @NonNull ExplainReport explain(@NonNull Context<IN> ctx) {
     var descriptor = describe();
     var markdown = description();

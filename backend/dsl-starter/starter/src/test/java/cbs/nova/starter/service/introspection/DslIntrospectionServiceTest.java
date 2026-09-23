@@ -9,6 +9,7 @@ import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.ExecutableDescriptor;
 import cbs.nova.dsl.helper.HelperSource;
 import cbs.nova.starter.model.DslIntrospectionModels.ConstructSchemaDto;
+import cbs.nova.starter.model.DslIntrospectionModels.HelperCatalogEntry;
 import cbs.nova.starter.model.DslIntrospectionModels.ConstructSchemaMode;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
@@ -19,6 +20,7 @@ import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.converter.DslIntrospectionMapper;
 import cbs.nova.starter.model.DslIntrospectionModels.DefinitionMetaDto;
 import cbs.nova.starter.model.DslIntrospectionModels.DefinitionStatus;
+import cbs.nova.starter.model.PageResponse;
 import cbs.nova.starter.model.DslIntrospectionModels.LogicInfoDto;
 import cbs.nova.starter.model.DslIntrospectionModels.LogicStatus;
 import cbs.nova.starter.service.DslDefinitionStatusResolver;
@@ -193,7 +195,7 @@ class DslIntrospectionServiceTest {
                 "A helper",
                 String.class,
                 Integer.class,
-            List.of());
+                List.of());
       }
     });
 
@@ -419,7 +421,7 @@ class DslIntrospectionServiceTest {
               public ExecutableDescriptor describe() {
                 return new ExecutableDescriptor(
                         "helperWithFile", "A helper", String.class, Integer.class,
-                    List.of());
+                        List.of());
               }
             });
     GlobalManager.globalManager().registerFunction(
@@ -444,5 +446,79 @@ class DslIntrospectionServiceTest {
               assertThat(d.type()).isEqualTo("function");
               assertThat(d.filePath()).isEqualTo("FunctionWithFile.java");
             });
+  }
+
+  @Test
+  void helpersReturnsPagedCatalog() {
+    registerSampleHelper("AHelper", "first helper", String.class, Integer.class);
+    registerSampleHelper("BHelper", "second helper", String.class, String.class);
+    registerSampleHelper("CHelper", "third helper", Long.class, Boolean.class);
+
+    PageResponse<HelperCatalogEntry> page = service.helpers(0, 2, null, null);
+
+    assertThat(page.items()).hasSize(2);
+    assertThat(page.total()).isEqualTo(3);
+    assertThat(page.offset()).isEqualTo(0);
+    assertThat(page.limit()).isEqualTo(2);
+  }
+
+  @Test
+  void helpersRespectsOffsetAndLimit() {
+    registerSampleHelper("Alpha", "desc", String.class, Integer.class);
+    registerSampleHelper("Beta", "desc", String.class, String.class);
+    registerSampleHelper("Gamma", "desc", Long.class, Boolean.class);
+
+    PageResponse<HelperCatalogEntry> page = service.helpers(1, 1, null, null);
+
+    assertThat(page.items()).hasSize(1);
+    assertThat(page.items().get(0).name()).isEqualTo("Beta");
+    assertThat(page.total()).isEqualTo(3);
+  }
+
+  @Test
+  void helpersFiltersByName() {
+    registerSampleHelper("FooHelper", "foo desc", String.class, Integer.class);
+    registerSampleHelper("BarHelper", "bar desc", String.class, String.class);
+
+    PageResponse<HelperCatalogEntry> page = service.helpers(0, 10, "foo", "exact");
+
+    assertThat(page.total()).isEqualTo(1);
+    assertThat(page.items().get(0).name()).isEqualTo("FooHelper");
+  }
+
+  @Test
+  void helpersFiltersByDescription() {
+    registerSampleHelper("FooHelper", "matches this", String.class, Integer.class);
+    registerSampleHelper("BarHelper", "no match", String.class, String.class);
+
+    PageResponse<HelperCatalogEntry> page = service.helpers(0, 10, "matches", "exact");
+
+    assertThat(page.total()).isEqualTo(1);
+    assertThat(page.items().get(0).name()).isEqualTo("FooHelper");
+  }
+
+  @Test
+  void helpersFiltersByAllMode() {
+    registerSampleHelper("FooHelper", "bar description", String.class, Integer.class);
+    registerSampleHelper("BarHelper", "other", String.class, String.class);
+
+    PageResponse<HelperCatalogEntry> page = service.helpers(0, 10, "bar", "exact");
+
+    assertThat(page.total()).isEqualTo(2);
+  }
+
+  private void registerSampleHelper(String name, String description, Class<?> inputType,
+          Class<?> outputType) {
+    GlobalManager.globalManager().registerHelper(name, new Executable<String, Integer>() {
+      @Override
+      public Result<Integer> execute(Context<String> ctx) {
+        return Result.success(1);
+      }
+
+      @Override
+      public ExecutableDescriptor describe() {
+        return new ExecutableDescriptor(name, description, inputType, outputType, List.of());
+      }
+    });
   }
 }

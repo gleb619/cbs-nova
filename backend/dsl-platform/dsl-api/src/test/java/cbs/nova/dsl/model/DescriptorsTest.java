@@ -18,7 +18,7 @@ class DescriptorsTest {
             "does things",
             String.class,
             Integer.class,
-        List.of(ParameterDescriptor.ofString("input")));
+            List.of(ParameterDescriptor.ofString("input")));
 
     DslDescriptor descriptor = Descriptors.from("lookupName", helper);
 

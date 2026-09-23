@@ -12,7 +12,6 @@ import type {
   EditorMarker,
   HelperCatalogEntry,
   HelperSearchFilters,
-  HelpersResponse,
   ObjectSearchResult,
   ObjectStructureDto,
   ValidationError,
@@ -196,27 +195,23 @@ watch(
   { deep: true },
 )
 
-const helpersCatalog = ref<HelperCatalogEntry[]>([])
-const helpersLoading = ref(false)
-const helpersError = ref<string | null>(null)
-
-async function loadHelpers() {
-  helpersLoading.value = true
-  helpersError.value = null
-  try {
-    const result = (await dslApi.listHelpers()) as HelpersResponse
-    helpersCatalog.value = result.helpers ?? []
-  } catch (err) {
-    helpersError.value = (err as Error).message
-    helpersCatalog.value = []
-  } finally {
-    helpersLoading.value = false
-  }
+async function loadHelpersPage(params: {
+  search: string
+  mode: string
+  offset: number
+  limit: number
+}) {
+  return dslApi.listHelpers({
+    search: params.search,
+    mode: params.mode,
+    limit: params.limit,
+    offset: params.offset,
+  })
 }
 
 async function fetchHelperCatalog(): Promise<HelperCatalogEntry[]> {
-  if (!helpersCatalog.value.length) await loadHelpers()
-  return helpersCatalog.value
+  const result = await dslApi.listHelpers({ limit: 500 })
+  return result.items ?? []
 }
 
 // Reuses the constructs already loaded into the workbench store (no extra
@@ -228,9 +223,6 @@ async function fetchConstructs(): Promise<DslConstruct[]> {
 
 function toggleHelperCatalog() {
   helperCatalogOpen.value = !helperCatalogOpen.value
-  if (helperCatalogOpen.value) {
-    void loadHelpers()
-  }
 }
 
 const workbenchDraft = useWorkbenchDraft(state.value.selectedName ?? '', {
@@ -862,16 +854,12 @@ onBeforeUnmount(() => {
 
       <CbsDrawer
         v-model:open="helperCatalogOpen"
-        title="Helpers"
+        title="Helpers Catalog"
         test-id="helper-catalog-drawer"
         close-label="Close helper catalog"
         width-class="w-96"
       >
-        <DslHelperCatalog
-          :helpers="helpersCatalog"
-          :loading="helpersLoading"
-          :error="helpersError"
-        />
+        <DslHelperCatalog :fetch="loadHelpersPage" />
       </CbsDrawer>
 
       <CbsDrawer

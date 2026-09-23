@@ -99,16 +99,13 @@ class StartupTimeReporterTest {
 
     assertThat(appender.list)
             .anyMatch(
-                    e ->
-                        e.getLevel() == Level.INFO
+                    e -> e.getLevel() == Level.INFO
                             && e.getFormattedMessage().contains("STARTUP_REPORT totalMillis=4321"))
             .anyMatch(
-                    e ->
-                        e.getLevel() == Level.INFO
+                    e -> e.getLevel() == Level.INFO
                             && e.getFormattedMessage().contains("step=beans.instantiate"))
             .anyMatch(
-                    e ->
-                        e.getLevel() == Level.DEBUG
+                    e -> e.getLevel() == Level.DEBUG
                             && e.getFormattedMessage().contains("slow=beans.instantiate"));
   }
 

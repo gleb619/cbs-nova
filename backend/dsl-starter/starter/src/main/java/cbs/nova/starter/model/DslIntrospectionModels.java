@@ -1,5 +1,6 @@
 package cbs.nova.starter.model;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonValue;
 import java.util.List;
@@ -42,6 +43,13 @@ public final class DslIntrospectionModels {
   public record NamesResponse(List<String> names) {
   }
 
+  public record WorkingSetResponse(
+          List<DefinitionMetaDto> items,
+          long total,
+          int offset,
+          int limit) {
+  }
+
   @JsonInclude(JsonInclude.Include.NON_NULL)
   public record ConstructSchemaDto(
           String name,
@@ -58,11 +66,24 @@ public final class DslIntrospectionModels {
           String name,
           String description,
           String inputType,
-          String outputType
-  ) {
+          String outputType) {
   }
 
-  public record HelpersResponse(List<String> names, List<HelperCatalogEntry> helpers) {
+  public enum HelperSearchMode {
+    EXACT, COSINE, FUZZY;
+
+    @JsonCreator
+    public static HelperSearchMode from(@Nullable String value) {
+      if (value == null || value.isBlank()) {
+        return EXACT;
+      }
+      return switch (value.trim().toLowerCase(Locale.ROOT)) {
+        case "exact" -> EXACT;
+        case "cosine" -> COSINE;
+        case "fuzzy" -> FUZZY;
+        default -> EXACT;
+      };
+    }
   }
 
   public record ProcessDetail(
@@ -114,13 +135,6 @@ public final class DslIntrospectionModels {
           String name,
           String format,
           String diagram) {
-  }
-
-  public record WorkingSetResponse(
-          List<DefinitionMetaDto> items,
-          long total,
-          int offset,
-          int limit) {
   }
 
   @JsonInclude(JsonInclude.Include.NON_NULL)

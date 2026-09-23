@@ -1645,6 +1645,21 @@ export interface components {
             /** Format: int64 */
             total?: number;
         };
+        HelperCatalogEntry: {
+            name?: string;
+            description?: string;
+            inputType?: string;
+            outputType?: string;
+        };
+        HelperCatalogPage: {
+            items?: components["schemas"]["HelperCatalogEntry"][];
+            /** Format: int64 */
+            total?: number;
+            /** Format: int32 */
+            offset?: number;
+            /** Format: int32 */
+            limit?: number;
+        };
     };
     responses: never;
     parameters: never;
@@ -2869,20 +2884,29 @@ export interface operations {
     };
     listHelpers: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Maximum number of helpers to return (default 100) */
+                limit?: string;
+                /** @description Number of helpers to skip before returning results */
+                offset?: string;
+                /** @description Text to search among helpers */
+                search?: string;
+                /** @description Search mode: Exact, Cosine, Fuzzy */
+                searchMode?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Helper catalog */
+            /** @description Paged helper catalog */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HelperSearchResult"];
+                    "application/json": components["schemas"]["HelperCatalogPage"];
                 };
             };
         };

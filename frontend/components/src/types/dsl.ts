@@ -57,8 +57,10 @@ export interface HelperCatalogEntry {
 }
 
 export interface HelpersResponse {
-  names: string[]
-  helpers: HelperCatalogEntry[]
+  items: HelperCatalogEntry[]
+  total: number
+  offset: number
+  limit: number
 }
 
 export type { CompileDiagnostic } from './api'

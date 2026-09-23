@@ -1429,7 +1429,7 @@ describe('dsl-workbench.vue share link action', () => {
     await flushPromises()
 
     expect(writeText).toHaveBeenCalledTimes(1)
-    const link = writeText.mock.calls[0]?.[0] as string
+    const link = (writeText.mock.calls[0] as unknown as [string])[0]
     const parsed = new URL(link)
     expect(parsed.pathname).toBe(window.location.pathname)
     expect(parsed.searchParams.get('objectName')).toBe('c1')
@@ -1452,7 +1452,7 @@ describe('dsl-workbench.vue share link action', () => {
     await dropdown.vm.$emit('select', { value: 'share-link' })
     await flushPromises()
 
-    const link = writeText.mock.calls[0]?.[0] as string
+    const link = (writeText.mock.calls[0] as unknown as [string])[0]
     expect(new URL(link).searchParams.get('activeTab')).toBe('structure')
 
     clipboardSpy.mockRestore()

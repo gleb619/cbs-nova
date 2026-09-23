@@ -15,6 +15,7 @@ import {
   type NotificationRulePage,
   type NotificationTestPayload,
   type NotificationTestResult,
+  type HelpersResponse,
   type ObjectStructureDto,
   type PromotionDefinition,
   type PromotionEnvironment,
@@ -176,9 +177,17 @@ export function useDslApi() {
     return bffWriteDslFileByName(name, { body: { content } })
   }
 
-  async function listHelpers() {
-    log.info('listHelpers request')
-    return bffListHelpers()
+  async function listHelpers(
+    params: { search?: string; mode?: string; limit?: number; offset?: number } = {},
+  ) {
+    const query: Record<string, string> = {}
+    if (params.search?.trim()) query.search = params.search.trim()
+    if (params.mode?.trim()) query.searchMode = params.mode.trim()
+    if (params.limit !== undefined) query.limit = String(params.limit)
+    if (params.offset !== undefined) query.offset = String(params.offset)
+
+    log.info('listHelpers request', { ...query })
+    return bffListHelpers({ query }) as Promise<HelpersResponse>
   }
 
   async function exportDefinitions(includeDrafts?: boolean) {

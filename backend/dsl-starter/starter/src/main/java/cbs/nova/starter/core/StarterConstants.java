@@ -158,6 +158,7 @@ public class StarterConstants {
 
   public static final int BUNDLE_FORMAT_VERSION = 1;
   public static final int DEFAULT_LIMIT = 50;
+  public static final int HELPERS_DEFAULT_LIMIT = 100;
   public static final long DEFAULT_MAX_BYTES = 1024L * 1024L;
   public static final int DEFAULT_MAX_HUNKS = 200;
 

@@ -3,7 +3,9 @@ package cbs.nova.starter.converter;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.starter.model.RequestQueryModels.ExecutionListQuery;
+import cbs.nova.starter.model.RequestQueryModels.HelperCatalogQuery;
 import cbs.nova.starter.model.RequestQueryModels.IntrospectionSearchQuery;
+import cbs.nova.starter.model.RequestQueryModels.WorkingSetQuery;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -115,5 +117,61 @@ class RequestQueryConverterTest {
     assertThat(q.name()).isEqualTo("");
     assertThat(q.type()).isEqualTo("");
     assertThat(q.description()).isEqualTo("");
+  }
+
+  // --- toHelperCatalogQuery -------------------------------------------------
+
+  @Test
+  void helperCatalogQueryAbsentAreNull() {
+    HelperCatalogQuery q = converter.toHelperCatalogQuery(request(Map.of()));
+    assertThat(q.text()).isNull();
+    assertThat(q.mode()).isNull();
+  }
+
+  @Test
+  void helperCatalogQueryValuesPassThrough() {
+    HelperCatalogQuery q = converter.toHelperCatalogQuery(
+            request(Map.of("search", "foo", "searchMode", "fuzzy")));
+    assertThat(q.text()).isEqualTo("foo");
+    assertThat(q.mode()).isEqualTo("fuzzy");
+  }
+
+  @Test
+  void helperCatalogQueryBlankValuesBecomeNull() {
+    HelperCatalogQuery q = converter.toHelperCatalogQuery(
+            request(Map.of("search", "   ", "searchMode", "  ")));
+    assertThat(q.text()).isNull();
+    assertThat(q.mode()).isNull();
+  }
+
+  @Test
+  void helperCatalogQueryTextIsTrimmed() {
+    HelperCatalogQuery q = converter.toHelperCatalogQuery(
+            request(Map.of("search", "  foo  ")));
+    assertThat(q.text()).isEqualTo("foo");
+  }
+
+  // --- toWorkingSetQuery ----------------------------------------------------
+
+  @Test
+  void workingSetQueryDefaultsLimitAndOffset() {
+    WorkingSetQuery q = converter.toWorkingSetQuery(request(Map.of()));
+    assertThat(q.limit()).isEqualTo(50);
+    assertThat(q.offset()).isEqualTo(0);
+    assertThat(q.name()).isNull();
+    assertThat(q.type()).isNull();
+    assertThat(q.description()).isNull();
+  }
+
+  @Test
+  void workingSetQueryParsesLimitOffsetAndFilters() {
+    WorkingSetQuery q = converter.toWorkingSetQuery(
+            request(Map.of("limit", "10", "offset", "5", "name", "x", "type", "y",
+                    "description", "z")));
+    assertThat(q.limit()).isEqualTo(10);
+    assertThat(q.offset()).isEqualTo(5);
+    assertThat(q.name()).isEqualTo("x");
+    assertThat(q.type()).isEqualTo("y");
+    assertThat(q.description()).isEqualTo("z");
   }
 }

@@ -14,7 +14,7 @@ public record ExecutableDescriptor(
 
   public static ExecutableDescriptor empty() {
     return new ExecutableDescriptor(null, null, null, null,
-        List.of());
+            List.of());
   }
 
 }

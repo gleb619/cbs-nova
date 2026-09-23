@@ -245,7 +245,9 @@ describe('ObjectsSearchPanel', () => {
     await wrapper.get('[data-testid="objects-search-results"]').trigger('keydown.down')
 
     expect(
-      wrapper.get('[data-testid="objects-search-result-row-ParseDate"]').attributes('aria-selected'),
+      wrapper
+        .get('[data-testid="objects-search-result-row-ParseDate"]')
+        .attributes('aria-selected'),
     ).toBe('true')
   })
 

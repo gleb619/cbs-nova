@@ -16,7 +16,7 @@ class ExecutableDescriptorTest {
             "Echoes input",
             String.class,
             String.class,
-        params);
+            params);
 
     assertThat(descriptor.name()).isEqualTo("echo");
     assertThat(descriptor.description()).isEqualTo("Echoes input");
@@ -51,7 +51,7 @@ class ExecutableDescriptorTest {
             "n", "d", String.class, String.class, params);
     var right = new ExecutableDescriptor(
             "n", "d", String.class, String.class,
-        List.of(ParameterDescriptor.ofString("x")));
+            List.of(ParameterDescriptor.ofString("x")));
 
     assertThat(left).isEqualTo(right).hasSameHashCodeAs(right);
 

@@ -1,10 +1,11 @@
 package cbs.nova.starter.converter;
 
 import cbs.nova.starter.model.RequestQueryModels.ExecutionListQuery;
+import cbs.nova.starter.model.RequestQueryModels.HelperCatalogQuery;
+import cbs.nova.starter.model.RequestQueryModels.IntrospectionSearchQuery;
+import cbs.nova.starter.model.RequestQueryModels.WorkingSetQuery;
 import cbs.nova.starter.controller.Pagination;
 import cbs.nova.starter.core.StarterConstants;
-import cbs.nova.starter.model.RequestQueryModels.WorkingSetQuery;
-import cbs.nova.starter.model.RequestQueryModels.IntrospectionSearchQuery;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.function.ServerRequest;
 
@@ -42,24 +43,35 @@ public class RequestQueryConverter {
   }
 
   /**
-   * Extracts working-set filters and pagination. Missing limit/offset fall back to the starter
-   * defaults; non-integer values are rejected with an IllegalArgumentException that the global
-   * handler maps to 400 BAD_REQUEST.
-   */
-  public WorkingSetQuery toWorkingSetQuery(ServerRequest request) {
-    return new WorkingSetQuery(
-            request.param("name").orElse(null),
-            request.param("type").orElse(null),
-            request.param("description").orElse(null),
-            Pagination.intParam(request, "limit", StarterConstants.DEFAULT_LIMIT),
-            Pagination.intParam(request, "offset", StarterConstants.DEFAULT_OFFSET));
-  }
-
-  /**
    * Extracts the three introspection search params as plain passthroughs.
    */
   public IntrospectionSearchQuery toIntrospectionSearchQuery(ServerRequest request) {
     return new IntrospectionSearchQuery(
+            request.param("name").orElse(null),
+            request.param("type").orElse(null),
+            request.param("description").orElse(null));
+  }
+
+  /**
+   * Extracts the helper-catalog filters. {@code text} is blank-filtered; {@code mode} is
+   * blank-filtered and defaults to {@code null} so the service can pick its own default.
+   */
+  public HelperCatalogQuery toHelperCatalogQuery(ServerRequest request) {
+    return new HelperCatalogQuery(
+            request.param("search").map(String::trim).filter(s -> !s.isBlank()).orElse(null),
+            request.param("searchMode").map(String::trim).filter(s -> !s.isBlank())
+                    .orElse(null));
+  }
+
+  /**
+   * Extracts the working-set pagination and filter parameters.
+   */
+  public WorkingSetQuery toWorkingSetQuery(ServerRequest request) {
+    int limit = Pagination.intParam(request, "limit", StarterConstants.DEFAULT_LIMIT);
+    int offset = Pagination.intParam(request, "offset", StarterConstants.DEFAULT_OFFSET);
+    return new WorkingSetQuery(
+            limit,
+            offset,
             request.param("name").orElse(null),
             request.param("type").orElse(null),
             request.param("description").orElse(null));

@@ -79,12 +79,14 @@ class DslIntrospectionResourceTest {
   }
 
   @Test
-  void helpersEndpointReturnsEmptyList() throws Exception {
+  void helpersEndpointReturnsEmptyPage() throws Exception {
     mockMvc
             .perform(get("/api/dsl/helpers").accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.names").isArray())
-            .andExpect(jsonPath("$.helpers").isArray());
+            .andExpect(jsonPath("$.items").isArray())
+            .andExpect(jsonPath("$.total").value(0))
+            .andExpect(jsonPath("$.offset").value(0))
+            .andExpect(jsonPath("$.limit").value(100));
   }
 
   @Test
@@ -94,14 +96,47 @@ class DslIntrospectionResourceTest {
     mockMvc
             .perform(get("/api/dsl/helpers").accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.names").isArray())
-            .andExpect(jsonPath("$.names").value(Matchers.hasItem("sampleHelper")))
-            .andExpect(jsonPath("$.helpers").isArray())
-            .andExpect(jsonPath("$.helpers[?(@.name=='sampleHelper')].description")
+            .andExpect(jsonPath("$.items").isArray())
+            .andExpect(jsonPath("$.total").value(2))
+            .andExpect(jsonPath("$.offset").value(0))
+            .andExpect(jsonPath("$.limit").value(100))
+            .andExpect(jsonPath("$.items[?(@.name=='sampleHelper')].description")
                     .value("A greeting helper"))
-            .andExpect(jsonPath("$.helpers[?(@.name=='sampleHelper')].inputType").value("String"))
-            .andExpect(jsonPath("$.helpers[?(@.name=='sampleHelper')].outputType").value("String"))
-            ;
+            .andExpect(jsonPath("$.items[?(@.name=='sampleHelper')].inputType").value("String"))
+            .andExpect(jsonPath("$.items[?(@.name=='sampleHelper')].outputType").value("String"));
+  }
+
+  @Test
+  void helpersEndpointPaginatesAndSearches() throws Exception {
+    registerSampleEntities();
+
+    mockMvc.perform(get("/api/dsl/helpers")
+            .param("limit", "1")
+            .param("offset", "1")
+            .accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.items").isArray())
+            .andExpect(jsonPath("$.items.length()").value(1))
+            .andExpect(jsonPath("$.total").value(2))
+            .andExpect(jsonPath("$.offset").value(1))
+            .andExpect(jsonPath("$.limit").value(1));
+
+    mockMvc.perform(get("/api/dsl/helpers")
+            .param("search", "sample")
+            .param("searchMode", "exact")
+            .accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.total").value(2))
+            .andExpect(jsonPath("$.items[*].name")
+                    .value(Matchers.hasItems("sampleHelper", "sampleFunction")));
+
+    mockMvc.perform(get("/api/dsl/helpers")
+            .param("search", "greeting")
+            .param("searchMode", "exact")
+            .accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.total").value(1))
+            .andExpect(jsonPath("$.items[0].name").value("sampleHelper"));
   }
 
   @Test
@@ -585,7 +620,7 @@ class DslIntrospectionResourceTest {
                             "A greeting function",
                             String.class,
                             String.class,
-                        List.of())))
+                            List.of())))
             .build();
     GlobalManager.globalManager().registerFunction(sampleFunction);
   }
@@ -604,7 +639,7 @@ class DslIntrospectionResourceTest {
               "A greeting helper",
               String.class,
               String.class,
-          List.of());
+              List.of());
     }
   }
 }

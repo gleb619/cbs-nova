@@ -18,11 +18,16 @@ public final class RequestQueryModels {
           String description) {
   }
 
+  public record HelperCatalogQuery(
+          String text,
+          String mode) {
+  }
+
   public record WorkingSetQuery(
+          int limit,
+          int offset,
           String name,
           String type,
-          String description,
-          int limit,
-          int offset) {
+          String description) {
   }
 }

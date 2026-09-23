@@ -76,7 +76,7 @@ class DefaultHelperRunnerPreviewTest {
               "mock helper",
               String.class,
               String.class,
-          List.of(ParameterDescriptor.ofString("in")));
+              List.of(ParameterDescriptor.ofString("in")));
     }
   }
 }

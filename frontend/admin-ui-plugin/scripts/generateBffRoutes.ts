@@ -150,7 +150,8 @@ const EXCLUDED_OPERATIONS: Record<string, { reason: string; handRoute: string }>
     handRoute: 'executions/[id]/events.get.ts',
   },
   logs: {
-    reason: 'uses h3 proxyRequest with explicit buildBackendHeaders (json: false) for non-JSON log body',
+    reason:
+      'uses h3 proxyRequest with explicit buildBackendHeaders (json: false) for non-JSON log body',
     handRoute: 'dsl/dry-run/[traceId]/logs.get.ts',
   },
   hierarchyDsl: {
@@ -158,7 +159,8 @@ const EXCLUDED_OPERATIONS: Record<string, { reason: string; handRoute: string }>
     handRoute: 'dsl/hierarchy/[name].post.ts',
   },
   getManifestGuard: {
-    reason: 'plain proxy but kept hand-written as part of the manifest subsystem; no behavior change requested',
+    reason:
+      'plain proxy but kept hand-written as part of the manifest subsystem; no behavior change requested',
     handRoute: 'dsl/manifest/guard.get.ts',
   },
   listNotificationChannels: {
@@ -210,7 +212,8 @@ const EXCLUDED_OPERATIONS: Record<string, { reason: string; handRoute: string }>
     handRoute: 'dsl/promote/index.post.ts',
   },
   querySignalState: {
-    reason: 'uses h3 proxyRequest with explicit buildBackendHeaders (json: false) for raw signal-state response',
+    reason:
+      'uses h3 proxyRequest with explicit buildBackendHeaders (json: false) for raw signal-state response',
     handRoute: 'dsl/queries/[runId].get.ts',
   },
   sendSignal: {

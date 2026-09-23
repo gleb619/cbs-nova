@@ -82,7 +82,8 @@ const { collapsed, hidden } = useSidebar()
       Press
       <kbd
         class="mx-1 inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1 rounded border border-neutral-600 bg-neutral-700 text-neutral-100 font-mono text-[10px]"
-      >Alt</kbd>
+        >Alt</kbd
+      >
       to reveal hotkey tooltips
     </div>
   </aside>
