@@ -108,6 +108,11 @@ openapi-check: ## Fail if docs/openapi.json drifts from live /v3/api-docs (class
 	python3 scripts/openapi-diff.py docs/openapi.json "$$TMP"
 
 
+.PHONY: helpers-doc
+helpers-doc: ## Regenerate docs/helpers.md from the live helpers catalog (needs the stack running)
+	@python3 $(SCRIPT) helpers-doc
+
+
 .PHONY: dev
 dev: ## Bring up docker + run backend and frontend together
 	@python3 $(SCRIPT) dev

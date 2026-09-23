@@ -5,6 +5,7 @@ from .commands.cve_gate import CveGateCommand
 from .commands.dev import DevCommand
 from .commands.doctor import DoctorCommand
 from .commands.format import FormatCommand
+from .commands.helpers_doc import HelpersDocCommand
 from .commands.lint import LintCommand
 from .commands.lint_kanban import LintKanbanCommand
 from .commands.loadtest import LoadtestCommand
@@ -101,6 +102,14 @@ class CLI:
         p = subparsers.add_parser("openapi-fetch", help="Boot backend and fetch normalized OpenAPI spec")
         p.add_argument("outpath", help="output JSON path")
         p.set_defaults(handler=OpenApiFetchCommand)
+
+        p = subparsers.add_parser("helpers-doc", help="Regenerate docs/helpers.md from the live helpers catalog")
+        p.add_argument("--base-url", default="http://localhost:3000",
+                       help="BFF base URL (fetches /api/v1/dsl/helpers)")
+        p.add_argument("--backend-url", default=None,
+                       help="backend base URL (fetches /api/dsl/helpers, falls back to objects/search)")
+        p.add_argument("--out", default="docs/helpers.md", help="output markdown path")
+        p.set_defaults(handler=HelpersDocCommand)
 
     def run(self) -> int:
         args = self.parser.parse_args()
