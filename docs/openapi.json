@@ -52,7 +52,7 @@
         },
         "type": "object"
       },
-      "ChangeRequest": {
+      "ChangeRequestEntity": {
         "properties": {
           "approvedAt": {
             "format": "date-time",
@@ -312,6 +312,35 @@
         },
         "type": "object"
       },
+      "DslDescriptor": {
+        "properties": {
+          "hasSideEffects": {
+            "type": "boolean"
+          },
+          "heartbeatTimeout": {
+            "type": "string"
+          },
+          "objectDescriptor": {
+            "$ref": "#/components/schemas/ObjectDescriptor"
+          },
+          "parameters": {
+            "items": {
+              "$ref": "#/components/schemas/ParameterDescriptor"
+            },
+            "type": "array"
+          },
+          "startToCloseTimeout": {
+            "type": "string"
+          },
+          "taskQueue": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "DslRequest": {
         "properties": {
           "body": {},
@@ -324,13 +353,13 @@
       },
       "ErrorEntry": {
         "properties": {
-          "code": {
+          "field": {
             "type": "string"
           },
           "message": {
             "type": "string"
           },
-          "stackTrace": {
+          "pieceId": {
             "type": "string"
           }
         },
@@ -367,6 +396,29 @@
             "type": "string"
           },
           "suggestion": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "ExecutableDescriptor": {
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "hasSideEffects": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "parameters": {
+            "items": {
+              "$ref": "#/components/schemas/ParameterDescriptor"
+            },
+            "type": "array"
+          },
+          "previewBehavior": {
             "type": "string"
           }
         },
@@ -504,7 +556,7 @@
           "description": {
             "type": "string"
           },
-          "mermaid": {
+          "markdown": {
             "type": "string"
           },
           "name": {
@@ -528,6 +580,74 @@
             "type": "string"
           },
           "type": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "HierarchyReport": {
+        "properties": {
+          "astTree": {
+            "$ref": "#/components/schemas/CallNode"
+          },
+          "callCounts": {
+            "additionalProperties": {
+              "format": "int32",
+              "type": "integer"
+            },
+            "type": "object"
+          },
+          "children": {
+            "items": {
+              "$ref": "#/components/schemas/HierarchyReport"
+            },
+            "type": "array"
+          },
+          "description": {
+            "type": "string"
+          },
+          "dryRunLogs": {
+            "items": {
+              "additionalProperties": {},
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "dslDescriptor": {
+            "$ref": "#/components/schemas/DslDescriptor"
+          },
+          "errors": {
+            "items": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "type": "array"
+          },
+          "executableDescriptor": {
+            "$ref": "#/components/schemas/ExecutableDescriptor"
+          },
+          "executionTrace": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "externalCalls": {
+            "items": {
+              "additionalProperties": {},
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "hasCompensation": {
+            "type": "boolean"
+          },
+          "mermaidDiagram": {
+            "type": "string"
+          },
+          "metrics": {
+            "$ref": "#/components/schemas/PreviewMetricsSnapshot"
+          },
+          "name": {
             "type": "string"
           }
         },
@@ -581,6 +701,56 @@
         },
         "type": "object"
       },
+      "LogicInfoDto": {
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "status": {
+            "enum": [
+              "configured",
+              "default"
+            ],
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "ManifestGuardEntry": {
+        "properties": {
+          "allowed": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "ManifestReloadResponse": {
+        "properties": {
+          "errors": {
+            "items": {
+              "$ref": "#/components/schemas/ErrorEntry"
+            },
+            "type": "array"
+          },
+          "pieceCount": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
       "NamesResponse": {
         "properties": {
           "names": {
@@ -588,6 +758,30 @@
               "type": "string"
             },
             "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "ObjectDescriptor": {},
+      "ObjectStructureDto": {
+        "properties": {
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/StructureFieldDto"
+            },
+            "type": "array"
+          },
+          "logic": {
+            "items": {
+              "$ref": "#/components/schemas/LogicInfoDto"
+            },
+            "type": "array"
+          },
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
           }
         },
         "type": "object"
@@ -609,6 +803,23 @@
           "total": {
             "format": "int64",
             "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "ParameterDescriptor": {
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "STRING",
+              "NUMBER",
+              "BOOLEAN",
+              "OBJECT"
+            ],
+            "type": "string"
           }
         },
         "type": "object"
@@ -686,6 +897,7 @@
               "RUN",
               "PREVIEW",
               "EXPLAIN",
+              "HIERARCHY",
               "COMPENSATION"
             ],
             "type": "string"
@@ -756,6 +968,28 @@
         },
         "type": "object"
       },
+      "PromotionDefinition": {
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "PromotionEnvironment": {
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "ServerResponse": {},
       "StepDto": {
         "properties": {
@@ -769,6 +1003,23 @@
             "type": "string"
           },
           "type": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "StructureFieldDto": {
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "value": {
             "type": "string"
           }
         },
@@ -1018,10 +1269,12 @@
         "operationId": "listChangeRequests",
         "parameters": [
           {
+            "description": "Optional exact definition name filter",
             "in": "query",
             "name": "definitionName"
           },
           {
+            "description": "Optional status filter (PENDING, APPROVED, REJECTED, SUPERSEDED)",
             "in": "query",
             "name": "status"
           }
@@ -1031,17 +1284,14 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/ChangeRequest"
-                  },
-                  "type": "array"
+                  "$ref": "#/components/schemas/ChangeRequestEntity"
                 }
               }
             },
-            "description": "Change requests matching the filters"
+            "description": "Matching change requests, newest first"
           }
         },
-        "summary": "List DSL publish change requests, optionally filtered by definition name and status",
+        "summary": "List change requests, optionally filtered by definitionName and status",
         "tags": [
           "DSL Admin"
         ]
@@ -1050,23 +1300,26 @@
     "/api/dsl/change-requests/{id}/approve": {
       "post": {
         "operationId": "approveChangeRequest",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true
-          }
-        ],
         "responses": {
           "200": {
             "content": {
-              "application/json": {
+              "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ChangeRequest"
+                  "$ref": "#/components/schemas/ServerResponse"
                 }
               }
             },
-            "description": "Change request approved; publish triggered"
+            "description": "Publish result of the approved snapshot"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Caller rank too low or self-approval"
           },
           "404": {
             "content": {
@@ -1076,10 +1329,20 @@
                 }
               }
             },
-            "description": "Unknown change request id"
+            "description": "No change request with the given id"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Change request is not pending"
           }
         },
-        "summary": "Approve a pending change request, triggering the DSL publish",
+        "summary": "Approve a pending change request and publish its snapshot",
         "tags": [
           "DSL Admin"
         ]
@@ -1088,23 +1351,26 @@
     "/api/dsl/change-requests/{id}/reject": {
       "post": {
         "operationId": "rejectChangeRequest",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true
-          }
-        ],
         "responses": {
           "200": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ChangeRequest"
+                  "$ref": "#/components/schemas/ChangeRequestEntity"
                 }
               }
             },
-            "description": "Change request rejected"
+            "description": "The rejected change request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Caller rank too low or self-rejection"
           },
           "404": {
             "content": {
@@ -1114,10 +1380,20 @@
                 }
               }
             },
-            "description": "Unknown change request id"
+            "description": "No change request with the given id"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Change request is not pending"
           }
         },
-        "summary": "Reject a pending change request with a required comment",
+        "summary": "Reject a pending change request",
         "tags": [
           "DSL Admin"
         ]
@@ -1483,23 +1759,16 @@
     "/api/dsl/drafts/{name}/change-request": {
       "post": {
         "operationId": "submitChangeRequest",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "name",
-            "required": true
-          }
-        ],
         "responses": {
-          "200": {
+          "201": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ChangeRequest"
+                  "$ref": "#/components/schemas/ChangeRequestEntity"
                 }
               }
             },
-            "description": "Change request created for the current draft"
+            "description": "Change request created"
           },
           "404": {
             "content": {
@@ -1509,10 +1778,10 @@
                 }
               }
             },
-            "description": "No draft found for the given name"
+            "description": "No draft exists for the definition"
           }
         },
-        "summary": "Submit the current draft of a definition for publish approval",
+        "summary": "Submit a change request snapshotting the current draft for approval",
         "tags": [
           "DSL Admin"
         ]
@@ -1771,6 +2040,44 @@
         "summary": "Persist a Workbench draft construct to disk",
         "tags": [
           "DSL Admin"
+        ]
+      }
+    },
+    "/api/dsl/dry-run/{traceId}/logs": {
+      "get": {
+        "operationId": "logs",
+        "parameters": [
+          {
+            "description": "Trace/run id (X-Request-Id used for the preview/explain call)",
+            "in": "path",
+            "name": "traceId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/event-stream": {}
+            },
+            "description": "SSE stream of dry-run log events"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Malformed trace id"
+          }
+        },
+        "summary": "Stream live dry-run log lines for a single trace/run id",
+        "tags": [
+          "DSL Dry Run"
         ]
       }
     },
@@ -2225,6 +2532,381 @@
         ]
       }
     },
+    "/api/dsl/hierarchy/{name}": {
+      "post": {
+        "operationId": "hierarchyDsl",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HierarchyReport"
+                }
+              }
+            },
+            "description": "Hierarchy report"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorsResponse"
+                }
+              }
+            },
+            "description": "Input validation or execution failed"
+          }
+        },
+        "summary": "Return a structured call-graph report of a DSL process",
+        "tags": [
+          "DSL Runtime"
+        ]
+      }
+    },
+    "/api/dsl/manifest/guard": {
+      "get": {
+        "operationId": "getManifestGuard",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ManifestGuardEntry"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Per-piece allow/deny verdicts for button targets"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unexpected resolution failure"
+          }
+        },
+        "summary": "Button-target piece guard verdicts resolved for the current principal (no check internals)",
+        "tags": [
+          "DSL Admin"
+        ]
+      }
+    },
+    "/api/dsl/manifest/reload": {
+      "post": {
+        "operationId": "reloadManifest",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManifestReloadResponse"
+                }
+              }
+            },
+            "description": "Reload successful"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManifestReloadResponse"
+                }
+              }
+            },
+            "description": "Manifest validation failed"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Manifest reload is disabled or not configured"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unexpected reload failure"
+          }
+        },
+        "summary": "Reload and validate the piece manifest YAML",
+        "tags": [
+          "DSL Admin"
+        ]
+      }
+    },
+    "/api/dsl/notifications/channels": {
+      "get": {
+        "operationId": "listNotificationChannels",
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerResponse"
+                }
+              }
+            },
+            "description": "Static channel catalogue; email is a placeholder"
+          }
+        },
+        "summary": "List available notification channel types",
+        "tags": [
+          "Notifications"
+        ]
+      }
+    },
+    "/api/dsl/notifications/fire-log": {
+      "get": {
+        "operationId": "listNotificationFireLog",
+        "parameters": [
+          {
+            "description": "Optional exact rule id filter",
+            "in": "query",
+            "name": "ruleId"
+          },
+          {
+            "description": "Maximum number of rows to return",
+            "in": "query",
+            "name": "limit"
+          },
+          {
+            "description": "Number of matching rows to skip before returning results",
+            "in": "query",
+            "name": "offset"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageResponse"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "List notification rule firing audit rows, newest first",
+        "tags": [
+          "Notifications"
+        ]
+      }
+    },
+    "/api/dsl/notifications/rules": {
+      "get": {
+        "operationId": "listNotificationRules",
+        "parameters": [
+          {
+            "description": "Maximum number of rules to return",
+            "in": "query",
+            "name": "limit"
+          },
+          {
+            "description": "Number of matching rules to skip before returning results",
+            "in": "query",
+            "name": "offset"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageResponse"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "List notification rules, match order (priority desc)",
+        "tags": [
+          "Notifications"
+        ]
+      },
+      "post": {
+        "operationId": "createNotificationRule",
+        "responses": {
+          "201": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerResponse"
+                }
+              }
+            },
+            "description": "Rule created"
+          }
+        },
+        "summary": "Create a notification rule",
+        "tags": [
+          "Notifications"
+        ]
+      }
+    },
+    "/api/dsl/notifications/rules/{id}": {
+      "delete": {
+        "operationId": "deleteNotificationRule",
+        "responses": {
+          "204": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerResponse"
+                }
+              }
+            },
+            "description": "Rule deleted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No rule with the given id"
+          }
+        },
+        "summary": "Delete a notification rule",
+        "tags": [
+          "Notifications"
+        ]
+      },
+      "get": {
+        "operationId": "getNotificationRule",
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerResponse"
+                }
+              }
+            },
+            "description": "The rule"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No rule with the given id"
+          }
+        },
+        "summary": "Get a notification rule by id",
+        "tags": [
+          "Notifications"
+        ]
+      },
+      "put": {
+        "operationId": "updateNotificationRule",
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerResponse"
+                }
+              }
+            },
+            "description": "The updated rule"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No rule with the given id"
+          }
+        },
+        "summary": "Replace a notification rule",
+        "tags": [
+          "Notifications"
+        ]
+      }
+    },
+    "/api/dsl/notifications/rules/{id}/enabled": {
+      "post": {
+        "operationId": "toggleNotificationRule",
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerResponse"
+                }
+              }
+            },
+            "description": "The updated rule"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No rule with the given id"
+          }
+        },
+        "summary": "Enable or disable a notification rule",
+        "tags": [
+          "Notifications"
+        ]
+      }
+    },
+    "/api/dsl/notifications/test": {
+      "post": {
+        "operationId": "testNotificationRules",
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerResponse"
+                }
+              }
+            },
+            "description": "Matched rule ids and per-action results; nothing is persisted"
+          }
+        },
+        "summary": "Test-match a synthetic event against the enabled rules and report results",
+        "tags": [
+          "Notifications"
+        ]
+      }
+    },
     "/api/dsl/objects/search": {
       "get": {
         "operationId": "searchObjects",
@@ -2372,6 +3054,137 @@
         "summary": "Get DSL process diagram",
         "tags": [
           "DSL Introspection"
+        ]
+      }
+    },
+    "/api/dsl/promote": {
+      "post": {
+        "operationId": "promote",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportBundleResult"
+                }
+              }
+            },
+            "description": "Dry-run diff or apply result"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid request or bundle validation failure"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Source or target environment not configured"
+          }
+        },
+        "summary": "Promote a definition bundle from one environment to another (dry-run or apply)",
+        "tags": [
+          "DSL Admin"
+        ]
+      }
+    },
+    "/api/dsl/promote/definitions": {
+      "get": {
+        "operationId": "promotionDefinitions",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromotionDefinition"
+                }
+              }
+            },
+            "description": "Definitions in the environment"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Environment not configured or directory missing"
+          }
+        },
+        "summary": "List definitions selectable in a source environment",
+        "tags": [
+          "DSL Admin"
+        ]
+      }
+    },
+    "/api/dsl/promote/environments": {
+      "get": {
+        "operationId": "promotionEnvironments",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromotionEnvironment"
+                }
+              }
+            },
+            "description": "Environment names"
+          }
+        },
+        "summary": "List configured promotion environments",
+        "tags": [
+          "DSL Admin"
+        ]
+      }
+    },
+    "/api/dsl/queries/{runId}": {
+      "get": {
+        "operationId": "querySignalState",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "runId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerResponse"
+                }
+              }
+            },
+            "description": "Signal state"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Run not found"
+          }
+        },
+        "summary": "Query current signal state of a running DSL process",
+        "tags": [
+          "DSL Signals"
         ]
       }
     },
@@ -2553,6 +3366,45 @@
         "tags": [
           "DSL Schedules"
         ]
+      },
+      "patch": {
+        "operationId": "updateSchedule",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Schedule updated"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid cron or timezone"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Schedule not found"
+          }
+        },
+        "summary": "Update the cron/timezone of the Temporal schedule for a DSL definition",
+        "tags": [
+          "DSL Schedules"
+        ]
       }
     },
     "/api/dsl/schedules/{definition}/pause": {
@@ -2645,6 +3497,11 @@
             "in": "path",
             "name": "name",
             "required": true
+          },
+          {
+            "description": "Schema mode: preview (default) or explain",
+            "in": "query",
+            "name": "mode"
           }
         ],
         "responses": {
@@ -2656,10 +3513,86 @@
                 }
               }
             },
-            "description": "Construct schemas"
+            "description": "Construct schemas or explain report"
           }
         },
-        "summary": "Get DSL construct input/output schemas",
+        "summary": "Get DSL construct input/output schemas (preview) or explain report (mode=explain)",
+        "tags": [
+          "DSL Introspection"
+        ]
+      }
+    },
+    "/api/dsl/signals/{runId}": {
+      "post": {
+        "operationId": "sendSignal",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "runId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerResponse"
+                }
+              }
+            },
+            "description": "Signal sent"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Run not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Run is not running"
+          }
+        },
+        "summary": "Send a signal to a running DSL process",
+        "tags": [
+          "DSL Signals"
+        ]
+      }
+    },
+    "/api/dsl/structures/{name}": {
+      "get": {
+        "operationId": "getObjectStructure",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObjectStructureDto"
+                }
+              }
+            },
+            "description": "Object structure"
+          }
+        },
+        "summary": "Get DSL object structure",
         "tags": [
           "DSL Introspection"
         ]
@@ -3025,12 +3958,24 @@
   ],
   "tags": [
     {
+      "description": "Change-request approval gate (T568)",
+      "name": "DSL Admin"
+    },
+    {
+      "description": "Dry-run log Server-Sent Events",
+      "name": "DSL Dry Run"
+    },
+    {
       "description": "Execution status Server-Sent Events",
       "name": "DSL Executions"
     },
     {
       "description": "Inspect DSL execution runs",
       "name": "DSL Executions"
+    },
+    {
+      "description": "Notification rules engine (T565)",
+      "name": "Notifications"
     }
   ]
 }
