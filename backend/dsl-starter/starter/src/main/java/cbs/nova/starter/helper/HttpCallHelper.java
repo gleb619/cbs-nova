@@ -90,6 +90,15 @@ public class HttpCallHelper implements Executable<HttpCallIn, HttpCallOut> {
     int maxAttempts = call.maxAttempts();
     long backoffMillis = call.retryBackoffMillis();
     for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+      if (attempt > 1 && backoffMillis > 0) {
+        try {
+          Thread.sleep(backoffMillis);
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          return Result.failure(new HttpCallTransportException(
+                  "httpCall interrupted: " + e.getMessage(), e));
+        }
+      }
       long startedAt = System.nanoTime();
       try {
         HttpResponse<String> response = selectedClient.send(request, BodyHandlers.ofString());
@@ -109,7 +118,6 @@ public class HttpCallHelper implements Executable<HttpCallIn, HttpCallOut> {
         // Non-2xx: retry on 5xx + 429 only; everything else (4xx) fails fast.
         if (attempt < maxAttempts && call.isRetryableStatus(status)) {
           logRetry(request, status, attempt, maxAttempts, durationMs);
-          sleepBackoff(backoffMillis);
           continue;
         }
         return Result.failure(new HttpCallFailure(status, body, headers,
@@ -125,7 +133,6 @@ public class HttpCallHelper implements Executable<HttpCallIn, HttpCallOut> {
         logFailure(request, e, startedAt);
         if (attempt < maxAttempts) {
           logRetry(request, -1, attempt, maxAttempts, durationMs);
-          sleepBackoff(backoffMillis);
           continue;
         }
         return Result.failure(new HttpCallTransportException(
@@ -143,22 +150,6 @@ public class HttpCallHelper implements Executable<HttpCallIn, HttpCallOut> {
     // Unreachable: the loop returns on every iteration when maxAttempts >= 1, but keep the
     // compiler happy.
     throw new IllegalStateException("httpCall retry loop exited without returning");
-  }
-
-  private void sleepBackoff(long backoffMillis) {
-    if (backoffMillis <= 0) {
-      return;
-    }
-    try {
-      Thread.sleep(backoffMillis);
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      // Propagate as retry-loop exit; outer loop's IOException handler isn't reached for an
-      // interrupted sleep, but we want interrupt-status preserved. The next iteration will
-      // surface the interrupt via the send() path; if there are no further attempts the caller
-      // sees HttpCallTransportException just like any other transport failure.
-      throw new RuntimeException("httpCall retry backoff interrupted", e);
-    }
   }
 
   private void logRetry(HttpRequest request, int lastStatusOrMinus, int attempt,
