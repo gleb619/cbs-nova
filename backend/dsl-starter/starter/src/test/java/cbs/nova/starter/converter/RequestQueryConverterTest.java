@@ -1,11 +1,12 @@
 package cbs.nova.starter.converter;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import cbs.nova.dsl.DslObject.DslType;
 import cbs.nova.starter.model.DslIntrospectionModels.ObjectSearchMode;
 import cbs.nova.starter.model.RequestQueryModels.ExecutionListQuery;
 import cbs.nova.starter.model.RequestQueryModels.ObjectSearchQuery;
-import cbs.nova.starter.model.RequestQueryModels.WorkingSetQuery;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -93,12 +94,13 @@ class RequestQueryConverterTest {
   // --- toObjectSearchQuery ----------------------------------------------------
 
   @Test
-  void objectSearchQueryDefaultsPageSizeAndMode() {
+  void objectSearchQueryDefaultsPageSizeModeAndType() {
     ObjectSearchQuery q = converter.toObjectSearchQuery(request(Map.of()));
     assertThat(q.page()).isEqualTo(0);
     assertThat(q.size()).isEqualTo(50);
     assertThat(q.query()).isNull();
     assertThat(q.mode()).isEqualTo(ObjectSearchMode.EXACT);
+    assertThat(q.type()).isNull();
   }
 
   @Test
@@ -109,6 +111,31 @@ class RequestQueryConverterTest {
     assertThat(q.size()).isEqualTo(10);
     assertThat(q.query()).isEqualTo("foo");
     assertThat(q.mode()).isEqualTo(ObjectSearchMode.FUZZY);
+  }
+
+  @Test
+  void objectSearchQueryParsesDslType() {
+    ObjectSearchQuery q = converter.toObjectSearchQuery(request(Map.of("type", "process")));
+    assertThat(q.type()).isEqualTo(DslType.PROCESS);
+  }
+
+  @Test
+  void objectSearchQueryParsesDslTypeCaseInsensitively() {
+    ObjectSearchQuery q = converter.toObjectSearchQuery(request(Map.of("type", "Process")));
+    assertThat(q.type()).isEqualTo(DslType.PROCESS);
+  }
+
+  @Test
+  void objectSearchQueryBlankDslTypeBecomesNull() {
+    ObjectSearchQuery q = converter.toObjectSearchQuery(request(Map.of("type", "   ")));
+    assertThat(q.type()).isNull();
+  }
+
+  @Test
+  void objectSearchQueryUnknownDslTypeThrows() {
+    assertThatThrownBy(() -> converter.toObjectSearchQuery(request(Map.of("type", "banana"))))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage("Unknown DSL type: banana");
   }
 
   @Test
@@ -135,29 +162,5 @@ class RequestQueryConverterTest {
     ObjectSearchQuery q = converter.toObjectSearchQuery(
             request(Map.of("mode", "unknown")));
     assertThat(q.mode()).isEqualTo(ObjectSearchMode.EXACT);
-  }
-
-  // --- toWorkingSetQuery ------------------------------------------------------
-
-  @Test
-  void workingSetQueryDefaultsLimitAndOffset() {
-    WorkingSetQuery q = converter.toWorkingSetQuery(request(Map.of()));
-    assertThat(q.limit()).isEqualTo(50);
-    assertThat(q.offset()).isEqualTo(0);
-    assertThat(q.name()).isNull();
-    assertThat(q.type()).isNull();
-    assertThat(q.description()).isNull();
-  }
-
-  @Test
-  void workingSetQueryParsesLimitOffsetAndFilters() {
-    WorkingSetQuery q = converter.toWorkingSetQuery(
-            request(Map.of("limit", "10", "offset", "5", "name", "x", "type", "y",
-                    "description", "z")));
-    assertThat(q.limit()).isEqualTo(10);
-    assertThat(q.offset()).isEqualTo(5);
-    assertThat(q.name()).isEqualTo("x");
-    assertThat(q.type()).isEqualTo("y");
-    assertThat(q.description()).isEqualTo("z");
   }
 }

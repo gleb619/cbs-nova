@@ -1,5 +1,6 @@
 package cbs.nova.starter.model;
 
+import cbs.nova.dsl.DslObject.DslType;
 import cbs.nova.starter.model.DslIntrospectionModels.ObjectSearchMode;
 
 public final class RequestQueryModels {
@@ -18,14 +19,7 @@ public final class RequestQueryModels {
           int page,
           int size,
           String query,
-          ObjectSearchMode mode) {
-  }
-
-  public record WorkingSetQuery(
-          int limit,
-          int offset,
-          String name,
-          String type,
-          String description) {
+          ObjectSearchMode mode,
+          DslType type) {
   }
 }

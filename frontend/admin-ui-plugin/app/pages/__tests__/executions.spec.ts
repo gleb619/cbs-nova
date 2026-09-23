@@ -1,8 +1,8 @@
+import type { Execution, ExecutionFilters } from '@cbs/components'
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { defineComponent, h, nextTick, Suspense, type Ref } from 'vue'
+import { defineComponent, h, nextTick, type Ref, Suspense } from 'vue'
 import ExecutionsPage from '../executions/index.vue'
-import type { Execution, ExecutionFilters } from '@cbs/components'
 
 interface ExecutionsHarness {
   executions: Ref<Execution[]>
@@ -56,7 +56,8 @@ const harness: ExecutionsHarness = (() => {
   }
 })()
 
-;(globalThis as unknown as { __executionsHarness?: ExecutionsHarness }).__executionsHarness = harness
+;(globalThis as unknown as { __executionsHarness?: ExecutionsHarness }).__executionsHarness =
+  harness
 
 vi.mock('@cbs/admin-ui-plugin/composables/useExecutions', () => ({
   useExecutions: useExecutionsMock,
@@ -381,7 +382,7 @@ describe('executions/index.vue page wiring', () => {
     await flush()
 
     const toggle = wrapper.find('[data-testid="executions-live-polling-toggle"]')
-    await toggle.setChecked(true)
+    await toggle.setValue(true)
     await flush()
 
     expect(harness.startListPolling).toHaveBeenCalled()

@@ -1,8 +1,8 @@
+import type { ExecutionDetail } from '@cbs/components'
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { defineComponent, h, nextTick, Suspense, type Ref } from 'vue'
+import { defineComponent, h, nextTick, type Ref, Suspense } from 'vue'
 import ExecutionDetailPage from '../executions/[id].vue'
-import type { ExecutionDetail } from '@cbs/components'
 
 interface DetailHarness {
   selectedExecution: Ref<ExecutionDetail | null>
@@ -15,15 +15,10 @@ interface DetailHarness {
   cancelExecution: ReturnType<typeof vi.fn>
 }
 
-const {
-  useExecutionsMock,
-  useExecutionsApiMock,
-  navigateTo,
-} = vi.hoisted(() => {
+const { useExecutionsMock, useExecutionsApiMock, navigateTo } = vi.hoisted(() => {
   const navigateToSpy = vi.fn()
   const useExecutionsMockFn = vi.fn(() => {
-    const harness = (globalThis as unknown as { __detailHarness?: DetailHarness })
-      .__detailHarness
+    const harness = (globalThis as unknown as { __detailHarness?: DetailHarness }).__detailHarness
     if (!harness) throw new Error('execution detail harness not installed yet')
     return harness
   })
@@ -85,11 +80,7 @@ const ExecutionSummaryProbe = defineComponent({
         h('span', { 'data-testid': 'summary-status' }, exec?.status ?? ''),
         h('span', { 'data-testid': 'summary-entity' }, exec?.entity ?? ''),
         h('span', { 'data-testid': 'summary-mode' }, exec?.mode ?? ''),
-        h(
-          'span',
-          { 'data-testid': 'summary-started-at' },
-          exec?.startedAt ?? '',
-        ),
+        h('span', { 'data-testid': 'summary-started-at' }, exec?.startedAt ?? ''),
         slots.actions ? slots.actions() : null,
       ])
   },
@@ -99,8 +90,7 @@ const makeStub = (testId: string) =>
   defineComponent({
     name: testId,
     setup(_props, { slots }) {
-      return () =>
-        h('div', { 'data-testid': testId }, slots.default ? slots.default() : null)
+      return () => h('div', { 'data-testid': testId }, slots.default?.() ?? [])
     },
   })
 
@@ -111,7 +101,11 @@ const CancelButtonProbe = defineComponent({
   setup(props, { emit }) {
     return () =>
       h('div', { 'data-testid': 'cancel-confirmation-modal' }, [
-        h('span', { 'data-testid': 'modal-execution-id' }, (props.executionId as string | undefined) ?? ''),
+        h(
+          'span',
+          { 'data-testid': 'modal-execution-id' },
+          (props.executionId as string | undefined) ?? '',
+        ),
         h(
           'button',
           {
@@ -253,9 +247,7 @@ describe('executions/[id].vue page wiring', () => {
     expect(wrapper.find('[data-testid="summary-status"]').text()).toBe('Running')
     expect(wrapper.find('[data-testid="summary-entity"]').text()).toBe('OnboardingDsl')
     expect(wrapper.find('[data-testid="summary-mode"]').text()).toBe('PREVIEW')
-    expect(wrapper.find('[data-testid="summary-started-at"]').text()).toBe(
-      '2026-09-23T11:00:00Z',
-    )
+    expect(wrapper.find('[data-testid="summary-started-at"]').text()).toBe('2026-09-23T11:00:00Z')
 
     wrapper.unmount()
   })

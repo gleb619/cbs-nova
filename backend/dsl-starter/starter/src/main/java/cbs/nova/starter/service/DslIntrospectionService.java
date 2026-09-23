@@ -4,6 +4,7 @@ import static cbs.nova.dsl.utils.ExplainReports.explainReportSchema;
 
 import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.DslObject;
+import cbs.nova.dsl.DslObject.DslType;
 import cbs.nova.dsl.ExecutableDescriptor;
 import cbs.nova.dsl.GeneratedClassDescriptor;
 import cbs.nova.dsl.GlobalManager;
@@ -18,7 +19,7 @@ import cbs.nova.dsl.transaction.TransactionDslObject;
 import cbs.nova.starter.controller.Pagination;
 import cbs.nova.starter.model.DslIntrospectionModels.ObjectSearchResult;
 import cbs.nova.starter.model.DslIntrospectionModels.WorkingSetResponse;
-import cbs.nova.starter.model.RequestQueryModels.WorkingSetQuery;
+import cbs.nova.starter.model.RequestQueryModels.ObjectSearchQuery;
 import cbs.nova.starter.converter.DslIntrospectionMapper;
 import cbs.nova.starter.model.DslIntrospectionModels.ConstructSchemaMode;
 import cbs.nova.starter.model.DslIntrospectionModels.DefinitionMetaDto;
@@ -53,7 +54,7 @@ public class DslIntrospectionService {
   private final DslDefinitionStatusResolver statusResolver;
 
   public PageResponse<ObjectSearchResult> searchObjects(int page, int size, String query,
-          ObjectSearchMode mode) {
+          ObjectSearchMode mode, DslType type) {
     var gm = GlobalManager.globalManager();
     List<ObjectSearchResult> results = new ArrayList<>();
     gm.processNames().forEach(n -> gm.describeProcess(n).ifPresent(d -> results.add(toResult(d))));
@@ -64,7 +65,8 @@ public class DslIntrospectionService {
       gm.describeFunction(n).ifPresent(d -> results.add(toResult(d)));
     });
     List<ObjectSearchResult> filtered = results.stream()
-            .filter(r -> matches(r, query, mode))
+            .filter(r -> matches(r.name(), r.type(), r.description(), r.inputType(),
+                    r.outputType(), query, mode, type))
             .toList();
     long total = filtered.size();
     int offset = Math.max(0, page) * size;
@@ -282,11 +284,12 @@ public class DslIntrospectionService {
     return new StructureFieldDto(path, mapper.typeName(type), "class", description);
   }
 
-  public WorkingSetResponse workingSet(WorkingSetQuery query) {
-    int pageSize = Pagination.clampLimit(query.limit());
-    int skip = Pagination.clampOffset(query.offset());
+  public WorkingSetResponse workingSet(ObjectSearchQuery query) {
+    int pageSize = Pagination.clampLimit(query.size());
+    int skip = Math.max(0, query.page()) * pageSize;
     List<DefinitionMetaDto> filtered = allDefinitionMetas().stream()
-            .filter(d -> matches(d, query.name(), query.type(), query.description()))
+            .filter(d -> matches(d.name(), d.type(), d.description(), d.inputType(),
+                    d.outputType(), query.query(), query.mode(), query.type()))
             .toList();
     long total = filtered.size();
     List<DefinitionMetaDto> paged = filtered.stream().skip(skip).limit(pageSize).toList();
@@ -319,20 +322,34 @@ public class DslIntrospectionService {
     return aggregate;
   }
 
-  private static boolean matches(DefinitionMetaDto dto, String name, String type,
-          String description) {
-    if (name != null && !name.isBlank()
-            && !dto.name().toLowerCase(Locale.ROOT).contains(name.toLowerCase(Locale.ROOT))) {
+  private static boolean matches(String name, String type, String description, String inputType,
+          String outputType, String query, ObjectSearchMode mode, DslType dslType) {
+    if (dslType != null && dslType != toDslType(type)) {
       return false;
     }
-    if (type != null && !type.isBlank() && !dto.type().equalsIgnoreCase(type)) {
-      return false;
+    if (query == null || query.isBlank() || mode == ObjectSearchMode.ALL) {
+      return true;
     }
-    if (description != null && !description.isBlank()) {
-      String desc = dto.description() != null ? dto.description() : "";
-      return desc.toLowerCase(Locale.ROOT).contains(description.toLowerCase(Locale.ROOT));
+    String term = query.toLowerCase(Locale.ROOT);
+    String candidate = (name + " " + type + " "
+            + (description == null ? "" : description) + " "
+            + (inputType == null ? "" : inputType) + " "
+            + (outputType == null ? "" : outputType))
+            .toLowerCase(Locale.ROOT);
+    return candidate.contains(term);
+  }
+
+  private static DslType toDslType(String type) {
+    if (type == null) {
+      return null;
     }
-    return true;
+    return switch (type.toLowerCase(Locale.ROOT)) {
+      case "process" -> DslType.PROCESS;
+      case "transaction" -> DslType.TRANSACTION;
+      case "function" -> DslType.FUNCTION;
+      case "helper" -> DslType.OTHER;
+      default -> null;
+    };
   }
 
   private ConstructSchemaDto toSchemaDto(ProcessDslObject process) {
@@ -417,20 +434,6 @@ public class DslIntrospectionService {
 
   private ObjectSearchResult toResult(String name, ExecutableDescriptor descriptor) {
     return mapper.toHelperSearchResult(name, descriptor);
-  }
-
-  private static boolean matches(ObjectSearchResult result, String query,
-          ObjectSearchMode mode) {
-    if (query == null || query.isBlank() || mode == ObjectSearchMode.ALL) {
-      return true;
-    }
-    String term = query.toLowerCase(Locale.ROOT);
-    String candidate = (result.name() + " " + result.type() + " "
-            + (result.description() == null ? "" : result.description()) + " "
-            + (result.inputType() == null ? "" : result.inputType()) + " "
-            + (result.outputType() == null ? "" : result.outputType()))
-            .toLowerCase(Locale.ROOT);
-    return candidate.contains(term);
   }
 
 }

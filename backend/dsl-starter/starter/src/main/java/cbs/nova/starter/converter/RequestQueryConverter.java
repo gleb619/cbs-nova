@@ -1,15 +1,17 @@
 package cbs.nova.starter.converter;
 
+import cbs.nova.dsl.DslObject.DslType;
 import cbs.nova.starter.model.DslIntrospectionModels.ObjectSearchMode;
 import cbs.nova.starter.model.RequestQueryModels.ExecutionListQuery;
 import cbs.nova.starter.model.RequestQueryModels.ObjectSearchQuery;
-import cbs.nova.starter.model.RequestQueryModels.WorkingSetQuery;
 import cbs.nova.starter.controller.Pagination;
 import cbs.nova.starter.core.StarterConstants;
+import java.util.Locale;
 import org.springframework.stereotype.Component;
+import org.springframework.web.servlet.function.ServerRequest;
 
 /**
- * Translates a {@link org.springframework.web.servlet.function.ServerRequest} into typed query
+ * Translates a {@link ServerRequest} into typed query
  * records.
  *
  * <p>
@@ -34,7 +36,7 @@ public class RequestQueryConverter {
    * then blank-filtered.
    */
   public ExecutionListQuery toExecutionListQuery(
-          org.springframework.web.servlet.function.ServerRequest request) {
+          ServerRequest request) {
     return new ExecutionListQuery(
             request.param("processName").filter(s -> !s.isBlank()).orElse(null),
             request.param("status").orElse(null),
@@ -44,30 +46,27 @@ public class RequestQueryConverter {
   }
 
   /**
-   * Extracts the unified object-search pagination, query text, and search mode.
+   * Extracts the unified object-search pagination, query text, search mode, and DSL type filter.
    */
   public ObjectSearchQuery toObjectSearchQuery(
-          org.springframework.web.servlet.function.ServerRequest request) {
+          ServerRequest request) {
     int page = Pagination.intParam(request, "page", 0);
     int size = Pagination.intParam(request, "size", StarterConstants.DEFAULT_LIMIT);
     int clampedSize = Pagination.clampLimit(size);
     String query = request.param("query").map(String::trim).filter(s -> !s.isBlank()).orElse(null);
     ObjectSearchMode mode = ObjectSearchMode.from(request.param("mode").orElse(null));
-    return new ObjectSearchQuery(Math.max(0, page), clampedSize, query, mode);
+    DslType type = request.param("type")
+            .filter(s -> !s.isBlank())
+            .map(RequestQueryConverter::parseDslType)
+            .orElse(null);
+    return new ObjectSearchQuery(Math.max(0, page), clampedSize, query, mode, type);
   }
 
-  /**
-   * Extracts the working-set pagination and filter parameters.
-   */
-  public WorkingSetQuery toWorkingSetQuery(
-          org.springframework.web.servlet.function.ServerRequest request) {
-    int limit = Pagination.intParam(request, "limit", StarterConstants.DEFAULT_LIMIT);
-    int offset = Pagination.intParam(request, "offset", StarterConstants.DEFAULT_OFFSET);
-    return new WorkingSetQuery(
-            limit,
-            offset,
-            request.param("name").orElse(null),
-            request.param("type").orElse(null),
-            request.param("description").orElse(null));
+  private static DslType parseDslType(String value) {
+    try {
+      return DslType.valueOf(value.trim().toUpperCase(Locale.ROOT));
+    } catch (IllegalArgumentException e) {
+      throw new IllegalArgumentException("Unknown DSL type: " + value);
+    }
   }
 }

@@ -19,7 +19,7 @@ public class DslIntrospectionHandler {
   public ServerResponse searchObjects(ServerRequest request) {
     var q = queryConverter.toObjectSearchQuery(request);
     PageResponse<ObjectSearchResult> page = service.searchObjects(
-            q.page(), q.size(), q.query(), q.mode());
+            q.page(), q.size(), q.query(), q.mode(), q.type());
     return ServerResponse.ok().body(page);
   }
 
@@ -46,7 +46,7 @@ public class DslIntrospectionHandler {
   }
 
   public ServerResponse workingSet(ServerRequest request) {
-    var q = queryConverter.toWorkingSetQuery(request);
+    var q = queryConverter.toObjectSearchQuery(request);
     WorkingSetResponse response = service.workingSet(q);
     return ServerResponse.ok().body(response);
   }
