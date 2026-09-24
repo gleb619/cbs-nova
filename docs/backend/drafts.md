@@ -119,9 +119,9 @@ file uses `GET /api/dsl/files/by-name/{name}` (starter `DslFileHandler.readByNam
 | **Save** (edit) | write working-tree file (buffered, then flushed) | none |
 | **Validate / compile** | none | isolated compile in a builder session. Diagnostics are returned, and nothing is loaded. |
 | **Discard** | `checkout HEAD -- <path>`, or remove an untracked file | none |
-| **Publish** | after a successful reload, `add` + `commit` of the definition's source path (author = actor). Push is not implemented yet. | reload first. If the reload fails, nothing is committed: the draft stays, and diagnostics are returned (§4.5). |
-| **History** | `git log -- <path>` | none |
-| **Restore(rev)** | `checkout <rev> -- <path>`, which produces a MODIFIED draft | none, until publish |
+| **Publish** | after a successful reload, `add` + `commit` of the definition's source path (author = actor). Then push to `git.remote` if `cbs.dsl.builder.git.push-on-commit=true`. The push never forces, and a failed push keeps the local commit. | reload first. If the reload fails, nothing is committed: the draft stays, and diagnostics are returned (§4.5). |
+| **History** | `git log -- <path>` (`/drafts/{name}/history` returns commit ids as `timestamp`) | none |
+| **Restore(rev)** | content at `<rev>` staged + flushed into the working tree, which produces a MODIFIED draft (`/drafts/{name}/history/{commitId}/restore`) | none, until publish |
 
 Invariants:
 
@@ -199,7 +199,7 @@ JGit locally) return:
 ```
 
 `changes` maps each path to a `ChangeType` (`ADDED`, `MODIFIED`, `DELETED`, `UNTRACKED`,
-`CONFLICTING`), classified per §3.1 by the static `classify(Status)` method. `dirtyPaths` is its
+`CONFLICTING`), classified per §3.1 by `cbs.nova.dsl.vcs.GitChangeClassifier` (shared `dsl-api`; each side adapts JGit `Status`). `dirtyPaths` is its
 key set and is kept for older peers. A payload without `changes` still parses, and `changes` is
 then empty. `RepoStatus.changeOf(path)` looks up one path. Results are cached per repo root for
 `git.status-cache-ttl-seconds` (default 5). `GitStatusService.invalidate()` clears the cache.
@@ -266,10 +266,10 @@ All starter paths are also exposed by the BFF under `/api/v1/dsl/...` (explicit 
 | DELETE     | `/api/dsl/drafts/{name}`                                                    | `delete`                             | deletes the draft marker only |
 | POST       | `/api/dsl/drafts/{name}/discard`                                            | `discard`                            | Builder mode only. Reverts the definition's source file to `HEAD` and drops the legacy marker (a 404 there is ignored). Returns `status: "Discarded"`. Local mode → `409 GIT_REQUIRES_BUILDER`. Unknown source path → 404. |
 | GET        | `/api/dsl/drafts/{name}/commits?limit`                                      | `commits`                            | Builder mode only. `git log` of the definition's source path, newest first. |
-| GET        | `/api/dsl/drafts/{name}/history`                                            | `history`                            | `DefinitionHistoryEntry[]` |
-| GET        | `/api/dsl/drafts/{name}/history/{ts}`                                       | `historyEntry`                       | snapshot `DraftRequest` |
-| GET        | `/api/dsl/drafts/{name}/history/{ts}/diff`                                  | `historyDiff`                        | snapshot vs current published, `LineDiff` hunks |
-| POST       | `/api/dsl/drafts/{name}/history/{ts}/restore`                               | `restore`                            | re-publishes the snapshot and reloads |
+| GET        | `/api/dsl/drafts/{name}/history`                                            | `history`                            | `DefinitionHistoryEntry[]`. In builder mode with a resolvable source path, `timestamp` is a commit id and `sizeBytes=-1`; otherwise these are legacy JSON snapshots. |
+| GET        | `/api/dsl/drafts/{name}/history/{ts}`                                       | `historyEntry`                       | `{ts}` = commit id → `DraftRequest` with `source` at that commit and status `History`. An all-digit `{ts}` → legacy snapshot. |
+| GET        | `/api/dsl/drafts/{name}/history/{ts}/diff`                                  | `historyDiff`                        | git: commit vs **working tree**; legacy: snapshot vs current published, `LineDiff` hunks |
+| POST       | `/api/dsl/drafts/{name}/history/{ts}/restore`                               | `restore`                            | git: stages the commit's content as a MODIFIED draft, with no reload (audit `DRAFT_RESTORE`); legacy: re-publishes the snapshot and reloads |
 | GET        | `/api/dsl/definitions/export[?include=drafts]`                              | `exportBundle`                       |  |
 | POST       | `/api/dsl/definitions/import[?dryRun=true]`                                 | `importBundle`                       |  |
 | GET / POST | `/api/dsl/files`, `/api/dsl/files/{*path}`, `/api/dsl/files/by-name/{name}` | `DslFileHandler`                     | list / read / stage write |
@@ -356,7 +356,7 @@ curl -X POST localhost:8090/api/dsl/drafts/LoanDisbursement/history/172715000000
 | `cbs.dsl.approval.required` | `false` | starter | Publish approval gate (T568) |
 | `csb.dsl.builder-client.enabled` / `base-url` | `true` / `http://localhost:8091` | starter | Delegate all draft/file/vcs calls to dsl-builder |
 | `cbs.dsl.builder.workspace-dir` / `source-dir` | – | builder | Workspace root (`source-dir` wins for the file API) |
-| `cbs.dsl.builder.git.{enabled,repository-dir,worktrees-dir,repo-url,sub-path,branch,status-cache-ttl-seconds}` | `true`,…,5 | builder | Worktree provisioning + status |
+| `cbs.dsl.builder.git.{enabled,repository-dir,worktrees-dir,repo-url,sub-path,branch,status-cache-ttl-seconds,push-on-commit,remote}` | `true`,…,5,`false`,`origin` | builder | Worktree provisioning + status |
 | `cbs.dsl.builder.files.{flush-interval-seconds,max-queue-size,read/write-bulkhead-permits}` | 5, 100, 32, 8 | builder | Write buffer |
 | `cbs.dsl.builder.drafts.history-limit` | 20 | builder | History snapshots kept per definition |
 | `cbs.dsl.builder.workbench.*` | see `DslBuilderProperties.Workbench` | builder | Marker dirs, bundle limits, diff hunks/context |
@@ -370,15 +370,15 @@ curl -X POST localhost:8090/api/dsl/drafts/LoanDisbursement/history/172715000000
 | G1 | Draft = git-changed DSL file | Draft = `.workbench/drafts/*.json` marker. File edits via `/api/dsl/files` are not drafts to the drafts API. | **Mostly closed.** Status now comes from the source file (§4.4). Markers remain only as a fallback, and for the save/read/history APIs. |
 | G2 | Per-file kind (A/M/D/?/U) | `RepoStatus.dirtyPaths` is a flat set | **Closed** (step 1). |
 | G3 | Status of the **DSL source** file | `DslDefinitionStatusResolver` checks the git state of the **marker JSON** | **Closed** (step 2). |
-| G4 | Publish = compile + commit (+ push) + reload | Publish = write marker + reload. No commit. History = JSON snapshots. | **Partly closed** (step 4). Publish commits, and `/commits` exposes `git log`. `history`/`restore` still use JSON snapshots. Push is not implemented. |
+| G4 | Publish = compile + commit (+ push) + reload | Publish = write marker + reload. No commit. History = JSON snapshots. | **Closed.** Publish commits (plus an optional push), and history/diff/restore read git. The legacy JSON snapshot path remains for old timestamps. |
 | G5 | Discard = checkout HEAD | Delete = remove marker | **Closed** (step 4): `POST /api/dsl/drafts/{name}/discard`. |
 | G6 | Pending writes count as drafts (I5) | Status is read from disk only (5s cache) | **Closed** (step 3): flush-before-status plus cache invalidation. |
-| G7 | One copy of status logic | `GitStatusService` (builder) and `DslGitStatusResolver` (starter) duplicate JGit code | **Open.** Both copies now carry the same `classify`; they are still duplicated. |
+| G7 | One copy of status logic | `GitStatusService` (builder) and `DslGitStatusResolver` (starter) duplicate JGit code | **Closed.** `ChangeType`, `RepoStatus` and `GitChangeClassifier` live in `dsl-api` `cbs.nova.dsl.vcs`. |
 | G8 | Property name consistency | Draft gate `csb.dsl.drafts.*` vs docs `dsl.drafts.*` | **Open.** |
 
 ### Migration path (incremental, each step shippable)
 
-Steps 1–4 landed on branch `feat/drafts-git`. Remaining work: step 4 history/restore on git, a one-off marker import commit, optional push, G7 and step 5.
+Steps 1–4, git history/restore, optional push and G7 have landed on `main`. Remaining work: a one-off marker import commit that retires `.workbench/published` and `.workbench/history`.
 
 1. **Typed status (G2, G7).** Add `changes: Map<path, ChangeType>` to `RepoStatus` and keep
    `dirtyPaths` as its key set, so the builder↔starter JSON stays backward compatible. Classify
@@ -469,7 +469,7 @@ Each migration step in §7 ships with these tests. Use real JGit repos in `@Temp
 | History | `service/DslDefinitionHistoryService` | `service/DefinitionHistoryService` |
 | Bundles | `service/DslDefinitionBundleService` | `service/DefinitionBundleService` |
 | Files | `controller/DslFileHandler`, `DslFileService` | `controller/FileController`, `service/FileService`, `FileBuffer`, `FileBulkhead` |
-| Git status | `service/DslGitStatusResolver` | `service/GitStatusService`, `controller/VcsController` |
+| Git status | `service/DslGitStatusResolver` | `service/GitStatusService`, `controller/VcsController`; shared model `dsl-api` `cbs.nova.dsl.vcs` |
 | Git ops | via `DslBuilderClient.commit/discard/log/show` | `service/WorkspaceGitService` |
 | Definition → source path | `service/DslSourcePathResolver` | – |
 | Git clone / worktree | – | `service/GitService`, `RepoUrlValidator` |
