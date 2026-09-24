@@ -37,6 +37,7 @@ import {
   explainDsl as bffExplainDsl,
   exportDefinitions as bffExportDefinitions,
   getWorkingSet as bffGetWorkingSet,
+  hierarchyDsl as bffHierarchyDsl,
   importDefinitions as bffImportDefinitions,
   listChangeRequests as bffListChangeRequests,
   listCompileDiagnostics as bffListCompileDiagnostics,
@@ -141,6 +142,18 @@ export function useDslApi() {
     const init: BffRequestInit = { body: { body, metadata } }
     if (headers) init.headers = headers
     return bffExplainDsl(name, init)
+  }
+
+  async function hierarchy(
+    name: string,
+    body: unknown,
+    metadata?: Record<string, unknown>,
+    headers?: Record<string, string>,
+  ) {
+    log.info('hierarchy request', { name })
+    const init: BffRequestInit = { body: { body, metadata } }
+    if (headers) init.headers = headers
+    return bffHierarchyDsl(name, init)
   }
 
   async function saveDraft(
@@ -584,6 +597,7 @@ export function useDslApi() {
     preview,
     run,
     explain,
+    hierarchy,
     saveDraft,
     publishDraft,
     deleteDraft,

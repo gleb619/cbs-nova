@@ -1,6 +1,13 @@
 import type { useToast } from '@cbs/components/composables'
 
-export const BODY_EDITOR_TABS = ['structure', 'code', 'preview', 'explain', 'problems'] as const
+export const BODY_EDITOR_TABS = [
+  'structure',
+  'code',
+  'preview',
+  'explain',
+  'hierarchy',
+  'problems',
+] as const
 export type BodyEditorTab = (typeof BODY_EDITOR_TABS)[number]
 
 export const BODY_EDITOR_TAB_STORAGE_KEY = 'cbs-nova:body-editor:active-tab'

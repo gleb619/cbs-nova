@@ -9,6 +9,9 @@ export const PREVIEW_HISTORY_STORAGE_KEY = 'history'
 export const EXPLAIN_HISTORY_STORAGE_NAMESPACE = 'cbs-nova:explain'
 export const EXPLAIN_HISTORY_STORAGE_KEY = 'history'
 
+export const HIERARCHY_HISTORY_STORAGE_NAMESPACE = 'cbs-nova:hierarchy'
+export const HIERARCHY_HISTORY_STORAGE_KEY = 'history'
+
 const MAX_ENTRIES_PER_NAME = PREVIEW_HISTORY_LIMIT * 20
 
 export interface PreviewHistory {
@@ -26,6 +29,10 @@ export function __resetPreviewHistoryForTests() {
 
 export function __resetExplainHistoryForTests() {
   sharedEntries.delete(EXPLAIN_HISTORY_STORAGE_NAMESPACE)
+}
+
+export function __resetHierarchyHistoryForTests() {
+  sharedEntries.delete(HIERARCHY_HISTORY_STORAGE_NAMESPACE)
 }
 
 function entriesRef(namespace: string): Ref<PreviewHistoryEntry[]> {
@@ -84,4 +91,11 @@ export function useExplainHistory(
   options: { limit?: number } = {},
 ): PreviewHistory {
   return useRunnerHistory(name, EXPLAIN_HISTORY_STORAGE_NAMESPACE, options)
+}
+
+export function useHierarchyHistory(
+  name: () => string,
+  options: { limit?: number } = {},
+): PreviewHistory {
+  return useRunnerHistory(name, HIERARCHY_HISTORY_STORAGE_NAMESPACE, options)
 }

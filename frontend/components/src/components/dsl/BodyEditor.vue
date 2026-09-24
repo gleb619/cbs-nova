@@ -15,6 +15,7 @@ import type {
 import type { RunnerOutput } from '../../types/runner'
 import CodeTab from './CodeTab.vue'
 import ExplainTab from './ExplainTab.vue'
+import HierarchyTab from './HierarchyTab.vue'
 import type { EditorMarker } from './MonacoEditor.vue'
 import PreviewTab from './PreviewTab.vue'
 import ProblemsPanel from './ProblemsPanel.vue'
@@ -35,6 +36,11 @@ const props = withDefaults(
     helperCatalogFetch?: () => Promise<HelperCatalogEntry[]>
     constructsFetch?: () => Promise<DslConstruct[]>
     explain?: (
+      name: string,
+      body: unknown,
+      metadata?: Record<string, unknown>,
+    ) => Promise<RunnerOutput>
+    hierarchy?: (
       name: string,
       body: unknown,
       metadata?: Record<string, unknown>,
@@ -77,12 +83,13 @@ const emit = defineEmits<{
   'retry-structure': []
 }>()
 
-type BodyEditorTab = 'structure' | 'code' | 'preview' | 'explain' | 'problems'
+type BodyEditorTab = 'structure' | 'code' | 'preview' | 'explain' | 'hierarchy' | 'problems'
 const BODY_EDITOR_TABS: readonly BodyEditorTab[] = [
   'structure',
   'code',
   'preview',
   'explain',
+  'hierarchy',
   'problems',
 ]
 
@@ -242,6 +249,16 @@ defineExpose({ revealPosition, insertAtCursor, selectProblem })
         Explain
       </button>
       <button
+        v-if="hierarchy"
+        type="button"
+        class="px-3 py-2 text-sm font-medium border-b-2 transition-colors"
+        :class="tab === 'hierarchy' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'"
+        data-testid="body-editor-tab-hierarchy"
+        @click="tab = 'hierarchy'"
+      >
+        Hierarchy
+      </button>
+      <button
         type="button"
         class="px-3 py-2 text-sm font-medium border-b-2 transition-colors"
         :class="tab === 'problems' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'"
@@ -296,6 +313,13 @@ defineExpose({ revealPosition, insertAtCursor, selectProblem })
         :name="construct?.name ?? ''"
         :type="construct?.type as ConstructType | undefined"
         :explain="props.explain!"
+      />
+      <HierarchyTab
+        v-if="tab === 'hierarchy'"
+        :key="construct?.name ?? ''"
+        :name="construct?.name ?? ''"
+        :type="construct?.type as ConstructType | undefined"
+        :hierarchy="props.hierarchy!"
       />
       <ProblemsPanel
         v-if="diagnosticsFetch && diagnosticsDefinition"

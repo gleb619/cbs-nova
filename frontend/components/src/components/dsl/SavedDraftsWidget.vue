@@ -78,6 +78,7 @@ onMounted(() => {
       test-id="dsl-saved-drafts-drawer"
       :width-class="drawerWidthClass"
     >
+      <!-- TODO: place new component here -->
       <slot
         name="header"
         :drafts="drafts"

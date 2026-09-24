@@ -76,6 +76,7 @@ const { dslApi, useDslApiMock, useDslWorkbenchMock, useApprovalsMock } = vi.hois
     reload: vi.fn(),
     run: vi.fn(),
     explain: vi.fn(),
+    hierarchy: vi.fn(),
     saveDraft: vi.fn(),
     publishDraft: vi.fn(),
     deleteDraft: vi.fn(),

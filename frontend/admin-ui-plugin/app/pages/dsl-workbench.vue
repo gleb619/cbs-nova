@@ -270,6 +270,14 @@ async function runExplain(
   return (await dslApi.explain(name, body, metadata)) as RunnerOutput
 }
 
+async function runHierarchy(
+  name: string,
+  body: unknown,
+  metadata?: Record<string, unknown>,
+): Promise<RunnerOutput> {
+  return (await dslApi.hierarchy(name, body, metadata)) as RunnerOutput
+}
+
 // Refresh and Validate moved to the Code tab toolbar (T589). The page owns
 // the wiring (reload + sync selection effects + draft refresh; validation
 // just delegates to the workbench).
@@ -503,6 +511,7 @@ onMounted(async () => {
             :constructs-fetch="fetchConstructs"
             :preview="runPreview"
             :explain="runExplain"
+            :hierarchy="runHierarchy"
             :refresh="onEditorRefresh"
             :validate="onEditorValidate"
             :busy="state.isSaving"

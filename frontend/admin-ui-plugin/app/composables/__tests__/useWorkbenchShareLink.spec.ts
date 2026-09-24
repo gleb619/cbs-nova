@@ -50,7 +50,14 @@ describe('useWorkbenchShareLink', () => {
   })
 
   it('exposes the tab allow-list for callers to validate against', () => {
-    expect(BODY_EDITOR_TABS).toEqual(['structure', 'code', 'preview', 'explain', 'problems'])
+    expect(BODY_EDITOR_TABS).toEqual([
+      'structure',
+      'code',
+      'preview',
+      'explain',
+      'hierarchy',
+      'problems',
+    ])
   })
 
   it('shareLink copies the URL to the clipboard and toasts on success', async () => {

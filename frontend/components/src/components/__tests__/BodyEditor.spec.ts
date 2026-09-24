@@ -37,6 +37,7 @@ const construct: DslConstruct = {
 }
 
 import ExplainTab from '../dsl/ExplainTab.vue'
+import HierarchyTab from '../dsl/HierarchyTab.vue'
 import PreviewTab from '../dsl/PreviewTab.vue'
 import RunResultPanel from '../dsl/RunResultPanel.vue'
 
@@ -55,6 +56,7 @@ function mountBodyEditor(props: Record<string, unknown>, fetchMock = defaultFetc
         PreviewTab,
         RunResultPanel,
         ExplainTab,
+        HierarchyTab,
       },
       provide: { [DSL_SCHEMA_FETCH_KEY as symbol]: fetchMock },
     },
@@ -176,6 +178,41 @@ describe('BodyEditor', () => {
 
     expect(explain).toHaveBeenCalledWith('CreateOrder', {}, { startedFrom: 'workbench' })
     expect(wrapper.text()).toContain('Test flow')
+  })
+
+  it('renders the Hierarchy tab when a hierarchy callback is provided', () => {
+    const wrapper = mountBodyEditor({
+      construct,
+      preview: vi.fn(),
+      explain: vi.fn(),
+      hierarchy: vi.fn(),
+    })
+    const buttons = wrapper.findAll('button').map((b) => b.text())
+    expect(buttons).toContain('Hierarchy')
+  })
+
+  it('calls the hierarchy callback when the Hierarchy tab Run is clicked', async () => {
+    const hierarchy = vi.fn().mockResolvedValue({ hierarchy: { nodes: [] } })
+    const wrapper = mountBodyEditor({ construct, hierarchy })
+
+    const hierarchyButton = wrapper.findAll('button').find((b) => b.text() === 'Hierarchy')!
+    await hierarchyButton.trigger('click')
+    await flushPromises()
+
+    const runButton = wrapper.find('[data-testid="run-button"]')
+    await runButton.trigger('click')
+    await flushPromises()
+
+    expect(hierarchy).toHaveBeenCalledWith(
+      'CreateOrder',
+      {
+        depth: 4,
+        includeActivities: true,
+        includeSignals: true,
+        includeQueries: true,
+      },
+      { startedFrom: 'workbench', endpoint: 'hierarchy' },
+    )
   })
 
   it('pulls in externally changed controlled code via keyed remount when the construct changes', async () => {
