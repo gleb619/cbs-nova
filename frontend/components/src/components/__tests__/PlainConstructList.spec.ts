@@ -8,6 +8,10 @@ const constructs: DslConstruct[] = [
   { name: 'CreditWallet', type: 'Transaction', status: 'Invalid' },
   { name: 'GetOrder', type: 'Function', status: 'Published' },
   { name: 'SendEmail', type: 'Helper', status: 'Draft' },
+  { name: 'AddFunds', type: 'Process', status: 'Added' },
+  { name: 'RetireFlow', type: 'Process', status: 'Deleted' },
+  { name: 'ConflictFlow', type: 'Process', status: 'Conflicting' },
+  { name: 'MutateFlow', type: 'Process', status: 'Modified' },
 ]
 
 describe('PlainConstructList', () => {
@@ -35,7 +39,11 @@ describe('PlainConstructList', () => {
     expect(text).toContain('CreditWallet')
     expect(text).toContain('GetOrder')
     expect(text).toContain('SendEmail')
-    expect(text).toContain('Process (1)')
+    expect(text).toContain('AddFunds')
+    expect(text).toContain('RetireFlow')
+    expect(text).toContain('ConflictFlow')
+    expect(text).toContain('MutateFlow')
+    expect(text).toContain('Process (5)')
     expect(text).toContain('Transaction (1)')
     expect(text).toContain('Function (1)')
     expect(text).toContain('Helper (1)')
@@ -96,6 +104,10 @@ describe('PlainConstructList', () => {
     expect(badges.some((b) => b.classes().includes('bg-red-100'))).toBe(true)
     expect(badges.some((b) => b.classes().includes('bg-blue-100'))).toBe(true)
     expect(badges.some((b) => b.classes().includes('bg-gray-200'))).toBe(true)
+    expect(badges.some((b) => b.classes().includes('bg-yellow-100'))).toBe(true)
+    expect(badges.some((b) => b.classes().includes('bg-emerald-100'))).toBe(true)
+    expect(badges.some((b) => b.classes().includes('bg-orange-100'))).toBe(true)
+    expect(badges.some((b) => b.classes().includes('bg-red-200'))).toBe(true)
   })
 
   it('renders a delete button for Draft items when deletable is true', () => {

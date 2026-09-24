@@ -13,6 +13,7 @@ import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.controller.DslFileHandler;
 import cbs.nova.starter.model.DslFileModels.FileContentResponse;
 import cbs.nova.starter.service.DslFileService;
+import cbs.nova.starter.service.DslSourcePathResolver;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -46,7 +47,8 @@ class DslFileHandlerTest {
     GlobalManager.globalManager().resetForTests();
     fileService = mock(DslFileService.class);
     DslProperties properties = DslProperties.builder().sourceDir("/tmp/dsl").build();
-    handler = new DslFileHandler(properties, fileService, new ObjectMapper());
+    handler = new DslFileHandler(properties, fileService, new DslSourcePathResolver(properties),
+            new ObjectMapper());
   }
 
   @AfterEach
@@ -79,7 +81,8 @@ class DslFileHandlerTest {
   @Test
   void readByNameReturns409WhenSourceDirNotConfigured() throws IOException {
     DslProperties properties = DslProperties.builder().build();
-    handler = new DslFileHandler(properties, fileService, new ObjectMapper());
+    handler = new DslFileHandler(properties, fileService, new DslSourcePathResolver(properties),
+            new ObjectMapper());
 
     ServerResponse response = handler.readByName(
             request("GET", "/api/dsl/files/by-name/LoanDisbursement", "LoanDisbursement"));
@@ -96,7 +99,8 @@ class DslFileHandlerTest {
       Files.writeString(nested, "step {}");
 
       DslProperties properties = DslProperties.builder().sourceDir(temp.toString()).build();
-      handler = new DslFileHandler(properties, fileService, new ObjectMapper());
+      handler = new DslFileHandler(properties, fileService, new DslSourcePathResolver(properties),
+              new ObjectMapper());
 
       registerProvider("InvoiceGeneration", "InvoiceGenerationDsl.java");
       when(fileService.readFile("dsl/InvoiceGenerationDsl.java"))
@@ -124,7 +128,8 @@ class DslFileHandlerTest {
       Files.writeString(nested, "step {}");
 
       DslProperties properties = DslProperties.builder().sourceDir(temp.toString()).build();
-      handler = new DslFileHandler(properties, fileService, new ObjectMapper());
+      handler = new DslFileHandler(properties, fileService, new DslSourcePathResolver(properties),
+              new ObjectMapper());
 
       registerProvider("BatchProcessing", "src/dsl/BatchProcessingDsl.java");
       when(fileService.readFile("src/dsl/BatchProcessingDsl.java"))
@@ -164,7 +169,8 @@ class DslFileHandlerTest {
       Files.writeString(nested, "step {}");
 
       DslProperties properties = DslProperties.builder().sourceDir(temp.toString()).build();
-      handler = new DslFileHandler(properties, fileService, new ObjectMapper());
+      handler = new DslFileHandler(properties, fileService, new DslSourcePathResolver(properties),
+              new ObjectMapper());
 
       registerProvider("ReserveInventory", "ReserveInventoryDsl.java");
 

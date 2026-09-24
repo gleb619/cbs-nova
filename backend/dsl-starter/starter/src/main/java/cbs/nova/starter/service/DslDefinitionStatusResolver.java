@@ -3,6 +3,7 @@ package cbs.nova.starter.service;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.model.DslIntrospectionModels.DefinitionStatus;
+import cbs.nova.starter.service.DslGitStatusResolver.ChangeType;
 import cbs.nova.starter.service.DslGitStatusResolver.RepoStatus;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -14,12 +15,37 @@ import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+/**
+ * Resolves the {@link DefinitionStatus} of one or more DSL definitions.
+ *
+ * <p>
+ * Per drafts spec §3.2 / §7 step 2: status comes from the <em>DSL source file</em> that declares
+ * each definition, not from the {@code .workbench/...} JSON markers. The markers are retained as a
+ * fallback only when git is absent or disabled.
+ *
+ * <p>
+ * Resolution for each name (in this order):
+ * <ol>
+ * <li>{@link DslSourcePathResolver#relativePath(String)} maps the name to its DSL file path.</li>
+ * <li>If git is enabled and a change is recorded for that path, the change's {@link ChangeType}
+ * maps to the {@link DefinitionStatus}: ADDED/UNTRACKED → ADDED, MODIFIED → MODIFIED, DELETED →
+ * DELETED, CONFLICTING → CONFLICTING.</li>
+ * <li>If git had nothing for that path, the legacy {@code .workbench/drafts/<name>.json} marker is
+ * consulted: present → DRAFT; absent → PUBLISHED.</li>
+ * </ol>
+ *
+ * <p>
+ * The git path can be reported under a builder worktree root that differs from the starter
+ * source-dir, so a change key {@code K} matches the resolved path {@code P} if {@code K.equals(P)},
+ * {@code K.endsWith("/" + P)}, or {@code P.endsWith("/" + K)}.
+ */
 @Component
 @RequiredArgsConstructor
 public class DslDefinitionStatusResolver {
 
   private final DslProperties dslProperties;
   private final DslGitStatusResolver gitResolver;
+  private final DslSourcePathResolver sourcePathResolver;
 
   public DefinitionStatus resolve(String name) {
     Map<String, DefinitionStatus> result = resolveAll(Set.of(name));
@@ -39,25 +65,64 @@ public class DslDefinitionStatusResolver {
     }
 
     Optional<RepoStatus> git = gitResolver.status(sourceDir);
-    Set<String> dirtyPaths = git.map(RepoStatus::dirtyPaths).orElse(Set.of());
-    Path workTree = git.map(RepoStatus::workTree).orElse(sourceDir);
+    Map<String, ChangeType> changes = git.map(RepoStatus::changes).orElse(Map.of());
 
     for (String name : names) {
-      if (Files.exists(safePath(sourceDir.resolve(StarterConstants.WORKBENCH_DRAFTS_DIR), name))) {
+      Optional<String> resolved = sourcePathResolver.relativePath(name);
+      ChangeType matched = resolved.flatMap(p -> matchChange(changes, p)).orElse(null);
+      if (matched != null) {
+        result.put(name, mapChangeType(matched));
+        continue;
+      }
+
+      Path draftMarker = safePath(sourceDir.resolve(StarterConstants.WORKBENCH_DRAFTS_DIR), name);
+      if (Files.exists(draftMarker)) {
         result.put(name, DefinitionStatus.DRAFT);
         continue;
       }
-
-      Path publishedFile = safePath(sourceDir.resolve(StarterConstants.WORKBENCH_PUBLISHED_DIR),
-              name);
-      if (git.isPresent() && isDirty(dirtyPaths, workTree, publishedFile)) {
-        result.put(name, DefinitionStatus.MODIFIED);
-        continue;
-      }
-
       result.put(name, DefinitionStatus.PUBLISHED);
     }
     return result;
+  }
+
+  private static DefinitionStatus mapChangeType(ChangeType type) {
+    return switch (type) {
+      case ADDED, UNTRACKED -> DefinitionStatus.ADDED;
+      case MODIFIED -> DefinitionStatus.MODIFIED;
+      case DELETED -> DefinitionStatus.DELETED;
+      case CONFLICTING -> DefinitionStatus.CONFLICTING;
+    };
+  }
+
+  /**
+   * Find a git change key {@code K} in {@code changes} that matches the resolved source path
+   * {@code P}. Match rule: {@code K.equals(P)} or {@code K.endsWith("/" + P)} or
+   * {@code P.endsWith("/" + K)}. The third clause lets {@code "dsl/LoanDsl.java"} match a builder
+   * key like {@code "repo/dsl/LoanDsl.java"}.
+   */
+  private static Optional<ChangeType> matchChange(Map<String, ChangeType> changes, String path) {
+    if (path == null || path.isBlank()) {
+      return Optional.empty();
+    }
+    ChangeType direct = changes.get(path);
+    if (direct != null) {
+      return Optional.of(direct);
+    }
+    String suffix = "/" + path;
+    for (Map.Entry<String, ChangeType> e : changes.entrySet()) {
+      String k = e.getKey();
+      if (k != null && k.endsWith(suffix)) {
+        return Optional.of(e.getValue());
+      }
+    }
+    String pathSuffix = "/" + path;
+    for (Map.Entry<String, ChangeType> e : changes.entrySet()) {
+      String k = e.getKey();
+      if (k != null && pathSuffix.endsWith("/" + k)) {
+        return Optional.of(e.getValue());
+      }
+    }
+    return Optional.empty();
   }
 
   private Path sourceDir() {
@@ -67,20 +132,6 @@ public class DslDefinitionStatusResolver {
     }
     Path dir = Path.of(sourceDirProperty);
     return Files.isDirectory(dir) ? dir : null;
-  }
-
-  private boolean isDirty(Set<String> dirtyPaths, Path workTree, Path file) {
-    if (!Files.exists(file)) {
-      return false;
-    }
-    Path normalized = file.toAbsolutePath().normalize();
-    String relative;
-    if (normalized.startsWith(workTree)) {
-      relative = workTree.relativize(normalized).toString();
-    } else {
-      relative = normalized.toString();
-    }
-    return dirtyPaths.contains(relative);
   }
 
   private static Path safePath(Path directory, String name) {

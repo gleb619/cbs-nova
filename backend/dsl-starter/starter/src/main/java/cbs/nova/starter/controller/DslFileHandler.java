@@ -8,9 +8,9 @@ import cbs.nova.starter.model.DslFileModels.FileContentResponse;
 import cbs.nova.starter.model.DslFileModels.FileEntry;
 import cbs.nova.starter.model.DslFileModels.FlushResult;
 import cbs.nova.starter.model.DslFileModels.PendingWritesStatus;
-import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.starter.service.DslFileService;
+import cbs.nova.starter.service.DslSourcePathResolver;
 import jakarta.servlet.ServletException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,12 +24,9 @@ import tools.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Stream;
 
 @Slf4j
 @Component
@@ -39,6 +36,7 @@ public class DslFileHandler {
 
   private final DslProperties dslProperties;
   private final DslFileService fileService;
+  private final DslSourcePathResolver sourcePathResolver;
   private final ObjectMapper objectMapper;
 
   public ServerResponse list(ServerRequest request) {
@@ -88,11 +86,11 @@ public class DslFileHandler {
     if (name == null || name.isBlank()) {
       return badRequest("name is required");
     }
-    String path = resolveRelativePath(name);
-    if (path == null || path.isBlank()) {
+    Optional<String> resolved = sourcePathResolver.relativePath(name);
+    if (resolved.isEmpty() || resolved.get().isBlank()) {
       return ServerResponse.notFound().build();
     }
-    return doReadFile(path);
+    return doReadFile(resolved.get());
   }
 
   public ServerResponse writeByName(ServerRequest request) throws IOException {
@@ -104,10 +102,11 @@ public class DslFileHandler {
     if (name == null || name.isBlank()) {
       return badRequest("name is required");
     }
-    String path = resolveRelativePath(name);
-    if (path == null || path.isBlank()) {
+    Optional<String> resolved = sourcePathResolver.relativePath(name);
+    if (resolved.isEmpty() || resolved.get().isBlank()) {
       return ServerResponse.notFound().build();
     }
+    String path = resolved.get();
     String content = readBody(request);
     fileService.stageWrite(path, content);
     log.info("[DSL files] staged write for {} (resolved from {})", path, name);
@@ -167,30 +166,6 @@ public class DslFileHandler {
     int pending = fileService.pendingCount();
     return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON)
             .body(new PendingWritesStatus(pending));
-  }
-
-  private String resolveRelativePath(String name) {
-    String filename = GlobalManager.globalManager().findFilename(name).orElse(null);
-    if (filename == null || filename.isBlank()) {
-      return null;
-    }
-    String sourceDir = dslProperties.sourceDir();
-    if (sourceDir == null || sourceDir.isBlank()) {
-      return filename;
-    }
-    Path root = Path.of(sourceDir).normalize();
-    String bareFilename = Path.of(filename).getFileName().toString();
-    try (Stream<Path> stream = Files.find(root, Integer.MAX_VALUE,
-            (p, _) -> Files.isRegularFile(p) && p.getFileName().toString().equals(bareFilename))) {
-      Optional<Path> found = stream.findFirst();
-      if (found.isPresent()) {
-        return root.relativize(found.get()).toString().replace('\\', '/');
-      }
-    } catch (IOException e) {
-      log.warn("[DSL files] failed to resolve source path for {} under {}: {}", name, root,
-              e.getMessage());
-    }
-    return filename;
   }
 
   private String pathVariable(ServerRequest request) {
