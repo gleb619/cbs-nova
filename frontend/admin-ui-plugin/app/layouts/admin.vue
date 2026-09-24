@@ -6,7 +6,7 @@ import {
   AppShell,
   AppSidebarToggle,
   buildDocsBaseUrl,
-  DslSavedDraftsWidget,
+  DslDraftsWidget,
   NotificationsWidget,
   useSavedDrafts,
 } from '@cbs/components'
@@ -110,7 +110,7 @@ const displayName = computed(
       <span class="text-neutral-800 font-semibold">CBS Nova Admin</span>
     </template>
     <template #widgets>
-      <DslSavedDraftsWidget
+      <DslDraftsWidget
         :drafts="drafts"
         :loading="draftsLoading"
         :error="draftsError"

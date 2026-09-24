@@ -1,7 +1,7 @@
 import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
 import type { SavedDraftSummary } from '../../composables/useSavedDrafts'
-import SavedDraftsList from '../dsl/SavedDraftsList.vue'
+import DraftsList from '../dsl/DraftsList.vue'
 
 const DRAFTS: SavedDraftSummary[] = [
   { name: 'alpha', type: 'Process', status: 'Draft', updatedAt: 1 },
@@ -9,9 +9,9 @@ const DRAFTS: SavedDraftSummary[] = [
 ]
 
 const mountList = (props: Record<string, unknown> = {}) =>
-  mount(SavedDraftsList, { props: { drafts: DRAFTS, ...props } })
+  mount(DraftsList, { props: { drafts: DRAFTS, ...props } })
 
-describe('SavedDraftsList', () => {
+describe('DraftsList', () => {
   it('renders one row per draft with its type and status', () => {
     const wrapper = mountList()
 

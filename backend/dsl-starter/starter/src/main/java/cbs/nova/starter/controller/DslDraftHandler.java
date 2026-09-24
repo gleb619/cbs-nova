@@ -23,6 +23,7 @@ import cbs.nova.starter.model.VcsModels.DiscardRequest;
 import cbs.nova.starter.model.VcsModels.DraftRequest;
 import cbs.nova.starter.model.VcsModels.DraftResponse;
 import cbs.nova.starter.model.VcsModels.DraftSummary;
+import cbs.nova.starter.model.VcsModels.DraftsMetadata;
 import cbs.nova.starter.model.VcsModels.HistoryDiffResponse;
 import cbs.nova.starter.model.VcsModels.ImportBundleResult;
 import cbs.nova.starter.model.VcsModels.ImportEntryResult;
@@ -65,6 +66,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import org.eclipse.jgit.lib.Repository;
+import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import tools.jackson.databind.ObjectMapper;
 
 @Slf4j
@@ -397,6 +400,71 @@ public class DslDraftHandler {
     var builder = builderClient();
     return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON)
             .body(builder.listDrafts(pageSize, skip));
+  }
+
+  public ServerResponse metadata(ServerRequest request) {
+    var dir = ensureConfigured(null);
+    Path draftsDir = dir.isError()
+            ? null
+            : draftsDir(dir.path());
+
+    int draftCount = 0;
+    Double sizeMb = null;
+    if (draftsDir != null && Files.isDirectory(draftsDir)) {
+      try (var stream = Files.list(draftsDir)) {
+        List<Path> files = stream
+                .filter(p -> p.toString().endsWith(".json"))
+                .toList();
+        draftCount = files.size();
+        long totalBytes = 0L;
+        for (Path f : files) {
+          totalBytes += Files.size(f);
+        }
+        sizeMb = Math.round(totalBytes / 1_048_576.0 * 100.0) / 100.0;
+      } catch (IOException e) {
+        log.warn("[DSL drafts] metadata: failed to scan drafts dir {}: {}", draftsDir,
+                e.getMessage());
+      }
+    }
+
+    Path sourceRoot = dir.isError() ? null : dir.path();
+    String workbenchPath = sourceRoot == null
+            ? WORKBENCH_DRAFTS_DIR
+            : sourceRoot.relativize(draftsDir(sourceRoot)).toString().replace('\\', '/');
+
+    boolean gitEnabled = dslProperties.git().enabled();
+    int cacheTtl = dslProperties.git().statusCacheTtlSeconds();
+    int historyLimit = dslProperties.drafts().historyLimit();
+
+    String gitBranch = null;
+    if (gitEnabled && sourceRoot != null) {
+      gitBranch = resolveGitBranch(sourceRoot);
+    }
+
+    return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON)
+            .body(new DraftsMetadata(draftCount, workbenchPath, sizeMb, gitBranch,
+                    gitEnabled, cacheTtl, historyLimit));
+  }
+
+  private @Nullable String resolveGitBranch(Path searchRoot) {
+    Path repoDir = dslProperties.git().repositoryDir() != null
+            ? Path.of(dslProperties.git().repositoryDir())
+            : searchRoot;
+    try {
+      try (Repository repo = new FileRepositoryBuilder()
+              .findGitDir(repoDir.toFile())
+              .setMustExist(false)
+              .build()) {
+        if (repo.getDirectory() == null) {
+          return null;
+        }
+        return repo.getBranch();
+      }
+    } catch (IOException | IllegalArgumentException e) {
+      log.debug("[DSL drafts] metadata: could not resolve git branch from {}: {}", repoDir,
+              e.getMessage());
+      return null;
+    }
   }
 
   public ServerResponse read(ServerRequest request) throws IOException {

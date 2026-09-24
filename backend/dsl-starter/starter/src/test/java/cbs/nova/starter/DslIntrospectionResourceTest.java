@@ -20,7 +20,7 @@ import cbs.nova.starter.config.router.DslIntrospectionRouterConfiguration;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.controller.DslIntrospectionHandler;
 import cbs.nova.starter.converter.RequestQueryConverter;
-import cbs.nova.starter.client.DslBuilderClient;
+import cbs.nova.starter.builder.DslBuilderClient;
 import cbs.nova.starter.service.DslDefinitionStatusResolver;
 import cbs.nova.starter.service.DslGitStatusResolver;
 import cbs.nova.starter.service.DslSourcePathResolver;

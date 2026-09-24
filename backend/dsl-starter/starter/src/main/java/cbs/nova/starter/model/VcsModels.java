@@ -142,4 +142,35 @@ public final class VcsModels {
 
   }
 
+  /**
+   * Snapshot of the current drafts workspace setup. Returned by
+   * {@code GET /api/dsl/drafts/metadata}.
+   *
+   * @param draftCount
+   *          number of draft records currently stored in {@code .workbench/drafts/}
+   * @param workbenchPath
+   *          workspace-relative path to the Workbench drafts directory (never an absolute path)
+   * @param sizeMb
+   *          total size of all draft JSON files in MB, rounded to two decimal places;
+   *          {@code null} when the directory is inaccessible
+   * @param gitBranch
+   *          name of the current git branch; {@code null} when git is disabled or no repo exists
+   * @param gitEnabled
+   *          whether git integration is enabled for the DSL workspace
+   * @param statusCacheTtlSeconds
+   *          configured git status cache TTL
+   * @param historyLimit
+   *          configured maximum number of history snapshots kept per definition
+   */
+  public record DraftsMetadata(
+          int draftCount,
+          String workbenchPath,
+          @JsonInclude(JsonInclude.Include.NON_NULL) Double sizeMb,
+          @JsonInclude(JsonInclude.Include.NON_NULL) String gitBranch,
+          boolean gitEnabled,
+          int statusCacheTtlSeconds,
+          int historyLimit) {
+
+  }
+
 }

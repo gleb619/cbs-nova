@@ -1,6 +1,7 @@
 export type { operations } from './api.generated'
 export * from './approvals'
 export * from './buildInfo'
+export * from './drafts'
 export * from './dashboard'
 export * from './dsl'
 export * from './events'

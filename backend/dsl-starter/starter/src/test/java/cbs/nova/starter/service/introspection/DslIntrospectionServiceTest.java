@@ -30,7 +30,7 @@ import cbs.nova.starter.model.DslIntrospectionModels.LogicInfoDto;
 import cbs.nova.starter.model.DslIntrospectionModels.LogicStatus;
 import cbs.nova.starter.service.DslDefinitionStatusResolver;
 import cbs.nova.starter.service.DslSourcePathResolver;
-import cbs.nova.starter.client.DslBuilderClient;
+import cbs.nova.starter.builder.DslBuilderClient;
 import cbs.nova.starter.service.DslGitStatusResolver;
 import cbs.nova.starter.service.DslIntrospectionService;
 import java.util.List;

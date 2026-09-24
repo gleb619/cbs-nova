@@ -170,8 +170,23 @@ const expectedProxies: readonly ExpectedProxy[] = [
   },
   {
     method: 'GET',
+    backendPath: '/api/dsl/drafts/{name}/commits',
+    bffPath: '/api/v1/dsl/drafts/{name}/commits',
+  },
+  {
+    method: 'POST',
+    backendPath: '/api/dsl/drafts/{name}/discard',
+    bffPath: '/api/v1/dsl/drafts/{name}/discard',
+  },
+  {
+    method: 'GET',
     backendPath: '/api/dsl/drafts',
     bffPath: '/api/v1/dsl/drafts',
+  },
+  {
+    method: 'GET',
+    backendPath: '/api/dsl/drafts/metadata',
+    bffPath: '/api/v1/dsl/drafts/metadata',
   },
   {
     method: 'GET',

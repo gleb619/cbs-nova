@@ -79,6 +79,10 @@ public class DslDraftRouterConfiguration {
               @ApiResponse(responseCode = "404", description = "Draft not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
               @ApiResponse(responseCode = "409", description = "Source directory not configured or not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
           })),
+      @RouterOperation(path = "/api/dsl/drafts/metadata", beanClass = DslDraftHandler.class, beanMethod = "metadata", method = RequestMethod.GET, operation = @Operation(operationId = "getDraftsMetadata", summary = "Return workspace setup metadata for the drafts folder (count, size, git branch, config)", tags = {
+          "DSL Admin"}, responses = {
+              @ApiResponse(responseCode = "200", description = "Drafts metadata returned")
+          })),
       @RouterOperation(path = "/api/dsl/drafts", beanClass = DslDraftHandler.class, beanMethod = "list", method = RequestMethod.GET, operation = @Operation(operationId = "listDrafts", summary = "List Workbench draft summaries from .workbench/drafts", tags = {
           "DSL Admin"}, responses = {
               @ApiResponse(responseCode = "200", description = "List of draft summaries", content = @Content(mediaType = "application/json", schema = @Schema(implementation = PageResponse.class)))
@@ -91,6 +95,7 @@ public class DslDraftRouterConfiguration {
   })
   RouterFunction<ServerResponse> dslDraftRouter(DslDraftHandler draftHandler) {
     return RouterFunctions.route()
+            .GET("/api/dsl/drafts/metadata", draftHandler::metadata)
             .GET("/api/dsl/drafts", draftHandler::list)
             .GET("/api/dsl/drafts/{name}", draftHandler::read)
             .POST("/api/dsl/drafts/{name}/save", draftHandler::save)

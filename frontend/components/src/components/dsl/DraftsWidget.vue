@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import type { DraftsMetadata } from '../../types/drafts'
 import type { SavedDraftSummary } from '../../composables/useSavedDrafts'
 import CbsDrawer from '../CbsDrawer.vue'
-import SavedDraftsList from './SavedDraftsList.vue'
+import DraftMetadataCard from './DraftMetadataCard.vue'
+import DraftsList from './DraftsList.vue'
 
 const props = withDefaults(
   defineProps<{
@@ -13,14 +15,20 @@ const props = withDefaults(
     autoLoad?: boolean
     drawerTitle?: string
     drawerWidthClass?: string
+    metadata?: DraftsMetadata | null
+    metadataLoading?: boolean
+    metadataError?: string | null
   }>(),
   {
     loading: false,
     error: null,
     selectedName: null,
     autoLoad: false,
-    drawerTitle: 'Saved Drafts',
+    drawerTitle: 'Drafts',
     drawerWidthClass: 'w-96',
+    metadata: null,
+    metadataLoading: false,
+    metadataError: null,
   },
 )
 
@@ -28,6 +36,7 @@ const emit = defineEmits<{
   (event: 'select', name: string): void
   (event: 'refresh'): void
   (event: 'open'): void
+  (event: 'refresh-metadata'): void
 }>()
 
 const drawerOpen = ref(false)
@@ -65,7 +74,7 @@ onMounted(() => {
       type="button"
       class="px-2 py-0.5 rounded text-xs font-medium border border-neutral-300 hover:bg-neutral-100"
       data-testid="dsl-saved-drafts-widget-details"
-      aria-label="Open saved drafts"
+      aria-label="Open drafts"
       @click="open"
     >
       Details
@@ -74,11 +83,10 @@ onMounted(() => {
     <CbsDrawer
       v-model:open="drawerOpen"
       :title="drawerTitle"
-      close-label="Close saved drafts"
+      close-label="Close drafts"
       test-id="dsl-saved-drafts-drawer"
       :width-class="drawerWidthClass"
     >
-      <!-- TODO: place new component here -->
       <slot
         name="header"
         :drafts="drafts"
@@ -86,10 +94,16 @@ onMounted(() => {
         :error="error"
         :refresh="() => emit('refresh')"
       />
+
+      <DraftMetadataCard
+        :metadata="metadata"
+        :loading="metadataLoading"
+        :error="metadataError"
+      />
+
       <div class="flex items-center justify-between px-3 py-2 border-b border-gray-800">
         <span class="text-xs uppercase tracking-wide text-gray-400">
-          {{ drafts.length }}
-          saved
+          {{ drafts.length }} saved
         </span>
         <button
           type="button"
@@ -101,6 +115,7 @@ onMounted(() => {
           {{ loading ? 'Refreshing…' : 'Refresh' }}
         </button>
       </div>
+
       <p
         v-if="error"
         class="px-3 py-2 text-xs text-red-300 bg-red-950/40 border-b border-red-900"
@@ -108,12 +123,14 @@ onMounted(() => {
       >
         {{ error }}
       </p>
-      <SavedDraftsList
+
+      <DraftsList
         :drafts="drafts"
         :loading="loading"
         :selected-name="selectedName"
         @select="handleSelect"
       />
+
       <slot
         name="footer"
         :drafts="drafts"
