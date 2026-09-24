@@ -103,8 +103,8 @@ public class DslGitStatusResolver {
 
   /**
    * Snapshot of a repository: the work tree path, the union of all changed paths
-   * ({@code dirtyPaths}), and the typed classification per path ({@code changes}).
-   * Backward compatible: the legacy 2-arg constructor leaves {@code changes} empty.
+   * ({@code dirtyPaths}), and the typed classification per path ({@code changes}). Backward
+   * compatible: the legacy 2-arg constructor leaves {@code changes} empty.
    */
   public record RepoStatus(Path workTree, Set<String> dirtyPaths,
           Map<String, ChangeType> changes) {
