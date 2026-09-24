@@ -106,8 +106,18 @@ public class ExtendedSelectQuery extends Query implements Matchable {
     Set<FromItem> allFromItems = new LinkedHashSet<>(fromItems);
     allFromItems.addAll(usedTableReferences);
 
+    // Generate aliases for every TableReference the compiled SQL will render:
+    // not only those collected from selection/criteria/groupBy/orders, but also
+    // those reachable from explicit FROM items. Missing aliases previously
+    // caused `QueryCompiler#getAlias` to return null and render the literal
+    // "null" as the table alias (e.g. "SELECT COUNT(*) FROM dsl_x null").
+    Set<TableReference> aliasedTableReferences = new LinkedHashSet<>(usedTableReferences);
+    for (FromItem item : fromItems) {
+      item.collectTableReferences(aliasedTableReferences);
+    }
+
     QueryCompiler compiler = new QueryCompiler(output,
-            AliasGenerator.generateAliases(usedTableReferences, TABLE_REFERENCE_ALIAS_ALPHABET));
+            AliasGenerator.generateAliases(aliasedTableReferences, TABLE_REFERENCE_ALIAS_ALPHABET));
 
     compiler.write("SELECT");
     if (selection.isEmpty()) {

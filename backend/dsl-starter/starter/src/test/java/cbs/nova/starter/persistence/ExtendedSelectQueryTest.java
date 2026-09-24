@@ -321,6 +321,33 @@ class ExtendedSelectQueryTest {
   }
 
   @Test
+  void countQueryRendersFromAliasNotLiteralNull() {
+    ExtendedSelectQuery query = new ExtendedSelectQuery();
+    query.addFrom(r);
+    query.addToSelection(Literal.unsafe("COUNT(*)"));
+
+    String sql = query.toString();
+
+    assertThat(sql).doesNotContain("null");
+    assertThat(sql).contains("COUNT(*)");
+    assertThat(sql).contains("users u");
+  }
+
+  @Test
+  void countQueryWithWhereRendersFromAliasNotLiteralNull() {
+    ExtendedSelectQuery query = new ExtendedSelectQuery();
+    query.addFrom(r);
+    query.addToSelection(Literal.unsafe("COUNT(*)"));
+    query.addCriteria(Criteria.equal(r.get(status), Literal.of("ACTIVE")));
+
+    String sql = query.toString();
+
+    assertThat(sql).doesNotContain("null");
+    assertThat(sql).contains("COUNT(*)");
+    assertThat(sql).contains("users u");
+  }
+
+  @Test
   void fullQueryWithAllClauses() {
     ExtendedSelectQuery query = new ExtendedSelectQuery();
     query.addToSelection(r.get(id));
