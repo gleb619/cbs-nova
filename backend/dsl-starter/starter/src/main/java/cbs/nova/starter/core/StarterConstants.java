@@ -325,6 +325,8 @@ public class StarterConstants {
   public static final String CACHE_FILE_EXISTS_PREFIX = "fileExists:";
   public static final String CACHE_PENDING_COUNT_KEY = "pendingCount";
   public static final String CACHE_VCS_STATUS_KEY = "vcsStatus";
+  public static final String CACHE_VCS_LOG_PREFIX = "vcsLog:";
+  public static final String CACHE_VCS_SHOW_PREFIX = "vcsShow:";
 
   // Semver regex fragments (SemverHelper)
 

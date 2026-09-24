@@ -13,13 +13,18 @@ import cbs.nova.starter.model.DslFileModels.FileEntry;
 import cbs.nova.starter.model.DslFileModels.FlushResult;
 import cbs.nova.starter.model.DslFileModels.PendingWritesStatus;
 import cbs.nova.starter.model.PageResponse;
+import cbs.nova.starter.model.VcsModels.CommitRequest;
+import cbs.nova.starter.model.VcsModels.CommitResult;
 import cbs.nova.starter.model.VcsModels.DefinitionBundle;
 import cbs.nova.starter.model.VcsModels.DefinitionHistoryEntry;
+import cbs.nova.starter.model.VcsModels.DiscardRequest;
+import cbs.nova.starter.model.VcsModels.DiscardResult;
 import cbs.nova.starter.model.VcsModels.DraftRequest;
 import cbs.nova.starter.model.VcsModels.DraftResponse;
 import cbs.nova.starter.model.VcsModels.DraftSummary;
 import cbs.nova.starter.model.VcsModels.HistoryDiffResponse;
 import cbs.nova.starter.model.VcsModels.ImportBundleResult;
+import cbs.nova.starter.model.VcsModels.LogEntry;
 import cbs.nova.starter.service.DslGitStatusResolver.RepoStatus;
 import io.github.resilience4j.bulkhead.Bulkhead;
 import io.github.resilience4j.bulkhead.BulkheadFullException;
@@ -46,6 +51,8 @@ public class DslBuilderClient {
   private static final ParameterizedTypeReference<List<DefinitionHistoryEntry>> HISTORY_TYPE = new ParameterizedTypeReference<>() {
   };
   private static final ParameterizedTypeReference<List<FileEntry>> FILE_ENTRIES_TYPE = new ParameterizedTypeReference<>() {
+  };
+  private static final ParameterizedTypeReference<List<LogEntry>> LOG_ENTRY_TYPE = new ParameterizedTypeReference<>() {
   };
 
   private final RestClient restClient;
@@ -183,6 +190,35 @@ public class DslBuilderClient {
     });
   }
 
+  public CommitResult commit(CommitRequest request) {
+    CommitResult result = execute(() -> doCommit(request));
+    // A successful commit changes the working tree state: drop file reads, vcs status and log
+    // pages.
+    cache.invalidateFiles();
+    cache.invalidateVcsStatus();
+    cache.invalidateVcsLog();
+    return result;
+  }
+
+  public DiscardResult discard(DiscardRequest request) {
+    DiscardResult result = execute(() -> doDiscard(request));
+    // Discard removes the dirty state for those paths and rewrites file contents; drop
+    // file reads, log + vcs status + per-draft entries.
+    cache.invalidateFiles();
+    cache.invalidateVcsStatus();
+    cache.invalidateVcsLog();
+    return result;
+  }
+
+  public List<LogEntry> vcsLog(String path, int limit) {
+    return cache.vcsLog(path, limit, () -> execute(() -> doLog(path, limit)));
+  }
+
+  public String vcsShow(String path, String commitId) {
+    return cache.vcsShow(path, commitId,
+            () -> execute(() -> doShow(path, commitId)));
+  }
+
   private CompileResult doCompile(CompileRequest request) {
     return restClient.post().uri("/api/dsl/compile").body(request).retrieve()
             .body(CompileResult.class);
@@ -299,6 +335,34 @@ public class DslBuilderClient {
 
   private RepoStatus doVcsStatus() {
     return restClient.get().uri("/api/dsl/vcs/status").retrieve().body(RepoStatus.class);
+  }
+
+  private CommitResult doCommit(CommitRequest request) {
+    return restClient.post().uri("/api/dsl/vcs/commit").body(request).retrieve()
+            .body(CommitResult.class);
+  }
+
+  private DiscardResult doDiscard(DiscardRequest request) {
+    return restClient.post().uri("/api/dsl/vcs/discard").body(request).retrieve()
+            .body(DiscardResult.class);
+  }
+
+  private List<LogEntry> doLog(String path, int limit) {
+    return restClient.get()
+            .uri(uriBuilder -> uriBuilder.path("/api/dsl/vcs/log")
+                    .queryParam("path", path)
+                    .queryParam("limit", limit)
+                    .build())
+            .retrieve().body(LOG_ENTRY_TYPE);
+  }
+
+  private String doShow(String path, String commitId) {
+    return restClient.get()
+            .uri(uriBuilder -> uriBuilder.path("/api/dsl/vcs/show")
+                    .queryParam("path", path)
+                    .queryParam("commit", commitId)
+                    .build())
+            .retrieve().body(String.class);
   }
 
   private static URI fileUri(UriBuilder uriBuilder, String path) {

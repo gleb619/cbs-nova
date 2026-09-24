@@ -130,7 +130,7 @@ class DslDraftApprovalGateTest {
             new DslDefinitionBundleService(mapper, Optional.empty(),
                     DslProperties.bundleServiceDefaults()),
             AuditTestSupport.providerOf(audit.service()), null, null, null,
-            roleResolverProvider());
+            roleResolverProvider(), null, null);
   }
 
   private static ObjectProvider<RoleResolver> roleResolverProvider() {

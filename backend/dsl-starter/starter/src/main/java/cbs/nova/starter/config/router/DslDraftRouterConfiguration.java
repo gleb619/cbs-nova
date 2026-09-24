@@ -60,6 +60,18 @@ public class DslDraftRouterConfiguration {
               @ApiResponse(responseCode = "409", description = "Source directory not configured or not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
               @ApiResponse(responseCode = "500", description = "Reload failed", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
           })),
+      @RouterOperation(path = "/api/dsl/drafts/{name}/discard", beanClass = DslDraftHandler.class, beanMethod = "discard", method = RequestMethod.POST, operation = @Operation(operationId = "discardDraft", summary = "Discard working-tree changes for a definition and remove its legacy marker", tags = {
+          "DSL Admin"}, responses = {
+              @ApiResponse(responseCode = "200", description = "Changes discarded"),
+              @ApiResponse(responseCode = "404", description = "Definition has no source path", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+              @ApiResponse(responseCode = "409", description = "Builder not available or source directory not configured", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+          })),
+      @RouterOperation(path = "/api/dsl/drafts/{name}/commits", beanClass = DslDraftHandler.class, beanMethod = "commits", method = RequestMethod.GET, operation = @Operation(operationId = "listDraftCommits", summary = "List git commits for a definition's source path", tags = {
+          "DSL Admin"}, responses = {
+              @ApiResponse(responseCode = "200", description = "List of commit entries"),
+              @ApiResponse(responseCode = "404", description = "Definition has no source path", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+              @ApiResponse(responseCode = "409", description = "Builder not available or source directory not configured", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+          })),
       @RouterOperation(path = "/api/dsl/drafts/{name}", beanClass = DslDraftHandler.class, beanMethod = "delete", method = RequestMethod.DELETE, operation = @Operation(operationId = "deleteDraft", summary = "Delete a Workbench draft construct", tags = {
           "DSL Admin"}, responses = {
               @ApiResponse(responseCode = "200", description = "Draft deleted"),
@@ -87,6 +99,8 @@ public class DslDraftRouterConfiguration {
             .GET("/api/dsl/drafts/{name}/history/{timestamp}", draftHandler::historyEntry)
             .GET("/api/dsl/drafts/{name}/history/{timestamp}/diff", draftHandler::historyDiff)
             .POST("/api/dsl/drafts/{name}/history/{timestamp}/restore", draftHandler::restore)
+            .POST("/api/dsl/drafts/{name}/discard", draftHandler::discard)
+            .GET("/api/dsl/drafts/{name}/commits", draftHandler::commits)
             .DELETE("/api/dsl/drafts/{name}", draftHandler::delete)
             .build();
   }

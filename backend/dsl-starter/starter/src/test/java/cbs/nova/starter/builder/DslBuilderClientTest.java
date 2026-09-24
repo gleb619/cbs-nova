@@ -30,6 +30,7 @@ import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
 import java.net.http.HttpClient;
 import java.time.Duration;
 import java.util.Map;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -372,6 +373,99 @@ class DslBuilderClientTest {
     // Cached read still works — no extra server hit was registered for it.
     DraftRequest cached = client.readDraft("foo");
     assertThat(cached.status()).isEqualTo("Draft");
+  }
+
+  @Test
+  void commitPostsPathsMessageAndAuthor() {
+    var client = client(circuitBreaker(5, 30, 3));
+    server.expect(requestTo("http://localhost:8091/api/dsl/vcs/commit"))
+            .andExpect(method(HttpMethod.POST))
+            .andExpect(content().string(containsString("\"paths\":[\"dsl/LoanDsl.java\"]")))
+            .andExpect(content().string(containsString("\"message\":\"Publish Loan\"")))
+            .andExpect(content().string(containsString("\"authorName\":\"alice\"")))
+            .andExpect(content().string(containsString("\"authorEmail\":\"alice@cbs-nova.local\"")))
+            .andRespond(withSuccess(
+                    "{\"commitId\":\"abc123\",\"paths\":[\"dsl/LoanDsl.java\"],\"timestampMillis\":42}",
+                    MediaType.APPLICATION_JSON));
+
+    var result = client.commit(new cbs.nova.starter.model.VcsModels.CommitRequest(
+            List.of("dsl/LoanDsl.java"), "Publish Loan", "alice", "alice@cbs-nova.local"));
+
+    assertThat(result.commitId()).isEqualTo("abc123");
+    assertThat(result.paths()).containsExactly("dsl/LoanDsl.java");
+    assertThat(result.timestampMillis()).isEqualTo(42);
+  }
+
+  @Test
+  void discardPostsPaths() {
+    var client = client(circuitBreaker(5, 30, 3));
+    server.expect(requestTo("http://localhost:8091/api/dsl/vcs/discard"))
+            .andExpect(method(HttpMethod.POST))
+            .andExpect(content().string(containsString("\"paths\":[\"dsl/LoanDsl.java\"]")))
+            .andRespond(withSuccess(
+                    "{\"discarded\":[\"dsl/LoanDsl.java\"]}",
+                    MediaType.APPLICATION_JSON));
+
+    var result = client.discard(new cbs.nova.starter.model.VcsModels.DiscardRequest(
+            List.of("dsl/LoanDsl.java")));
+
+    assertThat(result.discarded()).containsExactly("dsl/LoanDsl.java");
+  }
+
+  @Test
+  void vcsLogReadsPathAndLimit() {
+    var client = client(circuitBreaker(5, 30, 3));
+    server.expect(requestTo("http://localhost:8091/api/dsl/vcs/log?path=dsl/LoanDsl.java&limit=5"))
+            .andExpect(method(HttpMethod.GET))
+            .andRespond(withSuccess(
+                    "[{\"commitId\":\"abc123\",\"timestampMillis\":1,\"author\":\"alice\",\"message\":\"init\"}]",
+                    MediaType.APPLICATION_JSON));
+
+    var entries = client.vcsLog("dsl/LoanDsl.java", 5);
+
+    assertThat(entries).hasSize(1);
+    assertThat(entries.get(0).commitId()).isEqualTo("abc123");
+    assertThat(entries.get(0).author()).isEqualTo("alice");
+    assertThat(entries.get(0).message()).isEqualTo("init");
+  }
+
+  @Test
+  void vcsShowReadsPathAndCommit() {
+    var client = client(circuitBreaker(5, 30, 3));
+    server.expect(
+            requestTo("http://localhost:8091/api/dsl/vcs/show?path=dsl/LoanDsl.java&commit=abc123"))
+            .andExpect(method(HttpMethod.GET))
+            .andRespond(withSuccess("class LoanDsl {}", MediaType.TEXT_PLAIN));
+
+    String content = client.vcsShow("dsl/LoanDsl.java", "abc123");
+
+    assertThat(content).isEqualTo("class LoanDsl {}");
+  }
+
+  @Test
+  void commitInvalidatesCachedFileStatusAndLog() {
+    var client = client(circuitBreaker(5, 30, 3));
+    server.expect(requestTo("http://localhost:8091/api/dsl/vcs/commit"))
+            .andExpect(method(HttpMethod.POST))
+            .andRespond(withSuccess(
+                    "{\"commitId\":\"abc123\",\"paths\":[\"dsl/LoanDsl.java\"],\"timestampMillis\":42}",
+                    MediaType.APPLICATION_JSON));
+    server.expect(requestTo("http://localhost:8091/api/dsl/files/dsl/LoanDsl.java"))
+            .andExpect(method(HttpMethod.GET))
+            .andRespond(withSuccess(
+                    "{\"path\":\"dsl/LoanDsl.java\",\"content\":\"v2\",\"pending\":false,\"crc32\":1}",
+                    MediaType.APPLICATION_JSON));
+    server.expect(requestTo("http://localhost:8091/api/dsl/vcs/status"))
+            .andExpect(method(HttpMethod.GET))
+            .andRespond(withSuccess(
+                    "{\"workTree\":\"/repo\",\"dirtyPaths\":[],\"changes\":{}}",
+                    MediaType.APPLICATION_JSON));
+
+    client.commit(new cbs.nova.starter.model.VcsModels.CommitRequest(
+            List.of("dsl/LoanDsl.java"), "Publish", "alice", "alice@cbs-nova.local"));
+
+    assertThat(client.readFile("dsl/LoanDsl.java").content()).isEqualTo("v2");
+    assertThat(client.vcsStatus().get().dirtyPaths()).isEmpty();
   }
 
   private DslBuilderClient client(CircuitBreaker circuitBreaker) {

@@ -3,6 +3,7 @@ package cbs.nova.starter.service;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.model.DslIntrospectionModels.DefinitionStatus;
+import cbs.nova.starter.service.DslGitStatusResolver;
 import cbs.nova.starter.service.DslGitStatusResolver.ChangeType;
 import cbs.nova.starter.service.DslGitStatusResolver.RepoStatus;
 import java.nio.file.Files;
@@ -69,7 +70,8 @@ public class DslDefinitionStatusResolver {
 
     for (String name : names) {
       Optional<String> resolved = sourcePathResolver.relativePath(name);
-      ChangeType matched = resolved.flatMap(p -> matchChange(changes, p)).orElse(null);
+      ChangeType matched = resolved.flatMap(p -> DslGitStatusResolver.matchChange(changes, p))
+              .orElse(null);
       if (matched != null) {
         result.put(name, mapChangeType(matched));
         continue;
@@ -92,37 +94,6 @@ public class DslDefinitionStatusResolver {
       case DELETED -> DefinitionStatus.DELETED;
       case CONFLICTING -> DefinitionStatus.CONFLICTING;
     };
-  }
-
-  /**
-   * Find a git change key {@code K} in {@code changes} that matches the resolved source path
-   * {@code P}. Match rule: {@code K.equals(P)} or {@code K.endsWith("/" + P)} or
-   * {@code P.endsWith("/" + K)}. The third clause lets {@code "dsl/LoanDsl.java"} match a builder
-   * key like {@code "repo/dsl/LoanDsl.java"}.
-   */
-  private static Optional<ChangeType> matchChange(Map<String, ChangeType> changes, String path) {
-    if (path == null || path.isBlank()) {
-      return Optional.empty();
-    }
-    ChangeType direct = changes.get(path);
-    if (direct != null) {
-      return Optional.of(direct);
-    }
-    String suffix = "/" + path;
-    for (Map.Entry<String, ChangeType> e : changes.entrySet()) {
-      String k = e.getKey();
-      if (k != null && k.endsWith(suffix)) {
-        return Optional.of(e.getValue());
-      }
-    }
-    String pathSuffix = "/" + path;
-    for (Map.Entry<String, ChangeType> e : changes.entrySet()) {
-      String k = e.getKey();
-      if (k != null && pathSuffix.endsWith("/" + k)) {
-        return Optional.of(e.getValue());
-      }
-    }
-    return Optional.empty();
   }
 
   private Path sourceDir() {

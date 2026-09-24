@@ -13,15 +13,19 @@ import cbs.nova.dsl.utils.LineDiff;
 import cbs.nova.starter.builder.DslBuilderClient;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.exception.DslCompilationException;
+import cbs.nova.starter.model.VcsModels.CommitRequest;
+import cbs.nova.starter.model.VcsModels.CommitResult;
 import cbs.nova.starter.model.VcsModels.DefinitionBundle;
 import cbs.nova.starter.model.VcsModels.DefinitionBundleEntry;
 import cbs.nova.starter.model.VcsModels.DefinitionHistoryEntry;
+import cbs.nova.starter.model.VcsModels.DiscardRequest;
 import cbs.nova.starter.model.VcsModels.DraftRequest;
 import cbs.nova.starter.model.VcsModels.DraftResponse;
 import cbs.nova.starter.model.VcsModels.DraftSummary;
 import cbs.nova.starter.model.VcsModels.HistoryDiffResponse;
 import cbs.nova.starter.model.VcsModels.ImportBundleResult;
 import cbs.nova.starter.model.VcsModels.ImportEntryResult;
+import cbs.nova.starter.model.VcsModels.LogEntry;
 import cbs.nova.dsl.model.CompileDiagnostic;
 import cbs.nova.starter.model.CompileDiagnosticSource;
 import cbs.nova.starter.model.PageResponse;
@@ -36,6 +40,8 @@ import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.service.CorrelationId;
 import cbs.nova.starter.service.DslDefinitionBundleService;
 import cbs.nova.starter.service.DslDefinitionHistoryService;
+import cbs.nova.starter.service.DslGitStatusResolver;
+import cbs.nova.starter.service.DslSourcePathResolver;
 import tools.jackson.core.JacksonException;
 import jakarta.servlet.ServletException;
 import lombok.extern.slf4j.Slf4j;
@@ -56,6 +62,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import tools.jackson.databind.ObjectMapper;
 
 @Slf4j
@@ -67,6 +74,12 @@ public class DslDraftHandler {
   static final String ACTION_DRAFT_WRITE = "DRAFT_WRITE";
   static final String ACTION_DEFINITION_PUBLISH = "DEFINITION_PUBLISH";
   static final String ACTION_DRAFT_BULK_WRITE = "DRAFT_BULK_WRITE";
+  static final String ACTION_DRAFT_DISCARD = "DRAFT_DISCARD";
+  static final String ACTION_DRAFT_COMMIT = "DEFINITION_PUBLISH_COMMIT";
+  static final String DEFAULT_LOG_LIMIT = "20";
+  static final int MAX_LOG_LIMIT = 200;
+  static final String GIT_REQUIRES_BUILDER_CODE = "GIT_REQUIRES_BUILDER";
+  static final String COMMIT_ERROR_DETAIL = "commitError";
 
   private final DslProperties dslProperties;
   private final DslReloadHandler reloadHandler;
@@ -78,6 +91,8 @@ public class DslDraftHandler {
   private final ObjectProvider<CompileDiagnosticRecordRepository> compileDiagnosticRepositoryProvider;
   private final ObjectProvider<DomainEventPublisher> eventPublisherProvider;
   private final ObjectProvider<RoleResolver> roleResolverProvider;
+  private final ObjectProvider<DslSourcePathResolver> sourcePathResolverProvider;
+  private final ObjectProvider<DslGitStatusResolver> gitStatusResolverProvider;
 
   public ServerResponse save(ServerRequest request) throws IOException {
     String name = request.pathVariable("name");
@@ -122,7 +137,7 @@ public class DslDraftHandler {
       return ServerResponse.ok()
               .contentType(MediaType.APPLICATION_JSON)
               .body(new DraftResponse(name, "Draft", file.toString(), false, LoadResult.empty(),
-                      null, null, payload.savedAt()));
+                      null, null, payload.savedAt(), null));
     } catch (IOException | RuntimeException e) {
       audit(request, ACTION_DRAFT_WRITE, name, StarterConstants.OUTCOME_FAILURE,
               Map.of("error", String.valueOf(e.getMessage())));
@@ -178,18 +193,31 @@ public class DslDraftHandler {
         log.info("[DSL drafts] published {} via DSL builder", name);
         DraftResponse response = finishPublish(name, published.location(), dir.path());
         boolean success = response.reloadError() == null;
+        // Spec §3.3 + I2: publish is atomic per request. The reload must hold *before* we
+        // commit the working tree; if reload failed or the file isn't actually dirty in
+        // git, leave the draft uncommitted so the user sees the diagnostic and retries.
+        String commitId = null;
+        if (success && response.reloaded()) {
+          commitId = commitIfDirty(builder, request, name);
+        }
+        DraftResponse withCommit = commitId == null
+                ? response
+                : new DraftResponse(response.name(), response.status(), response.location(),
+                        response.reloaded(), response.loadResult(), response.reloadError(),
+                        response.diagnostics(), response.savedAt(), commitId);
         audit(request, ACTION_DEFINITION_PUBLISH, name,
                 success ? StarterConstants.OUTCOME_SUCCESS : StarterConstants.OUTCOME_FAILURE,
                 Map.of("location", String.valueOf(published.location()),
-                        "reloaded", response.reloaded(),
-                        "error", success ? "" : String.valueOf(response.reloadError())));
+                        "reloaded", withCommit.reloaded(),
+                        "commitId", String.valueOf(commitId),
+                        "error", success ? "" : String.valueOf(withCommit.reloadError())));
         publishEventBestEffort(new DomainEvent.DraftPublished(
                 name, payload.version(), payload.taskQueue(),
-                response.reloaded(), response.location(), null,
+                withCommit.reloaded(), withCommit.location(), null,
                 correlationIdOf(request)));
         return ServerResponse.ok()
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(response);
+                .body(withCommit);
       } catch (DslCompilationException e) {
         recordDiagnostics(CompileDiagnosticSource.PUBLISH, name, e.diagnostics());
         audit(request, ACTION_DEFINITION_PUBLISH, name, StarterConstants.OUTCOME_FAILURE,
@@ -354,7 +382,7 @@ public class DslDraftHandler {
     return ServerResponse.ok()
             .contentType(MediaType.APPLICATION_JSON)
             .body(new DraftResponse(name, "Deleted", null, false, LoadResult.empty(), null, null,
-                    null));
+                    null, null));
   }
 
   public ServerResponse list(ServerRequest request) {
@@ -699,17 +727,159 @@ public class DslDraftHandler {
         return new DraftResponse(name, "Published", location, false,
                 LoadResult.empty(),
                 compilation.getMessage(), compilation.diagnostics().stream().limit(20).toList(),
-                null);
+                null, null);
       }
       if (e instanceof ValidationException ve) {
         return new DraftResponse(name, "Published", location, false, LoadResult.empty(),
                 ve.getMessage(), toValidationDiagnostics(ve, name).stream().limit(20).toList(),
-                null);
+                null, null);
       }
       return new DraftResponse(name, "Published", location, false, LoadResult.empty(),
-              e.getMessage(), null, null);
+              e.getMessage(), null, null, null);
     }
-    return new DraftResponse(name, "Published", location, reloaded, loadResult, null, null, null);
+    return new DraftResponse(name, "Published", location, reloaded, loadResult, null, null, null,
+            null);
+  }
+
+  public ServerResponse discard(ServerRequest request) throws IOException {
+    String name = request.pathVariable("name");
+    var dir = ensureConfigured(name);
+    if (dir.isError()) {
+      return dir.response();
+    }
+    var sourcePath = resolveSourcePath(name);
+    if (sourcePath.isEmpty()) {
+      return error(HttpStatus.NOT_FOUND,
+              new ErrorResponse("NOT_FOUND", "No source path for definition: " + name, name,
+                      null, null, null, null, null, null));
+    }
+    var builder = builderClient();
+    if (builder == null) {
+      return error(HttpStatus.CONFLICT,
+              new ErrorResponse(GIT_REQUIRES_BUILDER_CODE,
+                      "Discard requires the DSL builder (git-backed workspace)", name,
+                      null, null, null, null, null, null));
+    }
+    String path = sourcePath.get();
+    try {
+      builder.discard(new DiscardRequest(List.of(path)));
+      try {
+        builder.deleteDraft(name);
+      } catch (cbs.nova.starter.exception.BuilderApiException e) {
+        if (e.getStatusCode().value() != 404) {
+          throw e;
+        }
+        log.debug("[DSL drafts] no legacy marker to delete for {} — ignored", name);
+      }
+      audit(request, ACTION_DRAFT_DISCARD, name, StarterConstants.OUTCOME_SUCCESS,
+              Map.of("location", path));
+      log.info("[DSL drafts] discarded {} via DSL builder (path={})", name, path);
+      return ServerResponse.ok()
+              .contentType(MediaType.APPLICATION_JSON)
+              .body(new DraftResponse(name, "Discarded", path, false, LoadResult.empty(),
+                      null, null, null, null));
+    } catch (RuntimeException e) {
+      audit(request, ACTION_DRAFT_DISCARD, name, StarterConstants.OUTCOME_FAILURE,
+              Map.of("error", String.valueOf(e.getMessage())));
+      throw e;
+    }
+  }
+
+  public ServerResponse commits(ServerRequest request) {
+    String name = request.pathVariable("name");
+    var dir = ensureConfigured(name);
+    if (dir.isError()) {
+      return dir.response();
+    }
+    var sourcePath = resolveSourcePath(name);
+    if (sourcePath.isEmpty()) {
+      return error(HttpStatus.NOT_FOUND,
+              new ErrorResponse("NOT_FOUND", "No source path for definition: " + name, name,
+                      null, null, null, null, null, null));
+    }
+    var builder = builderClient();
+    if (builder == null) {
+      return error(HttpStatus.CONFLICT,
+              new ErrorResponse(GIT_REQUIRES_BUILDER_CODE,
+                      "Commit history requires the DSL builder (git-backed workspace)", name,
+                      null, null, null, null, null, null));
+    }
+    int limit = parseLimit(request);
+    String path = sourcePath.get();
+    List<LogEntry> entries = builder.vcsLog(path, limit);
+    log.info("[DSL drafts] listed {} commits for {} (path={})", entries.size(), name, path);
+    return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(entries);
+  }
+
+  private @Nullable String commitIfDirty(DslBuilderClient builder, ServerRequest request,
+          String name) {
+    var sourcePath = resolveSourcePath(name);
+    if (sourcePath.isEmpty()) {
+      log.debug("[DSL drafts] no source path for {} — skipping commit", name);
+      return null;
+    }
+    String path = sourcePath.get();
+    var status = gitStatusResolver().flatMap(r -> r.status(sourceDir()));
+    boolean dirty = status.map(s -> DslGitStatusResolver.matchChange(s.changes(), path).isPresent())
+            .orElse(false);
+    if (!dirty) {
+      log.debug("[DSL drafts] source path {} is clean — no commit needed", path);
+      return null;
+    }
+    String actor = DslAuditService.currentActor();
+    try {
+      CommitResult result = builder.commit(new CommitRequest(List.of(path),
+              "Publish " + name, actor, actor + "@cbs-nova.local"));
+      log.info("[DSL drafts] committed {} (path={}) as {}", name, path, result.commitId());
+      audit(request, ACTION_DRAFT_COMMIT, name, StarterConstants.OUTCOME_SUCCESS,
+              Map.of("commitId", String.valueOf(result.commitId()),
+                      "location", path,
+                      "message", "Publish " + name));
+      return result.commitId();
+    } catch (RuntimeException e) {
+      log.warn("[DSL drafts] commit for {} (path={}) failed: {}", name, path, e.getMessage());
+      audit(request, ACTION_DRAFT_COMMIT, name, StarterConstants.OUTCOME_FAILURE,
+              Map.of(COMMIT_ERROR_DETAIL, String.valueOf(e.getMessage()),
+                      "location", path));
+      return null;
+    }
+  }
+
+  private Optional<String> resolveSourcePath(String name) {
+    if (sourcePathResolverProvider == null) {
+      return Optional.empty();
+    }
+    var resolver = sourcePathResolverProvider.getIfAvailable();
+    if (resolver == null) {
+      return Optional.empty();
+    }
+    return resolver.relativePath(name);
+  }
+
+  private Optional<DslGitStatusResolver> gitStatusResolver() {
+    if (gitStatusResolverProvider == null) {
+      return Optional.empty();
+    }
+    return Optional.ofNullable(gitStatusResolverProvider.getIfAvailable());
+  }
+
+  private Path sourceDir() {
+    String sourceDirProperty = dslProperties.sourceDir();
+    if (sourceDirProperty == null || sourceDirProperty.isBlank()) {
+      throw new IllegalStateException("csb.dsl.source-dir is not configured");
+    }
+    return Path.of(sourceDirProperty);
+  }
+
+  private int parseLimit(ServerRequest request) {
+    try {
+      return request.param("limit")
+              .map(Integer::parseInt)
+              .map(v -> Math.max(1, Math.min(v, MAX_LOG_LIMIT)))
+              .orElse(Integer.parseInt(DEFAULT_LOG_LIMIT));
+    } catch (NumberFormatException e) {
+      return Integer.parseInt(DEFAULT_LOG_LIMIT);
+    }
   }
 
   private sealed interface PathResult {

@@ -161,6 +161,38 @@ public class DslGitStatusResolver {
     return changes;
   }
 
+  /**
+   * Find a git change key {@code K} in {@code changes} that matches the resolved source path
+   * {@code P}. Match rule: {@code K.equals(P)}, {@code K.endsWith("/" + P)}, or
+   * {@code P.endsWith("/" + K)}. The third clause lets {@code "dsl/LoanDsl.java"} match a builder
+   * key like {@code "repo/dsl/LoanDsl.java"}. Shared between the definition-status resolver and the
+   * draft publish-flow commit hook (see {@code DslDraftHandler.publishPayload}).
+   */
+  public static Optional<ChangeType> matchChange(Map<String, ChangeType> changes, String path) {
+    if (path == null || path.isBlank() || changes == null || changes.isEmpty()) {
+      return Optional.empty();
+    }
+    ChangeType direct = changes.get(path);
+    if (direct != null) {
+      return Optional.of(direct);
+    }
+    String suffix = "/" + path;
+    for (Map.Entry<String, ChangeType> e : changes.entrySet()) {
+      String k = e.getKey();
+      if (k != null && k.endsWith(suffix)) {
+        return Optional.of(e.getValue());
+      }
+    }
+    String pathSuffix = "/" + path;
+    for (Map.Entry<String, ChangeType> e : changes.entrySet()) {
+      String k = e.getKey();
+      if (k != null && pathSuffix.endsWith("/" + k)) {
+        return Optional.of(e.getValue());
+      }
+    }
+    return Optional.empty();
+  }
+
   private DslBuilderClient builderClient() {
     return builderClientProvider == null ? null : builderClientProvider.getIfAvailable();
   }

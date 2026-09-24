@@ -40,6 +40,7 @@ public class DslSourcePathResolver {
   private final DslProperties dslProperties;
   private final Function<String, Optional<String>> filenameLookup;
 
+  @org.springframework.beans.factory.annotation.Autowired
   public DslSourcePathResolver(DslProperties dslProperties) {
     this(dslProperties, name -> GlobalManager.globalManager().findFilename(name));
   }
