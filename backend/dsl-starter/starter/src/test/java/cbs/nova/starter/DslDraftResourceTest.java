@@ -75,7 +75,7 @@ class DslDraftResourceTest {
             new DslDefinitionHistoryService(props, mapper), mapper,
             new DslDefinitionBundleService(mapper, Optional.empty(),
                     DslProperties.bundleServiceDefaults()),
-            null, null, null, null, null);
+            null, null, null, null, null, null, null);
   }
 
   @AfterEach
@@ -85,7 +85,7 @@ class DslDraftResourceTest {
     }
   }
 
-  private static final List<HttpMessageConverter<?>> CONVERTERS = List
+  static final List<HttpMessageConverter<?>> CONVERTERS = List
           .of(new InputStreamHttpMessageConverter(), new StringBodyHttpMessageConverter());
 
   private static ServerRequest postRequest(String path) {
@@ -186,7 +186,7 @@ class DslDraftResourceTest {
             mapper,
             new DslDefinitionBundleService(mapper, Optional.empty(),
                     DslProperties.bundleServiceDefaults()),
-            null, null, null, null, null);
+            null, null, null, null, null, null, null);
     ServerResponse response = handler.delete(deleteRequest("foo", "/api/dsl/drafts/foo"));
     assertThat(response.statusCode().value()).isEqualTo(409);
   }
@@ -241,7 +241,7 @@ class DslDraftResourceTest {
             mapper,
             new DslDefinitionBundleService(mapper, Optional.empty(),
                     DslProperties.bundleServiceDefaults()),
-            null, null, null, null, null);
+            null, null, null, null, null, null, null);
     ServerResponse response = handler.save(postRequest("/api/dsl/drafts/foo/save"));
     assertThat(response.statusCode().value()).isEqualTo(409);
   }
@@ -278,7 +278,7 @@ class DslDraftResourceTest {
             mapper,
             new DslDefinitionBundleService(mapper, Optional.empty(),
                     DslProperties.bundleServiceDefaults()),
-            null, null, null, null, null);
+            null, null, null, null, null, null, null);
 
     ServerResponse response = handler.list(getRequest("/api/dsl/drafts", null));
 
@@ -394,7 +394,7 @@ class DslDraftResourceTest {
             new DslDefinitionHistoryService(props, mapper), mapper,
             new DslDefinitionBundleService(mapper, Optional.empty(),
                     DslProperties.bundleServiceDefaults()),
-            null, null, null, null, null);
+            null, null, null, null, null, null, null);
 
     ServerResponse response = localHandler.publish(postRequest("/api/dsl/drafts/foo/publish"));
     assertThat(response.statusCode().value()).isEqualTo(200);
@@ -449,7 +449,7 @@ class DslDraftResourceTest {
             new DslDefinitionHistoryService(props, mapper), mapper,
             new DslDefinitionBundleService(mapper, Optional.empty(),
                     DslProperties.bundleServiceDefaults()),
-            null, null, null, null, null);
+            null, null, null, null, null, null, null);
     for (int i = 1; i <= 4; i++) {
       handler.publish(postRequest("/api/dsl/drafts/X/publish", "X", String.valueOf(i)));
       Thread.sleep(2);
@@ -580,7 +580,7 @@ class DslDraftResourceTest {
             mapper,
             new DslDefinitionBundleService(mapper, Optional.empty(),
                     DslProperties.bundleServiceDefaults()),
-            null, null, null, null, null);
+            null, null, null, null, null, null, null);
 
     ServerResponse response = handler.history(getRequest("/api/dsl/drafts/X/history",
             Map.of("name", "X")));
@@ -598,7 +598,7 @@ class DslDraftResourceTest {
             mapper,
             new DslDefinitionBundleService(mapper, Optional.empty(),
                     DslProperties.bundleServiceDefaults()),
-            null, null, null, null, null);
+            null, null, null, null, null, null, null);
 
     ServerResponse response = handler.restore(getRequest(
             "/api/dsl/drafts/X/history/123/restore",
@@ -788,7 +788,7 @@ class DslDraftResourceTest {
     stubSuccessfulCompile(client);
     when(client.saveDraft(eq("foo"), any())).thenReturn(
             new DraftResponse("foo", "Draft", "/remote/.workbench/drafts/foo.json", false,
-                    LoadResult.empty(), null, null, null));
+                    LoadResult.empty(), null, null, null, null));
     handler = builderDraftHandler(client);
 
     ServerResponse response = handler.save(postRequest("/api/dsl/drafts/foo/save"));
@@ -806,7 +806,7 @@ class DslDraftResourceTest {
     stubSuccessfulCompile(client);
     when(client.publishDraft(eq("foo"), any())).thenReturn(
             new DraftResponse("foo", "Published", "/remote/.workbench/published/foo.json", false,
-                    LoadResult.empty(), null, null, null));
+                    LoadResult.empty(), null, null, null, null));
     handler = builderDraftHandler(client);
 
     ServerResponse response = handler.publish(postRequest("/api/dsl/drafts/foo/publish"));
@@ -829,7 +829,7 @@ class DslDraftResourceTest {
             List.of(new CompileDiagnostic("Broken.java", 1L, null, "bad syntax", "error", null))));
     when(client.publishDraft(eq("foo"), any())).thenReturn(
             new DraftResponse("foo", "Published", "/remote/.workbench/published/foo.json", false,
-                    LoadResult.empty(), null, null, null));
+                    LoadResult.empty(), null, null, null, null));
     handler = builderDraftHandler(client);
 
     ServerResponse response = handler.publish(postRequest("/api/dsl/drafts/foo/publish"));
@@ -845,7 +845,8 @@ class DslDraftResourceTest {
   void deleteDelegatesToBuilderClient() throws Exception {
     DslBuilderClient client = mock(DslBuilderClient.class);
     when(client.deleteDraft("foo")).thenReturn(
-            new DraftResponse("foo", "Deleted", null, false, LoadResult.empty(), null, null, null));
+            new DraftResponse("foo", "Deleted", null, false, LoadResult.empty(), null, null, null,
+                    null));
     handler = builderDraftHandler(client);
 
     ServerResponse response = handler.delete(deleteRequest("foo", "/api/dsl/drafts/foo"));
@@ -879,7 +880,7 @@ class DslDraftResourceTest {
             new DslDefinitionBundleService(mapper, Optional.empty(),
                     DslProperties.bundleServiceDefaults()),
             null, providerOf(client),
-            null, null, null);
+            null, null, null, null, null);
   }
 
   @Test
@@ -934,7 +935,7 @@ class DslDraftResourceTest {
               new DslDefinitionHistoryService(props, mapper), mapper,
               new DslDefinitionBundleService(mapper, Optional.empty(),
                       DslProperties.bundleServiceDefaults()),
-              AuditTestSupport.providerOf(audit.service()), null, null, null, null);
+              AuditTestSupport.providerOf(audit.service()), null, null, null, null, null, null);
 
       ServerResponse response = audited.publish(postRequest("/api/dsl/drafts/foo/publish"));
 
@@ -957,7 +958,7 @@ class DslDraftResourceTest {
             new DslDefinitionHistoryService(properties, mapper), mapper,
             new DslDefinitionBundleService(mapper, Optional.empty(),
                     DslProperties.bundleServiceDefaults()),
-            AuditTestSupport.providerOf(audit.service()), null, null, null, null);
+            AuditTestSupport.providerOf(audit.service()), null, null, null, null, null, null);
   }
 
   private static ServerRequest postRequestWithHeader(String path, String name, String header,
@@ -1000,4 +1001,7 @@ class DslDraftResourceTest {
     }
   }
 
+  static List<HttpMessageConverter<?>> converters() {
+    return CONVERTERS;
+  }
 }

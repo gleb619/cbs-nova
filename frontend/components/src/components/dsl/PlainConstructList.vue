@@ -38,6 +38,9 @@ const statusClass: Record<string, string> = {
   Invalid: 'bg-red-100 text-red-700',
   Published: 'bg-blue-100 text-blue-700',
   Modified: 'bg-yellow-100 text-yellow-700',
+  Added: 'bg-emerald-100 text-emerald-700',
+  Deleted: 'bg-orange-100 text-orange-700',
+  Conflicting: 'bg-red-200 text-red-800',
 }
 
 function isCollapsed(type: string): boolean {

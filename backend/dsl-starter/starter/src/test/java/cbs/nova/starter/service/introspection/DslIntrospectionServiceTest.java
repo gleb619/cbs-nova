@@ -27,6 +27,7 @@ import cbs.nova.starter.model.RequestQueryModels.ObjectSearchQuery;
 import cbs.nova.starter.model.DslIntrospectionModels.LogicInfoDto;
 import cbs.nova.starter.model.DslIntrospectionModels.LogicStatus;
 import cbs.nova.starter.service.DslDefinitionStatusResolver;
+import cbs.nova.starter.service.DslSourcePathResolver;
 import cbs.nova.starter.service.DslGitStatusResolver;
 import cbs.nova.starter.service.DslIntrospectionService;
 import java.util.List;
@@ -48,7 +49,8 @@ class DslIntrospectionServiceTest {
             new JacksonJsonSchemaGenerator(),
             mapper,
             new DslDefinitionStatusResolver(DslProperties.builder().build(),
-                    new DslGitStatusResolver(DslProperties.builder().build(), null)));
+                    new DslGitStatusResolver(DslProperties.builder().build(), null),
+                    new DslSourcePathResolver(DslProperties.builder().build())));
   }
 
   @AfterEach

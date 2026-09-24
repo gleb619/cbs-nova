@@ -37,7 +37,28 @@ class DraftServiceTest {
     var properties = properties();
     historyService = new DefinitionHistoryService(properties, objectMapper);
     var bundleService = new DefinitionBundleService(properties, objectMapper, Optional.empty());
-    draftService = new DraftService(properties, objectMapper, historyService, bundleService);
+    draftService = new DraftService(properties, objectMapper, historyService, bundleService,
+            new NoOpGitStatusProvider());
+  }
+
+  /**
+   * No-op {@link org.springframework.beans.factory.ObjectProvider} stub. The
+   * {@link GitStatusService}-aware test passes a real service that records calls. Most
+   * {@code ObjectProvider} methods have sensible default implementations, so only the
+   * {@code *Available()} hooks are overridden.
+   */
+  private static final class NoOpGitStatusProvider
+          implements
+            org.springframework.beans.factory.ObjectProvider<GitStatusService> {
+    @Override
+    public GitStatusService getIfAvailable() {
+      return null;
+    }
+
+    @Override
+    public GitStatusService getIfUnique() {
+      return null;
+    }
   }
 
   private DslBuilderProperties properties() {
@@ -266,7 +287,7 @@ class DraftServiceTest {
     var customBundle = new DefinitionBundleService(customProperties, objectMapper,
             Optional.empty());
     var customDrafts = new DraftService(customProperties, objectMapper, customHistory,
-            customBundle);
+            customBundle, new NoOpGitStatusProvider());
 
     customDrafts.save("A", new DraftRequest("A", "process", "Draft", "v1", "q", null, null));
     assertThat(Files.exists(workspace.resolve("custom/drafts/A.json"))).isTrue();

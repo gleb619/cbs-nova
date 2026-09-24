@@ -10,6 +10,8 @@ import static cbs.nova.starter.core.StarterConstants.CACHE_HISTORY_DIFF_PREFIX;
 import static cbs.nova.starter.core.StarterConstants.CACHE_HISTORY_ENTRY_PREFIX;
 import static cbs.nova.starter.core.StarterConstants.CACHE_HISTORY_PREFIX;
 import static cbs.nova.starter.core.StarterConstants.CACHE_PENDING_COUNT_KEY;
+import static cbs.nova.starter.core.StarterConstants.CACHE_VCS_LOG_PREFIX;
+import static cbs.nova.starter.core.StarterConstants.CACHE_VCS_SHOW_PREFIX;
 import static cbs.nova.starter.core.StarterConstants.CACHE_VCS_STATUS_KEY;
 
 import cbs.nova.starter.core.StarterConstants;
@@ -21,6 +23,7 @@ import cbs.nova.starter.model.VcsModels.DefinitionHistoryEntry;
 import cbs.nova.starter.model.VcsModels.DraftRequest;
 import cbs.nova.starter.model.VcsModels.DraftSummary;
 import cbs.nova.starter.model.VcsModels.HistoryDiffResponse;
+import cbs.nova.starter.model.VcsModels.LogEntry;
 import cbs.nova.starter.service.DslGitStatusResolver.RepoStatus;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -81,11 +84,27 @@ public class BuilderCache {
     return get(CACHE_VCS_STATUS_KEY, loader);
   }
 
+  public List<LogEntry> vcsLog(String path, int limit, Supplier<List<LogEntry>> loader) {
+    return get(CACHE_VCS_LOG_PREFIX + path + ":" + limit, loader);
+  }
+
+  public String vcsShow(String path, String commitId, Supplier<String> loader) {
+    return get(CACHE_VCS_SHOW_PREFIX + path + ":" + commitId, loader);
+  }
+
+  public void invalidateVcsLog() {
+    invalidatePrefix(CACHE_VCS_LOG_PREFIX);
+    invalidatePrefix(CACHE_VCS_SHOW_PREFIX);
+  }
+
   public void invalidateDraft(String name) {
     cache.asMap().keySet().removeIf(key -> key.startsWith(CACHE_DRAFT_PREFIX + name)
             || key.startsWith(CACHE_HISTORY_PREFIX + name)
             || key.startsWith(CACHE_HISTORY_ENTRY_PREFIX + name)
             || key.startsWith(CACHE_HISTORY_DIFF_PREFIX + name));
+    // Drafts page is a paged list across all names; any mutation to one draft makes the page
+    // stale. Drop every page entry rather than try to compute a precise invalidation.
+    invalidatePrefix(CACHE_DRAFTS_PAGE_PREFIX);
   }
 
   public void invalidateFile(String path) {
@@ -102,6 +121,10 @@ public class BuilderCache {
 
   public void invalidateVcsStatus() {
     cache.invalidate(CACHE_VCS_STATUS_KEY);
+  }
+
+  public void invalidatePendingCount() {
+    cache.invalidate(CACHE_PENDING_COUNT_KEY);
   }
 
   public void clear() {

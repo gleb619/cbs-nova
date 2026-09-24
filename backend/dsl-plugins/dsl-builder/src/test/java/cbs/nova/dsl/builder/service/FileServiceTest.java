@@ -58,10 +58,110 @@ class FileServiceTest {
             null,
             false,
             null);
+    var gitStatusProvider = new NoOpGitStatusProvider();
     service = new FileService(properties, new FileRepository(),
             new FileBuffer(
                     BuilderServiceConfiguration.pendingCache(properties, Ticker.systemTicker())),
-            new FileBulkhead(new Semaphore(1), new Semaphore(1), 5L));
+            new FileBulkhead(new Semaphore(1), new Semaphore(1), 5L),
+            gitStatusProvider);
+  }
+
+  /**
+   * No-op {@link org.springframework.beans.factory.ObjectProvider} stub. Tests that exercise
+   * {@link GitStatusService} pass a real service instead. This default returns {@code null} so
+   * {@code FileService} skips the invalidation step. Most {@code ObjectProvider} methods have
+   * sensible default implementations, so only the {@code *Available()} hooks are overridden.
+   */
+  private static final class NoOpGitStatusProvider
+          implements
+            org.springframework.beans.factory.ObjectProvider<GitStatusService> {
+    @Override
+    public GitStatusService getIfAvailable() {
+      return null;
+    }
+
+    @Override
+    public GitStatusService getIfUnique() {
+      return null;
+    }
+  }
+
+  /**
+   * Single-element {@link org.springframework.beans.factory.ObjectProvider} stub for tests that
+   * need a real {@link GitStatusService} instance.
+   */
+  private static final class SingleObjectProvider<T>
+          implements
+            org.springframework.beans.factory.ObjectProvider<T> {
+    private final T value;
+
+    SingleObjectProvider(T value) {
+      this.value = value;
+    }
+
+    @Override
+    public T getIfAvailable() {
+      return value;
+    }
+
+    @Override
+    public T getIfUnique() {
+      return value;
+    }
+  }
+
+  /**
+   * {@link GitStatusService} stub that records {@link GitStatusService#invalidate()} calls. Returns
+   * empty {@link java.util.Optional} for {@code status(Path)} so tests stay filesystem- agnostic.
+   */
+  private static final class RecordingGitStatusService extends GitStatusService {
+    private int invalidateCalls = 0;
+
+    RecordingGitStatusService() {
+      super(new DslBuilderProperties(
+              Path.of(System.getProperty("java.io.tmpdir"), "recording-gitstatus-test"),
+              Duration.ofMinutes(10),
+              Duration.ofHours(1),
+              null,
+              "0.0.1-SNAPSHOT",
+              "1.27.0",
+              "4.0.4",
+              "v1",
+              List.of("clean", "build"),
+              List.of("dsl", "models"),
+              "project/templates",
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              false,
+              null));
+    }
+
+    @Override
+    public void invalidate() {
+      invalidateCalls++;
+    }
+
+    int invalidateCalls() {
+      return invalidateCalls;
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  private static org.springframework.beans.factory.ObjectProvider<GitStatusService> castingProvider(
+          GitStatusService value) {
+    return (org.springframework.beans.factory.ObjectProvider<GitStatusService>) (org.springframework.beans.factory.ObjectProvider<?>) new SingleObjectProvider<>(
+            value);
   }
 
   @Test
@@ -165,5 +265,96 @@ class FileServiceTest {
     assertThat(service.pendingCount()).isEqualTo(1);
     service.flushPending();
     assertThat(service.pendingCount()).isZero();
+  }
+
+  @Test
+  void flushPendingInvalidatesGitStatusWhenAtLeastOneFileLands() throws IOException {
+    // Gap G6 / invariant I5: a just-flushed write must show as a draft on the next status read.
+    // Use a recording GitStatusService stub so we can assert {@code invalidate()} was called.
+    var properties = new DslBuilderProperties(
+            workspaceDir,
+            Duration.ofMinutes(10),
+            Duration.ofHours(1),
+            null,
+            "0.0.1-SNAPSHOT",
+            "1.27.0",
+            "4.0.4",
+            "v1",
+            List.of("clean", "build"),
+            List.of("dsl", "models"),
+            "project/templates",
+            sourceDir,
+            null,
+            null,
+            new DslBuilderProperties.Files(0, 100, 32, 8, 5L),
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            false,
+            null);
+    var recording = new RecordingGitStatusService();
+    @SuppressWarnings("unchecked")
+    var provider = (org.springframework.beans.factory.ObjectProvider<GitStatusService>) (org.springframework.beans.factory.ObjectProvider<?>) new SingleObjectProvider<>(
+            recording);
+    var fileService = new FileService(properties, new FileRepository(),
+            new FileBuffer(
+                    BuilderServiceConfiguration.pendingCache(properties, Ticker.systemTicker())),
+            new FileBulkhead(new Semaphore(1), new Semaphore(1), 5L),
+            provider);
+
+    fileService.stageWrite("dsl/A.java", "a");
+    var result = fileService.flushPending();
+
+    assertThat(result.flushed()).isEqualTo(1);
+    assertThat(recording.invalidateCalls()).isEqualTo(1);
+  }
+
+  @Test
+  void flushPendingSkipsInvalidationWhenBufferIsEmpty() throws IOException {
+    var recording = new RecordingGitStatusService();
+    var noopProperties = new DslBuilderProperties(
+            workspaceDir,
+            Duration.ofMinutes(10),
+            Duration.ofHours(1),
+            null,
+            "0.0.1-SNAPSHOT",
+            "1.27.0",
+            "4.0.4",
+            "v1",
+            List.of("clean", "build"),
+            List.of("dsl", "models"),
+            "project/templates",
+            sourceDir,
+            null,
+            null,
+            new DslBuilderProperties.Files(0, 100, 32, 8, 5L),
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            false,
+            null);
+    service = new FileService(noopProperties,
+            new FileRepository(),
+            new FileBuffer(BuilderServiceConfiguration.pendingCache(noopProperties,
+                    Ticker.systemTicker())),
+            new FileBulkhead(new Semaphore(1), new Semaphore(1), 5L),
+            castingProvider(recording));
+
+    // No staged writes, nothing flushed — invalidate must not run.
+    var result = service.flushPending();
+    assertThat(result.flushed()).isZero();
+    assertThat(recording.invalidateCalls()).isZero();
   }
 }

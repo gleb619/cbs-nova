@@ -20,6 +20,7 @@ import cbs.nova.starter.controller.DslIntrospectionHandler;
 import cbs.nova.starter.converter.RequestQueryConverter;
 import cbs.nova.starter.service.DslDefinitionStatusResolver;
 import cbs.nova.starter.service.DslGitStatusResolver;
+import cbs.nova.starter.service.DslSourcePathResolver;
 import cbs.nova.starter.service.DslIntrospectionService;
 import cbs.nova.starter.converter.DslIntrospectionMapper;
 import org.junit.jupiter.api.AfterEach;
@@ -48,7 +49,8 @@ class DslIntrospectionResourceTest {
             new JacksonJsonSchemaGenerator(),
             mapper,
             new DslDefinitionStatusResolver(DslProperties.builder().build(),
-                    new DslGitStatusResolver(DslProperties.builder().build(), null)));
+                    new DslGitStatusResolver(DslProperties.builder().build(), null),
+                    new DslSourcePathResolver(DslProperties.builder().build())));
     DslIntrospectionHandler handler = new DslIntrospectionHandler(service,
             new RequestQueryConverter());
     DslIntrospectionRouterConfiguration router = new DslIntrospectionRouterConfiguration();

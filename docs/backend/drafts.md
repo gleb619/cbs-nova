@@ -119,7 +119,7 @@ file uses `GET /api/dsl/files/by-name/{name}` (starter `DslFileHandler.readByNam
 | **Save** (edit) | write working-tree file (buffered, then flushed) | none |
 | **Validate / compile** | none | isolated compile in a builder session. Diagnostics are returned, and nothing is loaded. |
 | **Discard** | `checkout HEAD -- <path>`, or remove an untracked file | none |
-| **Publish** | compile must pass, then `add` + `commit` (author = actor). Optionally push. | `POST /api/dsl/reload`. On reload failure the commit stays and diagnostics are returned (same contract as today, see §4.4). |
+| **Publish** | after a successful reload, `add` + `commit` of the definition's source path (author = actor). Push is not implemented yet. | reload first. If the reload fails, nothing is committed: the draft stays, and diagnostics are returned (§4.5). |
 | **History** | `git log -- <path>` | none |
 | **Restore(rev)** | `checkout <rev> -- <path>`, which produces a MODIFIED draft | none, until publish |
 
@@ -191,31 +191,61 @@ sense.
 JGit locally) return:
 
 ```json
-{ "workTree": "/abs/path", "dirtyPaths": ["dsl/LoanDsl.java", "..."] }
+{
+  "workTree": "/abs/path",
+  "dirtyPaths": ["dsl/LoanDsl.java", "dsl/NewDsl.java"],
+  "changes": { "dsl/LoanDsl.java": "MODIFIED", "dsl/NewDsl.java": "UNTRACKED" }
+}
 ```
 
-`dirtyPaths` is the union of added, changed, modified, untracked, removed and missing, with the
-**kind dropped**. Results are cached per repo root for `git.status-cache-ttl-seconds`
-(default 5).
+`changes` maps each path to a `ChangeType` (`ADDED`, `MODIFIED`, `DELETED`, `UNTRACKED`,
+`CONFLICTING`), classified per §3.1 by the static `classify(Status)` method. `dirtyPaths` is its
+key set and is kept for older peers. A payload without `changes` still parses, and `changes` is
+then empty. `RepoStatus.changeOf(path)` looks up one path. Results are cached per repo root for
+`git.status-cache-ttl-seconds` (default 5). `GitStatusService.invalidate()` clears the cache.
+
+Freshness (I5):
+
+- `VcsController.status` flushes pending `FileService` writes before it scans.
+- `FileService.flushPending` and every `DraftService` write invalidate the status cache.
+- On the starter side, `DslBuilderClient` invalidates the matching `BuilderCache` entries after
+  every successful mutating call: draft, files, VCS status and pending count.
 
 ### 4.4 Definition status resolution
 
 `DslDefinitionStatusResolver.resolveAll(names)` feeds `/api/dsl/working-set` and other
-introspection endpoints. It uses `DefinitionStatus { PUBLISHED, DRAFT, MODIFIED }`:
+introspection endpoints. It uses
+`DefinitionStatus { PUBLISHED, DRAFT, MODIFIED, ADDED, DELETED, CONFLICTING }`.
 
-1. `.workbench/drafts/<name>.json` exists → `DRAFT`
-2. `.workbench/published/<name>.json` is in `dirtyPaths` → `MODIFIED`
-3. otherwise → `PUBLISHED`
+1. `DslSourcePathResolver.relativePath(name)` maps the definition to its DSL source file. It
+   uses `GlobalManager.findFilename`, then a recursive lookup under `cbs.dsl.source-dir`.
+   `DslFileHandler` shares this resolver.
+2. If git is available, the path is looked up in `RepoStatus.changes()` with suffix-tolerant
+   matching: a change key `K` matches path `P` if `K == P`, `K` ends with `/P`, or `P` ends with
+   `/K`. This is needed because the builder's worktree root can differ from the starter's
+   source dir. `ADDED|UNTRACKED → ADDED`, `MODIFIED → MODIFIED`, `DELETED → DELETED`,
+   `CONFLICTING → CONFLICTING`.
+3. If there is no git change, the legacy check applies: `.workbench/drafts/<safeName>.json`
+   exists → `DRAFT`.
+4. Otherwise → `PUBLISHED`.
 
-Note that step 2 checks the **marker JSON's** git state, not the DSL source file.
+The admin UI shows chips for the new values (`ConstructStatus` in
+`frontend/components/src/types/dsl.ts`, `PlainConstructList.vue`).
 
 ### 4.5 Publish result contract (keep)
 
-`DraftResponse { name, status, location, reloaded, loadResult, reloadError, diagnostics[≤20], savedAt }`.
+`DraftResponse { name, status, location, reloaded, loadResult, reloadError, diagnostics[≤20], savedAt, commitId }`.
 A publish whose reload fails still returns `200` with `reloaded=false`, `reloadError` and
 `diagnostics`. The diagnostics are persisted via `CompileDiagnosticRecordRepository` (source
 `PUBLISH`). Audit actions: `DRAFT_WRITE`, `DEFINITION_PUBLISH`, `DRAFT_BULK_WRITE`. Domain events:
 `DraftSaved`, `DraftPublished`. They are best-effort; a failure is logged and swallowed.
+
+Git commit on publish (builder mode, `DslDraftHandler.publishPayload`) works like this. When the
+reload succeeds and the definition's source path has a git change, the starter calls
+`DslBuilderClient.commit` with message `Publish <name>`. The author is the audit actor, with
+email `<actor>@cbs-nova.local`. The resulting `commitId` is returned in `DraftResponse`. When the
+reload fails, nothing is committed. A commit failure is logged, and the audit entry records
+`commitError`. The publish still returns 200, with `commitId: null`.
 
 ---
 
@@ -226,24 +256,26 @@ All starter paths are also exposed by the BFF under `/api/v1/dsl/...` (explicit 
 
 ### 5.1 Starter endpoints
 
-| Method     | Path                                                                        | Handler                              | Notes                                                                                      |
-|------------|-----------------------------------------------------------------------------|--------------------------------------|--------------------------------------------------------------------------------------------|
+| Method     | Path                                                                        | Handler                              | Notes |
+| ---------- | --------------------------------------------------------------------------- | ------------------------------------ | ----- |
 | GET        | `/api/dsl/drafts?limit&offset`                                              | `DslDraftHandler.list`               | `PageResponse<DraftSummary>`. Returns an empty page when the source dir is not configured. |
-| GET        | `/api/dsl/drafts/{name}`                                                    | `read`                               | `DraftRequest`, 404 if missing                                                             |
-| POST       | `/api/dsl/drafts/{name}/save`                                               | `save`                               | body `DraftRequest` (name required)                                                        |
-| POST       | `/api/dsl/drafts/{name}/publish`                                            | `publish`                            | 403 when the approval gate is on and caller < OPERATOR                                     |
-| POST       | `/api/dsl/drafts/{name}/change-request`                                     | `ChangeRequestHandler.submit`        | approval-gate path                                                                         |
-| DELETE     | `/api/dsl/drafts/{name}`                                                    | `delete`                             | deletes the draft marker only                                                              |
-| GET        | `/api/dsl/drafts/{name}/history`                                            | `history`                            | `DefinitionHistoryEntry[]`                                                                 |
-| GET        | `/api/dsl/drafts/{name}/history/{ts}`                                       | `historyEntry`                       | snapshot `DraftRequest`                                                                    |
-| GET        | `/api/dsl/drafts/{name}/history/{ts}/diff`                                  | `historyDiff`                        | snapshot vs current published, `LineDiff` hunks                                            |
-| POST       | `/api/dsl/drafts/{name}/history/{ts}/restore`                               | `restore`                            | re-publishes the snapshot and reloads                                                      |
-| GET        | `/api/dsl/definitions/export[?include=drafts]`                              | `exportBundle`                       |                                                                                            |
-| POST       | `/api/dsl/definitions/import[?dryRun=true]`                                 | `importBundle`                       |                                                                                            |
-| GET / POST | `/api/dsl/files`, `/api/dsl/files/{*path}`, `/api/dsl/files/by-name/{name}` | `DslFileHandler`                     | list / read / stage write                                                                  |
-| POST       | `/api/dsl/files/bulk`, `/api/dsl/files/flush`                               | `DslFileHandler`                     | bulk stage / force flush                                                                   |
-| GET        | `/api/dsl/files/status`                                                     | `DslFileHandler.status`              | `{ pending }`                                                                              |
-| GET        | `/api/dsl/working-set`                                                      | `DslIntrospectionHandler.workingSet` | definitions + `DefinitionStatus`                                                           |
+| GET        | `/api/dsl/drafts/{name}`                                                    | `read`                               | `DraftRequest`, 404 if missing |
+| POST       | `/api/dsl/drafts/{name}/save`                                               | `save`                               | body `DraftRequest` (name required) |
+| POST       | `/api/dsl/drafts/{name}/publish`                                            | `publish`                            | 403 when the approval gate is on and caller < OPERATOR |
+| POST       | `/api/dsl/drafts/{name}/change-request`                                     | `ChangeRequestHandler.submit`        | approval-gate path |
+| DELETE     | `/api/dsl/drafts/{name}`                                                    | `delete`                             | deletes the draft marker only |
+| POST       | `/api/dsl/drafts/{name}/discard`                                            | `discard`                            | Builder mode only. Reverts the definition's source file to `HEAD` and drops the legacy marker (a 404 there is ignored). Returns `status: "Discarded"`. Local mode → `409 GIT_REQUIRES_BUILDER`. Unknown source path → 404. |
+| GET        | `/api/dsl/drafts/{name}/commits?limit`                                      | `commits`                            | Builder mode only. `git log` of the definition's source path, newest first. |
+| GET        | `/api/dsl/drafts/{name}/history`                                            | `history`                            | `DefinitionHistoryEntry[]` |
+| GET        | `/api/dsl/drafts/{name}/history/{ts}`                                       | `historyEntry`                       | snapshot `DraftRequest` |
+| GET        | `/api/dsl/drafts/{name}/history/{ts}/diff`                                  | `historyDiff`                        | snapshot vs current published, `LineDiff` hunks |
+| POST       | `/api/dsl/drafts/{name}/history/{ts}/restore`                               | `restore`                            | re-publishes the snapshot and reloads |
+| GET        | `/api/dsl/definitions/export[?include=drafts]`                              | `exportBundle`                       |  |
+| POST       | `/api/dsl/definitions/import[?dryRun=true]`                                 | `importBundle`                       |  |
+| GET / POST | `/api/dsl/files`, `/api/dsl/files/{*path}`, `/api/dsl/files/by-name/{name}` | `DslFileHandler`                     | list / read / stage write |
+| POST       | `/api/dsl/files/bulk`, `/api/dsl/files/flush`                               | `DslFileHandler`                     | bulk stage / force flush |
+| GET        | `/api/dsl/files/status`                                                     | `DslFileHandler.status`              | `{ pending }` |
+| GET        | `/api/dsl/working-set`                                                      | `DslIntrospectionHandler.workingSet` | definitions + `DefinitionStatus` |
 
 When no source dir is configured, the handlers return `409 NOT_CONFIGURED`
 (`csb.dsl.source-dir is not configured`). If the dir does not exist they return
@@ -252,11 +284,25 @@ When no source dir is configured, the handlers return `409 NOT_CONFIGURED`
 ### 5.2 dsl-builder endpoints
 
 `DraftController` `/api/dsl/drafts/**` (same shapes as above), `DefinitionBundleController`,
-`FileController` `/api/dsl/files/**`, `VcsController` `GET /api/dsl/vcs/status` (404 when there
-is no repo), `CompileController` `/api/dsl/compile` (+ `/{id}/download`). Errors use
+`FileController` `/api/dsl/files/**`, `VcsController` `/api/dsl/vcs/**`, `CompileController` `/api/dsl/compile` (+ `/{id}/download`). Errors use
 `BuilderApiException(status, code, message)`. The starter's `DslBuilderClient` maps them back.
 A full queue gives `BuilderClientBusyException`, and an open breaker or unreachable host gives
 `BuilderUnavailableException`.
+
+`VcsController` (backed by `WorkspaceGitService`, JGit):
+
+| Method | Path | Body / params | Result |
+|--------|------|---------------|--------|
+| GET | `/api/dsl/vcs/status` | – | `RepoStatus`. 404 when there is no repo. |
+| POST | `/api/dsl/vcs/commit` | `CommitRequest {paths, message, authorName, authorEmail}` | `CommitResult {commitId, paths, timestampMillis}`. Commits **only** the listed paths; other staged files stay staged. Atomic (I2): the index is reset on failure. 409 `NOTHING_TO_COMMIT` if any path is clean. |
+| POST | `/api/dsl/vcs/discard` | `DiscardRequest {paths}` | `DiscardResult {discarded}`. MODIFIED/DELETED → checkout `HEAD`, ADDED → unstage + delete, UNTRACKED → delete, clean → skipped. |
+| GET | `/api/dsl/vcs/log?path&limit` | limit default 20, clamped to 1..200 | `LogEntry[] {commitId, timestampMillis, author, message}`, newest first |
+| GET | `/api/dsl/vcs/show?path&commit` | – | `{path, commitId, content}`. 404 if the path is missing at that commit or the commit is unknown. |
+
+Commit and discard flush pending file writes first. Paths are workspace-relative. When the
+workspace is a subdirectory of the repo, the service translates paths to and from repo-relative
+form. A blank path or one containing `..` → 400 `INVALID_PATH`. Git disabled or no repo →
+409 `GIT_NOT_CONFIGURED`.
 
 ### 5.3 Recipes
 
@@ -319,18 +365,20 @@ curl -X POST localhost:8090/api/dsl/drafts/LoanDisbursement/history/172715000000
 
 ## 7. Gap analysis
 
-| # | Target | As-is | Consequence |
+| # | Target | Before `feat/drafts-git` | Status |
 |---|--------|-------|-------------|
-| G1 | Draft = git-changed DSL file | Draft = `.workbench/drafts/*.json` marker. File edits via `/api/dsl/files` are not drafts to the drafts API. | Two sources of truth. A file edited through the file API shows as `PUBLISHED` in the working set. |
-| G2 | Per-file kind (A/M/D/?/U) | `RepoStatus.dirtyPaths` is a flat set | The UI cannot show added vs deleted. `DefinitionStatus` has no ADDED/DELETED/CONFLICTING. |
-| G3 | Status of the **DSL source** file | `DslDefinitionStatusResolver` checks the git state of the **marker JSON** | `MODIFIED` only fires when a published marker is dirty. |
-| G4 | Publish = compile + commit (+ push) + reload | Publish = write marker + reload. No commit. History = JSON snapshots. | No audit trail in git, and no rollback via git. |
-| G5 | Discard = checkout HEAD | Delete = remove marker | A file-level discard does not exist. |
-| G6 | Pending writes count as drafts (I5) | Status is read from disk only (5s cache) | A just-saved edit may not show for up to about 10s (flush interval plus cache TTL). |
-| G7 | One copy of status logic | `GitStatusService` (builder) and `DslGitStatusResolver` (starter) duplicate JGit code | Fixes have to be made twice. |
-| G8 | Property name consistency | Draft gate `csb.dsl.drafts.*` vs docs `dsl.drafts.*` | Operators may set the wrong key. |
+| G1 | Draft = git-changed DSL file | Draft = `.workbench/drafts/*.json` marker. File edits via `/api/dsl/files` are not drafts to the drafts API. | **Mostly closed.** Status now comes from the source file (§4.4). Markers remain only as a fallback, and for the save/read/history APIs. |
+| G2 | Per-file kind (A/M/D/?/U) | `RepoStatus.dirtyPaths` is a flat set | **Closed** (step 1). |
+| G3 | Status of the **DSL source** file | `DslDefinitionStatusResolver` checks the git state of the **marker JSON** | **Closed** (step 2). |
+| G4 | Publish = compile + commit (+ push) + reload | Publish = write marker + reload. No commit. History = JSON snapshots. | **Partly closed** (step 4). Publish commits, and `/commits` exposes `git log`. `history`/`restore` still use JSON snapshots. Push is not implemented. |
+| G5 | Discard = checkout HEAD | Delete = remove marker | **Closed** (step 4): `POST /api/dsl/drafts/{name}/discard`. |
+| G6 | Pending writes count as drafts (I5) | Status is read from disk only (5s cache) | **Closed** (step 3): flush-before-status plus cache invalidation. |
+| G7 | One copy of status logic | `GitStatusService` (builder) and `DslGitStatusResolver` (starter) duplicate JGit code | **Open.** Both copies now carry the same `classify`; they are still duplicated. |
+| G8 | Property name consistency | Draft gate `csb.dsl.drafts.*` vs docs `dsl.drafts.*` | **Open.** |
 
 ### Migration path (incremental, each step shippable)
+
+Steps 1–4 landed on branch `feat/drafts-git`. Remaining work: step 4 history/restore on git, a one-off marker import commit, optional push, G7 and step 5.
 
 1. **Typed status (G2, G7).** Add `changes: Map<path, ChangeType>` to `RepoStatus` and keep
    `dirtyPaths` as its key set, so the builder↔starter JSON stays backward compatible. Classify
@@ -367,6 +415,11 @@ curl -X POST localhost:8090/api/dsl/drafts/LoanDisbursement/history/172715000000
 | Builder drafts | `dsl-builder/.../service/DraftServiceTest`, `controller/DraftControllerTest` |
 | Builder files | `FileServiceTest`, `FileBufferTest`, `FileBulkheadTest`, `controller/FileControllerTest` |
 | Builder git status | `GitStatusServiceTest`, `controller/VcsControllerTest` |
+| Builder git ops (commit/discard/log/show) | `WorkspaceGitServiceTest`, `controller/VcsControllerTest` |
+| Starter source path + status by source file | `DslSourcePathResolverTest`, `DslDefinitionStatusResolverTest` |
+| Starter git-backed publish/discard/commits | `DslDraftGitResourceTest` |
+| Builder cache invalidation | `builder/BuilderCacheTest`, `DslBuilderClientTest` |
+| BFF discard/commits | `server/api/v1/dsl/drafts/__tests__/drafts-git.spec.ts` |
 | BFF proxy | `frontend/admin-ui-plugin/server/api/v1/dsl/drafts/__tests__`, contract fixture `working-set.json` |
 
 Run:
@@ -397,9 +450,9 @@ Each migration step in §7 ships with these tests. Use real JGit repos in `@Temp
 | T-R1 | Definition file MODIFIED in git, no marker | working-set | definition status `MODIFIED` (G1/G3) |
 | T-R2 | Git disabled | working-set | marker fallback (`DRAFT` / `PUBLISHED`) unchanged |
 | T-F1 | File staged but not flushed | status | reported as a draft (I5) |
-| T-P1 | Draft with compile error | publish | no commit, diagnostics returned, status unchanged |
+| T-P1 | Draft whose reload fails | publish | no commit, `commitId=null`, diagnostics returned, status unchanged |
 | T-P2 | Valid draft | publish | commit exists (author = actor), status clean, `reloaded=true` |
-| T-P3 | Valid draft, reload fails | publish | commit kept, `reloaded=false`, diagnostics persisted (§4.5) |
+| T-P3 | Valid draft, commit throws | publish | 200, `commitId=null`, audit detail `commitError` |
 | T-P4 | Approval gate on, AUTHOR | publish | 403. Change request snapshots file content. |
 | T-D1 | MODIFIED / ADDED / DELETED | discard | file back to `HEAD` / removed / restored, status clean |
 | T-H1 | Two publishes | history + restore(first) | restored content is a `MODIFIED` draft, not yet committed |
@@ -417,6 +470,8 @@ Each migration step in §7 ships with these tests. Use real JGit repos in `@Temp
 | Bundles | `service/DslDefinitionBundleService` | `service/DefinitionBundleService` |
 | Files | `controller/DslFileHandler`, `DslFileService` | `controller/FileController`, `service/FileService`, `FileBuffer`, `FileBulkhead` |
 | Git status | `service/DslGitStatusResolver` | `service/GitStatusService`, `controller/VcsController` |
+| Git ops | via `DslBuilderClient.commit/discard/log/show` | `service/WorkspaceGitService` |
+| Definition → source path | `service/DslSourcePathResolver` | – |
 | Git clone / worktree | – | `service/GitService`, `RepoUrlValidator` |
 | Compile | – (via `DslBuilderClient.compile`) | `controller/CompileController`, `service/CompileService`, `GradleService` |
 | Definition status | `service/DslDefinitionStatusResolver`, `model/DslIntrospectionModels.DefinitionStatus` | – |

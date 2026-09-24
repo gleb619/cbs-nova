@@ -6,7 +6,8 @@ import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.HashSet;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -37,6 +38,15 @@ public class GitStatusService {
     this.clock = clock;
   }
 
+  /**
+   * Drop every per-root cached snapshot so the next {@link #status(Path)} call rescans git. Called
+   * by {@link FileService} after a pending write flush and by {@code VcsController} before a status
+   * read so a just-staged edit shows up immediately (gap G6 / invariant I5).
+   */
+  public void invalidate() {
+    cache.clear();
+  }
+
   public Optional<RepoStatus> status(Path candidateDir) {
     if (!gitEnabled() || candidateDir == null) {
       return Optional.empty();
@@ -64,16 +74,10 @@ public class GitStatusService {
     Repository repository = builder.build();
     try (Git git = new Git(repository)) {
       Status status = git.status().call();
-      Set<String> dirty = new HashSet<>();
-      dirty.addAll(status.getAdded());
-      dirty.addAll(status.getChanged());
-      dirty.addAll(status.getModified());
-      dirty.addAll(status.getUntracked());
-      dirty.addAll(status.getRemoved());
-      dirty.addAll(status.getMissing());
-      return new RepoStatus(
+      Map<String, ChangeType> changes = classify(status);
+      return RepoStatus.of(
               repository.getWorkTree().toPath().toAbsolutePath().normalize(),
-              Set.copyOf(dirty));
+              changes);
     }
   }
 
@@ -97,7 +101,72 @@ public class GitStatusService {
     return Duration.ofSeconds(Math.max(0, seconds));
   }
 
-  public record RepoStatus(Path workTree, Set<String> dirtyPaths) {
+  /**
+   * Per-path classification of the JGit {@link Status} set. Precedence (highest first) is
+   * CONFLICTING, DELETED, ADDED, MODIFIED — staged and unstaged variants collapse to one badge.
+   */
+  public enum ChangeType {
+    ADDED, MODIFIED, DELETED, UNTRACKED, CONFLICTING
+  }
+
+  /**
+   * Snapshot of a repository: the work tree path, the union of all changed paths
+   * ({@code dirtyPaths}), and the typed classification per path ({@code changes}). Backward
+   * compatible: the legacy 2-arg constructor leaves {@code changes} empty.
+   */
+  public record RepoStatus(Path workTree, Set<String> dirtyPaths,
+          Map<String, ChangeType> changes) {
+
+    public RepoStatus {
+      changes = changes == null ? Map.of() : Map.copyOf(changes);
+      dirtyPaths = dirtyPaths == null ? changes.keySet() : Set.copyOf(dirtyPaths);
+    }
+
+    /** Legacy constructor for callers/tests that only carry the dirty set. */
+    public RepoStatus(Path workTree, Set<String> dirtyPaths) {
+      this(workTree, dirtyPaths, null);
+    }
+
+    /** Build a {@code RepoStatus} whose {@code dirtyPaths} is the key set of {@code changes}. */
+    public static RepoStatus of(Path workTree, Map<String, ChangeType> changes) {
+      return new RepoStatus(workTree, null, changes);
+    }
+
+    /** Return the change type for {@code path}, if any. */
+    public Optional<ChangeType> changeOf(String path) {
+      ChangeType type = changes.get(path);
+      return type == null ? Optional.empty() : Optional.of(type);
+    }
+  }
+
+  /**
+   * Classify a JGit {@link Status} into a path→{@link ChangeType} map. Later writes win so
+   * precedence collapses to {@code CONFLICTING > DELETED > ADDED > UNTRACKED > MODIFIED}.
+   */
+  static Map<String, ChangeType> classify(Status status) {
+    Map<String, ChangeType> changes = new HashMap<>();
+    for (String p : status.getChanged()) {
+      changes.put(p, ChangeType.MODIFIED);
+    }
+    for (String p : status.getModified()) {
+      changes.put(p, ChangeType.MODIFIED);
+    }
+    for (String p : status.getUntracked()) {
+      changes.put(p, ChangeType.UNTRACKED);
+    }
+    for (String p : status.getAdded()) {
+      changes.put(p, ChangeType.ADDED);
+    }
+    for (String p : status.getRemoved()) {
+      changes.put(p, ChangeType.DELETED);
+    }
+    for (String p : status.getMissing()) {
+      changes.put(p, ChangeType.DELETED);
+    }
+    for (String p : status.getConflicting()) {
+      changes.put(p, ChangeType.CONFLICTING);
+    }
+    return changes;
   }
 
   private record Snapshot(RepoStatus repoStatus, Instant expiresAt) {

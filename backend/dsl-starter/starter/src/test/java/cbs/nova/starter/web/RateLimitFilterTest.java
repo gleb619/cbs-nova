@@ -232,6 +232,26 @@ class RateLimitFilterTest {
     assertThat(doPost(filter, "/api/dsl/preview/demo", "192.168.1.1")).isTrue();
   }
 
+  @Test
+  void draftDiscardIsRateLimitedAndDraftCommitsGetIsExempt() throws Exception {
+    RateLimitFilter filter = new RateLimitFilter(enabledProperties(1, 1.0), objectMapper,
+            new InMemoryRateLimitStore(System::nanoTime), null);
+
+    MockHttpServletRequest discard = post("/api/dsl/drafts/x/discard");
+    MockHttpServletResponse discardResponse = new MockHttpServletResponse();
+    filter.doFilterInternal(discard, discardResponse, noOpChain());
+    assertThat(discardResponse.getStatus()).isNotEqualTo(HttpStatus.TOO_MANY_REQUESTS.value());
+
+    MockHttpServletRequest discardAgain = post("/api/dsl/drafts/x/discard");
+    MockHttpServletResponse discardAgainResponse = new MockHttpServletResponse();
+    filter.doFilterInternal(discardAgain, discardAgainResponse, chainThatFailsIfInvoked());
+    assertThat(discardAgainResponse.getStatus()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS.value());
+
+    MockHttpServletRequest commits = get("/api/dsl/drafts/x/commits");
+    MockHttpServletResponse commitsResponse = new MockHttpServletResponse();
+    filter.doFilterInternal(commits, commitsResponse, noOpChain());
+    assertThat(commitsResponse.getStatus()).isNotEqualTo(HttpStatus.TOO_MANY_REQUESTS.value());
+  }
   private static boolean doPost(RateLimitFilter filter, String path, String remoteAddr)
           throws Exception {
     MockHttpServletRequest request = post(path);

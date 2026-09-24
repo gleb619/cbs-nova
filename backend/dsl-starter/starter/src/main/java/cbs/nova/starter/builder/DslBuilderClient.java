@@ -13,13 +13,18 @@ import cbs.nova.starter.model.DslFileModels.FileEntry;
 import cbs.nova.starter.model.DslFileModels.FlushResult;
 import cbs.nova.starter.model.DslFileModels.PendingWritesStatus;
 import cbs.nova.starter.model.PageResponse;
+import cbs.nova.starter.model.VcsModels.CommitRequest;
+import cbs.nova.starter.model.VcsModels.CommitResult;
 import cbs.nova.starter.model.VcsModels.DefinitionBundle;
 import cbs.nova.starter.model.VcsModels.DefinitionHistoryEntry;
+import cbs.nova.starter.model.VcsModels.DiscardRequest;
+import cbs.nova.starter.model.VcsModels.DiscardResult;
 import cbs.nova.starter.model.VcsModels.DraftRequest;
 import cbs.nova.starter.model.VcsModels.DraftResponse;
 import cbs.nova.starter.model.VcsModels.DraftSummary;
 import cbs.nova.starter.model.VcsModels.HistoryDiffResponse;
 import cbs.nova.starter.model.VcsModels.ImportBundleResult;
+import cbs.nova.starter.model.VcsModels.LogEntry;
 import cbs.nova.starter.service.DslGitStatusResolver.RepoStatus;
 import io.github.resilience4j.bulkhead.Bulkhead;
 import io.github.resilience4j.bulkhead.BulkheadFullException;
@@ -47,6 +52,8 @@ public class DslBuilderClient {
   };
   private static final ParameterizedTypeReference<List<FileEntry>> FILE_ENTRIES_TYPE = new ParameterizedTypeReference<>() {
   };
+  private static final ParameterizedTypeReference<List<LogEntry>> LOG_ENTRY_TYPE = new ParameterizedTypeReference<>() {
+  };
 
   private final RestClient restClient;
   private final ThreadPoolBulkhead queue;
@@ -63,11 +70,20 @@ public class DslBuilderClient {
   }
 
   public DraftResponse saveDraft(String name, DraftRequest body) {
-    return execute(() -> doSaveDraft(name, body));
+    DraftResponse response = execute(() -> doSaveDraft(name, body));
+    // Gap G6 / invariant I5: a successful draft write must be visible on the next read of
+    // the draft, its history pages and the global drafts list, plus the vcs status (the
+    // marker JSON now counts as a working-tree change).
+    cache.invalidateDraft(name);
+    cache.invalidateVcsStatus();
+    return response;
   }
 
   public DraftResponse publishDraft(String name, DraftRequest body) {
-    return execute(() -> doPublishDraft(name, body));
+    DraftResponse response = execute(() -> doPublishDraft(name, body));
+    cache.invalidateDraft(name);
+    cache.invalidateVcsStatus();
+    return response;
   }
 
   public List<DefinitionHistoryEntry> history(String name) {
@@ -85,11 +101,17 @@ public class DslBuilderClient {
   }
 
   public DraftResponse restoreDraft(String name, String timestamp) {
-    return execute(() -> doRestoreDraft(name, timestamp));
+    DraftResponse response = execute(() -> doRestoreDraft(name, timestamp));
+    cache.invalidateDraft(name);
+    cache.invalidateVcsStatus();
+    return response;
   }
 
   public DraftResponse deleteDraft(String name) {
-    return execute(() -> doDeleteDraft(name));
+    DraftResponse response = execute(() -> doDeleteDraft(name));
+    cache.invalidateDraft(name);
+    cache.invalidateVcsStatus();
+    return response;
   }
 
   public PageResponse<DraftSummary> listDrafts(int limit, int offset) {
@@ -105,7 +127,13 @@ public class DslBuilderClient {
   }
 
   public ImportBundleResult importBundle(DefinitionBundle bundle, boolean dryRun) {
-    return execute(() -> doImportBundle(bundle, dryRun));
+    ImportBundleResult result = execute(() -> doImportBundle(bundle, dryRun));
+    // A non-dry-run import rewrites every definition marker — drop the whole cache so the
+    // next read reflects the new state. Dry-run leaves no on-disk change so no invalidation.
+    if (!dryRun) {
+      cache.clear();
+    }
+    return result;
   }
 
   public List<FileEntry> listFiles(String prefix) {
@@ -122,14 +150,27 @@ public class DslBuilderClient {
 
   public void stageWrite(String path, String content) {
     execute(() -> doStageWrite(path, content));
+    // The staged file is now a pending draft (invariant I5). Drop the file cache so a
+    // follow-up read re-fetches from the builder (which serves the pending buffer), and
+    // drop vcs status + pending count so a status read sees the new pending count.
+    cache.invalidateFile(path);
+    cache.invalidateVcsStatus();
+    cache.invalidatePendingCount();
   }
 
   public BulkWriteResult stageAll(List<FileContentRequest> files) {
-    return execute(() -> doStageAll(files));
+    BulkWriteResult result = execute(() -> doStageAll(files));
+    cache.invalidateFiles();
+    cache.invalidateVcsStatus();
+    return result;
   }
 
   public FlushResult flushFiles() {
-    return execute(this::doFlushFiles);
+    FlushResult result = execute(this::doFlushFiles);
+    // After a forced flush every cached file read is stale and the vcs status snapshot is too.
+    cache.invalidateFiles();
+    cache.invalidateVcsStatus();
+    return result;
   }
 
   public int pendingCount() {
@@ -147,6 +188,35 @@ public class DslBuilderClient {
         throw e;
       }
     });
+  }
+
+  public CommitResult commit(CommitRequest request) {
+    CommitResult result = execute(() -> doCommit(request));
+    // A successful commit changes the working tree state: drop file reads, vcs status and log
+    // pages.
+    cache.invalidateFiles();
+    cache.invalidateVcsStatus();
+    cache.invalidateVcsLog();
+    return result;
+  }
+
+  public DiscardResult discard(DiscardRequest request) {
+    DiscardResult result = execute(() -> doDiscard(request));
+    // Discard removes the dirty state for those paths and rewrites file contents; drop
+    // file reads, log + vcs status + per-draft entries.
+    cache.invalidateFiles();
+    cache.invalidateVcsStatus();
+    cache.invalidateVcsLog();
+    return result;
+  }
+
+  public List<LogEntry> vcsLog(String path, int limit) {
+    return cache.vcsLog(path, limit, () -> execute(() -> doLog(path, limit)));
+  }
+
+  public String vcsShow(String path, String commitId) {
+    return cache.vcsShow(path, commitId,
+            () -> execute(() -> doShow(path, commitId)));
   }
 
   private CompileResult doCompile(CompileRequest request) {
@@ -265,6 +335,34 @@ public class DslBuilderClient {
 
   private RepoStatus doVcsStatus() {
     return restClient.get().uri("/api/dsl/vcs/status").retrieve().body(RepoStatus.class);
+  }
+
+  private CommitResult doCommit(CommitRequest request) {
+    return restClient.post().uri("/api/dsl/vcs/commit").body(request).retrieve()
+            .body(CommitResult.class);
+  }
+
+  private DiscardResult doDiscard(DiscardRequest request) {
+    return restClient.post().uri("/api/dsl/vcs/discard").body(request).retrieve()
+            .body(DiscardResult.class);
+  }
+
+  private List<LogEntry> doLog(String path, int limit) {
+    return restClient.get()
+            .uri(uriBuilder -> uriBuilder.path("/api/dsl/vcs/log")
+                    .queryParam("path", path)
+                    .queryParam("limit", limit)
+                    .build())
+            .retrieve().body(LOG_ENTRY_TYPE);
+  }
+
+  private String doShow(String path, String commitId) {
+    return restClient.get()
+            .uri(uriBuilder -> uriBuilder.path("/api/dsl/vcs/show")
+                    .queryParam("path", path)
+                    .queryParam("commit", commitId)
+                    .build())
+            .retrieve().body(String.class);
   }
 
   private static URI fileUri(UriBuilder uriBuilder, String path) {

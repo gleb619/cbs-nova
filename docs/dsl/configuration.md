@@ -124,7 +124,8 @@ Class: `DslRunPersistenceProperties` (record). The `dsl_runs` persistence layer.
 
 Class: `CbsSecurityRateLimitProperties` (record). Opt-in token-bucket rate limiter for mutating DSL REST
 endpoints (`/api/dsl/run/**`, `/api/dsl/preview/**`, `/api/dsl/explain/**`, `/api/dsl/reload`,
-`/api/dsl/drafts/**`, `/api/executions/*/cancel`). GET and actuator/health paths are always exempt. Bucket is
+`/api/dsl/drafts/*/save`, `/api/dsl/drafts/*/publish`, `/api/dsl/drafts/*/discard`,
+`/api/dsl/drafts/*` (DELETE), `/api/executions/*/cancel`). GET and actuator/health paths are always exempt. Bucket is
 in-memory and refilled lazily per request.
 
 | Key | Type | Default | Effect |

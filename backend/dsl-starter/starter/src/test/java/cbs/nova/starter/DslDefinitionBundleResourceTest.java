@@ -67,7 +67,7 @@ class DslDefinitionBundleResourceTest {
             new DslReloadHandler(props, null, null, null, null, null, null, null),
             historyService,
             mapper,
-            bundleService, null, null, null, null, null);
+            bundleService, null, null, null, null, null, null, null);
     mockMvc = mockMvcFor(handler);
   }
 
@@ -240,7 +240,7 @@ class DslDefinitionBundleResourceTest {
             new DslReloadHandler(strict, null, null, null, null, null, null, null),
             new DslDefinitionHistoryService(strict, mapper),
             mapper,
-            bundleService, null, null, null, null, null);
+            bundleService, null, null, null, null, null, null, null);
     mockMvc = mockMvcFor(handler);
 
     String bundle = "{\"formatVersion\":1,\"definitions\":["
@@ -347,7 +347,7 @@ class DslDefinitionBundleResourceTest {
             new DslDefinitionBundleService(mapper, Optional.empty(),
                     DslProperties.bundleServiceDefaults()),
             null,
-            BuilderClientTestSupport.providerOf(client), null, null, null);
+            BuilderClientTestSupport.providerOf(client), null, null, null, null, null);
     MockMvc builderMvc = mockMvcFor(handler);
     String bundle = "{\"formatVersion\":1,\"definitions\":["
             + "{\"definition\":{\"name\":\"A\",\"type\":\"process\",\"status\":\"Published\",\"version\":\"v1\",\"taskQueue\":\"q\"},\"source\":\"published\"}]}";
@@ -396,7 +396,7 @@ class DslDefinitionBundleResourceTest {
             mapper,
             new DslDefinitionBundleService(mapper, Optional.empty(),
                     DslProperties.bundleServiceDefaults()),
-            null, null, null, null, null);
+            null, null, null, null, null, null, null);
     DslDefinitionBundleRouterConfiguration router = new DslDefinitionBundleRouterConfiguration();
 
     AnnotationConfigApplicationContext adviceContext = new AnnotationConfigApplicationContext();

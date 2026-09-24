@@ -96,4 +96,43 @@ public final class VcsModels {
           @JsonInclude(JsonInclude.Include.NON_NULL) List<CompileDiagnostic> diagnostics) {
 
   }
+
+  /**
+   * Per spec §3.3 + invariant I2: publish = atomic commit. The caller passes the dirty paths
+   * reported by {@code /api/dsl/vcs/status}, a commit message, and the actor identity.
+   */
+  public record CommitRequest(
+          List<String> paths,
+          @JsonInclude(JsonInclude.Include.NON_NULL) String message,
+          @JsonInclude(JsonInclude.Include.NON_NULL) String authorName,
+          @JsonInclude(JsonInclude.Include.NON_NULL) String authorEmail) {
+
+  }
+
+  public record CommitResult(
+          String commitId,
+          List<String> paths,
+          long timestampMillis) {
+
+  }
+
+  /** Discard = checkout HEAD (or remove an untracked/added file). See spec §3.3. */
+  public record DiscardRequest(
+          List<String> paths) {
+
+  }
+
+  public record DiscardResult(
+          List<String> discarded) {
+
+  }
+
+  /** History entry per spec §3.3: git log -- path. */
+  public record LogEntry(
+          String commitId,
+          long timestampMillis,
+          String author,
+          String message) {
+
+  }
 }

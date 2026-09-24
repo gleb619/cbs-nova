@@ -30,11 +30,12 @@ public final class VcsModels {
           LoadResult loadResult,
           @JsonInclude(JsonInclude.Include.NON_NULL) String reloadError,
           @JsonInclude(JsonInclude.Include.NON_NULL) List<CompileDiagnostic> diagnostics,
-          @JsonInclude(JsonInclude.Include.NON_NULL) Long savedAt) {
+          @JsonInclude(JsonInclude.Include.NON_NULL) Long savedAt,
+          @JsonInclude(JsonInclude.Include.NON_NULL) String commitId) {
 
     public DraftResponse(String name, String status, String location, boolean reloaded,
             LoadResult loadResult) {
-      this(name, status, location, reloaded, loadResult, null, null, null);
+      this(name, status, location, reloaded, loadResult, null, null, null, null);
     }
 
   }
@@ -96,6 +97,46 @@ public final class VcsModels {
           List<ImportEntryResult> results,
           @JsonInclude(JsonInclude.Include.NON_NULL) String reloadError,
           @JsonInclude(JsonInclude.Include.NON_NULL) List<CompileDiagnostic> diagnostics) {
+
+  }
+
+  /**
+   * Mirror of {@code cbs.nova.dsl.builder.model.VcsModels.CommitRequest} — atomic per-request
+   * publish per spec §3.3 + invariant I2. The starter sets {@code message} and {@code author*} from
+   * the caller's audit row before forwarding to the builder.
+   */
+  public record CommitRequest(
+          List<String> paths,
+          @JsonInclude(JsonInclude.Include.NON_NULL) String message,
+          @JsonInclude(JsonInclude.Include.NON_NULL) String authorName,
+          @JsonInclude(JsonInclude.Include.NON_NULL) String authorEmail) {
+
+  }
+
+  public record CommitResult(
+          String commitId,
+          List<String> paths,
+          long timestampMillis) {
+
+  }
+
+  /** Discard = checkout HEAD (or remove an untracked / added file). */
+  public record DiscardRequest(
+          List<String> paths) {
+
+  }
+
+  public record DiscardResult(
+          List<String> discarded) {
+
+  }
+
+  /** History entry per spec §3.3: {@code git log -- path}, newest-first. */
+  public record LogEntry(
+          String commitId,
+          long timestampMillis,
+          String author,
+          String message) {
 
   }
 
