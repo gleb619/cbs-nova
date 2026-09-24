@@ -68,7 +68,7 @@ public class HelperInstanceResolverConfig {
           @Override
           public @NonNull Result<FileLatchOut> execute(@NonNull Context<FileLatchIn> ctx) {
             LATCH_ENTERED.countDown();
-            if(canRun()) {
+            if (canRun()) {
               Workflow.sleep(Duration.ofSeconds(10));
             } else {
               try {

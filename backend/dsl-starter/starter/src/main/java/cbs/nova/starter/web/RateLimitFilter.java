@@ -39,6 +39,7 @@ public final class RateLimitFilter extends OncePerRequestFilter {
           new RateLimitRule("POST", "/api/dsl/reload"),
           new RateLimitRule("POST", "/api/dsl/drafts/*/save"),
           new RateLimitRule("POST", "/api/dsl/drafts/*/publish"),
+          new RateLimitRule("POST", "/api/dsl/drafts/*/discard"),
           new RateLimitRule("DELETE", "/api/dsl/drafts/*"),
           new RateLimitRule("POST", "/api/executions/*/cancel"));
 
