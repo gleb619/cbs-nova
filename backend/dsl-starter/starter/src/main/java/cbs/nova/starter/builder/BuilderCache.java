@@ -24,7 +24,7 @@ import cbs.nova.starter.model.VcsModels.DraftRequest;
 import cbs.nova.starter.model.VcsModels.DraftSummary;
 import cbs.nova.starter.model.VcsModels.HistoryDiffResponse;
 import cbs.nova.starter.model.VcsModels.LogEntry;
-import cbs.nova.starter.service.DslGitStatusResolver.RepoStatus;
+import cbs.nova.dsl.vcs.RepoStatus;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import java.util.List;

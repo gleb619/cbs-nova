@@ -8,7 +8,7 @@ import cbs.nova.dsl.builder.exception.BuilderApiException;
 import cbs.nova.dsl.builder.model.VcsModels.CommitResult;
 import cbs.nova.dsl.builder.model.VcsModels.DiscardResult;
 import cbs.nova.dsl.builder.model.VcsModels.LogEntry;
-import cbs.nova.dsl.builder.service.GitStatusService.ChangeType;
+import cbs.nova.dsl.vcs.ChangeType;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Clock;

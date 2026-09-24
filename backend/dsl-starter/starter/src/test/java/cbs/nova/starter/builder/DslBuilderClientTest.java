@@ -12,8 +12,8 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 import cbs.nova.starter.config.BuilderClientConfiguration;
 import cbs.nova.starter.config.properties.DslBuilderClientProperties;
 import cbs.nova.starter.controller.BuilderApiErrorHandler;
-import cbs.nova.starter.service.DslGitStatusResolver.ChangeType;
-import cbs.nova.starter.service.DslGitStatusResolver.RepoStatus;
+import cbs.nova.dsl.vcs.ChangeType;
+import cbs.nova.dsl.vcs.RepoStatus;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import cbs.nova.starter.exception.BuilderApiException;
 import cbs.nova.starter.exception.BuilderClientBusyException;

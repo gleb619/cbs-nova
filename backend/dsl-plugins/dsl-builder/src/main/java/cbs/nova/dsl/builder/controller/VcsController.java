@@ -9,7 +9,7 @@ import cbs.nova.dsl.builder.model.VcsModels.DiscardResult;
 import cbs.nova.dsl.builder.model.VcsModels.LogEntry;
 import cbs.nova.dsl.builder.service.FileService;
 import cbs.nova.dsl.builder.service.GitStatusService;
-import cbs.nova.dsl.builder.service.GitStatusService.RepoStatus;
+import cbs.nova.dsl.vcs.RepoStatus;
 import cbs.nova.dsl.builder.service.WorkspaceGitService;
 import jakarta.validation.constraints.NotBlank;
 import java.util.List;

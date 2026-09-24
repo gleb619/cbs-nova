@@ -3,8 +3,8 @@ package cbs.nova.dsl.builder.service;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.builder.config.DslBuilderProperties;
-import cbs.nova.dsl.builder.service.GitStatusService.ChangeType;
-import cbs.nova.dsl.builder.service.GitStatusService.RepoStatus;
+import cbs.nova.dsl.vcs.ChangeType;
+import cbs.nova.dsl.vcs.RepoStatus;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Clock;
@@ -51,7 +51,7 @@ class GitStatusServiceTest {
     Path repo = initRepo();
     var service = newService(git(true, null, 60), mutableClock());
 
-    Optional<GitStatusService.RepoStatus> status = service.status(repo);
+    Optional<RepoStatus> status = service.status(repo);
 
     assertThat(status).isPresent();
     assertThat(status.get().dirtyPaths()).isEmpty();
@@ -76,7 +76,7 @@ class GitStatusServiceTest {
 
     var service = newService(git(true, null, 60), mutableClock());
 
-    GitStatusService.RepoStatus status = service.status(repo).orElseThrow();
+    RepoStatus status = service.status(repo).orElseThrow();
 
     assertThat(status.dirtyPaths())
             .contains("README.md", "added.txt", "scratch.txt");
@@ -88,14 +88,14 @@ class GitStatusServiceTest {
     var clock = mutableClock();
     var service = newService(git(true, null, 60), clock);
 
-    GitStatusService.RepoStatus first = service.status(repo).orElseThrow();
+    RepoStatus first = service.status(repo).orElseThrow();
     assertThat(first.dirtyPaths()).isEmpty();
 
     // Mutate the repo after the first read. A fresh scan would pick this up.
     Files.writeString(repo.resolve("after.txt"), "after");
 
     // Same instant, no TTL elapsed.
-    GitStatusService.RepoStatus second = service.status(repo).orElseThrow();
+    RepoStatus second = service.status(repo).orElseThrow();
 
     assertThat(second.dirtyPaths()).isEmpty();
     assertThat(second).isSameAs(first);
@@ -107,13 +107,13 @@ class GitStatusServiceTest {
     var clock = mutableClock();
     var service = newService(git(true, null, 60), clock);
 
-    GitStatusService.RepoStatus first = service.status(repo).orElseThrow();
+    RepoStatus first = service.status(repo).orElseThrow();
     assertThat(first.dirtyPaths()).isEmpty();
 
     Files.writeString(repo.resolve("after.txt"), "after");
     clock.advance(Duration.ofSeconds(61));
 
-    GitStatusService.RepoStatus second = service.status(repo).orElseThrow();
+    RepoStatus second = service.status(repo).orElseThrow();
 
     assertThat(second.dirtyPaths()).contains("after.txt");
   }
@@ -127,7 +127,7 @@ class GitStatusServiceTest {
     var clock = mutableClock();
     var service = newService(git(true, null, 3600), clock);
 
-    GitStatusService.RepoStatus first = service.status(repo).orElseThrow();
+    RepoStatus first = service.status(repo).orElseThrow();
     assertThat(first.dirtyPaths()).isEmpty();
     assertThat(first).isSameAs(service.status(repo).orElseThrow());
 
@@ -137,7 +137,7 @@ class GitStatusServiceTest {
     // snapshot. The invalidate hook restores fresh-status behaviour.
     service.invalidate();
 
-    GitStatusService.RepoStatus second = service.status(repo).orElseThrow();
+    RepoStatus second = service.status(repo).orElseThrow();
 
     assertThat(second.dirtyPaths()).contains("after.txt");
     assertThat(second).isNotSameAs(first);
@@ -151,7 +151,7 @@ class GitStatusServiceTest {
 
     var service = newService(git(true, configuredRepo.toString(), 60), mutableClock());
 
-    Optional<GitStatusService.RepoStatus> status = service.status(unrelated);
+    Optional<RepoStatus> status = service.status(unrelated);
 
     assertThat(status).isPresent();
     assertThat(status.get().workTree()).isEqualTo(configuredRepo.toRealPath());
@@ -164,7 +164,7 @@ class GitStatusServiceTest {
 
     var service = newService(git(true, null, 60), mutableClock());
 
-    Optional<GitStatusService.RepoStatus> status = service.status(nested);
+    Optional<RepoStatus> status = service.status(nested);
 
     assertThat(status).isPresent();
     assertThat(status.get().workTree()).isEqualTo(repo.toRealPath());

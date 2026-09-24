@@ -1,12 +1,14 @@
 package cbs.nova.dsl.builder.service;
 
 import cbs.nova.dsl.builder.config.DslBuilderProperties;
+import cbs.nova.dsl.vcs.ChangeType;
+import cbs.nova.dsl.vcs.GitChangeClassifier;
+import cbs.nova.dsl.vcs.RepoStatus;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -102,71 +104,19 @@ public class GitStatusService {
   }
 
   /**
-   * Per-path classification of the JGit {@link Status} set. Precedence (highest first) is
-   * CONFLICTING, DELETED, ADDED, MODIFIED — staged and unstaged variants collapse to one badge.
-   */
-  public enum ChangeType {
-    ADDED, MODIFIED, DELETED, UNTRACKED, CONFLICTING
-  }
-
-  /**
-   * Snapshot of a repository: the work tree path, the union of all changed paths
-   * ({@code dirtyPaths}), and the typed classification per path ({@code changes}). Backward
-   * compatible: the legacy 2-arg constructor leaves {@code changes} empty.
-   */
-  public record RepoStatus(Path workTree, Set<String> dirtyPaths,
-          Map<String, ChangeType> changes) {
-
-    public RepoStatus {
-      changes = changes == null ? Map.of() : Map.copyOf(changes);
-      dirtyPaths = dirtyPaths == null ? changes.keySet() : Set.copyOf(dirtyPaths);
-    }
-
-    /** Legacy constructor for callers/tests that only carry the dirty set. */
-    public RepoStatus(Path workTree, Set<String> dirtyPaths) {
-      this(workTree, dirtyPaths, null);
-    }
-
-    /** Build a {@code RepoStatus} whose {@code dirtyPaths} is the key set of {@code changes}. */
-    public static RepoStatus of(Path workTree, Map<String, ChangeType> changes) {
-      return new RepoStatus(workTree, null, changes);
-    }
-
-    /** Return the change type for {@code path}, if any. */
-    public Optional<ChangeType> changeOf(String path) {
-      ChangeType type = changes.get(path);
-      return type == null ? Optional.empty() : Optional.of(type);
-    }
-  }
-
-  /**
-   * Classify a JGit {@link Status} into a path→{@link ChangeType} map. Later writes win so
-   * precedence collapses to {@code CONFLICTING > DELETED > ADDED > UNTRACKED > MODIFIED}.
+   * Classify a JGit {@link Status} into a path→{@link ChangeType} map via the shared
+   * {@link GitChangeClassifier}. Later writes win so precedence collapses to
+   * {@code CONFLICTING > DELETED > ADDED > UNTRACKED > MODIFIED}.
    */
   static Map<String, ChangeType> classify(Status status) {
-    Map<String, ChangeType> changes = new HashMap<>();
-    for (String p : status.getChanged()) {
-      changes.put(p, ChangeType.MODIFIED);
-    }
-    for (String p : status.getModified()) {
-      changes.put(p, ChangeType.MODIFIED);
-    }
-    for (String p : status.getUntracked()) {
-      changes.put(p, ChangeType.UNTRACKED);
-    }
-    for (String p : status.getAdded()) {
-      changes.put(p, ChangeType.ADDED);
-    }
-    for (String p : status.getRemoved()) {
-      changes.put(p, ChangeType.DELETED);
-    }
-    for (String p : status.getMissing()) {
-      changes.put(p, ChangeType.DELETED);
-    }
-    for (String p : status.getConflicting()) {
-      changes.put(p, ChangeType.CONFLICTING);
-    }
-    return changes;
+    return GitChangeClassifier.classify(
+            status.getAdded(),
+            status.getChanged(),
+            status.getModified(),
+            status.getUntracked(),
+            status.getRemoved(),
+            status.getMissing(),
+            status.getConflicting());
   }
 
   private record Snapshot(RepoStatus repoStatus, Instant expiresAt) {

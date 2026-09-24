@@ -6,7 +6,8 @@ import static org.mockito.Mockito.when;
 
 import cbs.nova.starter.builder.DslBuilderClient;
 import cbs.nova.starter.config.properties.DslProperties;
-import cbs.nova.starter.service.DslGitStatusResolver.ChangeType;
+import cbs.nova.dsl.vcs.ChangeType;
+import cbs.nova.dsl.vcs.RepoStatus;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Clock;
@@ -29,7 +30,7 @@ class DslGitStatusResolverTest {
 
   @Test
   void delegatesToBuilderClientWhenAvailable() {
-    var expected = Optional.of(new DslGitStatusResolver.RepoStatus(tempDir, Set.of("builder.txt")));
+    var expected = Optional.of(new RepoStatus(tempDir, Set.of("builder.txt")));
     var builder = mock(DslBuilderClient.class);
     when(builder.vcsStatus()).thenReturn(expected);
 
@@ -59,7 +60,7 @@ class DslGitStatusResolverTest {
     Path repo = initRepo();
     var resolver = newResolver(dslProperties(true, null, 60), null);
 
-    Optional<DslGitStatusResolver.RepoStatus> status = resolver.status(repo);
+    Optional<RepoStatus> status = resolver.status(repo);
 
     assertThat(status).isPresent();
     assertThat(status.get().dirtyPaths()).isEmpty();
@@ -87,7 +88,7 @@ class DslGitStatusResolverTest {
 
     var resolver = newResolver(dslProperties(true, null, 60), null);
 
-    DslGitStatusResolver.RepoStatus status = resolver.status(repo).orElseThrow();
+    RepoStatus status = resolver.status(repo).orElseThrow();
 
     assertThat(status.dirtyPaths())
             .contains("added.txt", "changedBase.txt", "modifiedBase.txt",
@@ -111,12 +112,12 @@ class DslGitStatusResolverTest {
     var resolver = newResolver(dslProperties(true, null, 60), null);
     resolver.setClock(clock);
 
-    DslGitStatusResolver.RepoStatus first = resolver.status(repo).orElseThrow();
+    RepoStatus first = resolver.status(repo).orElseThrow();
     assertThat(first.dirtyPaths()).isEmpty();
 
     Files.writeString(repo.resolve("after.txt"), "after");
 
-    DslGitStatusResolver.RepoStatus second = resolver.status(repo).orElseThrow();
+    RepoStatus second = resolver.status(repo).orElseThrow();
 
     assertThat(second.dirtyPaths()).isEmpty();
     assertThat(second).isSameAs(first);
@@ -129,13 +130,13 @@ class DslGitStatusResolverTest {
     var resolver = newResolver(dslProperties(true, null, 60), null);
     resolver.setClock(clock);
 
-    DslGitStatusResolver.RepoStatus first = resolver.status(repo).orElseThrow();
+    RepoStatus first = resolver.status(repo).orElseThrow();
     assertThat(first.dirtyPaths()).isEmpty();
 
     Files.writeString(repo.resolve("after.txt"), "after");
     clock.advance(Duration.ofSeconds(61));
 
-    DslGitStatusResolver.RepoStatus second = resolver.status(repo).orElseThrow();
+    RepoStatus second = resolver.status(repo).orElseThrow();
 
     assertThat(second.dirtyPaths()).contains("after.txt");
   }
@@ -157,7 +158,7 @@ class DslGitStatusResolverTest {
 
     var resolver = newResolver(dslProperties(true, configuredRepo.toString(), 60), null);
 
-    Optional<DslGitStatusResolver.RepoStatus> status = resolver.status(unrelated);
+    Optional<RepoStatus> status = resolver.status(unrelated);
 
     assertThat(status).isPresent();
     assertThat(status.get().workTree()).isEqualTo(configuredRepo.toRealPath());

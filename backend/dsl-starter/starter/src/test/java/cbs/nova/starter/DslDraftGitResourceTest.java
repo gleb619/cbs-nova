@@ -30,6 +30,8 @@ import cbs.nova.starter.model.VcsModels.DraftResponse;
 import cbs.nova.starter.model.VcsModels.LogEntry;
 import cbs.nova.starter.service.DslDefinitionBundleService;
 import cbs.nova.starter.service.DslDefinitionHistoryService;
+import cbs.nova.dsl.vcs.ChangeType;
+import cbs.nova.dsl.vcs.RepoStatus;
 import cbs.nova.starter.service.DslGitStatusResolver;
 import cbs.nova.starter.service.DslSourcePathResolver;
 import java.io.IOException;
@@ -95,8 +97,8 @@ class DslDraftGitResourceTest {
     when(client.compile(any())).thenReturn(new CompileResult("s-1", true, List.of(), List.of(), 1));
     when(client.downloadZip(anyString())).thenReturn(emptyZip());
     when(sourcePathResolver.relativePath("foo")).thenReturn(Optional.of("dsl/FooDsl.java"));
-    var status = DslGitStatusResolver.RepoStatus.of(sourceDir,
-            Map.of("dsl/FooDsl.java", DslGitStatusResolver.ChangeType.MODIFIED));
+    var status = RepoStatus.of(sourceDir,
+            Map.of("dsl/FooDsl.java", ChangeType.MODIFIED));
     when(gitStatusResolver.status(sourceDir)).thenReturn(Optional.of(status));
     when(client.commit(any()))
             .thenReturn(new CommitResult("abc123", List.of("dsl/FooDsl.java"), 42));
@@ -137,7 +139,7 @@ class DslDraftGitResourceTest {
     when(client.compile(any())).thenReturn(new CompileResult("s-1", true, List.of(), List.of(), 1));
     when(client.downloadZip(anyString())).thenReturn(emptyZip());
     when(sourcePathResolver.relativePath("foo")).thenReturn(Optional.of("dsl/FooDsl.java"));
-    var status = DslGitStatusResolver.RepoStatus.of(sourceDir, Map.of());
+    var status = RepoStatus.of(sourceDir, Map.of());
     when(gitStatusResolver.status(sourceDir)).thenReturn(Optional.of(status));
 
     ServerResponse response = handler.publish(postRequest("/api/dsl/drafts/foo/publish", "foo"));
@@ -157,8 +159,8 @@ class DslDraftGitResourceTest {
     when(client.compile(any())).thenReturn(new CompileResult("s-1", true, List.of(), List.of(), 1));
     when(client.downloadZip(anyString())).thenReturn(emptyZip());
     when(sourcePathResolver.relativePath("foo")).thenReturn(Optional.of("dsl/FooDsl.java"));
-    var status = DslGitStatusResolver.RepoStatus.of(sourceDir,
-            Map.of("dsl/FooDsl.java", DslGitStatusResolver.ChangeType.MODIFIED));
+    var status = RepoStatus.of(sourceDir,
+            Map.of("dsl/FooDsl.java", ChangeType.MODIFIED));
     when(gitStatusResolver.status(sourceDir)).thenReturn(Optional.of(status));
     when(client.commit(any())).thenThrow(new BuilderApiException(
             HttpStatus.INTERNAL_SERVER_ERROR, "COMMIT_FAILED", "git refused"));

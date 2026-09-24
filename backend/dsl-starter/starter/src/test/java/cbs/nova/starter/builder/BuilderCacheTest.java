@@ -11,7 +11,7 @@ import static cbs.nova.starter.core.StarterConstants.CACHE_VCS_STATUS_KEY;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.starter.model.VcsModels.DraftRequest;
-import cbs.nova.starter.service.DslGitStatusResolver.RepoStatus;
+import cbs.nova.dsl.vcs.RepoStatus;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import java.nio.file.Path;
 import java.util.Optional;

@@ -8,8 +8,8 @@ import static org.mockito.Mockito.when;
 
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.model.DslIntrospectionModels.DefinitionStatus;
-import cbs.nova.starter.service.DslGitStatusResolver.ChangeType;
-import cbs.nova.starter.service.DslGitStatusResolver.RepoStatus;
+import cbs.nova.dsl.vcs.ChangeType;
+import cbs.nova.dsl.vcs.RepoStatus;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
