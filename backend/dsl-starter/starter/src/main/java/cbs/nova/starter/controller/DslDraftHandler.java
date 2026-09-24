@@ -12,6 +12,7 @@ import cbs.nova.dsl.exception.ValidationException;
 import cbs.nova.dsl.utils.LineDiff;
 import cbs.nova.starter.builder.DslBuilderClient;
 import cbs.nova.starter.config.properties.DslProperties;
+import cbs.nova.starter.exception.BuilderApiException;
 import cbs.nova.starter.exception.DslCompilationException;
 import cbs.nova.starter.model.VcsModels.CommitRequest;
 import cbs.nova.starter.model.VcsModels.CommitResult;
@@ -77,6 +78,10 @@ public class DslDraftHandler {
   static final String ACTION_DRAFT_BULK_WRITE = "DRAFT_BULK_WRITE";
   static final String ACTION_DRAFT_DISCARD = "DRAFT_DISCARD";
   static final String ACTION_DRAFT_COMMIT = "DEFINITION_PUBLISH_COMMIT";
+  static final String ACTION_DRAFT_RESTORE = "DRAFT_RESTORE";
+  static final String GIT_NOT_CONFIGURED_CODE = "GIT_NOT_CONFIGURED";
+  static final int HISTORY_LIMIT = 50;
+  static final long HISTORY_SIZE_UNKNOWN = -1L;
   static final String DEFAULT_LOG_LIMIT = "20";
   static final int MAX_LOG_LIMIT = 200;
   static final String GIT_REQUIRES_BUILDER_CODE = "GIT_REQUIRES_BUILDER";
@@ -263,8 +268,26 @@ public class DslDraftHandler {
     }
     var builder = builderClient();
     if (builder != null) {
-      return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON)
-              .body(builder.history(name));
+      var sourcePath = resolveSourcePath(name);
+      if (sourcePath.isPresent()) {
+        try {
+          String path = sourcePath.get();
+          List<LogEntry> entries = builder.vcsLog(path, HISTORY_LIMIT);
+          List<DefinitionHistoryEntry> history = entries.stream()
+                  .map(e -> new DefinitionHistoryEntry(e.commitId(), e.timestampMillis(),
+                          HISTORY_SIZE_UNKNOWN, e.timestampMillis()))
+                  .toList();
+          return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(history);
+        } catch (RuntimeException e) {
+          if (isGitNotConfigured(e)) {
+            log.debug("[DSL drafts] git not configured for {} — falling back to JSON history",
+                    name);
+            return historyViaBuilderJson(name, builder);
+          }
+          throw e;
+        }
+      }
+      return historyViaBuilderJson(name, builder);
     }
     List<DefinitionHistoryEntry> entries = historyService.list(dir.path(), name);
     return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(entries);
@@ -279,19 +302,50 @@ public class DslDraftHandler {
     }
     var builder = builderClient();
     if (builder != null) {
-      return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON)
-              .body(builder.historyEntry(name, timestamp));
+      var sourcePath = resolveSourcePath(name);
+      if (sourcePath.isPresent() && isGitCommitId(timestamp)) {
+        String path = sourcePath.get();
+        try {
+          String content = builder.vcsShow(path, timestamp);
+          DraftRequest meta = readDraftMetadataIgnoring404(builder, name);
+          DraftRequest response = new DraftRequest(
+                  name,
+                  meta != null ? meta.type() : null,
+                  "History",
+                  meta != null ? meta.version() : null,
+                  meta != null ? meta.taskQueue() : null,
+                  content,
+                  null);
+          return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(response);
+        } catch (BuilderApiException e) {
+          if (e.getStatusCode().value() == HttpStatus.NOT_FOUND.value()) {
+            return historyEntryNotFound(name, timestamp);
+          }
+          if (isGitNotConfigured(e)) {
+            return historyEntryViaBuilderJson(name, timestamp, builder);
+          }
+          throw e;
+        } catch (RuntimeException e) {
+          if (isGitNotConfigured(e)) {
+            return historyEntryViaBuilderJson(name, timestamp, builder);
+          }
+          throw e;
+        }
+      }
+      return historyEntryViaBuilderJson(name, timestamp, builder);
     }
     var entry = historyService.readEntry(dir.path(), name, timestamp);
     if (entry.isEmpty()) {
-      return error(HttpStatus.NOT_FOUND,
-              new ErrorResponse("NOT_FOUND",
-                      "No publish history entry " + timestamp + " for " + name, name, null, null,
-                      null, null, null, null));
+      return historyEntryNotFound(name, timestamp);
     }
     return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(entry.get());
   }
 
+  /**
+   * Git-backed diff compares the file content at the requested commit against the current
+   * working-tree content of the definition's source path. The local-filesystem branch compares the
+   * stored published marker against the requested JSON history snapshot.
+   */
   public ServerResponse historyDiff(ServerRequest request) throws IOException {
     String name = request.pathVariable("name");
     String timestamp = request.pathVariable("timestamp");
@@ -301,15 +355,37 @@ public class DslDraftHandler {
     }
     var builder = builderClient();
     if (builder != null) {
-      return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON)
-              .body(builder.historyDiff(name, timestamp));
+      var sourcePath = resolveSourcePath(name);
+      if (sourcePath.isPresent() && isGitCommitId(timestamp)) {
+        String path = sourcePath.get();
+        try {
+          String before = builder.vcsShow(path, timestamp);
+          String after = builder.readFile(path).content();
+          LineDiff.Result result = LineDiff.diff(before, after, StarterConstants.DEFAULT_MAX_HUNKS,
+                  StarterConstants.LINE_DIFF_CONTEXT_LINES);
+          return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON)
+                  .body(new HistoryDiffResponse(name, timestamp, before, after, result.hunks(),
+                          result.truncated()));
+        } catch (BuilderApiException e) {
+          if (e.getStatusCode().value() == HttpStatus.NOT_FOUND.value()) {
+            return historyEntryNotFound(name, timestamp);
+          }
+          if (isGitNotConfigured(e)) {
+            return historyDiffViaBuilderJson(name, timestamp, builder);
+          }
+          throw e;
+        } catch (RuntimeException e) {
+          if (isGitNotConfigured(e)) {
+            return historyDiffViaBuilderJson(name, timestamp, builder);
+          }
+          throw e;
+        }
+      }
+      return historyDiffViaBuilderJson(name, timestamp, builder);
     }
     var entry = historyService.readEntry(dir.path(), name, timestamp);
     if (entry.isEmpty()) {
-      return error(HttpStatus.NOT_FOUND,
-              new ErrorResponse("NOT_FOUND",
-                      "No publish history entry " + timestamp + " for " + name, name, null, null,
-                      null, null, null, null));
+      return historyEntryNotFound(name, timestamp);
     }
     String after = pretty(entry.get());
     var published = historyService.readPublished(dir.path(), name);
@@ -337,18 +413,43 @@ public class DslDraftHandler {
     }
     var builder = builderClient();
     if (builder != null) {
-      var restored = builder.restoreDraft(name, timestamp);
-      log.info("[DSL drafts] restored {} via DSL builder from history {}", name, timestamp);
-      return ServerResponse.ok()
-              .contentType(MediaType.APPLICATION_JSON)
-              .body(finishPublish(name, restored.location(), dir.path()));
+      var sourcePath = resolveSourcePath(name);
+      if (sourcePath.isPresent() && isGitCommitId(timestamp)) {
+        String path = sourcePath.get();
+        try {
+          String content = builder.vcsShow(path, timestamp);
+          builder.stageWrite(path, content);
+          builder.flushFiles();
+          DraftResponse response = new DraftResponse(name, "Draft", path, false,
+                  LoadResult.empty(), null, null, System.currentTimeMillis(), null);
+          audit(request, ACTION_DRAFT_RESTORE, name, StarterConstants.OUTCOME_SUCCESS,
+                  Map.of("location", path, "commitId", timestamp));
+          log.info("[DSL drafts] restored {} (path={}) from commit {}", name, path, timestamp);
+          return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(response);
+        } catch (BuilderApiException e) {
+          audit(request, ACTION_DRAFT_RESTORE, name, StarterConstants.OUTCOME_FAILURE,
+                  Map.of("error", String.valueOf(e.getMessage())));
+          if (e.getStatusCode().value() == HttpStatus.NOT_FOUND.value()) {
+            return historyEntryNotFound(name, timestamp);
+          }
+          if (isGitNotConfigured(e)) {
+            return restoreViaBuilderJson(name, timestamp, builder, dir.path());
+          }
+          throw e;
+        } catch (RuntimeException e) {
+          audit(request, ACTION_DRAFT_RESTORE, name, StarterConstants.OUTCOME_FAILURE,
+                  Map.of("error", String.valueOf(e.getMessage())));
+          if (isGitNotConfigured(e)) {
+            return restoreViaBuilderJson(name, timestamp, builder, dir.path());
+          }
+          throw e;
+        }
+      }
+      return restoreViaBuilderJson(name, timestamp, builder, dir.path());
     }
     var entry = historyService.readEntry(dir.path(), name, timestamp);
     if (entry.isEmpty()) {
-      return error(HttpStatus.NOT_FOUND,
-              new ErrorResponse("NOT_FOUND",
-                      "No publish history entry " + timestamp + " for " + name, name, null, null,
-                      null, null, null, null));
+      return historyEntryNotFound(name, timestamp);
     }
     historyService.snapshotBeforePublish(dir.path(), name);
     var payload = withStatus(entry.get(), "Published");
@@ -851,6 +952,70 @@ public class DslDraftHandler {
                       "location", path));
       return null;
     }
+  }
+
+  private ServerResponse historyViaBuilderJson(String name, DslBuilderClient builder) {
+    return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON)
+            .body(builder.history(name));
+  }
+
+  private ServerResponse historyEntryViaBuilderJson(String name, String timestamp,
+          DslBuilderClient builder) {
+    return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON)
+            .body(builder.historyEntry(name, timestamp));
+  }
+
+  private ServerResponse historyDiffViaBuilderJson(String name, String timestamp,
+          DslBuilderClient builder) {
+    return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON)
+            .body(builder.historyDiff(name, timestamp));
+  }
+
+  private ServerResponse restoreViaBuilderJson(String name, String timestamp,
+          DslBuilderClient builder, Path dir) throws IOException {
+    var restored = builder.restoreDraft(name, timestamp);
+    log.info("[DSL drafts] restored {} via DSL builder from history {}", name, timestamp);
+    return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON)
+            .body(finishPublish(name, restored.location(), dir));
+  }
+
+  private DraftRequest readDraftMetadataIgnoring404(DslBuilderClient builder, String name) {
+    try {
+      return builder.readDraft(name);
+    } catch (BuilderApiException e) {
+      if (e.getStatusCode().value() == HttpStatus.NOT_FOUND.value()) {
+        return null;
+      }
+      throw e;
+    }
+  }
+
+  private ServerResponse historyEntryNotFound(String name, String timestamp) {
+    return error(HttpStatus.NOT_FOUND,
+            new ErrorResponse("NOT_FOUND",
+                    "No publish history entry " + timestamp + " for " + name, name, null, null,
+                    null, null, null, null));
+  }
+
+  private boolean isGitCommitId(String timestamp) {
+    if (timestamp == null
+            || timestamp.matches(StarterConstants.WORKBENCH_HISTORY_TIMESTAMP_PATTERN)) {
+      return false;
+    }
+    int len = timestamp.length();
+    if (len < 7 || len > 40) {
+      return false;
+    }
+    if (!timestamp.matches("^[0-9a-fA-F]+$")) {
+      return false;
+    }
+    return len == 40 || timestamp.matches(".*[a-fA-F].*");
+  }
+
+  private boolean isGitNotConfigured(RuntimeException e) {
+    return e instanceof BuilderApiException bae
+            && bae.getStatusCode().value() == HttpStatus.CONFLICT.value()
+            && GIT_NOT_CONFIGURED_CODE.equals(bae.getCode());
   }
 
   private Optional<String> resolveSourcePath(String name) {

@@ -26,7 +26,10 @@ import cbs.nova.starter.model.VcsModels.CommitRequest;
 import cbs.nova.starter.model.VcsModels.CommitResult;
 import cbs.nova.starter.model.VcsModels.DiscardRequest;
 import cbs.nova.starter.model.VcsModels.DraftRequest;
+import cbs.nova.starter.model.DslFileModels.FileContentResponse;
+import cbs.nova.starter.model.VcsModels.DefinitionHistoryEntry;
 import cbs.nova.starter.model.VcsModels.DraftResponse;
+import cbs.nova.starter.model.VcsModels.HistoryDiffResponse;
 import cbs.nova.starter.model.VcsModels.LogEntry;
 import cbs.nova.starter.service.DslDefinitionBundleService;
 import cbs.nova.starter.service.DslDefinitionHistoryService;
@@ -280,9 +283,13 @@ class DslDraftGitResourceTest {
   }
 
   private DslDraftHandler builderHandler(DslBuilderClient client) {
-    return new DslDraftHandler(props,
+    return handler(client,
             new DslReloadHandler(props, new DefinitionLoader(), null, null, providerOf(client),
-                    null, null, null),
+                    null, null, null));
+  }
+
+  private DslDraftHandler handler(DslBuilderClient client, DslReloadHandler reloadHandler) {
+    return new DslDraftHandler(props, reloadHandler,
             new DslDefinitionHistoryService(props, mapper), mapper,
             new DslDefinitionBundleService(mapper, Optional.empty(),
                     DslProperties.bundleServiceDefaults()),
@@ -305,6 +312,252 @@ class DslDraftGitResourceTest {
     ObjectProvider<T> provider = mock(ObjectProvider.class);
     when(provider.getIfAvailable()).thenReturn(bean);
     return provider;
+  }
+
+  @Test
+  void historyMapsLogEntriesToDefinitionHistoryEntries() throws Exception {
+    when(sourcePathResolver.relativePath("foo")).thenReturn(Optional.of("dsl/FooDsl.java"));
+    when(client.vcsLog("dsl/FooDsl.java", 50)).thenReturn(List.of(
+            new LogEntry("abc1234", 1000L, "alice", "Publish foo"),
+            new LogEntry("def5678", 2000L, "bob", "Publish foo v2")));
+
+    ServerResponse response = handler.history(getRequest("/api/dsl/drafts/foo/history",
+            Map.of("name", "foo")));
+
+    assertThat(response.statusCode().value()).isEqualTo(200);
+    @SuppressWarnings("unchecked")
+    List<DefinitionHistoryEntry> body = (List<DefinitionHistoryEntry>) ((EntityResponse<?>) response)
+            .entity();
+    assertThat(body).hasSize(2);
+    assertThat(body.get(0).timestamp()).isEqualTo("abc1234");
+    assertThat(body.get(0).timestampMillis()).isEqualTo(1000L);
+    assertThat(body.get(0).sizeBytes()).isEqualTo(-1L);
+    assertThat(body.get(0).lastModifiedMillis()).isEqualTo(1000L);
+    assertThat(body.get(1).timestamp()).isEqualTo("def5678");
+    assertThat(body.get(1).timestampMillis()).isEqualTo(2000L);
+    verify(client, never()).history("foo");
+  }
+
+  @Test
+  void historyFallsBackToBuilderJsonWhenNoSourcePath() throws Exception {
+    when(sourcePathResolver.relativePath("foo")).thenReturn(Optional.empty());
+    when(client.history("foo")).thenReturn(List.of());
+
+    handler.history(getRequest("/api/dsl/drafts/foo/history", Map.of("name", "foo")));
+
+    verify(client).history("foo");
+    verify(client, never()).vcsLog(anyString(), eq(50));
+  }
+
+  @Test
+  void historyFallsBackToBuilderJsonWhenGitNotConfigured() throws Exception {
+    when(sourcePathResolver.relativePath("foo")).thenReturn(Optional.of("dsl/FooDsl.java"));
+    when(client.vcsLog("dsl/FooDsl.java", 50)).thenThrow(new BuilderApiException(
+            HttpStatus.CONFLICT, "GIT_NOT_CONFIGURED", "git disabled"));
+    when(client.history("foo")).thenReturn(List.of());
+
+    handler.history(getRequest("/api/dsl/drafts/foo/history", Map.of("name", "foo")));
+
+    verify(client).history("foo");
+  }
+
+  @Test
+  void historyEntryReturnsSourceAtCommitWithMetadata() throws Exception {
+    when(sourcePathResolver.relativePath("foo")).thenReturn(Optional.of("dsl/FooDsl.java"));
+    when(client.vcsShow("dsl/FooDsl.java", "abc1234")).thenReturn("class Foo {}");
+    when(client.readDraft("foo")).thenReturn(
+            new DraftRequest("foo", "process", "Draft", "1.0.0", "q", "current", null));
+
+    ServerResponse response = handler.historyEntry(getRequest(
+            "/api/dsl/drafts/foo/history/abc1234", Map.of("name", "foo", "timestamp", "abc1234")));
+
+    assertThat(response.statusCode().value()).isEqualTo(200);
+    DraftRequest body = (DraftRequest) ((EntityResponse<?>) response).entity();
+    assertThat(body.status()).isEqualTo("History");
+    assertThat(body.source()).isEqualTo("class Foo {}");
+    assertThat(body.type()).isEqualTo("process");
+    assertThat(body.version()).isEqualTo("1.0.0");
+    assertThat(body.taskQueue()).isEqualTo("q");
+  }
+
+  @Test
+  void historyEntryReturnsSourceAtCommitWhenNoDraftMarker() throws Exception {
+    when(sourcePathResolver.relativePath("foo")).thenReturn(Optional.of("dsl/FooDsl.java"));
+    when(client.vcsShow("dsl/FooDsl.java", "abc1234")).thenReturn("class Foo {}");
+    when(client.readDraft("foo")).thenThrow(new BuilderApiException(
+            HttpStatus.NOT_FOUND, "NOT_FOUND", "no marker"));
+
+    ServerResponse response = handler.historyEntry(getRequest(
+            "/api/dsl/drafts/foo/history/abc1234", Map.of("name", "foo", "timestamp", "abc1234")));
+
+    DraftRequest body = (DraftRequest) ((EntityResponse<?>) response).entity();
+    assertThat(body.status()).isEqualTo("History");
+    assertThat(body.source()).isEqualTo("class Foo {}");
+    assertThat(body.type()).isNull();
+    assertThat(body.version()).isNull();
+    assertThat(body.taskQueue()).isNull();
+  }
+
+  @Test
+  void historyEntryReturns404WhenShowNotFound() throws Exception {
+    when(sourcePathResolver.relativePath("foo")).thenReturn(Optional.of("dsl/FooDsl.java"));
+    when(client.vcsShow("dsl/FooDsl.java", "abc1234")).thenThrow(new BuilderApiException(
+            HttpStatus.NOT_FOUND, "NOT_FOUND", "no such commit"));
+
+    ServerResponse response = handler.historyEntry(getRequest(
+            "/api/dsl/drafts/foo/history/abc1234", Map.of("name", "foo", "timestamp", "abc1234")));
+
+    assertThat(response.statusCode().value()).isEqualTo(404);
+    cbs.nova.dsl.model.ErrorResponse body = (cbs.nova.dsl.model.ErrorResponse) ((EntityResponse<?>) response)
+            .entity();
+    assertThat(body.code()).isEqualTo("NOT_FOUND");
+  }
+
+  @Test
+  void historyEntryFallsBackToBuilderJsonForLegacyNumericTs() throws Exception {
+    when(sourcePathResolver.relativePath("foo")).thenReturn(Optional.of("dsl/FooDsl.java"));
+    when(client.historyEntry("foo", "1727150000000")).thenReturn(
+            new DraftRequest("foo", "process", "History", "1", "q", "old", null));
+
+    handler.historyEntry(getRequest("/api/dsl/drafts/foo/history/1727150000000",
+            Map.of("name", "foo", "timestamp", "1727150000000")));
+
+    verify(client).historyEntry("foo", "1727150000000");
+    verify(client, never()).vcsShow(anyString(), anyString());
+  }
+
+  @Test
+  void historyEntryFallsBackToBuilderJsonForAllDigitShortSha() throws Exception {
+    when(sourcePathResolver.relativePath("foo")).thenReturn(Optional.of("dsl/FooDsl.java"));
+    when(client.historyEntry("foo", "1234567")).thenReturn(
+            new DraftRequest("foo", "process", "History", "1", "q", "old", null));
+
+    handler.historyEntry(getRequest("/api/dsl/drafts/foo/history/1234567",
+            Map.of("name", "foo", "timestamp", "1234567")));
+
+    verify(client).historyEntry("foo", "1234567");
+  }
+
+  @Test
+  void historyDiffComputesHunksBetweenCommitAndWorkingTree() throws Exception {
+    when(sourcePathResolver.relativePath("foo")).thenReturn(Optional.of("dsl/FooDsl.java"));
+    when(client.vcsShow("dsl/FooDsl.java", "abc1234")).thenReturn("line1\nline2\nline3");
+    when(client.readFile("dsl/FooDsl.java")).thenReturn(
+            new FileContentResponse("dsl/FooDsl.java", "line1\nline2\nline3\nline4", false, 0));
+
+    ServerResponse response = handler.historyDiff(getRequest(
+            "/api/dsl/drafts/foo/history/abc1234/diff",
+            Map.of("name", "foo", "timestamp", "abc1234")));
+
+    assertThat(response.statusCode().value()).isEqualTo(200);
+    HistoryDiffResponse body = (HistoryDiffResponse) ((EntityResponse<?>) response).entity();
+    assertThat(body.name()).isEqualTo("foo");
+    assertThat(body.timestamp()).isEqualTo("abc1234");
+    assertThat(body.before()).isEqualTo("line1\nline2\nline3");
+    assertThat(body.after()).isEqualTo("line1\nline2\nline3\nline4");
+    assertThat(body.hunks()).isNotEmpty();
+  }
+
+  @Test
+  void historyDiffFallsBackToBuilderJsonForLegacyNumericTs() throws Exception {
+    when(sourcePathResolver.relativePath("foo")).thenReturn(Optional.of("dsl/FooDsl.java"));
+    when(client.historyDiff("foo", "1727150000000")).thenReturn(
+            new HistoryDiffResponse("foo", "1727150000000", null, "after", List.of(), false));
+
+    handler.historyDiff(getRequest("/api/dsl/drafts/foo/history/1727150000000/diff",
+            Map.of("name", "foo", "timestamp", "1727150000000")));
+
+    verify(client).historyDiff("foo", "1727150000000");
+    verify(client, never()).vcsShow(anyString(), anyString());
+    verify(client, never()).readFile(anyString());
+  }
+
+  @Test
+  void restoreStagesWriteAndFlushesWithoutReload() throws Exception {
+    DslReloadHandler reloadHandler = mock(DslReloadHandler.class);
+    handler = handler(client, reloadHandler);
+    when(sourcePathResolver.relativePath("foo")).thenReturn(Optional.of("dsl/FooDsl.java"));
+    when(client.vcsShow("dsl/FooDsl.java", "abc1234")).thenReturn("class Foo {}");
+
+    ServerResponse response = handler.restore(postRequestWithTimestamp(
+            "/api/dsl/drafts/foo/history/abc1234/restore", "foo", "abc1234"));
+
+    assertThat(response.statusCode().value()).isEqualTo(200);
+    DraftResponse body = (DraftResponse) ((EntityResponse<?>) response).entity();
+    assertThat(body.status()).isEqualTo("Draft");
+    assertThat(body.location()).isEqualTo("dsl/FooDsl.java");
+    assertThat(body.reloaded()).isFalse();
+    assertThat(body.commitId()).isNull();
+    verify(client).stageWrite("dsl/FooDsl.java", "class Foo {}");
+    verify(client).flushFiles();
+    verify(reloadHandler, never()).reloadDefinitions();
+  }
+
+  @Test
+  void restoreReturns404WhenCommitNotFound() throws Exception {
+    DslReloadHandler reloadHandler = mock(DslReloadHandler.class);
+    handler = handler(client, reloadHandler);
+    when(sourcePathResolver.relativePath("foo")).thenReturn(Optional.of("dsl/FooDsl.java"));
+    when(client.vcsShow("dsl/FooDsl.java", "abc1234")).thenThrow(new BuilderApiException(
+            HttpStatus.NOT_FOUND, "NOT_FOUND", "no such commit"));
+
+    ServerResponse response = handler.restore(postRequestWithTimestamp(
+            "/api/dsl/drafts/foo/history/abc1234/restore", "foo", "abc1234"));
+
+    assertThat(response.statusCode().value()).isEqualTo(404);
+    verify(client, never()).stageWrite(anyString(), anyString());
+    verify(client, never()).flushFiles();
+    verify(reloadHandler, never()).reloadDefinitions();
+  }
+
+  @Test
+  void restoreFallsBackToBuilderJsonForLegacyNumericTs() throws Exception {
+    DslReloadHandler reloadHandler = mock(DslReloadHandler.class);
+    handler = handler(client, reloadHandler);
+    when(sourcePathResolver.relativePath("foo")).thenReturn(Optional.of("dsl/FooDsl.java"));
+    when(client.restoreDraft("foo", "1727150000000")).thenReturn(
+            new DraftResponse("foo", "Published", "/remote/.workbench/published/foo.json", false,
+                    LoadResult.empty(), null, null, null, null));
+
+    handler.restore(postRequestWithTimestamp("/api/dsl/drafts/foo/history/1727150000000/restore",
+            "foo", "1727150000000"));
+
+    verify(client).restoreDraft("foo", "1727150000000");
+    verify(client, never()).stageWrite(anyString(), anyString());
+  }
+
+  @Test
+  void restoreFallsBackToBuilderJsonWhenGitNotConfigured() throws Exception {
+    DslReloadHandler reloadHandler = mock(DslReloadHandler.class);
+    handler = handler(client, reloadHandler);
+    when(sourcePathResolver.relativePath("foo")).thenReturn(Optional.of("dsl/FooDsl.java"));
+    when(client.vcsShow("dsl/FooDsl.java", "abc1234")).thenThrow(new BuilderApiException(
+            HttpStatus.CONFLICT, "GIT_NOT_CONFIGURED", "git disabled"));
+    when(client.restoreDraft("foo", "abc1234")).thenReturn(
+            new DraftResponse("foo", "Published", "/remote/.workbench/published/foo.json", false,
+                    LoadResult.empty(), null, null, null, null));
+
+    handler.restore(postRequestWithTimestamp("/api/dsl/drafts/foo/history/abc1234/restore", "foo",
+            "abc1234"));
+
+    verify(client).restoreDraft("foo", "abc1234");
+    verify(client, never()).stageWrite(anyString(), anyString());
+  }
+
+  @Test
+  void restoreFallsBackToBuilderJsonWhenNoSourcePath() throws Exception {
+    DslReloadHandler reloadHandler = mock(DslReloadHandler.class);
+    handler = handler(client, reloadHandler);
+    when(sourcePathResolver.relativePath("foo")).thenReturn(Optional.empty());
+    when(client.restoreDraft("foo", "abc1234")).thenReturn(
+            new DraftResponse("foo", "Published", "/remote/.workbench/published/foo.json", false,
+                    LoadResult.empty(), null, null, null, null));
+
+    handler.restore(postRequestWithTimestamp("/api/dsl/drafts/foo/history/abc1234/restore", "foo",
+            "abc1234"));
+
+    verify(client).restoreDraft("foo", "abc1234");
+    verify(client, never()).stageWrite(anyString(), anyString());
   }
 
   private static CommitRequest argThatCommit(String path, String message) {
@@ -330,9 +583,18 @@ class DslDraftGitResourceTest {
   }
 
   private static ServerRequest postRequest(String path, String name) {
+    return postRequestWithTimestamp(path, name, null);
+  }
+
+  private static ServerRequest postRequestWithTimestamp(String path, String name,
+          String timestamp) {
     var req = new MockHttpServletRequest("POST", path);
-    req.setAttribute(RouterFunctions.URI_TEMPLATE_VARIABLES_ATTRIBUTE,
-            Map.of("name", name));
+    Map<String, String> pathVariables = new java.util.HashMap<>();
+    pathVariables.put("name", name);
+    if (timestamp != null) {
+      pathVariables.put("timestamp", timestamp);
+    }
+    req.setAttribute(RouterFunctions.URI_TEMPLATE_VARIABLES_ATTRIBUTE, pathVariables);
     req.setContentType("application/json");
     req.setContent(("{\"name\":\"" + name
             + "\",\"type\":\"process\",\"status\":\"Draft\",\"version\":\"1\"}").getBytes());
