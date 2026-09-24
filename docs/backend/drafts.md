@@ -42,8 +42,6 @@ and git work to the **dsl-builder** service that owns the workspace.
 | Published | The DSL file content at `HEAD`, which is also what the runtime has loaded. |
 | Working set | All definitions with their status (`GET /api/dsl/working-set`). It drives the Workbench tree badges. |
 | Pending write | A file write that dsl-builder accepted (`202`) and buffered, but has not yet flushed to disk. |
-| Workbench record | JSON metadata for a definition under `.workbench/`. See [§6](#6-workbench-records-workbench). |
-
 ---
 
 ## 2. Architecture
@@ -54,7 +52,7 @@ and git work to the **dsl-builder** service that owns the workspace.
                                               │   DslBuilderClient (Resilience4j queue + bulkhead + breaker, BuilderCache)
                                               ▼
                                         dsl-builder (:8091)
-                                              │   FileService · DraftService · GitStatusService
+                                              │   FileService · GitStatusService
                                               │   WorkspaceGitService · CompileService
                                               ▼
                               workspace dir == git worktree (host folder / docker volume)
@@ -117,8 +115,8 @@ unstaged changes are not separate states for the user. Renames show up as
 **Freshness.** A saved edit is visible as a draft immediately:
 
 - `VcsController.status` flushes pending `FileService` writes before it scans.
-- Status is cached per repo root for `git.status-cache-ttl-seconds` (default 5). Every flush and
-  every `DraftService` write invalidates that cache (`GitStatusService.invalidate()`).
+- Status is cached per repo root for `git.status-cache-ttl-seconds` (default 5). Every flush, commit
+  and discard invalidates that cache (`GitStatusService.invalidate()`).
 - On the starter side, `DslBuilderClient` invalidates the matching `BuilderCache` entries after
   every successful mutating call: draft, files, VCS status and pending count.
 
@@ -126,7 +124,7 @@ unstaged changes are not separate states for the user. Renames show up as
 
 A definition inherits the status of the DSL file that declares it.
 `DslDefinitionStatusResolver.resolveAll(names)` produces
-`DefinitionStatus { PUBLISHED, DRAFT, MODIFIED, ADDED, DELETED, CONFLICTING }` for the working
+`DefinitionStatus { PUBLISHED, MODIFIED, ADDED, DELETED, CONFLICTING }` for the working
 set and other introspection endpoints:
 
 1. `DslSourcePathResolver.relativePath(name)` maps the definition to its source file. It uses
@@ -137,9 +135,7 @@ set and other introspection endpoints:
    tolerates a builder worktree root that differs from the starter's source dir. The mapping is
    `ADDED | UNTRACKED → ADDED`, `MODIFIED → MODIFIED`, `DELETED → DELETED` and
    `CONFLICTING → CONFLICTING`.
-3. If the file has no git change but a Workbench draft record `.workbench/drafts/<safeName>.json`
-   exists, the status is `DRAFT`.
-4. Otherwise the status is `PUBLISHED`.
+3. A file with no git change is `PUBLISHED`.
 
 The admin UI renders these values as chips (`ConstructStatus` in
 `frontend/components/src/types/dsl.ts`, `PlainConstructList.vue`).
@@ -165,7 +161,7 @@ The admin UI renders these values as chips (`ConstructStatus` in
 | **Edit** | Writes the working-tree file. The write is buffered (`202`), then flushed. | none |
 | **Compile / reload** | none | `POST /api/dsl/reload` compiles the sources through dsl-builder (`/api/dsl/compile`). Compile errors come back as diagnostics, and nothing is loaded. |
 | **Publish** | Reloads first. On success, commits the definition's source path if it has a git change: `Publish <name>`, author = audit actor, email `<actor>@cbs-nova.local`. With `cbs.dsl.builder.git.push-on-commit=true` the commit is then pushed to `git.remote`. | Definitions are reloaded. If the reload fails, nothing is committed and the draft stays. |
-| **Discard** | `MODIFIED` / `DELETED` → checkout `HEAD`. `ADDED` → unstage and delete. `UNTRACKED` → delete. Also drops the definition's Workbench draft record. | none |
+| **Discard** | `MODIFIED` / `DELETED` → checkout `HEAD`. `ADDED` → unstage and delete. `UNTRACKED` → delete. | none |
 | **History** | `git log -- <source path>`, newest first | none |
 | **Restore(commit)** | Writes the file content at that commit into the working tree (stage + flush). The result is a `MODIFIED` draft. | none until publish |
 
@@ -175,7 +171,7 @@ The admin UI renders these values as chips (`ConstructStatus` in
 - **I2.** A commit is atomic. Either every listed path is committed or none is: the index is
   reset on failure. Only the listed paths are committed, and unrelated staged files stay staged.
 - **I3.** Only files under the DSL source root are drafts. The workspace repo's `.gitignore` must
-  exclude `.workbench/`, `build/` and `.gradle/`.
+  exclude `build/` and `.gradle/`.
 - **I4.** Paths are workspace-relative with forward slashes. `\` is normalised to `/`, a leading
   `/` is stripped, and anything containing `..` is rejected.
 - **I5.** Pending writes are flushed before any status scan, commit or discard.
@@ -195,24 +191,23 @@ The BFF exposes all starter routes under `/api/v1/dsl/...`, as explicit Nitro ro
 
 | Method | Path | Handler | Behaviour |
 |--------|------|---------|-----------|
-| GET | `/api/dsl/drafts?limit&offset` | `DslDraftHandler.list` | `PageResponse<DraftSummary>` of Workbench draft records |
-| GET | `/api/dsl/drafts/{name}` | `read` | `DraftRequest`, or 404 |
-| POST | `/api/dsl/drafts/{name}/save` | `save` | Stores the Workbench draft record (body `DraftRequest`, `name` required). Audit `DRAFT_WRITE`, event `DraftSaved`. |
-| POST | `/api/dsl/drafts/{name}/publish` | `publish` | Publish flow (§4, §5.5). 403 when the approval gate is on and the caller is below OPERATOR. |
+| GET | `/api/dsl/drafts?limit&offset` | `DslDraftHandler.list` | `PageResponse<DraftSummary>` of definitions whose source file has a git change, sorted by name |
+| GET | `/api/dsl/drafts/{name}` | `read` | `DraftRequest` with the definition's name, type, current `DefinitionStatus` and the working-tree `source`. 404 when the definition has no source path. |
+| POST | `/api/dsl/drafts/{name}/save` | `save` | Writes the body's `source` to the definition's source file (stage + flush). 400 when `source` is blank, 404 when there is no source path. Returns `status: "Draft"`. Audit `DRAFT_WRITE`, event `DraftSaved`. |
+| POST | `/api/dsl/drafts/{name}/publish` | `publish` | Writes the body's `source` first when it is present, then runs the publish flow (§4, §5.5). 403 when the approval gate is on and the caller is below OPERATOR. |
 | POST | `/api/dsl/drafts/{name}/change-request` | `ChangeRequestHandler.submit` | Submits the draft for approval |
-| POST | `/api/dsl/drafts/{name}/discard` | `discard` | Reverts the source file to `HEAD` and drops the draft record (a 404 there is ignored). Returns `status: "Discarded"`. Audit `DRAFT_DISCARD`. 404 when the definition has no source path. |
-| DELETE | `/api/dsl/drafts/{name}` | `delete` | Deletes the Workbench draft record only; the source file is untouched |
+| POST | `/api/dsl/drafts/{name}/discard` | `discard` | Reverts the source file to `HEAD`. Returns `status: "Discarded"`. Audit `DRAFT_DISCARD`. 404 when the definition has no source path. |
+| DELETE | `/api/dsl/drafts/{name}` | `delete` | Same as `discard` |
 | GET | `/api/dsl/drafts/{name}/commits?limit` | `commits` | `git log` of the definition's source path |
-| GET | `/api/dsl/drafts/{name}/history` | `history` | `DefinitionHistoryEntry[]`, newest first. For git history, `timestamp` is a commit id, `timestampMillis`/`lastModifiedMillis` are the commit time and `sizeBytes` is `-1`. |
-| GET | `/api/dsl/drafts/{name}/history/{ts}` | `historyEntry` | `DraftRequest` whose `source` is the file at that commit, with status `History`. Metadata comes from the draft record when there is one. 404 if the file is missing at that commit or the commit is unknown. |
+| GET | `/api/dsl/drafts/metadata` | `metadata` | `DraftsMetadata {draftCount, sourcePath, sizeMb, gitBranch, gitEnabled, statusCacheTtlSeconds, historyLimit}`: the number and size of changed DSL files, the source dir, the workspace branch (from dsl-builder `GET /api/dsl/vcs/branch`) and the git settings. Shown in the Workbench `DraftMetadataCard`. |
+| GET | `/api/dsl/drafts/{name}/history` | `history` | `DefinitionHistoryEntry[]` from `git log` of the source file, newest first, at most `DslDraftHandler.HISTORY_LIMIT` (50). `timestamp` is the commit id, `timestampMillis`/`lastModifiedMillis` are the commit time and `sizeBytes` is `-1`. |
+| GET | `/api/dsl/drafts/{name}/history/{ts}` | `historyEntry` | `DraftRequest` whose `source` is the file at commit `{ts}`, with status `History`. 404 if the file is missing at that commit or the commit is unknown. |
 | GET | `/api/dsl/drafts/{name}/history/{ts}/diff` | `historyDiff` | `HistoryDiffResponse`: the file at that commit (`before`) against the current working tree (`after`), as `LineDiff` hunks |
 | POST | `/api/dsl/drafts/{name}/history/{ts}/restore` | `restore` | Stages the commit's content as a `MODIFIED` draft, with no reload. Returns `status: "Draft"`. Audit `DRAFT_RESTORE`. |
-| GET | `/api/dsl/definitions/export[?include=drafts]` | `exportBundle` | `DefinitionBundle` |
-| POST | `/api/dsl/definitions/import[?dryRun=true]` | `importBundle` | Digest-verified, at most 200 definitions, then a reload |
+| GET | `/api/dsl/definitions/export[?include=drafts]` | `exportBundle` | `DefinitionBundle` of every definition's source file: content at `HEAD`, or the working tree with `include=drafts` |
+| POST | `/api/dsl/definitions/import[?dryRun=true]` | `importBundle` | Digest-verified, at most 200 definitions. `dryRun` compares each entry with the current file. Otherwise it writes each entry to its definition's source file (unknown names are `skipped`), reloads, and commits all written files as one `Import bundle` commit. |
 
-`{ts}` is a git commit id when it is 7–40 hex characters and is either 40 characters long or
-contains a letter a–f. An all-digit `{ts}` addresses a Workbench history snapshot (§6). A
-snapshot is also used when the definition has no source path or git is not configured.
+`{ts}` is always a git commit id.
 
 `discard`, `commits` and git history all go through the dsl-builder. Without
 `cbs.dsl.source-dir` the handlers return `409 NOT_CONFIGURED`. If the directory does not exist they
@@ -240,6 +235,7 @@ return `409 NOT_FOUND`.
 | Method | Path | Body / params | Result |
 |--------|------|---------------|--------|
 | GET | `/api/dsl/vcs/status` | – | `RepoStatus`. 404 when there is no repo. |
+| GET | `/api/dsl/vcs/branch` | – | `{branch}` of the workspace repo |
 | POST | `/api/dsl/vcs/commit` | `CommitRequest {paths, message, authorName, authorEmail}` | `CommitResult {commitId, paths, timestampMillis, pushed, pushError}`. `pushed` is `null` when push-on-commit is off. 409 `NOTHING_TO_COMMIT` if any listed path is clean. |
 | POST | `/api/dsl/vcs/discard` | `DiscardRequest {paths}` | `DiscardResult {discarded}`. Clean paths are skipped. |
 | GET | `/api/dsl/vcs/log?path&limit` | `limit` defaults to 20, clamped to 1..200 | `LogEntry[] {commitId, timestampMillis, author, message}`, newest first |
@@ -249,8 +245,7 @@ Commit and discard flush pending writes first. When the workspace is a subdirect
 paths are translated to and from repo-relative form. A blank path or one containing `..` returns
 400 `INVALID_PATH`. Git disabled or no repo returns 409 `GIT_NOT_CONFIGURED`.
 
-dsl-builder also serves `DraftController` (`/api/dsl/drafts/**`, Workbench records),
-`DefinitionBundleController`, `FileController` (`/api/dsl/files/**`) and `CompileController`
+dsl-builder also serves `FileController` (`/api/dsl/files/**`) and `CompileController`
 (`/api/dsl/compile`, `/api/dsl/compile/{id}/download`). Errors are
 `BuilderApiException(status, code, message)`, which `DslBuilderClient` maps back. A full request
 queue raises `BuilderClientBusyException`. An open breaker or unreachable host raises
@@ -261,7 +256,7 @@ queue raises `BuilderClientBusyException`. An open breaker or unreachable host r
 Each starter route above has a Nitro proxy route under
 `frontend/admin-ui-plugin/server/api/v1/dsl/`. The draft git routes are
 `drafts/[name]/discard.post.ts` and `drafts/[name]/commits.get.ts`. History routes pass `{ts}`
-through unchanged, so both commit ids and snapshot timestamps work.
+through unchanged. The metadata route is `drafts/metadata.get.ts`.
 
 ### 5.5 Publish response and side effects
 
@@ -282,31 +277,7 @@ through unchanged, so both commit ids and snapshot timestamps work.
 
 ---
 
-## 6. Workbench records (`.workbench/`)
-
-Alongside the DSL files, the workspace keeps JSON metadata for the Workbench. It lives under
-`.workbench/`, which git ignores, so it never shows up as a draft:
-
-```
-<workspace>/
-  .workbench/drafts/<safeName>.json               draft record      (save; removed by publish/discard/delete)
-  .workbench/published/<safeName>.json            published record  (publish, bundle import)
-  .workbench/history/<safeName>/<epochMs>.json    snapshot taken before each publish
-```
-
-- `safeName = name.replaceAll("[^A-Za-z0-9._-]", "_")`.
-- A record is a `DraftRequest { name, type, status, version, taskQueue, source, savedAt }`.
-- Draft records carry Workbench metadata (type, version, task queue) and give definitions
-  without a git change a `DRAFT` status (§3.3).
-- Published records feed bundle export and import.
-- History snapshots answer history requests with an all-digit `{ts}`. A snapshot restore
-  re-publishes the snapshot and reloads.
-- dsl-builder keeps up to `cbs.dsl.builder.drafts.history-limit` snapshots per definition
-  (default 20). Directories are configured with `cbs.dsl.builder.workbench.*`.
-
----
-
-## 7. Working with drafts
+## 6. Working with drafts
 
 Edit a definition's source file; it becomes a draft immediately:
 
@@ -341,20 +312,20 @@ curl -X POST localhost:8090/api/dsl/drafts/LoanDisbursement/history/<commitId>/r
 
 ---
 
-## 8. Deployment
+## 7. Deployment
 
 - Mount the DSL repo, or an empty volume plus `cbs.dsl.builder.git.repo-url`, at
   `cbs.dsl.builder.workspace-dir`. Only dsl-builder mounts it read-write.
 - Keep `cbs.dsl.builder.git.enabled=true` (the default). Without a git repo,
-  `/api/dsl/vcs/status` returns 404, every definition resolves to `PUBLISHED` or `DRAFT`, and the
+  `/api/dsl/vcs/status` returns 404, every definition resolves to `PUBLISHED`, and the
   git operations return `GIT_NOT_CONFIGURED`.
-- Add `.workbench/`, `build/` and `.gradle/` to the workspace repo's `.gitignore` (I3).
+- Add `build/` and `.gradle/` to the workspace repo's `.gitignore` (I3).
 - To publish to a shared repo, set `cbs.dsl.builder.git.push-on-commit=true` and make sure the
   `git.remote` is reachable with the credentials dsl-builder runs under.
 
 ---
 
-## 9. Configuration
+## 8. Configuration
 
 All keys use the `cbs.dsl.` prefix.
 
@@ -369,12 +340,11 @@ All keys use the `cbs.dsl.` prefix.
 | `cbs.dsl.builder.git.status-cache-ttl-seconds` | `5` | dsl-builder | Status cache TTL |
 | `cbs.dsl.builder.git.push-on-commit` / `remote` | `false` / `origin` | dsl-builder | Push after each publish commit |
 | `cbs.dsl.builder.files.{flush-interval-seconds,max-queue-size,read-bulkhead-permits,write-bulkhead-permits}` | `5`, `100`, `32`, `8` | dsl-builder | Write buffer |
-| `cbs.dsl.builder.drafts.history-limit` | `20` | dsl-builder | Snapshots kept per definition |
-| `cbs.dsl.builder.workbench.*` | see `DslBuilderProperties.Workbench` | dsl-builder | Record dirs, bundle limits, diff hunks/context |
+| `cbs.dsl.builder.bundles.{bundle-format-version,bundle-max-definitions}` | `1`, `200` | dsl-builder | Bundle format and size limit |
 
 ---
 
-## 10. Testing
+## 9. Testing
 
 | Area | Tests |
 |------|-------|
@@ -382,11 +352,11 @@ All keys use the `cbs.dsl.` prefix.
 | Builder git status + freshness | `GitStatusServiceTest`, `controller/VcsControllerTest` |
 | Builder commit / discard / log / show / push | `WorkspaceGitServiceTest`, `controller/VcsControllerTest` |
 | Builder files and flush | `FileServiceTest`, `FileBufferTest`, `FileBulkheadTest`, `controller/FileControllerTest` |
-| Builder Workbench records | `DraftServiceTest`, `controller/DraftControllerTest` |
 | Starter git status | `service/DslGitStatusResolverTest` |
 | Definition → source path, definition status | `service/DslSourcePathResolverTest`, `service/DslDefinitionStatusResolverTest` |
 | Publish commit, discard, commits, git history / diff / restore | `DslDraftGitResourceTest` |
-| Local-mode draft routes | `DslDraftResourceTest` |
+| Draft routes | `DslDraftResourceTest` |
+| Drafts metadata | `DslDraftMetadataResourceTest`, `components/.../DraftMetadataCard.spec.ts`, BFF `drafts-metadata.spec.ts` |
 | Approval gate | `DslDraftApprovalGateTest`, `approval/ChangeRequestServiceTest` |
 | Bundles | `DslDefinitionBundleResourceTest` |
 | Builder client contract + cache invalidation | `builder/DslBuilderClientTest`, `builder/BuilderCacheTest` |
@@ -410,18 +380,18 @@ cd frontend/admin-ui-plugin && npx vitest run server/api/v1/dsl/drafts
 
 ---
 
-## 11. Code map
+## 10. Code map
 
 | Concern | Starter (`backend/dsl-starter/starter/.../cbs/nova/starter`) | dsl-builder (`backend/dsl-plugins/dsl-builder/.../cbs/nova/dsl/builder`) |
 |---------|------|------|
 | Shared git model | `dsl-api` `cbs.nova.dsl.vcs` (`ChangeType`, `RepoStatus`, `GitChangeClassifier`) | same |
-| Draft HTTP | `controller/DslDraftHandler`, `config/router/DslDraftRouterConfiguration` | `controller/DraftController`, `DefinitionBundleController` |
+| Draft HTTP | `controller/DslDraftHandler`, `config/router/DslDraftRouterConfiguration` | – |
 | Git status | `service/DslGitStatusResolver` | `service/GitStatusService`, `controller/VcsController` |
 | Git operations | `builder/DslBuilderClient.commit/discard/log/show` | `service/WorkspaceGitService` |
 | Definition → source path | `service/DslSourcePathResolver` | – |
 | Definition status | `service/DslDefinitionStatusResolver`, `model/DslIntrospectionModels.DefinitionStatus` | – |
 | Files | `controller/DslFileHandler`, `service/DslFileService` | `controller/FileController`, `service/FileService`, `FileBuffer`, `FileBulkhead` |
-| Workbench records | `service/DslDefinitionHistoryService`, `DslDefinitionBundleService` | `service/DraftService`, `DefinitionHistoryService`, `DefinitionBundleService` |
+| Bundles | `service/DslDefinitionBundleService` | – |
 | Compile / reload | `controller/DslReloadHandler` | `controller/CompileController`, `service/CompileService`, `GradleService` |
 | Clone / worktree | – | `service/GitService`, `RepoUrlValidator` |
 | Remote client | `builder/DslBuilderClient`, `BuilderCache`, `config/BuilderClientConfiguration` | – |
