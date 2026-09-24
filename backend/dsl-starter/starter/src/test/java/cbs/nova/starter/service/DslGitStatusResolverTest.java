@@ -6,12 +6,14 @@ import static org.mockito.Mockito.when;
 
 import cbs.nova.starter.builder.DslBuilderClient;
 import cbs.nova.starter.config.properties.DslProperties;
+import cbs.nova.starter.service.DslGitStatusResolver.ChangeType;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -90,6 +92,16 @@ class DslGitStatusResolverTest {
     assertThat(status.dirtyPaths())
             .contains("added.txt", "changedBase.txt", "modifiedBase.txt",
                     "untracked.txt", "removeBase.txt", "missingBase.txt");
+
+    Map<String, ChangeType> changes = status.changes();
+    assertThat(changes)
+            .containsEntry("added.txt", ChangeType.ADDED)
+            .containsEntry("changedBase.txt", ChangeType.MODIFIED)
+            .containsEntry("modifiedBase.txt", ChangeType.MODIFIED)
+            .containsEntry("untracked.txt", ChangeType.UNTRACKED)
+            .containsEntry("removeBase.txt", ChangeType.DELETED)
+            .containsEntry("missingBase.txt", ChangeType.DELETED);
+    assertThat(status.dirtyPaths()).isEqualTo(changes.keySet());
   }
 
   @Test

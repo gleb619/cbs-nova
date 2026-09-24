@@ -12,6 +12,7 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 import cbs.nova.starter.config.BuilderClientConfiguration;
 import cbs.nova.starter.config.properties.DslBuilderClientProperties;
 import cbs.nova.starter.controller.BuilderApiErrorHandler;
+import cbs.nova.starter.service.DslGitStatusResolver.ChangeType;
 import cbs.nova.starter.service.DslGitStatusResolver.RepoStatus;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import cbs.nova.starter.exception.BuilderApiException;
@@ -160,6 +161,28 @@ class DslBuilderClientTest {
     assertThat(status).isPresent();
     assertThat(status.get().workTree().toString()).isEqualTo("/repo");
     assertThat(status.get().dirtyPaths()).containsExactly("a.java");
+    assertThat(status.get().changes()).isEmpty();
+  }
+
+  @Test
+  void vcsStatusParsesTypedChanges() {
+    var client = client(circuitBreaker(5, 30, 3));
+    server.expect(requestTo("http://localhost:8091/api/dsl/vcs/status"))
+            .andExpect(method(HttpMethod.GET))
+            .andRespond(withSuccess(
+                    "{\"workTree\":\"/repo\",\"dirtyPaths\":[\"a.java\",\"b.java\"],"
+                            + "\"changes\":{\"a.java\":\"ADDED\",\"b.java\":\"DELETED\"}}",
+                    MediaType.APPLICATION_JSON));
+
+    Optional<RepoStatus> status = client.vcsStatus();
+
+    assertThat(status).isPresent();
+    RepoStatus repo = status.get();
+    assertThat(repo.dirtyPaths()).containsExactlyInAnyOrder("a.java", "b.java");
+    assertThat(repo.changes())
+            .containsEntry("a.java", ChangeType.ADDED)
+            .containsEntry("b.java", ChangeType.DELETED);
+    assertThat(repo.changeOf("a.java")).contains(ChangeType.ADDED);
   }
 
   @Test

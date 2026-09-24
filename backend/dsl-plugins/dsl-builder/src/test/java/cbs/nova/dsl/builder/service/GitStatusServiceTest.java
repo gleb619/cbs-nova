@@ -3,6 +3,8 @@ package cbs.nova.dsl.builder.service;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.builder.config.DslBuilderProperties;
+import cbs.nova.dsl.builder.service.GitStatusService.ChangeType;
+import cbs.nova.dsl.builder.service.GitStatusService.RepoStatus;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Clock;
@@ -10,6 +12,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.eclipse.jgit.api.Git;
 import org.junit.jupiter.api.Test;
@@ -140,6 +143,113 @@ class GitStatusServiceTest {
 
     assertThat(status).isPresent();
     assertThat(status.get().workTree()).isEqualTo(repo.toRealPath());
+  }
+
+  @Test
+  void classifiesStagedAddAsAdded() throws Exception {
+    Path repo = initRepo();
+    Files.writeString(repo.resolve("new.txt"), "new");
+    try (Git git = Git.open(repo.toFile())) {
+      git.add().addFilepattern("new.txt").call();
+    }
+
+    var service = newService(git(true, null, 60), mutableClock());
+
+    RepoStatus status = service.status(repo).orElseThrow();
+
+    assertThat(status.changes()).containsEntry("new.txt", ChangeType.ADDED);
+    assertThat(status.changeOf("new.txt")).contains(ChangeType.ADDED);
+  }
+
+  @Test
+  void classifiesUntrackedFileAsUntracked() throws Exception {
+    Path repo = initRepo();
+    Files.writeString(repo.resolve("scratch.txt"), "scratch");
+
+    var service = newService(git(true, null, 60), mutableClock());
+
+    RepoStatus status = service.status(repo).orElseThrow();
+
+    assertThat(status.changes()).containsEntry("scratch.txt", ChangeType.UNTRACKED);
+  }
+
+  @Test
+  void classifiesTrackedModifyAsModified() throws Exception {
+    Path repo = initRepo();
+    Files.writeString(repo.resolve("README.md"), "v2");
+
+    var service = newService(git(true, null, 60), mutableClock());
+
+    RepoStatus status = service.status(repo).orElseThrow();
+
+    assertThat(status.changes()).containsEntry("README.md", ChangeType.MODIFIED);
+  }
+
+  @Test
+  void classifiesGitRmAsDeleted() throws Exception {
+    Path repo = initRepo();
+    try (Git git = Git.open(repo.toFile())) {
+      git.rm().addFilepattern("README.md").call();
+    }
+
+    var service = newService(git(true, null, 60), mutableClock());
+
+    RepoStatus status = service.status(repo).orElseThrow();
+
+    assertThat(status.changes()).containsEntry("README.md", ChangeType.DELETED);
+  }
+
+  @Test
+  void classifiesDeletedFromDiskAsDeleted() throws Exception {
+    Path repo = initRepo();
+    Files.deleteIfExists(repo.resolve("README.md"));
+
+    var service = newService(git(true, null, 60), mutableClock());
+
+    RepoStatus status = service.status(repo).orElseThrow();
+
+    assertThat(status.changes()).containsEntry("README.md", ChangeType.DELETED);
+  }
+
+  @Test
+  void stagedAddThenEditStaysAdded() throws Exception {
+    Path repo = initRepo();
+    Files.writeString(repo.resolve("new.txt"), "v1");
+    try (Git git = Git.open(repo.toFile())) {
+      git.add().addFilepattern("new.txt").call();
+    }
+    Files.writeString(repo.resolve("new.txt"), "v2");
+
+    var service = newService(git(true, null, 60), mutableClock());
+
+    RepoStatus status = service.status(repo).orElseThrow();
+
+    assertThat(status.changes()).containsEntry("new.txt", ChangeType.ADDED);
+  }
+
+  @Test
+  void dirtyPathsEqualChangesKeySet() throws Exception {
+    Path repo = initRepo();
+    Files.writeString(repo.resolve("added.txt"), "added");
+    try (Git git = Git.open(repo.toFile())) {
+      git.add().addFilepattern("added.txt").call();
+    }
+    Files.writeString(repo.resolve("scratch.txt"), "scratch");
+
+    var service = newService(git(true, null, 60), mutableClock());
+
+    RepoStatus status = service.status(repo).orElseThrow();
+
+    assertThat(status.dirtyPaths()).isEqualTo(status.changes().keySet());
+  }
+
+  @Test
+  void legacyTwoArgConstructorYieldsEmptyChanges() {
+    RepoStatus legacy = new RepoStatus(Path.of("/repo"), Set.of("a.txt", "b.txt"));
+
+    assertThat(legacy.changes()).isEmpty();
+    assertThat(legacy.dirtyPaths()).containsExactly("a.txt", "b.txt");
+    assertThat(legacy.changeOf("a.txt")).isEmpty();
   }
 
   private Path initRepo() throws Exception {

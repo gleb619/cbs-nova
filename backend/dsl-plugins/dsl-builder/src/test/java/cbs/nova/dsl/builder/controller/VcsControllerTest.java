@@ -101,7 +101,8 @@ class VcsControllerTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.workTree").isString())
             .andExpect(jsonPath("$.dirtyPaths").isArray())
-            .andExpect(jsonPath("$.dirtyPaths[0]").value("dsl/LoanDsl.java"));
+            .andExpect(jsonPath("$.dirtyPaths[0]").value("dsl/LoanDsl.java"))
+            .andExpect(jsonPath("$.changes['dsl/LoanDsl.java']").value("UNTRACKED"));
   }
 
   private void initRepositoryWithUntrackedFile() throws IOException {

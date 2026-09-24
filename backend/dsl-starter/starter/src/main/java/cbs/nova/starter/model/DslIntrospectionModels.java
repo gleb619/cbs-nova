@@ -174,7 +174,8 @@ public final class DslIntrospectionModels {
 
   public enum DefinitionStatus {
 
-    PUBLISHED("Published"), DRAFT("Draft"), MODIFIED("Modified");
+    PUBLISHED("Published"), DRAFT("Draft"), MODIFIED("Modified"), ADDED("Added"), DELETED(
+            "Deleted"), CONFLICTING("Conflicting");
 
     private final String value;
 
