@@ -362,9 +362,7 @@ curl -X POST localhost:8090/api/dsl/drafts/LoanDisbursement/history/<commitId>/r
 
 ## 9. Configuration
 
-Canonical keys use the `cbs.dsl.` prefix. For one release, deprecated `csb.dsl.*` keys are copied
-to their `cbs.dsl.*` names by `CbsDslLegacyPropertyPrefixPostProcessor`, which logs a
-deprecation warning.
+All keys use the `cbs.dsl.` prefix.
 
 | Key | Default | Service | Purpose |
 |-----|---------|---------|---------|
@@ -399,7 +397,7 @@ deprecation warning.
 | Approval gate | `DslDraftApprovalGateTest`, `approval/ChangeRequestServiceTest` |
 | Bundles | `DslDefinitionBundleResourceTest` |
 | Builder client contract + cache invalidation | `builder/DslBuilderClientTest`, `builder/BuilderCacheTest` |
-| Property prefix compatibility | `config/CbsDslPropertyPrefixCompatibilityTest`, `config/properties/DslBuilderClientPropertiesTest` |
+| Property binding | `config/CbsDslPropertyPrefixTest`, `config/properties/DslBuilderClientPropertiesTest` |
 | Rate limiting | `web/RateLimitFilterTest` |
 | Working set | `DslIntrospectionServiceTest`, `DslIntrospectionResourceTest` |
 | BFF | `server/api/v1/dsl/drafts/__tests__/drafts.spec.ts`, `drafts-git.spec.ts` |
@@ -434,4 +432,3 @@ cd frontend/admin-ui-plugin && npx vitest run server/api/v1/dsl/drafts
 | Compile / reload | `controller/DslReloadHandler` | `controller/CompileController`, `service/CompileService`, `GradleService` |
 | Clone / worktree | – | `service/GitService`, `RepoUrlValidator` |
 | Remote client | `builder/DslBuilderClient`, `BuilderCache`, `config/BuilderClientConfiguration` | – |
-| Property compatibility | `config/CbsDslLegacyPropertyPrefixPostProcessor` | – |
