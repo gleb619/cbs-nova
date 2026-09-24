@@ -269,12 +269,12 @@ class GitStatusServiceTest {
   }
 
   @Test
-  void legacyTwoArgConstructorYieldsEmptyChanges() {
-    RepoStatus legacy = new RepoStatus(Path.of("/repo"), Set.of("a.txt", "b.txt"));
+  void fromDirtyPathsYieldsEmptyChanges() {
+    RepoStatus fromDirty = RepoStatus.fromDirtyPaths(Path.of("/repo"), Set.of("a.txt", "b.txt"));
 
-    assertThat(legacy.changes()).isEmpty();
-    assertThat(legacy.dirtyPaths()).containsExactlyInAnyOrder("a.txt", "b.txt");
-    assertThat(legacy.changeOf("a.txt")).isEmpty();
+    assertThat(fromDirty.changes()).isEmpty();
+    assertThat(fromDirty.dirtyPaths()).containsExactlyInAnyOrder("a.txt", "b.txt");
+    assertThat(fromDirty.changeOf("a.txt")).isEmpty();
   }
 
   private Path initRepo() throws Exception {

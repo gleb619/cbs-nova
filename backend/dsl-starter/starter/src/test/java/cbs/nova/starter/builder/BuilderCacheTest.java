@@ -78,7 +78,8 @@ class BuilderCacheTest {
 
   @Test
   void clearDropsEverything() {
-    cache.vcsStatus(() -> Optional.of(RepoStatus.fromDirtyPaths(Path.of("/repo"), java.util.Set.of())));
+    cache.vcsStatus(
+            () -> Optional.of(RepoStatus.fromDirtyPaths(Path.of("/repo"), java.util.Set.of())));
     cache.pendingCount(() -> 3);
     cache.readFile("dsl/A.java", () -> null);
 
