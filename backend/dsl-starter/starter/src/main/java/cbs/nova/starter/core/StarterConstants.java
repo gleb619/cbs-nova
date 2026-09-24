@@ -218,10 +218,8 @@ public class StarterConstants {
 
   public static final int YAML_MAX_CODE_POINTS = 3 * 1024 * 1024;
 
-  // Workbench directory layout + bundle caps (DslDraftHandler)
+  // Bundle size cap (DslDefinitionBundleService)
 
-  public static final String WORKBENCH_DRAFTS_DIR = ".workbench/drafts";
-  public static final String WORKBENCH_PUBLISHED_DIR = ".workbench/published";
   public static final int BUNDLE_MAX_DEFINITIONS = 200;
 
   // Webhook protocol + caps (WebhookDispatcher, WebhookDeliveryRecordRepository)
@@ -314,12 +312,6 @@ public class StarterConstants {
 
   // Builder cache key prefixes + scalar keys (BuilderCache)
 
-  public static final String CACHE_HISTORY_PREFIX = "history:";
-  public static final String CACHE_HISTORY_ENTRY_PREFIX = "historyEntry:";
-  public static final String CACHE_HISTORY_DIFF_PREFIX = "historyDiff:";
-  public static final String CACHE_DRAFT_PREFIX = "draft:";
-  public static final String CACHE_DRAFTS_PAGE_PREFIX = "draftsPage:";
-  public static final String CACHE_EXPORT_PREFIX = "export:";
   public static final String CACHE_FILES_PREFIX = "files:";
   public static final String CACHE_FILE_PREFIX = "file:";
   public static final String CACHE_FILE_EXISTS_PREFIX = "fileExists:";
@@ -327,6 +319,7 @@ public class StarterConstants {
   public static final String CACHE_VCS_STATUS_KEY = "vcsStatus";
   public static final String CACHE_VCS_LOG_PREFIX = "vcsLog:";
   public static final String CACHE_VCS_SHOW_PREFIX = "vcsShow:";
+  public static final String CACHE_VCS_BRANCH_KEY = "vcsBranch";
 
   // Semver regex fragments (SemverHelper)
 
@@ -367,11 +360,6 @@ public class StarterConstants {
   public static final int COMPILE_DIAGNOSTIC_FILE_MAX_LENGTH = 512;
   public static final int COMPILE_DIAGNOSTIC_SEVERITY_MAX_LENGTH = 16;
   public static final int COMPILE_DIAGNOSTIC_CODE_MAX_LENGTH = 64;
-
-  // Workbench history directory layout + suffix (DslDefinitionHistoryService)
-
-  public static final String WORKBENCH_HISTORY_DIR = ".workbench/history";
-  public static final String WORKBENCH_HISTORY_TIMESTAMP_PATTERN = "^[0-9]+$";
 
   // Run naming strategy default table (DslRunNamingStrategy)
 

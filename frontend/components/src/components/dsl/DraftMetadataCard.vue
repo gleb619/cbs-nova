@@ -30,7 +30,7 @@ defineProps<{
     >
       <dt class="text-gray-500">Location</dt>
       <dd class="truncate font-mono text-gray-300" data-testid="draft-metadata-card-path">
-        {{ metadata.workbenchPath }}
+        {{ metadata.sourcePath }}
       </dd>
 
       <dt class="text-gray-500">Drafts</dt>

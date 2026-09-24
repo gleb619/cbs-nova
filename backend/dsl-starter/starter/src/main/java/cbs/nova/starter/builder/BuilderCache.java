@@ -1,32 +1,20 @@
 package cbs.nova.starter.builder;
 
-import static cbs.nova.starter.core.StarterConstants.CACHE_DRAFTS_PAGE_PREFIX;
-import static cbs.nova.starter.core.StarterConstants.CACHE_DRAFT_PREFIX;
-import static cbs.nova.starter.core.StarterConstants.CACHE_EXPORT_PREFIX;
-import static cbs.nova.starter.core.StarterConstants.CACHE_FILES_PREFIX;
 import static cbs.nova.starter.core.StarterConstants.CACHE_FILE_EXISTS_PREFIX;
 import static cbs.nova.starter.core.StarterConstants.CACHE_FILE_PREFIX;
-import static cbs.nova.starter.core.StarterConstants.CACHE_HISTORY_DIFF_PREFIX;
-import static cbs.nova.starter.core.StarterConstants.CACHE_HISTORY_ENTRY_PREFIX;
-import static cbs.nova.starter.core.StarterConstants.CACHE_HISTORY_PREFIX;
+import static cbs.nova.starter.core.StarterConstants.CACHE_FILES_PREFIX;
 import static cbs.nova.starter.core.StarterConstants.CACHE_PENDING_COUNT_KEY;
+import static cbs.nova.starter.core.StarterConstants.CACHE_VCS_BRANCH_KEY;
 import static cbs.nova.starter.core.StarterConstants.CACHE_VCS_LOG_PREFIX;
 import static cbs.nova.starter.core.StarterConstants.CACHE_VCS_SHOW_PREFIX;
 import static cbs.nova.starter.core.StarterConstants.CACHE_VCS_STATUS_KEY;
 
-import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.model.DslFileModels.FileContentResponse;
 import cbs.nova.starter.model.DslFileModels.FileEntry;
-import cbs.nova.starter.model.PageResponse;
-import cbs.nova.starter.model.VcsModels.DefinitionBundle;
-import cbs.nova.starter.model.VcsModels.DefinitionHistoryEntry;
-import cbs.nova.starter.model.VcsModels.DraftRequest;
-import cbs.nova.starter.model.VcsModels.DraftSummary;
-import cbs.nova.starter.model.VcsModels.HistoryDiffResponse;
 import cbs.nova.starter.model.VcsModels.LogEntry;
 import cbs.nova.dsl.vcs.RepoStatus;
+import cbs.nova.starter.core.StarterConstants;
 import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.Caffeine;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Supplier;
@@ -36,33 +24,6 @@ import lombok.RequiredArgsConstructor;
 public class BuilderCache {
 
   private final Cache<String, Object> cache;
-
-  public List<DefinitionHistoryEntry> history(String name,
-          Supplier<List<DefinitionHistoryEntry>> loader) {
-    return get(CACHE_HISTORY_PREFIX + name, loader);
-  }
-
-  public DraftRequest historyEntry(String name, String timestamp, Supplier<DraftRequest> loader) {
-    return get(CACHE_HISTORY_ENTRY_PREFIX + name + ":" + timestamp, loader);
-  }
-
-  public HistoryDiffResponse historyDiff(String name, String timestamp,
-          Supplier<HistoryDiffResponse> loader) {
-    return get(CACHE_HISTORY_DIFF_PREFIX + name + ":" + timestamp, loader);
-  }
-
-  public DraftRequest readDraft(String name, Supplier<DraftRequest> loader) {
-    return get(CACHE_DRAFT_PREFIX + name, loader);
-  }
-
-  public PageResponse<DraftSummary> listDrafts(int limit, int offset,
-          Supplier<PageResponse<DraftSummary>> loader) {
-    return get(CACHE_DRAFTS_PAGE_PREFIX + limit + ":" + offset, loader);
-  }
-
-  public DefinitionBundle exportBundle(boolean includeDrafts, Supplier<DefinitionBundle> loader) {
-    return get(CACHE_EXPORT_PREFIX + includeDrafts, loader);
-  }
 
   public List<FileEntry> listFiles(String prefix, Supplier<List<FileEntry>> loader) {
     return get(CACHE_FILES_PREFIX + (prefix == null ? "" : prefix), loader);
@@ -92,19 +53,14 @@ public class BuilderCache {
     return get(CACHE_VCS_SHOW_PREFIX + path + ":" + commitId, loader);
   }
 
+  public String vcsBranch(Supplier<String> loader) {
+    return get(CACHE_VCS_BRANCH_KEY, loader);
+  }
+
   public void invalidateVcsLog() {
     invalidatePrefix(CACHE_VCS_LOG_PREFIX);
     invalidatePrefix(CACHE_VCS_SHOW_PREFIX);
-  }
-
-  public void invalidateDraft(String name) {
-    cache.asMap().keySet().removeIf(key -> key.startsWith(CACHE_DRAFT_PREFIX + name)
-            || key.startsWith(CACHE_HISTORY_PREFIX + name)
-            || key.startsWith(CACHE_HISTORY_ENTRY_PREFIX + name)
-            || key.startsWith(CACHE_HISTORY_DIFF_PREFIX + name));
-    // Drafts page is a paged list across all names; any mutation to one draft makes the page
-    // stale. Drop every page entry rather than try to compute a precise invalidation.
-    invalidatePrefix(CACHE_DRAFTS_PAGE_PREFIX);
+    cache.invalidate(StarterConstants.CACHE_VCS_BRANCH_KEY);
   }
 
   public void invalidateFile(String path) {

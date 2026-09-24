@@ -17,14 +17,15 @@ import cbs.nova.starter.model.VcsModels.CommitRequest;
 import cbs.nova.starter.model.VcsModels.CommitResult;
 import cbs.nova.starter.model.VcsModels.DiscardRequest;
 import cbs.nova.starter.model.VcsModels.DiscardResult;
-import cbs.nova.starter.model.VcsModels.DraftRequest;
 import cbs.nova.starter.model.VcsModels.DraftResponse;
 import cbs.nova.starter.security.Role;
 import cbs.nova.starter.security.RoleResolver;
 import cbs.nova.starter.service.DslDefinitionBundleService;
-import cbs.nova.starter.service.DslDefinitionHistoryService;
+import cbs.nova.starter.service.DslDefinitionStatusResolver;
 import cbs.nova.starter.service.DslGitStatusResolver;
 import cbs.nova.starter.service.DslSourcePathResolver;
+import cbs.nova.dsl.vcs.ChangeType;
+import cbs.nova.dsl.vcs.RepoStatus;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -97,7 +98,7 @@ class DslDraftApprovalGateTest {
     ErrorResponse body = (ErrorResponse) ((EntityResponse<?>) response).entity();
     assertThat(body.getCode()).isEqualTo(StarterConstants.FORBIDDEN_CODE);
     assertThat(body.getMessage()).isEqualTo("publish requires approval");
-    assertThat(sourceDir.resolve(".workbench/published/LoanA.json")).doesNotExist();
+    assertThat(Files.list(sourceDir).toList()).isEmpty();
 
     var rows = audit.service().search(null, 0, 10);
     assertThat(rows.total()).isEqualTo(1);
@@ -138,36 +139,28 @@ class DslDraftApprovalGateTest {
   private DslDraftHandler handler(DslProperties props, AuditTestSupport.Harness audit) {
     DslBuilderClient client = mock(DslBuilderClient.class);
     BuilderClientTestSupport.stubLocalCompile(client);
-    when(client.publishDraft(anyString(), any(DraftRequest.class))).thenAnswer(invocation -> {
-      String name = invocation.getArgument(0);
-      return new DraftResponse(name, "Published", "/mock/location/" + name + ".json", false,
-              LoadResult.empty(), null, null, System.currentTimeMillis(), null);
-    });
-    when(client.saveDraft(anyString(), any(DraftRequest.class))).thenAnswer(invocation -> {
-      String name = invocation.getArgument(0);
-      return new DraftResponse(name, "Draft", "/mock/location/" + name + ".json", false,
-              LoadResult.empty(), null, null, System.currentTimeMillis(), null);
-    });
     when(client.commit(any(CommitRequest.class)))
             .thenReturn(new CommitResult("abc123", List.of(), 0L, null, null));
-    when(client.deleteDraft(anyString()))
-            .thenReturn(new DraftResponse(null, "Deleted", null, false, LoadResult.empty(), null,
-                    null, null, null));
     when(client.discard(any(DiscardRequest.class))).thenReturn(new DiscardResult(List.of()));
     ObjectProvider<DslBuilderClient> providerOfClient = BuilderClientTestSupport.providerOf(client);
 
     DslSourcePathResolver sourcePathResolver = mock(DslSourcePathResolver.class);
+    when(sourcePathResolver.relativePath("LoanA")).thenReturn(Optional.of("dsl/LoanADsl.java"));
     DslGitStatusResolver gitStatusResolver = mock(DslGitStatusResolver.class);
+    when(gitStatusResolver.status(sourceDir)).thenReturn(Optional.of(
+            RepoStatus.of(sourceDir, Map.of("dsl/LoanADsl.java", ChangeType.MODIFIED))));
+    DslDefinitionStatusResolver statusResolver = new DslDefinitionStatusResolver(
+            props, gitStatusResolver, sourcePathResolver);
 
     return new DslDraftHandler(props,
             new DslReloadHandler(props, null, null, AuditTestSupport.providerOf(audit.service()),
                     providerOfClient, null, null, null),
-            new DslDefinitionHistoryService(props, mapper), mapper,
-            new DslDefinitionBundleService(mapper, Optional.empty(),
-                    DslProperties.bundleServiceDefaults()),
+            mapper,
+            new DslDefinitionBundleService(mapper, Optional.empty(), props, sourcePathResolver,
+                    providerOfClient),
             AuditTestSupport.providerOf(audit.service()), providerOfClient, null, null,
             roleResolverProvider(), providerOfBean(sourcePathResolver),
-            providerOfBean(gitStatusResolver));
+            providerOfBean(gitStatusResolver), providerOfBean(statusResolver));
   }
 
   private static <T> ObjectProvider<T> providerOfBean(T bean) {

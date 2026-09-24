@@ -147,12 +147,13 @@ public final class VcsModels {
    * {@code GET /api/dsl/drafts/metadata}.
    *
    * @param draftCount
-   *          number of draft records currently stored in {@code .workbench/drafts/}
-   * @param workbenchPath
-   *          workspace-relative path to the Workbench drafts directory (never an absolute path)
+   *          number of DSL source files that currently have a git change (uncommitted draft)
+   * @param sourcePath
+   *          configured DSL source root ({@code cbs.dsl.source-dir}), forward-slash separated;
+   *          empty when the source dir is not configured
    * @param sizeMb
-   *          total size of all draft JSON files in MB, rounded to two decimal places; {@code null}
-   *          when the directory is inaccessible
+   *          total size of the changed source files in MB, rounded to two decimal places;
+   *          {@code null} when sizes cannot be resolved (e.g. the builder is unavailable)
    * @param gitBranch
    *          name of the current git branch; {@code null} when git is disabled or no repo exists
    * @param gitEnabled
@@ -160,11 +161,11 @@ public final class VcsModels {
    * @param statusCacheTtlSeconds
    *          configured git status cache TTL
    * @param historyLimit
-   *          configured maximum number of history snapshots kept per definition
+   *          git history page size the {@code /api/dsl/drafts/{name}/history} endpoint uses
    */
   public record DraftsMetadata(
           int draftCount,
-          String workbenchPath,
+          String sourcePath,
           @JsonInclude(JsonInclude.Include.NON_NULL) Double sizeMb,
           @JsonInclude(JsonInclude.Include.NON_NULL) String gitBranch,
           boolean gitEnabled,

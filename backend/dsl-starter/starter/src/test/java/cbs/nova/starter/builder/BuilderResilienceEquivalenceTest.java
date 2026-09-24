@@ -60,16 +60,16 @@ class BuilderResilienceEquivalenceTest {
             breakerProperties(1, 30, 3));
     var client = client(breaker);
 
-    server.expect(requestTo("http://localhost:8091/api/dsl/drafts/foo"))
+    server.expect(requestTo("http://localhost:8091/api/dsl/files/dsl/Foo.java"))
             .andRespond(withStatus(HttpStatus.SERVICE_UNAVAILABLE)
                     .body("{\"code\":\"UNAVAILABLE\",\"message\":\"down\"}")
                     .contentType(MediaType.APPLICATION_JSON));
 
-    assertThatThrownBy(() -> client.readDraft("foo"))
+    assertThatThrownBy(() -> client.readFile("dsl/Foo.java"))
             .isInstanceOf(BuilderUnavailableException.class);
     assertThat(breaker.getState()).isEqualTo(CircuitBreaker.State.OPEN);
 
-    assertThatThrownBy(() -> client.readDraft("foo"))
+    assertThatThrownBy(() -> client.readFile("dsl/Foo.java"))
             .isInstanceOf(BuilderUnavailableException.class)
             .hasMessageContaining("circuit breaker");
   }
@@ -82,19 +82,21 @@ class BuilderResilienceEquivalenceTest {
     var client = client(breaker);
 
     // All expectations must be registered before any request is issued.
-    server.expect(requestTo("http://localhost:8091/api/dsl/drafts/foo"))
+    server.expect(requestTo("http://localhost:8091/api/dsl/files/dsl/Foo.java"))
             .andRespond(withStatus(HttpStatus.SERVICE_UNAVAILABLE)
                     .body("{\"code\":\"UNAVAILABLE\",\"message\":\"down\"}")
                     .contentType(MediaType.APPLICATION_JSON));
-    server.expect(requestTo("http://localhost:8091/api/dsl/drafts/foo"))
-            .andRespond(withSuccess("{\"name\":\"foo\"}", MediaType.APPLICATION_JSON));
+    server.expect(requestTo("http://localhost:8091/api/dsl/files/dsl/Foo.java"))
+            .andRespond(withSuccess(
+                    "{\"path\":\"dsl/Foo.java\",\"content\":\"foo\",\"pending\":false,\"crc32\":0}",
+                    MediaType.APPLICATION_JSON));
 
-    assertThatThrownBy(() -> client.readDraft("foo"))
+    assertThatThrownBy(() -> client.readFile("dsl/Foo.java"))
             .isInstanceOf(BuilderUnavailableException.class);
     assertThat(breaker.getState()).isEqualTo(CircuitBreaker.State.OPEN);
 
     Thread.sleep(1100);
-    assertThat(client.readDraft("foo").name()).isEqualTo("foo");
+    assertThat(client.readFile("dsl/Foo.java").content()).isEqualTo("foo");
     assertThat(breaker.getState()).isEqualTo(CircuitBreaker.State.CLOSED);
   }
 

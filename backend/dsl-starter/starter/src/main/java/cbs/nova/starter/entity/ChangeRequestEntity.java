@@ -9,7 +9,7 @@ import org.springframework.data.relational.core.mapping.Table;
 /**
  * Row of {@code dsl_change_request} (T568): a snapshot of a Workbench draft payload awaiting
  * approval before publish. {@code draftContent} holds the raw draft JSON exactly as stored under
- * {@code .workbench/drafts}; on approval the snapshot (not the current draft file) is published.
+ * DSL source file; on approval the snapshot source is written to the file and published.
  */
 @Table("dsl_change_request")
 public record ChangeRequestEntity(

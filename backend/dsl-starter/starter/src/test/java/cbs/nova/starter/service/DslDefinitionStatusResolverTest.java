@@ -1,6 +1,5 @@
 package cbs.nova.starter.service;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -23,8 +22,8 @@ import org.junit.jupiter.api.Test;
 import org.mockito.invocation.InvocationOnMock;
 
 /**
- * Spec §7 step 2 / §3.2: a definition's status is read from the git status of the DSL <em>source
- * file</em> that declares it. The marker JSON files are a fallback only when git is absent.
+ * Spec §3: a definition's status is read from the git status of the DSL source file that declares
+ * it. A clean file is PUBLISHED; there is no separate DRAFT state and no marker fallback.
  */
 class DslDefinitionStatusResolverTest {
 
@@ -104,7 +103,6 @@ class DslDefinitionStatusResolverTest {
 
   @Test
   void suffixMatchingWhenBuilderKeyIsPrefixed() {
-    // Builder worktree root differs from starter source-dir; key carries the prefix.
     when(sourcePathResolver.relativePath("LoanDsl"))
             .thenReturn(Optional.of("dsl/LoanDsl.java"));
     stubGit(Map.of("repo/dsl/LoanDsl.java", ChangeType.MODIFIED));
@@ -113,20 +111,7 @@ class DslDefinitionStatusResolverTest {
   }
 
   @Test
-  void draftMarkerFallbackWhenCleanGitAndNoChange() throws IOException {
-    when(sourcePathResolver.relativePath("Foo"))
-            .thenReturn(Optional.of("dsl/FooDsl.java"));
-    stubGit(Map.of());
-
-    Path draft = sourceDir.resolve(".workbench/drafts/Foo.json");
-    Files.createDirectories(draft.getParent());
-    Files.writeString(draft, "{}", UTF_8);
-
-    assertThat(resolver.resolve("Foo")).isEqualTo(DefinitionStatus.DRAFT);
-  }
-
-  @Test
-  void publishedWhenCleanGitAndNoMarker() {
+  void publishedWhenCleanGit() {
     when(sourcePathResolver.relativePath("Foo"))
             .thenReturn(Optional.of("dsl/FooDsl.java"));
     stubGit(Map.of());
@@ -136,24 +121,10 @@ class DslDefinitionStatusResolverTest {
 
   @Test
   void publishedWhenUnknownDefinition() {
-    // Empty Optional from source path resolver (no provider, no fallback).
     when(sourcePathResolver.relativePath("Foo")).thenReturn(Optional.empty());
     stubGit(Map.of("dsl/FooDsl.java", ChangeType.MODIFIED));
 
     assertThat(resolver.resolve("Foo")).isEqualTo(DefinitionStatus.PUBLISHED);
-  }
-
-  @Test
-  void gitAbsentFallsBackToMarker() throws IOException {
-    when(gitResolver.status(any())).thenReturn(Optional.empty());
-    when(sourcePathResolver.relativePath("Foo"))
-            .thenReturn(Optional.of("dsl/FooDsl.java"));
-
-    Path draft = sourceDir.resolve(".workbench/drafts/Foo.json");
-    Files.createDirectories(draft.getParent());
-    Files.writeString(draft, "{}", UTF_8);
-
-    assertThat(resolver.resolve("Foo")).isEqualTo(DefinitionStatus.DRAFT);
   }
 
   @Test
@@ -165,20 +136,6 @@ class DslDefinitionStatusResolverTest {
             .thenReturn(Optional.of("dsl/FooDsl.java"));
 
     assertThat(noDirResolver.resolve("Foo")).isEqualTo(DefinitionStatus.PUBLISHED);
-  }
-
-  @Test
-  void gitChangeWinsOverMarker() throws IOException {
-    when(sourcePathResolver.relativePath("Foo"))
-            .thenReturn(Optional.of("dsl/FooDsl.java"));
-    stubGit(Map.of("dsl/FooDsl.java", ChangeType.DELETED));
-
-    // Marker would otherwise say DRAFT; git DELETE must win.
-    Path draft = sourceDir.resolve(".workbench/drafts/Foo.json");
-    Files.createDirectories(draft.getParent());
-    Files.writeString(draft, "{}", UTF_8);
-
-    assertThat(resolver.resolve("Foo")).isEqualTo(DefinitionStatus.DELETED);
   }
 
   @Test

@@ -23,6 +23,7 @@ import cbs.nova.starter.model.VcsModels.DraftRequest;
 import cbs.nova.starter.persistence.ChangeRequestRepository;
 import cbs.nova.starter.security.Role;
 import cbs.nova.starter.service.ChangeRequestService;
+import cbs.nova.starter.service.DslSourcePathResolver;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -61,8 +62,11 @@ class ChangeRequestServiceTest {
     repository = mock(ChangeRequestRepository.class);
     draftHandler = mock(DslDraftHandler.class);
     DslProperties props = DslProperties.builder().sourceDir(sourceDir.toString()).build();
+    DslSourcePathResolver sourcePathResolver = new DslSourcePathResolver(props,
+            name -> name.equals("LoanA") ? Optional.of("dsl/LoanADsl.java") : Optional.empty());
     service = new ChangeRequestService(repository, props, mapper,
-            draftHandlerProvider(draftHandler), AuditTestSupport.emptyProvider());
+            draftHandlerProvider(draftHandler), providerOfBean(sourcePathResolver),
+            AuditTestSupport.emptyProvider());
   }
 
   @Test
@@ -166,7 +170,7 @@ class ChangeRequestServiceTest {
 
   @Test
   void secondSubmitSupersedesPreviousPendingRequest() throws IOException {
-    writeDraft("LoanA", SNAPSHOT);
+    writeDraft("LoanA");
     when(repository.findPendingByDefinitionName("LoanA"))
             .thenReturn(Optional.empty())
             .thenReturn(Optional.of(new ChangeRequestEntity(3L, "LoanA", "old", "alice",
@@ -189,10 +193,11 @@ class ChangeRequestServiceTest {
     verify(repository, never()).insert(any());
   }
 
-  private void writeDraft(String name, String json) throws IOException {
-    Path drafts = sourceDir.resolve(".workbench/drafts");
-    Files.createDirectories(drafts);
-    Files.writeString(drafts.resolve(name + ".json"), json, StandardCharsets.UTF_8);
+  private void writeDraft(String name) throws IOException {
+    Path dsl = sourceDir.resolve("dsl");
+    Files.createDirectories(dsl);
+    Files.writeString(dsl.resolve(name + "Dsl.java"), "// draft for " + name,
+            StandardCharsets.UTF_8);
   }
 
   private static ChangeRequestEntity pending(long id, String requestedBy) {
@@ -204,6 +209,13 @@ class ChangeRequestServiceTest {
   private static ObjectProvider<DslDraftHandler> draftHandlerProvider(DslDraftHandler handler) {
     ObjectProvider<DslDraftHandler> provider = mock(ObjectProvider.class);
     when(provider.getIfAvailable()).thenReturn(handler);
+    return provider;
+  }
+
+  private static <T> ObjectProvider<T> providerOfBean(T bean) {
+    @SuppressWarnings("unchecked")
+    ObjectProvider<T> provider = mock(ObjectProvider.class);
+    when(provider.getIfAvailable()).thenReturn(bean);
     return provider;
   }
 

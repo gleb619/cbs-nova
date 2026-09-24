@@ -208,7 +208,7 @@ class DslIntrospectionMapperTest {
     Map<String, Object> inputSchema = Map.of("type", "string");
 
     DefinitionMetaDto dto = mapper.toProcessDefinitionMeta(
-            process, inputSchema, DefinitionStatus.DRAFT, "flows/p.dsl");
+            process, inputSchema, DefinitionStatus.MODIFIED, "flows/p.dsl");
 
     assertThat(dto.name()).isEqualTo("P");
     assertThat(dto.type()).isEqualTo("process");
@@ -218,7 +218,7 @@ class DslIntrospectionMapperTest {
     assertThat(dto.outputType()).isEqualTo("Integer");
     assertThat(dto.hasCompensation()).isFalse();
     assertThat(dto.inputSchema()).isEqualTo(inputSchema);
-    assertThat(dto.status()).isEqualTo(DefinitionStatus.DRAFT);
+    assertThat(dto.status()).isEqualTo(DefinitionStatus.MODIFIED);
     assertThat(dto.filePath()).isEqualTo("flows/p.dsl");
   }
 
@@ -276,7 +276,7 @@ class DslIntrospectionMapperTest {
     Map<String, Object> inputSchema = Map.of("type", "string");
 
     DefinitionMetaDto dto = mapper.toHelperDefinitionMeta(
-            "helperName", helper, inputSchema, DefinitionStatus.DRAFT, "flows/h.dsl");
+            "helperName", helper, inputSchema, DefinitionStatus.MODIFIED, "flows/h.dsl");
 
     assertThat(dto.name()).isEqualTo("helperName");
     assertThat(dto.type()).isEqualTo("helper");
@@ -285,7 +285,7 @@ class DslIntrospectionMapperTest {
     assertThat(dto.hasCompensation()).isNull();
     assertThat(dto.description()).isEqualTo("desc");
     assertThat(dto.inputSchema()).isEqualTo(inputSchema);
-    assertThat(dto.status()).isEqualTo(DefinitionStatus.DRAFT);
+    assertThat(dto.status()).isEqualTo(DefinitionStatus.MODIFIED);
     assertThat(dto.filePath()).isEqualTo("flows/h.dsl");
   }
 }

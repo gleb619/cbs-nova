@@ -1,9 +1,7 @@
 package cbs.nova.starter.service;
 
 import cbs.nova.starter.config.properties.DslProperties;
-import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.model.DslIntrospectionModels.DefinitionStatus;
-import cbs.nova.starter.service.DslGitStatusResolver;
 import cbs.nova.dsl.vcs.ChangeType;
 import cbs.nova.dsl.vcs.RepoStatus;
 import java.nio.file.Files;
@@ -20,25 +18,9 @@ import org.springframework.stereotype.Component;
  * Resolves the {@link DefinitionStatus} of one or more DSL definitions.
  *
  * <p>
- * Per drafts spec §3.2 / §7 step 2: status comes from the <em>DSL source file</em> that declares
- * each definition, not from the {@code .workbench/...} JSON markers. The markers are retained as a
- * fallback only when git is absent or disabled.
- *
- * <p>
- * Resolution for each name (in this order):
- * <ol>
- * <li>{@link DslSourcePathResolver#relativePath(String)} maps the name to its DSL file path.</li>
- * <li>If git is enabled and a change is recorded for that path, the change's {@link ChangeType}
- * maps to the {@link DefinitionStatus}: ADDED/UNTRACKED → ADDED, MODIFIED → MODIFIED, DELETED →
- * DELETED, CONFLICTING → CONFLICTING.</li>
- * <li>If git had nothing for that path, the legacy {@code .workbench/drafts/<name>.json} marker is
- * consulted: present → DRAFT; absent → PUBLISHED.</li>
- * </ol>
- *
- * <p>
- * The git path can be reported under a builder worktree root that differs from the starter
- * source-dir, so a change key {@code K} matches the resolved path {@code P} if {@code K.equals(P)},
- * {@code K.endsWith("/" + P)}, or {@code P.endsWith("/" + K)}.
+ * Per drafts spec §3: status comes from the <em>DSL source file</em> that declares each definition,
+ * derived from git status. A clean file is {@code PUBLISHED}; there is no separate {@code DRAFT}
+ * state.
  */
 @Component
 @RequiredArgsConstructor
@@ -72,17 +54,7 @@ public class DslDefinitionStatusResolver {
       Optional<String> resolved = sourcePathResolver.relativePath(name);
       ChangeType matched = resolved.flatMap(p -> DslGitStatusResolver.matchChange(changes, p))
               .orElse(null);
-      if (matched != null) {
-        result.put(name, mapChangeType(matched));
-        continue;
-      }
-
-      Path draftMarker = safePath(sourceDir.resolve(StarterConstants.WORKBENCH_DRAFTS_DIR), name);
-      if (Files.exists(draftMarker)) {
-        result.put(name, DefinitionStatus.DRAFT);
-        continue;
-      }
-      result.put(name, DefinitionStatus.PUBLISHED);
+      result.put(name, matched != null ? mapChangeType(matched) : DefinitionStatus.PUBLISHED);
     }
     return result;
   }
@@ -103,17 +75,5 @@ public class DslDefinitionStatusResolver {
     }
     Path dir = Path.of(sourceDirProperty);
     return Files.isDirectory(dir) ? dir : null;
-  }
-
-  private static Path safePath(Path directory, String name) {
-    Path file = directory.resolve(safeFileName(name) + StarterConstants.JSON_SUFFIX).normalize();
-    if (!file.startsWith(directory.normalize())) {
-      throw new IllegalArgumentException("Illegal definition name: " + name);
-    }
-    return file;
-  }
-
-  private static String safeFileName(String name) {
-    return name.replaceAll("[^A-Za-z0-9._-]", "_");
   }
 }

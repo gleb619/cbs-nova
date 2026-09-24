@@ -5,7 +5,7 @@ import DraftMetadataCard from '../dsl/DraftMetadataCard.vue'
 
 const METADATA: DraftsMetadata = {
   draftCount: 3,
-  workbenchPath: '.workbench/drafts',
+  sourcePath: '/workspace/dsl',
   sizeMb: 0.12,
   gitBranch: 'main',
   gitEnabled: true,
@@ -17,11 +17,9 @@ const mountCard = (props: Record<string, unknown> = {}) =>
   mount(DraftMetadataCard, { props: { metadata: METADATA, ...props } })
 
 describe('DraftMetadataCard', () => {
-  it('renders the workbench path', () => {
+  it('renders the source path', () => {
     const wrapper = mountCard()
-    expect(wrapper.find('[data-testid="draft-metadata-card-path"]').text()).toBe(
-      '.workbench/drafts',
-    )
+    expect(wrapper.find('[data-testid="draft-metadata-card-path"]').text()).toBe('/workspace/dsl')
   })
 
   it('renders the draft count', () => {

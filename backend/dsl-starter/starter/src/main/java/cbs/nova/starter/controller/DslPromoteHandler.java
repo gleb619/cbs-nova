@@ -12,7 +12,6 @@ import cbs.nova.starter.model.VcsModels.ImportBundleResult;
 import cbs.nova.starter.model.VcsModels.ImportEntryResult;
 import cbs.nova.starter.service.DslAuditService;
 import cbs.nova.starter.service.DslDefinitionBundleService;
-import cbs.nova.starter.service.DslDefinitionHistoryService;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -35,10 +34,10 @@ import tools.jackson.databind.ObjectMapper;
  * Functional handler for the T569 environment-promotion workflow. Promotion exports a bundle from
  * one configured environment workbench directory, previews the diff against the target via the
  * existing {@link DslDefinitionBundleService#diffForImport} machinery, and — on apply — writes the
- * published markers to the target and proves the result with digest verification.
+ * DSL source files to the target and proves the result with digest verification.
  *
  * <p>
- * The target environment is NOT reloaded: it is a separate deployment that picks up its markers on
+ * The target environment is NOT reloaded: it is a separate deployment that picks up its files on
  * its own reload cycle. Every apply is recorded in the audit log with actor, source, target and
  * definition names.
  */
@@ -51,7 +50,6 @@ public class DslPromoteHandler {
 
   private final DslProperties dslProperties;
   private final DslDefinitionBundleService bundleService;
-  private final DslDefinitionHistoryService historyService;
   private final ObjectMapper objectMapper;
   private final ObjectProvider<DslAuditService> auditServiceProvider;
 
@@ -136,9 +134,6 @@ public class DslPromoteHandler {
 
     List<ImportEntryResult> results = new ArrayList<>();
     try {
-      for (DefinitionBundleEntry entry : bundle.definitions()) {
-        historyService.snapshotBeforePublish(target.path(), entry.definition().name());
-      }
       results.addAll(bundleService.applyToTarget(target.path(), bundle));
       bundleService.verifyApplied(target.path(), bundle);
     } catch (RuntimeException e) {
@@ -227,4 +222,5 @@ public class DslPromoteHandler {
   private static ServerResponse error(HttpStatus status, ErrorResponse body) {
     return ServerResponse.status(status).body(body);
   }
+
 }

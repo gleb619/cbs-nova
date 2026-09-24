@@ -19,6 +19,7 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -28,8 +29,8 @@ import org.springframework.web.servlet.function.ServerResponse;
 import tools.jackson.databind.ObjectMapper;
 
 /**
- * Change-request lifecycle (T568): submit snapshots the current draft file, approve validates the
- * approver (AUTHOR rank, no self-approval below ADMIN) and delegates the actual publish to
+ * Change-request lifecycle (T568): submit snapshots the current DSL source file, approve validates
+ * the approver (AUTHOR rank, no self-approval below ADMIN) and delegates the actual publish to
  * {@link DslDraftHandler#publishPayload} so the publish flow is not duplicated. Every outcome is
  * audited through {@link DslAuditService} (fail-safe by design).
  *
@@ -46,22 +47,26 @@ public class ChangeRequestService {
   private final DslProperties dslProperties;
   private final ObjectMapper objectMapper;
   private final ObjectProvider<DslDraftHandler> draftHandlerProvider;
+  private final ObjectProvider<DslSourcePathResolver> sourcePathResolverProvider;
   private final ObjectProvider<DslAuditService> auditService;
 
   /**
-   * Snapshots the current draft of {@code definitionName} into a new PENDING change request,
-   * superseding any previous PENDING request for the same definition.
+   * Snapshots the current DSL source file of {@code definitionName} into a new PENDING change
+   * request, superseding any previous PENDING request for the same definition.
    *
    * @throws ChangeRequestException
-   *           {@code NOT_FOUND} when no draft file exists, {@code CONFLICT} when the drafts
-   *           directory is not configured.
+   *           {@code NOT_FOUND} when no source file exists, {@code CONFLICT} when the source
+   *           directory is not configured or the file cannot be read.
    */
   public ChangeRequestEntity submit(String definitionName, String actor, ServerRequest request) {
     try {
       String content = readDraftSnapshot(definitionName);
       repository.findPendingByDefinitionName(definitionName).ifPresent(pending -> repository
               .updateStatus(pending.id(), Status.SUPERSEDED, null, null, null));
-      ChangeRequestEntity row = new ChangeRequestEntity(null, definitionName, content, actor,
+      DraftRequest snapshot = new DraftRequest(definitionName, null, "Draft", null, null, content,
+              System.currentTimeMillis());
+      String json = objectMapper.writeValueAsString(snapshot);
+      ChangeRequestEntity row = new ChangeRequestEntity(null, definitionName, json, actor,
               Instant.now(), Status.PENDING, null, null, null);
       long id = repository.insert(row);
       ChangeRequestEntity created = new ChangeRequestEntity(id, row.definitionName(),
@@ -71,6 +76,10 @@ public class ChangeRequestService {
               Map.of("definitionName", definitionName));
       return created;
     } catch (ChangeRequestException e) {
+      audit(request, StarterConstants.ACTION_CHANGE_REQUEST_CREATE, null, actor, OUTCOME_FAILURE,
+              Map.of("definitionName", definitionName, "error", e.getMessage()));
+      throw e;
+    } catch (RuntimeException e) {
       audit(request, StarterConstants.ACTION_CHANGE_REQUEST_CREATE, null, actor, OUTCOME_FAILURE,
               Map.of("definitionName", definitionName, "error", e.getMessage()));
       throw e;
@@ -157,21 +166,37 @@ public class ChangeRequestService {
     if (sourceDirProperty == null || sourceDirProperty.isBlank()) {
       throw new ChangeRequestException("CONFLICT", "cbs.dsl.source-dir is not configured");
     }
-    Path draftsDir = Path.of(sourceDirProperty).resolve(StarterConstants.WORKBENCH_DRAFTS_DIR);
-    Path draftFile = draftsDir.resolve(safeFileName(definitionName) + ".json").normalize();
-    if (!draftFile.startsWith(draftsDir) || !Files.exists(draftFile)) {
+    Path sourceDir = Path.of(sourceDirProperty);
+    Optional<String> relative = relativePath(definitionName);
+    if (relative.isEmpty()) {
+      throw new ChangeRequestException("NOT_FOUND",
+              "No source path for definition: " + definitionName);
+    }
+    Path file = sourceDir.resolve(relative.get()).normalize();
+    if (!file.startsWith(sourceDir.normalize())) {
+      throw new ChangeRequestException("NOT_FOUND",
+              "No source path for definition: " + definitionName);
+    }
+    if (!Files.exists(file)) {
       throw new ChangeRequestException("NOT_FOUND", "No draft found for: " + definitionName);
     }
     try {
-      return Files.readString(draftFile, StandardCharsets.UTF_8);
+      return Files.readString(file, StandardCharsets.UTF_8);
     } catch (IOException e) {
       throw new ChangeRequestException("CONFLICT",
               "Failed to read draft for " + definitionName + ": " + e.getMessage());
     }
   }
 
-  private static String safeFileName(String name) {
-    return name.replaceAll("[^A-Za-z0-9._-]", "_");
+  private Optional<String> relativePath(String definitionName) {
+    if (sourcePathResolverProvider == null) {
+      return Optional.empty();
+    }
+    DslSourcePathResolver resolver = sourcePathResolverProvider.getIfAvailable();
+    if (resolver == null) {
+      return Optional.empty();
+    }
+    return resolver.relativePath(definitionName);
   }
 
   private void audit(@Nullable ServerRequest request, String action, @Nullable Long id,

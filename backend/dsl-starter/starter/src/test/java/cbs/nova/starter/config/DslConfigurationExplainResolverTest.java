@@ -132,8 +132,7 @@ class DslConfigurationExplainResolverTest {
 
     @Bean
     DslProperties dslProperties() {
-      return new DslProperties("target/test-dsl", null, null, null, null, null, null, null, null,
-              null, null, null, null);
+      return DslProperties.builder().sourceDir("target/test-dsl").build();
     }
 
     @Bean

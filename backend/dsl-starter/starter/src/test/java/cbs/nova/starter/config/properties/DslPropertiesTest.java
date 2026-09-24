@@ -20,8 +20,7 @@ class DslPropertiesTest {
       assertThat(properties.taskQueue()).isEqualTo("dsl-task-queue");
       assertThat(properties.worker().enabled()).isFalse();
       assertThat(properties.reload().enabled()).isFalse();
-      assertThat(properties.workbenchWorkspaceRoot()).isEqualTo(".workbench/drafts-fs");
-      assertThat(properties.drafts().historyLimit()).isEqualTo(20);
+      assertThat(properties.workbenchWorkspaceRoot()).isEqualTo(".dsl-workspace");
       assertThat(properties.files().enabled()).isTrue();
       assertThat(properties.files().flushIntervalSeconds()).isEqualTo(5);
       assertThat(properties.files().maxQueueSize()).isEqualTo(100);

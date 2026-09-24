@@ -16,10 +16,9 @@ import cbs.nova.starter.config.router.DslPromoteRouterConfiguration;
 import cbs.nova.starter.controller.DslExceptionHandler;
 import cbs.nova.starter.controller.DslPromoteHandler;
 import cbs.nova.starter.converter.DefaultDslExceptionMapper;
-import cbs.nova.starter.model.VcsModels.DraftRequest;
 import cbs.nova.starter.service.DslAuditService;
 import cbs.nova.starter.service.DslDefinitionBundleService;
-import cbs.nova.starter.service.DslDefinitionHistoryService;
+import cbs.nova.starter.service.DslSourcePathResolver;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -48,6 +47,7 @@ class DslPromoteResourceTest {
   private MockMvc mockMvc;
   private Path devDir;
   private Path stagingDir;
+  private Path sourceDir;
   private DslAuditService auditService;
   private final ObjectMapper mapper = new ObjectMapper();
 
@@ -55,8 +55,9 @@ class DslPromoteResourceTest {
   void setUp() throws Exception {
     devDir = Files.createTempDirectory("dsl-promote-dev-");
     stagingDir = Files.createTempDirectory("dsl-promote-staging-");
+    sourceDir = Files.createTempDirectory("dsl-promote-source-");
     DslProperties props = DslProperties.builder()
-            .sourceDir(devDir.toString())
+            .sourceDir(sourceDir.toString())
             .promotion(new DslProperties.Promotion(Map.of(
                     "dev", new DslProperties.Promotion.Environment(devDir.toString()),
                     "staging", new DslProperties.Promotion.Environment(stagingDir.toString()))))
@@ -66,12 +67,17 @@ class DslPromoteResourceTest {
     org.springframework.beans.factory.ObjectProvider<DslAuditService> auditProvider = mock(
             org.springframework.beans.factory.ObjectProvider.class);
     when(auditProvider.getIfAvailable()).thenReturn(auditService);
+    DslSourcePathResolver sourcePathResolver = new DslSourcePathResolver(props,
+            name -> Optional.of("dsl/" + name + "Dsl.java"));
+    @SuppressWarnings("unchecked")
+    org.springframework.beans.factory.ObjectProvider<cbs.nova.starter.builder.DslBuilderClient> emptyBuilder = mock(
+            org.springframework.beans.factory.ObjectProvider.class);
+    when(emptyBuilder.getIfAvailable()).thenReturn(null);
     DslDefinitionBundleService bundleService = new DslDefinitionBundleService(mapper,
-            Optional.empty(), DslProperties.bundleServiceDefaults());
+            Optional.empty(), props, sourcePathResolver, emptyBuilder);
     DslPromoteHandler handler = new DslPromoteHandler(
             props,
             bundleService,
-            new DslDefinitionHistoryService(props, mapper),
             mapper,
             auditProvider);
     mockMvc = mockMvcFor(handler);
@@ -102,6 +108,7 @@ class DslPromoteResourceTest {
   void tearDown() throws Exception {
     deleteRecursively(devDir);
     deleteRecursively(stagingDir);
+    deleteRecursively(sourceDir);
   }
 
   @Test
@@ -151,7 +158,7 @@ class DslPromoteResourceTest {
     assertThat(json).contains("\"dryRun\":true");
     assertThat(json).contains("\"outcome\":\"created\"");
     assertThat(json).contains("\"outcome\":\"updated\"");
-    assertThat(stagingDir.resolve(".workbench/published/A.json")).doesNotExist();
+    assertThat(stagingDir.resolve("dsl/ADsl.java")).doesNotExist();
     verifyNoInteractions(auditService);
   }
 
@@ -184,14 +191,22 @@ class DslPromoteResourceTest {
     assertThat(json).contains("\"dryRun\":false");
     assertThat(json).contains("\"published\":2");
     assertThat(json).contains("\"outcome\":\"published\"");
-    assertThat(stagingDir.resolve(".workbench/published/A.json")).exists();
-    assertThat(stagingDir.resolve(".workbench/published/B.json")).exists();
+    assertThat(stagingDir.resolve("dsl/ADsl.java")).exists();
+    assertThat(stagingDir.resolve("dsl/BDsl.java")).exists();
 
     verify(auditService).record(any(), eq("PROMOTION"), eq("staging"), any(),
             eq("SUCCESS"), any());
     // promoted markers on the target must re-export with a matching digest
+    DslSourcePathResolver sourcePathResolver = new DslSourcePathResolver(
+            DslProperties.bundleServiceDefaults(),
+            name -> Optional.of("dsl/" + name + "Dsl.java"));
+    @SuppressWarnings("unchecked")
+    org.springframework.beans.factory.ObjectProvider<cbs.nova.starter.builder.DslBuilderClient> emptyBuilder = mock(
+            org.springframework.beans.factory.ObjectProvider.class);
+    when(emptyBuilder.getIfAvailable()).thenReturn(null);
     DslDefinitionBundleService verifier = new DslDefinitionBundleService(mapper,
-            Optional.empty(), DslProperties.bundleServiceDefaults());
+            Optional.empty(), DslProperties.bundleServiceDefaults(), sourcePathResolver,
+            emptyBuilder);
     var bundle = verifier.export(devDir, false);
     verifier.verifyApplied(stagingDir, bundle);
   }
@@ -209,8 +224,8 @@ class DslPromoteResourceTest {
             .andReturn().getResponse().getContentAsString();
 
     assertThat(json).contains("\"published\":1");
-    assertThat(stagingDir.resolve(".workbench/published/B.json")).exists();
-    assertThat(stagingDir.resolve(".workbench/published/A.json")).doesNotExist();
+    assertThat(stagingDir.resolve("dsl/BDsl.java")).exists();
+    assertThat(stagingDir.resolve("dsl/ADsl.java")).doesNotExist();
   }
 
   @Test
@@ -261,10 +276,16 @@ class DslPromoteResourceTest {
                     "broken", new DslProperties.Promotion.Environment(
                             devDir.resolve("does-not-exist").toString()))))
             .build();
+    DslSourcePathResolver sourcePathResolver = new DslSourcePathResolver(props,
+            name -> Optional.of("dsl/" + name + "Dsl.java"));
+    @SuppressWarnings("unchecked")
+    org.springframework.beans.factory.ObjectProvider<cbs.nova.starter.builder.DslBuilderClient> emptyBuilder = mock(
+            org.springframework.beans.factory.ObjectProvider.class);
+    when(emptyBuilder.getIfAvailable()).thenReturn(null);
     DslDefinitionBundleService bundleService = new DslDefinitionBundleService(mapper,
-            Optional.empty(), DslProperties.bundleServiceDefaults());
+            Optional.empty(), props, sourcePathResolver, emptyBuilder);
     DslPromoteHandler handler = new DslPromoteHandler(props, bundleService,
-            new DslDefinitionHistoryService(props, mapper), mapper, auditProvider());
+            mapper, auditProvider());
     MockMvc brokenMvc = mockMvcFor(handler);
 
     brokenMvc.perform(post("/api/dsl/promote?dryRun=true")
@@ -282,11 +303,10 @@ class DslPromoteResourceTest {
   }
 
   private void publish(Path root, String name, String version) throws Exception {
-    Path dir = root.resolve(".workbench/published");
+    Path dir = root.resolve("dsl");
     Files.createDirectories(dir);
-    DraftRequest req = new DraftRequest(name, "process", "Published", version, "q", null, null);
-    Files.writeString(dir.resolve(name + ".json"), mapper.writeValueAsString(req),
-            StandardCharsets.UTF_8);
+    String body = "// version=" + version + "\nDsl.process(\"" + name + "\")\n";
+    Files.writeString(dir.resolve(name + "Dsl.java"), body, StandardCharsets.UTF_8);
   }
 
   private static final class InputStreamHttpMessageConverter

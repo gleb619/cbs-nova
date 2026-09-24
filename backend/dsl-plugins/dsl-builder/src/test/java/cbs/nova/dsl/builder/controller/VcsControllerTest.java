@@ -81,11 +81,10 @@ class VcsControllerTest {
               null,
               null,
               null,
-              null,
               new DslBuilderProperties.Git(true, null, null, null, null,
                       null, 0, true, "origin"),
               null,
-              null,
+              new DslBuilderProperties.Bundles(1, 200),
               null,
               null,
               null,
@@ -147,7 +146,7 @@ class VcsControllerTest {
     Files.createDirectories(WORKSPACE.resolve("dsl"));
     Files.writeString(WORKSPACE.resolve("dsl/LoanDsl.java"), "class LoanDsl {}");
     Files.writeString(WORKSPACE.resolve("README.md"), "v1");
-    try (Git git = Git.init().setDirectory(WORKSPACE.toFile()).call()) {
+    try (Git git = Git.init().setDirectory(WORKSPACE.toFile()).setInitialBranch("main").call()) {
       git.add().addFilepattern(".").call();
       git.commit().setMessage("initial").setAuthor("a", "a@example.com")
               .setCommitter("a", "a@example.com").call();
@@ -328,5 +327,21 @@ class VcsControllerTest {
             .param("commit", "0000000000000000000000000000000000000000"))
             .andExpect(status().isNotFound())
             .andExpect(jsonPath("$.code").value("NOT_FOUND"));
+  }
+
+  @Test
+  void branchEndpointReturnsCurrentBranch() throws Exception {
+    initRepositoryWithInitialCommit();
+
+    mockMvc.perform(get("/api/dsl/vcs/branch"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.branch").value("main"));
+  }
+
+  @Test
+  void branchEndpointReturnsNullBranchWhenNoRepo() throws Exception {
+    mockMvc.perform(get("/api/dsl/vcs/branch"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.branch").doesNotExist());
   }
 }

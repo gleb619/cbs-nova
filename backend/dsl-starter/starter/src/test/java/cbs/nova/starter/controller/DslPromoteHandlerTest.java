@@ -23,7 +23,6 @@ import cbs.nova.starter.model.VcsModels.DraftRequest;
 import cbs.nova.starter.model.VcsModels.ImportEntryResult;
 import cbs.nova.starter.service.DslAuditService;
 import cbs.nova.starter.service.DslDefinitionBundleService;
-import cbs.nova.starter.service.DslDefinitionHistoryService;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -55,7 +54,6 @@ class DslPromoteHandlerTest {
   private Path devDir;
   private Path stagingDir;
   private DslDefinitionBundleService bundleService;
-  private DslDefinitionHistoryService historyService;
   private DslAuditService auditService;
 
   private final ObjectMapper mapper = new ObjectMapper();
@@ -71,12 +69,11 @@ class DslPromoteHandlerTest {
                     "staging", new DslProperties.Promotion.Environment(stagingDir.toString()))))
             .build();
     bundleService = mock(DslDefinitionBundleService.class);
-    historyService = mock(DslDefinitionHistoryService.class);
     auditService = mock(DslAuditService.class);
     @SuppressWarnings("unchecked")
     ObjectProvider<DslAuditService> auditProvider = mock(ObjectProvider.class);
     when(auditProvider.getIfAvailable()).thenReturn(auditService);
-    DslPromoteHandler handler = new DslPromoteHandler(props, bundleService, historyService,
+    DslPromoteHandler handler = new DslPromoteHandler(props, bundleService,
             mapper, auditProvider);
 
     DslPromoteRouterConfiguration router = new DslPromoteRouterConfiguration();
@@ -165,7 +162,7 @@ class DslPromoteHandlerTest {
 
     verify(bundleService, never()).applyToTarget(any(Path.class), any());
     verify(bundleService, never()).verifyApplied(any(Path.class), any());
-    verifyNoInteractions(historyService, auditService);
+    verifyNoInteractions(auditService);
   }
 
   @Test
@@ -195,7 +192,7 @@ class DslPromoteHandlerTest {
             .andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
             .andExpect(jsonPath("$.message").value("malformed promotion request JSON"));
 
-    verifyNoInteractions(bundleService, historyService, auditService);
+    verifyNoInteractions(bundleService, auditService);
   }
 
   @Test
@@ -207,7 +204,7 @@ class DslPromoteHandlerTest {
             .andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
             .andExpect(jsonPath("$.message").value("source and target are required"));
 
-    verifyNoInteractions(bundleService, historyService, auditService);
+    verifyNoInteractions(bundleService, auditService);
   }
 
   @Test
@@ -230,8 +227,6 @@ class DslPromoteHandlerTest {
             .andExpect(jsonPath("$.results.length()").value(3));
 
     verify(bundleService).verifyApplied(eq(stagingDir), any(DefinitionBundle.class));
-    verify(historyService).snapshotBeforePublish(eq(stagingDir), eq("A"));
-    verify(historyService).snapshotBeforePublish(eq(stagingDir), eq("B"));
     verify(auditService).record(any(), eq("PROMOTION"), eq("staging"), any(),
             eq("SUCCESS"), any());
   }

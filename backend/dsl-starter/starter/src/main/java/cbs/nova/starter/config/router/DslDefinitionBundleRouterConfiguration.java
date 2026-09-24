@@ -24,12 +24,12 @@ public class DslDefinitionBundleRouterConfiguration {
 
   @Bean
   @RouterOperations({
-      @RouterOperation(path = "/api/dsl/definitions/export", beanClass = DslDraftHandler.class, beanMethod = "exportBundle", method = RequestMethod.GET, operation = @Operation(operationId = "exportDefinitions", summary = "Export published (and optionally draft) definition metadata as a bundle", tags = {
+      @RouterOperation(path = "/api/dsl/definitions/export", beanClass = DslDraftHandler.class, beanMethod = "exportBundle", method = RequestMethod.GET, operation = @Operation(operationId = "exportDefinitions", summary = "Export DSL source files as a bundle", tags = {
           "DSL Admin"}, responses = {
               @ApiResponse(responseCode = "200", description = "Bundle exported", content = @Content(mediaType = "application/json", schema = @Schema(implementation = DefinitionBundle.class))),
               @ApiResponse(responseCode = "409", description = "Source directory not configured or not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
           })),
-      @RouterOperation(path = "/api/dsl/definitions/import", beanClass = DslDraftHandler.class, beanMethod = "importBundle", method = RequestMethod.POST, operation = @Operation(operationId = "importDefinitions", summary = "Import a definition metadata bundle, snapshotting history and reloading DSL", tags = {
+      @RouterOperation(path = "/api/dsl/definitions/import", beanClass = DslDraftHandler.class, beanMethod = "importBundle", method = RequestMethod.POST, operation = @Operation(operationId = "importDefinitions", summary = "Import a DSL source bundle, write files, reload DSL and commit", tags = {
           "DSL Admin"}, responses = {
               @ApiResponse(responseCode = "200", description = "Bundle imported (reload may have failed; see response)", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ImportBundleResult.class))),
               @ApiResponse(responseCode = "400", description = "Invalid bundle body or too many definitions", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),

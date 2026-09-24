@@ -41,8 +41,6 @@ cbs:
       queue:
         capacity: 100
         workers: 4
-      drafts:
-        history-limit: 20
       files:
         flush-interval-seconds: 5
         max-queue-size: 100
@@ -60,13 +58,6 @@ cbs:
       file-buffer:
         max-entries: 1000
         expire-after-write-seconds: 3600
-      workbench:
-        drafts-dir: .workbench/drafts
-        published-dir: .workbench/published
-        history-dir: .workbench/history
+      bundles:
         bundle-format-version: 1
         bundle-max-definitions: 200
-        drafts-default-limit: 50
-        # Line-diff caps for history diffs (cbs.nova.dsl.utils.LineDiff)
-        diff-max-hunks: 200
-        diff-context-lines: 3

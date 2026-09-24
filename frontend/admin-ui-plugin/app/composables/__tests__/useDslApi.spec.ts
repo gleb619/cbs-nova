@@ -186,7 +186,7 @@ describe('useDslApi', () => {
   it('getDraftsMetadata GETs /api/v1/dsl/drafts/metadata', async () => {
     const metadata = {
       draftCount: 3,
-      workbenchPath: '.workbench/drafts',
+      sourcePath: '/workspace/dsl',
       sizeMb: 0.5,
       gitBranch: 'main',
       gitEnabled: true,

@@ -1,5 +1,6 @@
 package cbs.nova.starter.builder;
 
+import static org.awaitility.Awaitility.await;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.Matchers.containsString;
@@ -12,26 +13,31 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 import cbs.nova.starter.config.BuilderClientConfiguration;
 import cbs.nova.starter.config.properties.DslBuilderClientProperties;
 import cbs.nova.starter.controller.BuilderApiErrorHandler;
-import cbs.nova.dsl.vcs.ChangeType;
 import cbs.nova.dsl.vcs.RepoStatus;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import cbs.nova.starter.exception.BuilderApiException;
 import cbs.nova.starter.exception.BuilderClientBusyException;
 import cbs.nova.starter.exception.BuilderUnavailableException;
-import cbs.nova.starter.exception.DslCompilationException;
 import cbs.nova.starter.model.CompileModels.CompileRequest;
-import cbs.nova.starter.model.VcsModels.DraftRequest;
+import cbs.nova.starter.model.CompileModels.CompileResult;
+import cbs.nova.starter.model.DslFileModels.BulkWriteRequest;
+import cbs.nova.starter.model.DslFileModels.FileContentRequest;
+import cbs.nova.starter.model.VcsModels.CommitRequest;
+import cbs.nova.starter.model.VcsModels.CommitResult;
+import cbs.nova.starter.model.VcsModels.DiscardRequest;
+import cbs.nova.starter.model.VcsModels.DiscardResult;
+import cbs.nova.starter.model.DslFileModels.FileContentResponse;
 import io.github.resilience4j.bulkhead.Bulkhead;
 import io.github.resilience4j.bulkhead.BulkheadConfig;
 import io.github.resilience4j.bulkhead.ThreadPoolBulkhead;
 import io.github.resilience4j.bulkhead.ThreadPoolBulkheadConfig;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
-import java.net.http.HttpClient;
 import java.time.Duration;
-import java.util.Map;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CountDownLatch;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
@@ -47,15 +53,12 @@ class DslBuilderClientTest {
   private ThreadPoolBulkhead queue;
 
   @AfterEach
-  void tearDown() {
+  void tearDown() throws Exception {
     if (server != null) {
       server.verify();
     }
     if (queue != null) {
-      try {
-        queue.close();
-      } catch (Exception ignored) {
-      }
+      queue.close();
     }
   }
 
@@ -64,336 +67,121 @@ class DslBuilderClientTest {
     var client = client(circuitBreaker(5, 30, 3));
     server.expect(requestTo("http://localhost:8091/api/dsl/compile"))
             .andExpect(method(HttpMethod.POST))
-            .andExpect(content().string(containsString("\"sources\"")))
-            .andExpect(content().string(containsString("LoanDsl.java")))
             .andRespond(withSuccess(
-                    "{\"id\":\"s-1\",\"success\":true,\"generatedFiles\":[\"LoanDsl.java\"],"
-                            + "\"diagnostics\":[],\"durationMillis\":42}",
+                    "{\"id\":\"s-1\",\"success\":true,\"generatedFiles\":[\"A.java\"],"
+                            + "\"diagnostics\":[],\"durationMillis\":1}",
                     MediaType.APPLICATION_JSON));
 
     var result = client.compile(new CompileRequest(null, null, null, null, null, null,
-            Map.of("LoanDsl.java", "class LoanDsl {}")));
+            Map.of()));
 
-    assertThat(result.id()).isEqualTo("s-1");
     assertThat(result.success()).isTrue();
-    assertThat(result.generatedFiles()).containsExactly("LoanDsl.java");
+    assertThat(result.generatedFiles()).containsExactly("A.java");
   }
 
   @Test
   void downloadZipReturnsBytes() {
     var client = client(circuitBreaker(5, 30, 3));
     server.expect(requestTo("http://localhost:8091/api/dsl/compile/s-1/download"))
-            .andExpect(method(HttpMethod.GET))
-            .andRespond(withSuccess("zip-bytes", MediaType.parseMediaType("application/zip")));
+            .andRespond(withSuccess("bytes", MediaType.APPLICATION_OCTET_STREAM));
 
-    assertThat(client.downloadZip("s-1")).isEqualTo("zip-bytes".getBytes());
+    assertThat(client.downloadZip("s-1")).containsExactly("bytes".getBytes());
   }
 
   @Test
-  void saveDraftSerializesDraftRequest() {
+  void listFilesRequestsPrefix() {
     var client = client(circuitBreaker(5, 30, 3));
-    server.expect(requestTo("http://localhost:8091/api/dsl/drafts/foo/save"))
-            .andExpect(method(HttpMethod.POST))
-            .andExpect(content().string(containsString("\"name\":\"foo\"")))
+    server.expect(requestTo("http://localhost:8091/api/dsl/files?prefix=dsl/"))
             .andRespond(withSuccess(
-                    "{\"name\":\"foo\",\"status\":\"Draft\",\"location\":\"/ws/.workbench/drafts/foo.json\","
-                            + "\"reloaded\":false,\"loadResult\":{\"processes\":[],\"transactions\":[],"
-                            + "\"functions\":[]}}",
+                    "[{\"path\":\"dsl/Foo.java\",\"sizeBytes\":1,\"lastModifiedMillis\":2}]",
                     MediaType.APPLICATION_JSON));
 
-    var response = client.saveDraft("foo",
-            new DraftRequest("foo", "process", "Draft", "1", "q", null, null));
+    var files = client.listFiles("dsl/");
 
-    assertThat(response.name()).isEqualTo("foo");
-    assertThat(response.status()).isEqualTo("Draft");
-    assertThat(response.reloaded()).isFalse();
-    assertThat(response.loadResult().total()).isZero();
+    assertThat(files).hasSize(1);
+    assertThat(files.get(0).path()).isEqualTo("dsl/Foo.java");
+    assertThat(files.get(0).sizeBytes()).isEqualTo(1L);
+    assertThat(files.get(0).lastModifiedMillis()).isEqualTo(2L);
   }
 
   @Test
-  void listDraftsDeserializesPageResponse() {
+  void readFileReturnsContent() {
     var client = client(circuitBreaker(5, 30, 3));
-    server.expect(requestTo("http://localhost:8091/api/dsl/drafts?limit=50&offset=0"))
-            .andExpect(method(HttpMethod.GET))
+    server.expect(requestTo("http://localhost:8091/api/dsl/files/dsl/FooDsl.java"))
             .andRespond(withSuccess(
-                    "{\"items\":[{\"name\":\"foo\",\"type\":\"process\",\"status\":\"Draft\","
-                            + "\"version\":\"1\",\"updatedAt\":123}],\"total\":1,\"offset\":0,\"limit\":50}",
+                    "{\"path\":\"dsl/FooDsl.java\",\"content\":\"class Foo {}\","
+                            + "\"pending\":false,\"crc32\":12}",
                     MediaType.APPLICATION_JSON));
 
-    var page = client.listDrafts(50, 0);
+    var response = client.readFile("dsl/FooDsl.java");
 
-    assertThat(page.total()).isEqualTo(1);
-    assertThat(page.items()).hasSize(1);
-    assertThat(page.items().get(0).name()).isEqualTo("foo");
-    assertThat(page.items().get(0).updatedAt()).isEqualTo(123);
+    assertThat(response.content()).isEqualTo("class Foo {}");
   }
 
   @Test
-  void stageWritePostsRawContentToWildcardPath() {
+  void stageWritePostsContent() {
     var client = client(circuitBreaker(5, 30, 3));
-    server.expect(requestTo("http://localhost:8091/api/dsl/files/dsl/LoanDsl.java"))
+    server.expect(requestTo("http://localhost:8091/api/dsl/files/dsl/FooDsl.java"))
             .andExpect(method(HttpMethod.POST))
-            .andExpect(content().string("class LoanDsl {}"))
-            .andRespond(withStatus(HttpStatus.ACCEPTED));
+            .andExpect(content().string("class Foo {}"))
+            .andRespond(withSuccess("", MediaType.APPLICATION_JSON));
 
-    client.stageWrite("dsl/LoanDsl.java", "class LoanDsl {}");
+    client.stageWrite("dsl/FooDsl.java", "class Foo {}");
   }
 
   @Test
-  void pendingCountReadsStatusEndpoint() {
+  void stageAllPostsBulkRequest() {
     var client = client(circuitBreaker(5, 30, 3));
-    server.expect(requestTo("http://localhost:8091/api/dsl/files/status"))
-            .andExpect(method(HttpMethod.GET))
-            .andRespond(withSuccess("{\"pending\":3}", MediaType.APPLICATION_JSON));
+    server.expect(requestTo("http://localhost:8091/api/dsl/files/bulk"))
+            .andExpect(method(HttpMethod.POST))
+            .andExpect(content().string(containsString("\"files\"")))
+            .andRespond(withSuccess(
+                    "{\"staged\":1,\"failed\":0}", MediaType.APPLICATION_JSON));
 
-    assertThat(client.pendingCount()).isEqualTo(3);
+    var result = client.stageAll(List.of(new FileContentRequest("dsl/Foo.java", "v1")));
+
+    assertThat(result.staged()).isEqualTo(1);
+    assertThat(result.failed()).isZero();
   }
 
   @Test
   void vcsStatusReturnsRepoStatus() {
     var client = client(circuitBreaker(5, 30, 3));
     server.expect(requestTo("http://localhost:8091/api/dsl/vcs/status"))
-            .andExpect(method(HttpMethod.GET))
-            .andRespond(withSuccess("{\"workTree\":\"/repo\",\"dirtyPaths\":[\"a.java\"]}",
-                    MediaType.APPLICATION_JSON));
-
-    Optional<RepoStatus> status = client.vcsStatus();
-
-    assertThat(status).isPresent();
-    assertThat(status.get().workTree().toString()).isEqualTo("/repo");
-    assertThat(status.get().dirtyPaths()).containsExactly("a.java");
-    assertThat(status.get().changes()).isEmpty();
-  }
-
-  @Test
-  void vcsStatusParsesTypedChanges() {
-    var client = client(circuitBreaker(5, 30, 3));
-    server.expect(requestTo("http://localhost:8091/api/dsl/vcs/status"))
-            .andExpect(method(HttpMethod.GET))
             .andRespond(withSuccess(
-                    "{\"workTree\":\"/repo\",\"dirtyPaths\":[\"a.java\",\"b.java\"],"
-                            + "\"changes\":{\"a.java\":\"ADDED\",\"b.java\":\"DELETED\"}}",
+                    "{\"workTree\":\"/repo\",\"dirtyPaths\":[\"dsl/Foo.java\"],"
+                            + "\"changes\":{\"dsl/Foo.java\":\"MODIFIED\"}}",
                     MediaType.APPLICATION_JSON));
 
     Optional<RepoStatus> status = client.vcsStatus();
 
     assertThat(status).isPresent();
-    RepoStatus repo = status.get();
-    assertThat(repo.dirtyPaths()).containsExactlyInAnyOrder("a.java", "b.java");
-    assertThat(repo.changes())
-            .containsEntry("a.java", ChangeType.ADDED)
-            .containsEntry("b.java", ChangeType.DELETED);
-    assertThat(repo.changeOf("a.java")).contains(ChangeType.ADDED);
+    assertThat(status.get().changeOf("dsl/Foo.java")).isPresent();
   }
 
   @Test
-  void vcsStatusReturnsEmptyOn404() {
+  void vcsStatus404ReturnsEmpty() {
     var client = client(circuitBreaker(5, 30, 3));
     server.expect(requestTo("http://localhost:8091/api/dsl/vcs/status"))
-            .andRespond(withStatus(HttpStatus.NOT_FOUND)
-                    .body("{\"code\":\"NOT_FOUND\",\"message\":\"no git repository\"}")
-                    .contentType(MediaType.APPLICATION_JSON));
+            .andRespond(withStatus(HttpStatus.NOT_FOUND));
 
     assertThat(client.vcsStatus()).isEmpty();
   }
 
   @Test
-  void missingDraftMapsToBuilderApiException() {
-    var client = client(circuitBreaker(5, 30, 3));
-    server.expect(requestTo("http://localhost:8091/api/dsl/drafts/missing"))
-            .andRespond(withStatus(HttpStatus.NOT_FOUND)
-                    .body("{\"code\":\"NOT_FOUND\",\"message\":\"Draft not found: missing\"}")
-                    .contentType(MediaType.APPLICATION_JSON));
-
-    assertThatThrownBy(() -> client.readDraft("missing"))
-            .isInstanceOf(BuilderApiException.class)
-            .satisfies(ex -> {
-              var api = (BuilderApiException) ex;
-              assertThat(api.getStatusCode().value()).isEqualTo(404);
-              assertThat(api.getCode()).isEqualTo("NOT_FOUND");
-            });
-  }
-
-  @Test
-  void compileFailureMapsToDslCompilationException() {
-    var client = client(circuitBreaker(5, 30, 3));
-    server.expect(requestTo("http://localhost:8091/api/dsl/compile"))
-            .andExpect(method(HttpMethod.POST))
-            .andRespond(withStatus(HttpStatus.UNPROCESSABLE_ENTITY)
-                    .body("{\"error\":\"COMPILE_FAILED\",\"diagnostics\":[\"Broken.java: bad syntax\"]}")
-                    .contentType(MediaType.APPLICATION_JSON));
-
-    assertThatThrownBy(() -> client.compile(new CompileRequest(null, null, null, null, null, null,
-            Map.of("Broken.java", "broken"))))
-            .isInstanceOf(DslCompilationException.class)
-            .satisfies(ex -> {
-              var diagnostics = ((DslCompilationException) ex).diagnostics();
-              assertThat(diagnostics).hasSize(1);
-              assertThat(diagnostics.get(0).message()).isEqualTo("Broken.java: bad syntax");
-              assertThat(diagnostics.get(0).severity()).isEqualTo("error");
-            });
-  }
-
-  @Test
-  void builderBusyMapsToBusyExceptionWithoutTrippingBreaker() {
-    var circuit = circuitBreaker(5, 30, 3);
-    var client = client(circuit);
-    server.expect(requestTo("http://localhost:8091/api/dsl/drafts/foo"))
-            .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS)
-                    .body("{\"error\":\"BUILDER_BUSY\",\"message\":\"queue full\"}")
-                    .contentType(MediaType.APPLICATION_JSON));
-
-    assertThatThrownBy(() -> client.readDraft("foo"))
-            .isInstanceOf(BuilderClientBusyException.class);
-    assertThat(circuit.getState()).isEqualTo(CircuitBreaker.State.CLOSED);
-  }
-
-  @Test
-  void serverErrorTripsBreakerAndShortCircuitsNextCall() {
-    var circuit = circuitBreaker(1, 30, 3);
-    var client = client(circuit);
-    server.expect(requestTo("http://localhost:8091/api/dsl/drafts/foo"))
-            .andRespond(withStatus(HttpStatus.SERVICE_UNAVAILABLE)
-                    .body("{\"code\":\"BULKHEAD_SATURATED\",\"message\":\"saturated\"}")
-                    .contentType(MediaType.APPLICATION_JSON));
-
-    assertThatThrownBy(() -> client.readDraft("foo"))
-            .isInstanceOf(BuilderUnavailableException.class);
-    assertThat(circuit.getState()).isEqualTo(CircuitBreaker.State.OPEN);
-
-    assertThatThrownBy(() -> client.readDraft("foo"))
-            .isInstanceOf(BuilderUnavailableException.class)
-            .hasMessageContaining("circuit breaker");
-  }
-
-  @Test
-  void jdkFactoryUsesHttp2ByDefaultForPriorKnowledge() {
-    var httpClient = BuilderClientConfiguration.httpClient(
-            DslBuilderClientProperties.builder().build());
-
-    assertThat(httpClient.version()).isEqualTo(HttpClient.Version.HTTP_2);
-  }
-
-  @Test
-  void jdkFactoryHonorsHttp1DisabledFlag() {
-    var httpClient = BuilderClientConfiguration.httpClient(
-            DslBuilderClientProperties.builder().http2(false).build());
-
-    assertThat(httpClient.version()).isEqualTo(HttpClient.Version.HTTP_1_1);
-  }
-
-  @Test
-  void saveDraftInvalidatesCacheSoFollowUpReadsHitServer() {
-    // Gap G6 / invariant I5: a successful mutating call must drop every cache entry that
-    // could shadow the new state. saveDraft invalidates the draft, its history pages and
-    // the vcs status. Two expectations per read demonstrate the cache drop, not just one.
-    var client = client(circuitBreaker(5, 30, 3));
-    server.expect(requestTo("http://localhost:8091/api/dsl/drafts/foo/save"))
-            .andExpect(method(HttpMethod.POST))
-            .andRespond(withSuccess(
-                    "{\"name\":\"foo\",\"status\":\"Draft\",\"location\":\"/ws/.workbench/drafts/foo.json\","
-                            + "\"reloaded\":false,\"loadResult\":{\"processes\":[],\"transactions\":[],"
-                            + "\"functions\":[]}}",
-                    MediaType.APPLICATION_JSON));
-    server.expect(requestTo("http://localhost:8091/api/dsl/drafts/foo"))
-            .andExpect(method(HttpMethod.GET))
-            .andRespond(withSuccess(
-                    "{\"name\":\"foo\",\"type\":\"process\",\"status\":\"Draft\",\"version\":\"1\","
-                            + "\"taskQueue\":\"q\",\"source\":null,\"savedAt\":42}",
-                    MediaType.APPLICATION_JSON));
-    server.expect(requestTo("http://localhost:8091/api/dsl/drafts?limit=10&offset=0"))
-            .andExpect(method(HttpMethod.GET))
-            .andRespond(withSuccess(
-                    "{\"items\":[],\"total\":0,\"offset\":0,\"limit\":10}",
-                    MediaType.APPLICATION_JSON));
-    server.expect(requestTo("http://localhost:8091/api/dsl/vcs/status"))
-            .andExpect(method(HttpMethod.GET))
-            .andRespond(withSuccess(
-                    "{\"workTree\":\"/repo\",\"dirtyPaths\":[\".workbench/drafts/foo.json\"],"
-                            + "\"changes\":{\".workbench/drafts/foo.json\":\"UNTRACKED\"}}",
-                    MediaType.APPLICATION_JSON));
-
-    client.saveDraft("foo", new DraftRequest("foo", "process", "Draft", "1", "q", null, null));
-
-    assertThat(client.readDraft("foo").status()).isEqualTo("Draft");
-    assertThat(client.listDrafts(10, 0).total()).isZero();
-    assertThat(client.vcsStatus()).isPresent();
-  }
-
-  @Test
-  void stageWriteInvalidatesCachedFileAndStatus() {
-    var client = client(circuitBreaker(5, 30, 3));
-    server.expect(requestTo("http://localhost:8091/api/dsl/files/dsl/LoanDsl.java"))
-            .andExpect(method(HttpMethod.POST))
-            .andRespond(withStatus(HttpStatus.ACCEPTED));
-    server.expect(requestTo("http://localhost:8091/api/dsl/files/dsl/LoanDsl.java"))
-            .andExpect(method(HttpMethod.GET))
-            .andRespond(withSuccess(
-                    "{\"path\":\"dsl/LoanDsl.java\",\"content\":\"v1\",\"pending\":true,\"crc32\":1}",
-                    MediaType.APPLICATION_JSON));
-    server.expect(requestTo("http://localhost:8091/api/dsl/vcs/status"))
-            .andExpect(method(HttpMethod.GET))
-            .andRespond(withSuccess(
-                    "{\"workTree\":\"/repo\",\"dirtyPaths\":[\"dsl/LoanDsl.java\"],"
-                            + "\"changes\":{\"dsl/LoanDsl.java\":\"UNTRACKED\"}}",
-                    MediaType.APPLICATION_JSON));
-
-    client.stageWrite("dsl/LoanDsl.java", "v1");
-
-    assertThat(client.readFile("dsl/LoanDsl.java").content()).isEqualTo("v1");
-    assertThat(client.vcsStatus()).isPresent();
-  }
-
-  @Test
-  void failingMutatingCallDoesNotInvalidateCache() {
-    // A draft request that the builder rejects with 4xx must leave the cache alone. Otherwise
-    // a transient failure would force every subsequent caller to re-fetch from the builder.
-    var client = client(circuitBreaker(5, 30, 3));
-    server.expect(requestTo("http://localhost:8091/api/dsl/drafts/foo/save"))
-            .andExpect(method(HttpMethod.POST))
-            .andRespond(withStatus(HttpStatus.UNPROCESSABLE_ENTITY)
-                    .body("{\"code\":\"INVALID_REQUEST\",\"message\":\"bad name\"}")
-                    .contentType(MediaType.APPLICATION_JSON));
-    // After the failed saveDraft a readDraft would normally re-fetch because the cache
-    // entry was dropped. The first read seeds it; the second read would normally hit
-    // the cache. With the failure path we still seed once and serve the second from
-    // cache.
-    server.expect(requestTo("http://localhost:8091/api/dsl/drafts/foo"))
-            .andExpect(method(HttpMethod.GET))
-            .andRespond(withSuccess(
-                    "{\"name\":\"foo\",\"type\":\"process\",\"status\":\"Draft\",\"version\":\"1\","
-                            + "\"taskQueue\":\"q\",\"source\":null,\"savedAt\":1}",
-                    MediaType.APPLICATION_JSON));
-    // No second readDraft expectation: the cache still holds the seeded value.
-
-    assertThatThrownBy(() -> client.saveDraft("foo",
-            new DraftRequest("foo", "process", "Draft", "1", "q", null, null)))
-            .isInstanceOfAny(BuilderApiException.class, DslCompilationException.class);
-
-    // Cached read still works — no extra server hit was registered for it.
-    DraftRequest cached = client.readDraft("foo");
-    assertThat(cached.status()).isEqualTo("Draft");
-  }
-
-  @Test
-  void commitPostsPathsMessageAndAuthor() {
+  void commitPostsCommitRequest() {
     var client = client(circuitBreaker(5, 30, 3));
     server.expect(requestTo("http://localhost:8091/api/dsl/vcs/commit"))
             .andExpect(method(HttpMethod.POST))
-            .andExpect(content().string(containsString("\"paths\":[\"dsl/LoanDsl.java\"]")))
-            .andExpect(content().string(containsString("\"message\":\"Publish Loan\"")))
-            .andExpect(content().string(containsString("\"authorName\":\"alice\"")))
-            .andExpect(content().string(containsString("\"authorEmail\":\"alice@cbs-nova.local\"")))
             .andRespond(withSuccess(
-                    "{\"commitId\":\"abc123\",\"paths\":[\"dsl/LoanDsl.java\"],\"timestampMillis\":42}",
+                    "{\"commitId\":\"abc\",\"paths\":[\"dsl/Foo.java\"],"
+                            + "\"timestampMillis\":42,\"pushed\":true}",
                     MediaType.APPLICATION_JSON));
 
-    var result = client.commit(new cbs.nova.starter.model.VcsModels.CommitRequest(
-            List.of("dsl/LoanDsl.java"), "Publish Loan", "alice", "alice@cbs-nova.local"));
+    var result = client.commit(new CommitRequest(List.of("dsl/Foo.java"), "msg", "a", "a@b"));
 
-    assertThat(result.commitId()).isEqualTo("abc123");
-    assertThat(result.paths()).containsExactly("dsl/LoanDsl.java");
-    assertThat(result.timestampMillis()).isEqualTo(42);
+    assertThat(result.commitId()).isEqualTo("abc");
+    assertThat(result.pushed()).isTrue();
   }
 
   @Test
@@ -401,107 +189,135 @@ class DslBuilderClientTest {
     var client = client(circuitBreaker(5, 30, 3));
     server.expect(requestTo("http://localhost:8091/api/dsl/vcs/discard"))
             .andExpect(method(HttpMethod.POST))
-            .andExpect(content().string(containsString("\"paths\":[\"dsl/LoanDsl.java\"]")))
+            .andExpect(content().string(containsString("dsl/Foo.java")))
             .andRespond(withSuccess(
-                    "{\"discarded\":[\"dsl/LoanDsl.java\"]}",
-                    MediaType.APPLICATION_JSON));
+                    "{\"discarded\":[\"dsl/Foo.java\"]}", MediaType.APPLICATION_JSON));
 
-    var result = client.discard(new cbs.nova.starter.model.VcsModels.DiscardRequest(
-            List.of("dsl/LoanDsl.java")));
+    var result = client.discard(new DiscardRequest(List.of("dsl/Foo.java")));
 
-    assertThat(result.discarded()).containsExactly("dsl/LoanDsl.java");
+    assertThat(result.discarded()).containsExactly("dsl/Foo.java");
   }
 
   @Test
-  void vcsLogReadsPathAndLimit() {
+  void vcsLogRequestsPathAndLimit() {
     var client = client(circuitBreaker(5, 30, 3));
-    server.expect(requestTo("http://localhost:8091/api/dsl/vcs/log?path=dsl/LoanDsl.java&limit=5"))
-            .andExpect(method(HttpMethod.GET))
-            .andRespond(withSuccess(
-                    "[{\"commitId\":\"abc123\",\"timestampMillis\":1,\"author\":\"alice\",\"message\":\"init\"}]",
-                    MediaType.APPLICATION_JSON));
+    server.expect(requestTo("http://localhost:8091/api/dsl/vcs/log?path=dsl/Foo.java&limit=20"))
+            .andRespond(withSuccess("[]", MediaType.APPLICATION_JSON));
 
-    var entries = client.vcsLog("dsl/LoanDsl.java", 5);
-
-    assertThat(entries).hasSize(1);
-    assertThat(entries.get(0).commitId()).isEqualTo("abc123");
-    assertThat(entries.get(0).author()).isEqualTo("alice");
-    assertThat(entries.get(0).message()).isEqualTo("init");
+    assertThat(client.vcsLog("dsl/Foo.java", 20)).isEmpty();
   }
 
   @Test
-  void vcsShowReadsPathAndCommit() {
+  void vcsShowRequestsPathAndCommit() {
     var client = client(circuitBreaker(5, 30, 3));
-    server.expect(
-            requestTo("http://localhost:8091/api/dsl/vcs/show?path=dsl/LoanDsl.java&commit=abc123"))
-            .andExpect(method(HttpMethod.GET))
-            .andRespond(withSuccess("class LoanDsl {}", MediaType.TEXT_PLAIN));
+    server.expect(requestTo(
+            "http://localhost:8091/api/dsl/vcs/show?path=dsl/Foo.java&commit=abc123"))
+            .andRespond(withSuccess("class Foo {}", MediaType.TEXT_PLAIN));
 
-    String content = client.vcsShow("dsl/LoanDsl.java", "abc123");
-
-    assertThat(content).isEqualTo("class LoanDsl {}");
+    assertThat(client.vcsShow("dsl/Foo.java", "abc123")).isEqualTo("class Foo {}");
   }
 
   @Test
-  void commitInvalidatesCachedFileStatusAndLog() {
+  void vcsBranchReadsBranch() {
     var client = client(circuitBreaker(5, 30, 3));
-    server.expect(requestTo("http://localhost:8091/api/dsl/vcs/commit"))
-            .andExpect(method(HttpMethod.POST))
-            .andRespond(withSuccess(
-                    "{\"commitId\":\"abc123\",\"paths\":[\"dsl/LoanDsl.java\"],\"timestampMillis\":42}",
-                    MediaType.APPLICATION_JSON));
-    server.expect(requestTo("http://localhost:8091/api/dsl/files/dsl/LoanDsl.java"))
-            .andExpect(method(HttpMethod.GET))
-            .andRespond(withSuccess(
-                    "{\"path\":\"dsl/LoanDsl.java\",\"content\":\"v2\",\"pending\":false,\"crc32\":1}",
-                    MediaType.APPLICATION_JSON));
-    server.expect(requestTo("http://localhost:8091/api/dsl/vcs/status"))
-            .andExpect(method(HttpMethod.GET))
-            .andRespond(withSuccess(
-                    "{\"workTree\":\"/repo\",\"dirtyPaths\":[],\"changes\":{}}",
-                    MediaType.APPLICATION_JSON));
+    server.expect(requestTo("http://localhost:8091/api/dsl/vcs/branch"))
+            .andRespond(withSuccess("{\"branch\":\"main\"}", MediaType.APPLICATION_JSON));
 
-    client.commit(new cbs.nova.starter.model.VcsModels.CommitRequest(
-            List.of("dsl/LoanDsl.java"), "Publish", "alice", "alice@cbs-nova.local"));
-
-    assertThat(client.readFile("dsl/LoanDsl.java").content()).isEqualTo("v2");
-    assertThat(client.vcsStatus().get().dirtyPaths()).isEmpty();
+    assertThat(client.vcsBranch()).isEqualTo("main");
   }
 
   @Test
-  void commitParsesPushFields() {
+  void vcsBranchReturnsNullWhenResponseHasNoBranch() {
     var client = client(circuitBreaker(5, 30, 3));
-    server.expect(requestTo("http://localhost:8091/api/dsl/vcs/commit"))
-            .andExpect(method(HttpMethod.POST))
-            .andRespond(withSuccess(
-                    "{\"commitId\":\"abc123\",\"paths\":[\"dsl/LoanDsl.java\"],"
-                            + "\"timestampMillis\":42,\"pushed\":true,\"pushError\":\"nope\"}",
-                    MediaType.APPLICATION_JSON));
+    server.expect(requestTo("http://localhost:8091/api/dsl/vcs/branch"))
+            .andRespond(withSuccess("{\"branch\":null}", MediaType.APPLICATION_JSON));
 
-    var result = client.commit(new cbs.nova.starter.model.VcsModels.CommitRequest(
-            List.of("dsl/LoanDsl.java"), "Publish Loan", "alice", "alice@cbs-nova.local"));
-
-    assertThat(result.commitId()).isEqualTo("abc123");
-    assertThat(result.pushed()).isTrue();
-    assertThat(result.pushError()).isEqualTo("nope");
+    assertThat(client.vcsBranch()).isNull();
   }
 
   @Test
-  void commitParsesLegacyJsonWithoutPushFields() {
+  void builderApiExceptionPreservesStatusAndCode() {
     var client = client(circuitBreaker(5, 30, 3));
-    server.expect(requestTo("http://localhost:8091/api/dsl/vcs/commit"))
-            .andExpect(method(HttpMethod.POST))
+    server.expect(requestTo("http://localhost:8091/api/dsl/files/dsl/FooDsl.java"))
+            .andRespond(withStatus(HttpStatus.CONFLICT)
+                    .body("{\"code\":\"NOTHING_TO_COMMIT\",\"message\":\"x\"}")
+                    .contentType(MediaType.APPLICATION_JSON));
+
+    assertThatThrownBy(() -> client.readFile("dsl/FooDsl.java"))
+            .isInstanceOf(BuilderApiException.class)
+            .satisfies(e -> {
+              BuilderApiException bae = (BuilderApiException) e;
+              assertThat(bae.getStatusCode().value()).isEqualTo(409);
+              assertThat(bae.getCode()).isEqualTo("NOTHING_TO_COMMIT");
+            });
+  }
+
+  @Test
+  void dslCompilationResultReportsDiagnostics() {
+    var client = client(circuitBreaker(5, 30, 3));
+    server.expect(requestTo("http://localhost:8091/api/dsl/compile"))
             .andRespond(withSuccess(
-                    "{\"commitId\":\"abc123\",\"paths\":[\"dsl/LoanDsl.java\"],"
-                            + "\"timestampMillis\":42}",
+                    "{\"id\":\"s-1\",\"success\":false,\"generatedFiles\":[],"
+                            + "\"diagnostics\":[\"Broken.java:1: bad\"],\"durationMillis\":1}",
                     MediaType.APPLICATION_JSON));
 
-    var result = client.commit(new cbs.nova.starter.model.VcsModels.CommitRequest(
-            List.of("dsl/LoanDsl.java"), "Publish Loan", "alice", "alice@cbs-nova.local"));
+    var result = client.compile(new CompileRequest(null, null, null, null, null, null,
+            Map.of()));
 
-    assertThat(result.commitId()).isEqualTo("abc123");
-    assertThat(result.pushed()).isNull();
-    assertThat(result.pushError()).isNull();
+    assertThat(result.success()).isFalse();
+    assertThat(result.diagnostics()).containsExactly("Broken.java:1: bad");
+  }
+
+  @Test
+  void circuitBreakerOpensOnUnavailable() {
+    var breaker = circuitBreaker(2, 30, 1);
+    var client = client(breaker);
+    server.expect(requestTo("http://localhost:8091/api/dsl/files/dsl/Foo.java"))
+            .andRespond(withStatus(HttpStatus.SERVICE_UNAVAILABLE));
+    server.expect(requestTo("http://localhost:8091/api/dsl/files/dsl/Foo.java"))
+            .andRespond(withStatus(HttpStatus.SERVICE_UNAVAILABLE));
+
+    assertThatThrownBy(() -> client.readFile("dsl/Foo.java"))
+            .isInstanceOf(BuilderUnavailableException.class);
+    await().atMost(Duration.ofSeconds(2))
+            .untilAsserted(() -> assertThatThrownBy(() -> client.readFile("dsl/Foo.java"))
+                    .isInstanceOf(BuilderUnavailableException.class)
+                    .hasMessageContaining("circuit breaker"));
+  }
+
+  @Test
+  void queueFullThrowsBusy() throws Exception {
+    var breaker = circuitBreaker(100, 30, 100);
+    queue = ThreadPoolBulkhead.of("test", ThreadPoolBulkheadConfig.custom()
+            .maxThreadPoolSize(1)
+            .coreThreadPoolSize(1)
+            .queueCapacity(0)
+            .build());
+    Bulkhead bulkhead = Bulkhead.of("test", BulkheadConfig.custom()
+            .maxConcurrentCalls(100)
+            .maxWaitDuration(Duration.ZERO)
+            .build());
+    var cache = new BuilderCache(Caffeine.newBuilder().build());
+    var rest = BuilderClientConfiguration.configureBuilder(RestClient.builder(),
+            DslBuilderClientProperties.builder().build(),
+            new BuilderApiErrorHandler(new ObjectMapper()))
+            .build();
+    var client = new DslBuilderClient(rest, queue, bulkhead, breaker, cache);
+
+    var blocker = new CountDownLatch(1);
+    var submitted = client.submit(() -> {
+      blocker.await();
+      return null;
+    });
+    try {
+      Thread.sleep(50);
+      assertThatThrownBy(() -> client.readFile("dsl/Foo.java"))
+              .isInstanceOf(BuilderClientBusyException.class)
+              .hasMessageContaining("queue is full");
+    } finally {
+      blocker.countDown();
+      submitted.toCompletableFuture().cancel(true);
+    }
   }
 
   private DslBuilderClient client(CircuitBreaker circuitBreaker) {

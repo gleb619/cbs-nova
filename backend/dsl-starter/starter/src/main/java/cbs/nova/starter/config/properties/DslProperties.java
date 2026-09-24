@@ -25,15 +25,14 @@ import org.springframework.validation.annotation.Validated;
 public record DslProperties(
         String sourceDir,
         /**
-         * Workbench virtual-workspace root for filesystem-backed drafts. Relative values resolve
-         * against {@code sourceDir}; an absolute value is used as-is.
+         * Legacy workspace root (no longer used for metadata; retained for backward compatibility).
+         * Relative values resolve against {@code sourceDir}; an absolute value is used as-is.
          */
-        @DefaultValue(".workbench/drafts-fs") String workbenchWorkspaceRoot,
+        @DefaultValue(".dsl-workspace") String workbenchWorkspaceRoot,
         @DefaultValue("dsl-task-queue") String taskQueue,
         @Valid @DefaultValue Worker worker,
         @Valid @DefaultValue Reload reload,
         @Valid @DefaultValue Auth auth,
-        @Valid @DefaultValue Drafts drafts,
         @Valid @DefaultValue Files files,
         @Valid @DefaultValue Git git,
         @Valid @DefaultValue FileBuffer fileBuffer,
@@ -43,13 +42,12 @@ public record DslProperties(
 
   public DslProperties {
     workbenchWorkspaceRoot = workbenchWorkspaceRoot == null
-            ? ".workbench/drafts-fs"
+            ? ".dsl-workspace"
             : workbenchWorkspaceRoot;
     taskQueue = taskQueue == null ? "dsl-task-queue" : taskQueue;
     worker = worker == null ? new Worker(false) : worker;
     reload = reload == null ? new Reload(false) : reload;
     auth = auth == null ? new Auth(false, null, new Rbac(false, "roles")) : auth;
-    drafts = drafts == null ? new Drafts(20) : drafts;
     files = files == null ? new Files(true, 5, 100, 32, 8, 5L) : files;
     git = git == null ? new Git(true, null, 5) : git;
     fileBuffer = fileBuffer == null ? new FileBuffer(1000, 3600L) : fileBuffer;
@@ -115,19 +113,6 @@ public record DslProperties(
     public Rbac {
       enabled = enabled == null ? false : enabled;
       claim = (claim == null || claim.isBlank()) ? "roles" : claim;
-    }
-  }
-
-  @Builder
-  public record Drafts(
-          /**
-           * How many prior published snapshots to keep per definition. Older snapshots are pruned
-           * on publish; values less than or equal to 0 keep an unlimited history.
-           */
-          @DefaultValue("20") Integer historyLimit) {
-
-    public Drafts {
-      historyLimit = historyLimit == null ? 20 : historyLimit;
     }
   }
 
@@ -240,10 +225,9 @@ public record DslProperties(
 
   /**
    * Environment promotion (T569): named environment workbench directories that bundles can be
-   * promoted between. Each environment maps to a filesystem root holding the standard
-   * {@code .workbench/published} marker layout; relative {@code basePath} values resolve against
-   * {@code cbs.dsl.source-dir}. Empty by default — the promote endpoints report
-   * {@code ENV_NOT_FOUND} until at least one environment is configured.
+   * promoted between. Each environment maps to a filesystem root holding DSL source files; relative
+   * {@code basePath} values resolve against {@code cbs.dsl.source-dir}. Empty by default — the
+   * promote endpoints report {@code ENV_NOT_FOUND} until at least one environment is configured.
    */
   @Builder
   public record Promotion(

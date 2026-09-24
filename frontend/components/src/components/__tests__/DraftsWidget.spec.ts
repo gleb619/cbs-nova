@@ -1,8 +1,8 @@
 import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
 import { h } from 'vue'
-import type { DraftsMetadata } from '../../types/drafts'
 import type { SavedDraftSummary } from '../../composables/useSavedDrafts'
+import type { DraftsMetadata } from '../../types/drafts'
 import DraftsWidget from '../dsl/DraftsWidget.vue'
 
 const DRAFTS: SavedDraftSummary[] = [
@@ -12,7 +12,7 @@ const DRAFTS: SavedDraftSummary[] = [
 
 const METADATA: DraftsMetadata = {
   draftCount: 2,
-  workbenchPath: '.workbench/drafts',
+  sourcePath: '/workspace/dsl',
   sizeMb: 0.01,
   gitBranch: 'main',
   gitEnabled: true,

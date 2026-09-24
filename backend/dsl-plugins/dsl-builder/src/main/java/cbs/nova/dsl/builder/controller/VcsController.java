@@ -91,6 +91,16 @@ public class VcsController {
                     "no file at " + commit + ":" + path));
   }
 
+  /**
+   * Current branch of the workspace's git repository, or {@code {"branch": null}} when git is
+   * disabled or no repository is configured. Never throws — the starter dashboard treats a missing
+   * branch as "no info" rather than a 5xx.
+   */
+  @GetMapping("/branch")
+  public BranchResponse branch() {
+    return new BranchResponse(workspaceGitService.branch().orElse(null));
+  }
+
   private void flushPendingDrafts() {
     // I5: a just-buffered edit is already a draft. Flush it before commit/discard so its
     // content is on disk for JGit to stage; the FileService also drops the git-status cache.
@@ -102,5 +112,9 @@ public class VcsController {
 
   /** Inline response shape for {@code GET /api/dsl/vcs/show}. */
   public record ShowResponse(String path, String commitId, String content) {
+  }
+
+  /** Inline response shape for {@code GET /api/dsl/vcs/branch}. */
+  public record BranchResponse(String branch) {
   }
 }

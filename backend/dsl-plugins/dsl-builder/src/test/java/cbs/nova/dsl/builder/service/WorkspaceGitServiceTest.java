@@ -353,6 +353,30 @@ class WorkspaceGitServiceTest {
   }
 
   @Test
+  void branchReturnsRepoBranch() throws Exception {
+    Path repo = initRepo();
+    var service = newService(repo, null);
+    assertThat(service.branch()).hasValue("main");
+  }
+
+  @Test
+  void branchIsEmptyWhenGitDisabled() throws Exception {
+    Path repo = initRepo();
+    var properties = dslBuilderProperties(repo,
+            new DslBuilderProperties.Git(false, null, null, null, null, null, 5, false, "origin"));
+    var status = new GitStatusService(properties, Clock.systemUTC());
+    var service = new WorkspaceGitService(properties, () -> status) {
+    };
+    assertThat(service.branch()).isEmpty();
+  }
+
+  @Test
+  void branchIsEmptyWhenNoRepoConfigured() {
+    var service = newService(tempDir, null);
+    assertThat(service.branch()).isEmpty();
+  }
+
+  @Test
   void pushOnCommitTrueReachesBareRepo() throws Exception {
     Path bare = initBareRepo();
     Path workspace = cloneWorkspace(bare);
@@ -528,10 +552,9 @@ class WorkspaceGitServiceTest {
             null,
             null,
             null,
-            null,
             gitProps,
             null,
-            null,
+            new DslBuilderProperties.Bundles(1, 200),
             null,
             null,
             null,

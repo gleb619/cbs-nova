@@ -323,6 +323,28 @@ public class WorkspaceGitService {
   }
 
   /**
+   * Current branch of the workspace's git repository. Empty when git is disabled or no repo is
+   * configured under the workspace. Never throws — the dashboard treats a missing value as "no
+   * branch info available" rather than a 500.
+   */
+  public Optional<String> branch() {
+    if (!gitEnabled()) {
+      return Optional.empty();
+    }
+    Path repoRoot = findRepoRoot();
+    if (repoRoot == null) {
+      return Optional.empty();
+    }
+    try (Repository repository = openRepository()) {
+      String name = repository.getBranch();
+      return (name == null || name.isBlank()) ? Optional.empty() : Optional.of(name);
+    } catch (IOException e) {
+      log.debug("[DSL vcs] failed to read branch from {}: {}", repoRoot, e.getMessage());
+      return Optional.empty();
+    }
+  }
+
+  /**
    * Push the current branch to the configured {@code cbs.dsl.builder.git.remote}. Never
    * force-pushes. Returns a {@link PushResult} with {@code ok=false} and a message when any remote
    * ref update is not OK / up-to-date.

@@ -147,7 +147,7 @@ describe('admin.vue saved drafts widget', () => {
     dslApi.getDraftsMetadata.mockReset()
     dslApi.getDraftsMetadata.mockResolvedValue({
       draftCount: 0,
-      workbenchPath: '.workbench/drafts',
+      sourcePath: '/workspace/dsl',
       sizeMb: 0,
       gitBranch: 'main',
       gitEnabled: true,
@@ -201,7 +201,7 @@ describe('admin.vue saved drafts widget', () => {
   it('loads and displays draft metadata when Details is opened', async () => {
     dslApi.getDraftsMetadata.mockResolvedValueOnce({
       draftCount: 7,
-      workbenchPath: 'workspace/.workbench/drafts',
+      sourcePath: 'workspace/dsl',
       sizeMb: 1.25,
       gitBranch: 'feature/drafts',
       gitEnabled: true,
@@ -216,9 +216,7 @@ describe('admin.vue saved drafts widget', () => {
 
     expect(dslApi.getDraftsMetadata).toHaveBeenCalledOnce()
     expect(wrapper.find('[data-testid="draft-metadata-card-count"]').text()).toBe('7')
-    expect(wrapper.find('[data-testid="draft-metadata-card-path"]').text()).toBe(
-      'workspace/.workbench/drafts',
-    )
+    expect(wrapper.find('[data-testid="draft-metadata-card-path"]').text()).toBe('workspace/dsl')
     expect(wrapper.find('[data-testid="draft-metadata-card-branch"]').text()).toBe('feature/drafts')
   })
 

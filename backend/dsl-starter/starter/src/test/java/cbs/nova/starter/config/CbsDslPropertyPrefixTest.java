@@ -11,7 +11,7 @@ import cbs.nova.starter.controller.BuilderApiErrorHandler;
 import cbs.nova.starter.controller.DslDraftHandler;
 import cbs.nova.starter.controller.DslReloadHandler;
 import cbs.nova.starter.service.DslDefinitionBundleService;
-import cbs.nova.starter.service.DslDefinitionHistoryService;
+import cbs.nova.starter.service.DslSourcePathResolver;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -77,20 +77,31 @@ class CbsDslPropertyPrefixTest {
     }
 
     @Bean
-    DslDefinitionHistoryService dslDefinitionHistoryService(DslProperties props,
-            ObjectMapper mapper) {
-      return new DslDefinitionHistoryService(props, mapper);
-    }
-
-    @Bean
-    DslDefinitionBundleService dslDefinitionBundleService(ObjectMapper mapper) {
+    DslDefinitionBundleService dslDefinitionBundleService(ObjectMapper mapper,
+            DslSourcePathResolver sourcePathResolver,
+            org.springframework.beans.factory.ObjectProvider<DslBuilderClient> builderProvider) {
       return new DslDefinitionBundleService(mapper, Optional.empty(),
-              DslProperties.bundleServiceDefaults());
+              DslProperties.bundleServiceDefaults(), sourcePathResolver, builderProvider);
     }
 
     @Bean
     ObjectMapper objectMapper() {
       return new ObjectMapper();
+    }
+
+    @Bean
+    DslSourcePathResolver dslSourcePathResolver(DslProperties props) {
+      return new DslSourcePathResolver(props);
+    }
+
+    @Bean
+    org.springframework.beans.factory.ObjectProvider<DslBuilderClient> dslBuilderClientProvider() {
+      return new org.springframework.beans.factory.ObjectProvider<>() {
+        @Override
+        public DslBuilderClient getIfAvailable() {
+          return null;
+        }
+      };
     }
   }
 

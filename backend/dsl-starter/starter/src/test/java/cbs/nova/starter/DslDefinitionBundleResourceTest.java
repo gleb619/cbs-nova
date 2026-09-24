@@ -1,483 +1,298 @@
 package cbs.nova.starter;
 
+import static cbs.nova.starter.BuilderClientTestSupport.emptyZip;
+import static cbs.nova.starter.BuilderClientTestSupport.providerOf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import cbs.nova.dsl.GlobalManager;
+import cbs.nova.dsl.utils.DefinitionLoader;
 import cbs.nova.starter.builder.DslBuilderClient;
-import cbs.nova.starter.config.router.DslDefinitionBundleRouterConfiguration;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.controller.DslDraftHandler;
-import cbs.nova.starter.controller.DslExceptionHandler;
 import cbs.nova.starter.controller.DslReloadHandler;
-import cbs.nova.starter.converter.DefaultDslExceptionMapper;
-import cbs.nova.dsl.utils.DefinitionLoader;
+import cbs.nova.starter.model.VcsModels.CommitResult;
 import cbs.nova.starter.model.VcsModels.DefinitionBundle;
+import cbs.nova.starter.model.VcsModels.DefinitionBundleEntry;
 import cbs.nova.starter.model.VcsModels.DraftRequest;
 import cbs.nova.starter.model.VcsModels.ImportBundleResult;
-import cbs.nova.starter.model.VcsModels.ImportEntryResult;
+import cbs.nova.starter.model.DslFileModels.FileContentResponse;
 import cbs.nova.starter.service.DslDefinitionBundleService;
-import cbs.nova.starter.service.DslDefinitionHistoryService;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.springframework.context.annotation.AnnotationConfigApplicationContext;
-import org.springframework.http.HttpInputMessage;
-import org.springframework.http.HttpOutputMessage;
-import org.springframework.http.MediaType;
-import org.springframework.http.converter.HttpMessageConverter;
-import org.springframework.http.converter.StringHttpMessageConverter;
-import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver;
-import tools.jackson.databind.ObjectMapper;
-
+import cbs.nova.starter.service.DslDefinitionStatusResolver;
+import cbs.nova.starter.service.DslGitStatusResolver;
+import cbs.nova.starter.service.DslSourcePathResolver;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Stream;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.web.servlet.function.EntityResponse;
+import org.springframework.web.servlet.function.RouterFunctions;
+import org.springframework.web.servlet.function.ServerRequest;
+import org.springframework.web.servlet.function.ServerResponse;
+import tools.jackson.databind.ObjectMapper;
 
 class DslDefinitionBundleResourceTest {
 
-  private MockMvc mockMvc;
   private Path sourceDir;
+  private DslProperties props;
+  private DslDraftHandler handler;
+  private DslBuilderClient client;
+  private DslSourcePathResolver sourcePathResolver;
+  private DslGitStatusResolver gitStatusResolver;
+  private DslDefinitionStatusResolver statusResolver;
+  private DslDefinitionBundleService bundleService;
   private final ObjectMapper mapper = new ObjectMapper();
+  private GlobalManager previousGlobalManager;
 
   @BeforeEach
-  void setUp() throws Exception {
+  void setUp() throws IOException {
+    previousGlobalManager = GlobalManager.globalManager();
+    GlobalManager.globalManager().resetForTests();
     sourceDir = Files.createTempDirectory("dsl-bundle-test-");
-    DslProperties props = DslProperties.builder().sourceDir(sourceDir.toString()).build();
-
-    DslDefinitionHistoryService historyService = new DslDefinitionHistoryService(props, mapper);
-    DslDefinitionBundleService bundleService = new DslDefinitionBundleService(mapper,
-            Optional.empty(), DslProperties.bundleServiceDefaults());
-    DslDraftHandler handler = new DslDraftHandler(
-            props,
-            new DslReloadHandler(props, null, null, null, null, null, null, null),
-            historyService,
-            mapper,
-            bundleService, null, null, null, null, null, null, null);
-    mockMvc = mockMvcFor(handler);
-  }
-
-  private MockMvc mockMvcFor(DslDraftHandler handler) {
-    DslDefinitionBundleRouterConfiguration router = new DslDefinitionBundleRouterConfiguration();
-
-    AnnotationConfigApplicationContext adviceContext = new AnnotationConfigApplicationContext();
-    adviceContext.registerBean(DslExceptionHandler.class,
-            () -> new DslExceptionHandler(new DefaultDslExceptionMapper()));
-    adviceContext.refresh();
-
-    ExceptionHandlerExceptionResolver exceptionResolver = new ExceptionHandlerExceptionResolver();
-    exceptionResolver.setApplicationContext(adviceContext);
-    exceptionResolver.setMessageConverters(List.of(new JacksonJsonHttpMessageConverter()));
-    exceptionResolver.afterPropertiesSet();
-
-    return MockMvcBuilders.routerFunctions(router.dslDefinitionBundleRouter(handler))
-            .setMessageConverters(new StringHttpMessageConverter(),
-                    new JacksonJsonHttpMessageConverter(),
-                    new InputStreamHttpMessageConverter())
-            .setHandlerExceptionResolvers(exceptionResolver)
-            .build();
+    props = DslProperties.builder().sourceDir(sourceDir.toString()).build();
+    client = mock(DslBuilderClient.class);
+    sourcePathResolver = mock(DslSourcePathResolver.class);
+    gitStatusResolver = mock(DslGitStatusResolver.class);
+    statusResolver = new DslDefinitionStatusResolver(props, gitStatusResolver, sourcePathResolver);
+    bundleService = new DslDefinitionBundleService(mapper, Optional.empty(), props,
+            sourcePathResolver, providerOf(client));
+    handler = handler(client);
   }
 
   @AfterEach
-  void tearDown() throws Exception {
-    if (sourceDir != null && Files.exists(sourceDir)) {
-      deleteRecursively(sourceDir);
-    }
-  }
-
-  @Test
-  void exportReturnsPublishedBundle() throws Exception {
-    publish("A", "v1");
-    publish("B", "v2");
-
-    String json = mockMvc.perform(get("/api/dsl/definitions/export"))
-            .andExpect(status().isOk())
-            .andReturn().getResponse().getContentAsString();
-
-    assertThat(json).contains("\"formatVersion\":1");
-    assertThat(json).contains("\"name\":\"A\"");
-    assertThat(json).contains("\"name\":\"B\"");
-    assertThat(json).contains("\"source\":\"published\"");
-    assertThat(json).contains("\"engineVersion\"");
-    assertThat(json).contains("\"exportedAt\"");
-    assertThat(json).contains("\"digest\"");
-  }
-
-  @Test
-  void exportWithDraftsIncludesDraftsAndPublishesWin() throws Exception {
-    publish("A", "v1");
-    draft("C", "v3");
-    draft("A", "draft-v1");
-
-    String json = mockMvc.perform(get("/api/dsl/definitions/export?include=drafts"))
-            .andExpect(status().isOk())
-            .andReturn().getResponse().getContentAsString();
-
-    assertThat(json).contains("\"name\":\"A\"");
-    assertThat(json).contains("\"name\":\"C\"");
-    assertThat(json).contains("\"source\":\"published\"");
-    assertThat(json).contains("\"source\":\"draft\"");
-    assertThat(json).doesNotContain("\"version\":\"draft-v1\"");
-  }
-
-  @Test
-  void importRoundTripRecreatesPublishedMarkers() throws Exception {
-    publish("A", "v1");
-    publish("B", "v2");
-    String bundle = mockMvc.perform(get("/api/dsl/definitions/export"))
-            .andReturn().getResponse().getContentAsString();
-
-    deleteRecursively(sourceDir.resolve(".workbench/published"));
-
-    String result = mockMvc.perform(post("/api/dsl/definitions/import")
-            .contentType(MediaType.APPLICATION_JSON)
-            .content(bundle))
-            .andExpect(status().isOk())
-            .andReturn().getResponse().getContentAsString();
-
-    assertThat(result).contains("\"dryRun\":false");
-    assertThat(result).contains("\"published\":2");
-    assertThat(result).contains("\"outcome\":\"published\"");
-    assertThat(sourceDir.resolve(".workbench/published/A.json")).exists();
-    assertThat(sourceDir.resolve(".workbench/published/B.json")).exists();
-  }
-
-  @Test
-  void dryRunImportDoesNotWriteFiles() throws Exception {
-    String bundle = "{\"formatVersion\":1,\"definitions\":["
-            + "{\"definition\":{\"name\":\"A\",\"type\":\"process\",\"status\":\"Published\",\"version\":\"v1\",\"taskQueue\":\"q\"},\"source\":\"published\"}]}";
-
-    String result = mockMvc.perform(post("/api/dsl/definitions/import?dryRun=true")
-            .contentType(MediaType.APPLICATION_JSON)
-            .content(bundle))
-            .andExpect(status().isOk())
-            .andReturn().getResponse().getContentAsString();
-
-    assertThat(result).contains("\"dryRun\":true");
-    assertThat(result).contains("\"published\":1");
-    assertThat(result).contains("\"outcome\":\"created\"");
-    assertThat(sourceDir.resolve(".workbench/published/A.json")).doesNotExist();
-  }
-
-  @Test
-  void dryRunImportClassifiesCreatedUpdatedUnchangedSkipped() throws Exception {
-    publish("A", "v1");
-    publish("B", "v2");
-    String bundle = "{\"formatVersion\":1,\"definitions\":["
-            + "{\"definition\":{\"name\":\"A\",\"type\":\"process\",\"status\":\"Published\",\"version\":\"v1\",\"taskQueue\":\"q\"},\"source\":\"published\"},"
-            + "{\"definition\":{\"name\":\"B\",\"type\":\"transaction\",\"status\":\"Published\",\"version\":\"v3\",\"taskQueue\":\"q\"},\"source\":\"published\"},"
-            + "{\"definition\":{\"name\":\"C\",\"type\":\"helper\",\"status\":\"Published\",\"version\":\"v1\",\"taskQueue\":\"q\"},\"source\":\"published\"}]}";
-
-    String result = mockMvc.perform(post("/api/dsl/definitions/import?dryRun=true")
-            .contentType(MediaType.APPLICATION_JSON)
-            .content(bundle))
-            .andExpect(status().isOk())
-            .andReturn().getResponse().getContentAsString();
-
-    assertThat(result).contains("\"dryRun\":true");
-    assertThat(result).contains("\"published\":2");
-    assertThat(result).contains("\"failed\":0");
-    assertThat(result).contains("\"outcome\":\"unchanged\"");
-    assertThat(result).contains("\"outcome\":\"updated\"");
-    assertThat(result).contains("\"outcome\":\"created\"");
-    assertThat(sourceDir.resolve(".workbench/published/A.json")).exists();
-    assertThat(sourceDir.resolve(".workbench/published/B.json")).exists();
-    assertThat(sourceDir.resolve(".workbench/published/C.json")).doesNotExist();
-  }
-
-  @Test
-  void tamperedBundleDigestReturns400() throws Exception {
-    publish("A", "v1");
-    String bundle = mockMvc.perform(get("/api/dsl/definitions/export"))
-            .andReturn().getResponse().getContentAsString();
-    String tampered = bundle.replace("\"version\":\"v1\"", "\"version\":\"v2\"");
-
-    mockMvc.perform(post("/api/dsl/definitions/import")
-            .contentType(MediaType.APPLICATION_JSON)
-            .content(tampered))
-            .andExpect(status().isBadRequest())
-            .andExpect(result -> assertThat(result.getResponse().getContentAsString())
-                    .contains("BUNDLE_DIGEST_MISMATCH"));
-  }
-
-  @Test
-  void legacyBundleWithoutDigestIsAccepted() throws Exception {
-    String bundle = "{\"formatVersion\":1,\"definitions\":["
-            + "{\"definition\":{\"name\":\"A\",\"type\":\"process\",\"status\":\"Published\",\"version\":\"v1\",\"taskQueue\":\"q\"},\"source\":\"published\"}]}";
-
-    String result = mockMvc.perform(post("/api/dsl/definitions/import?dryRun=true")
-            .contentType(MediaType.APPLICATION_JSON)
-            .content(bundle))
-            .andExpect(status().isOk())
-            .andReturn().getResponse().getContentAsString();
-
-    assertThat(result).contains("\"dryRun\":true");
-    assertThat(result).contains("\"outcome\":\"created\"");
-  }
-
-  @Test
-  void missingRequiredDigestReturns400() throws Exception {
-    DslProperties strict = DslProperties.builder().sourceDir(sourceDir.toString())
-            .bundles(new DslProperties.Bundles(true)).build();
-    DslDefinitionBundleService bundleService = new DslDefinitionBundleService(mapper,
-            Optional.empty(), strict);
-    DslDraftHandler handler = new DslDraftHandler(
-            strict,
-            new DslReloadHandler(strict, null, null, null, null, null, null, null),
-            new DslDefinitionHistoryService(strict, mapper),
-            mapper,
-            bundleService, null, null, null, null, null, null, null);
-    mockMvc = mockMvcFor(handler);
-
-    String bundle = "{\"formatVersion\":1,\"definitions\":["
-            + "{\"definition\":{\"name\":\"A\",\"type\":\"process\",\"status\":\"Published\",\"version\":\"v1\",\"taskQueue\":\"q\"},\"source\":\"published\"}]}";
-
-    mockMvc.perform(post("/api/dsl/definitions/import")
-            .contentType(MediaType.APPLICATION_JSON)
-            .content(bundle))
-            .andExpect(status().isBadRequest())
-            .andExpect(result -> assertThat(result.getResponse().getContentAsString())
-                    .contains("BUNDLE_DIGEST_MISSING"));
-  }
-
-  @Test
-  void importBadFormatVersionReturns400() throws Exception {
-    String body = "{\"formatVersion\":99,\"definitions\":["
-            + "{\"definition\":{\"name\":\"A\",\"type\":\"process\",\"status\":\"Published\",\"version\":\"v1\"},\"source\":\"published\"}]}";
-
-    String result = mockMvc.perform(post("/api/dsl/definitions/import")
-            .contentType(MediaType.APPLICATION_JSON)
-            .content(body))
-            .andExpect(status().isBadRequest())
-            .andReturn().getResponse().getContentAsString();
-
-    assertThat(result).contains("99");
-  }
-
-  @Test
-  void importMalformedJsonReturns400() throws Exception {
-    mockMvc.perform(post("/api/dsl/definitions/import")
-            .contentType(MediaType.APPLICATION_JSON)
-            .content("not-json"))
-            .andExpect(status().isBadRequest())
-            .andExpect(result -> assertThat(result.getResponse().getContentAsString())
-                    .contains("INVALID_REQUEST"));
-  }
-
-  @Test
-  void importEmptyDefinitionsReturns400() throws Exception {
-    String body = "{\"formatVersion\":1,\"definitions\":[]}";
-
-    mockMvc.perform(post("/api/dsl/definitions/import")
-            .contentType(MediaType.APPLICATION_JSON)
-            .content(body))
-            .andExpect(status().isBadRequest())
-            .andExpect(result -> assertThat(result.getResponse().getContentAsString())
-                    .contains("no definitions"));
-  }
-
-  @Test
-  void importTooManyDefinitionsReturns400() throws Exception {
-    StringBuilder sb = new StringBuilder("{\"formatVersion\":1,\"definitions\":[");
-    for (int i = 0; i < 201; i++) {
-      if (i > 0)
-        sb.append(",");
-      sb.append("{\"definition\":{\"name\":\"D").append(i)
-              .append("\",\"type\":\"process\",\"status\":\"Published\",\"version\":\"v1\"},\"source\":\"published\"}");
-    }
-    sb.append("]}");
-
-    mockMvc.perform(post("/api/dsl/definitions/import")
-            .contentType(MediaType.APPLICATION_JSON)
-            .content(sb.toString()))
-            .andExpect(status().isBadRequest())
-            .andExpect(result -> assertThat(result.getResponse().getContentAsString())
-                    .contains("too large"));
-  }
-
-  @Test
-  void importSnapshotsPreviousPublishedPayload() throws Exception {
-    publish("A", "v1");
-    Thread.sleep(2);
-    String bundle = "{\"formatVersion\":1,\"definitions\":["
-            + "{\"definition\":{\"name\":\"A\",\"type\":\"process\",\"status\":\"Published\",\"version\":\"v2\",\"taskQueue\":\"q\"},\"source\":\"published\"}]}";
-
-    mockMvc.perform(post("/api/dsl/definitions/import")
-            .contentType(MediaType.APPLICATION_JSON)
-            .content(bundle))
-            .andExpect(status().isOk());
-
-    Path historyDir = sourceDir.resolve(".workbench/history/A");
-    assertThat(historyDir).isDirectory();
-    List<Path> files;
-    try (Stream<Path> s = Files.list(historyDir)) {
-      files = s.filter(Files::isRegularFile).toList();
-    }
-    assertThat(files).hasSize(1);
-    DraftRequest snapshot = mapper.readValue(files.get(0).toFile(), DraftRequest.class);
-    assertThat(snapshot.version()).isEqualTo("v1");
-  }
-
-  @Test
-  void importDelegatesToBuilderClientAndReloadsLocally() throws Exception {
-    DslProperties props = DslProperties.builder().sourceDir(sourceDir.toString()).build();
-    DslBuilderClient client = mock(DslBuilderClient.class);
-    BuilderClientTestSupport.stubSuccessfulCompile(client);
-    when(client.importBundle(any(DefinitionBundle.class), eq(false)))
-            .thenReturn(new ImportBundleResult(false, false, 1, 0,
-                    List.of(new ImportEntryResult("A", "published", null)), null, null));
-    DslDraftHandler handler = new DslDraftHandler(props,
-            new DslReloadHandler(props, new DefinitionLoader(), null, null,
-                    BuilderClientTestSupport.providerOf(client), null, null, null),
-            new DslDefinitionHistoryService(props, mapper), mapper,
-            new DslDefinitionBundleService(mapper, Optional.empty(),
-                    DslProperties.bundleServiceDefaults()),
-            null,
-            BuilderClientTestSupport.providerOf(client), null, null, null, null, null);
-    MockMvc builderMvc = mockMvcFor(handler);
-    String bundle = "{\"formatVersion\":1,\"definitions\":["
-            + "{\"definition\":{\"name\":\"A\",\"type\":\"process\",\"status\":\"Published\",\"version\":\"v1\",\"taskQueue\":\"q\"},\"source\":\"published\"}]}";
-
-    String result = builderMvc.perform(post("/api/dsl/definitions/import")
-            .contentType(MediaType.APPLICATION_JSON)
-            .content(bundle))
-            .andExpect(status().isOk())
-            .andReturn().getResponse().getContentAsString();
-
-    assertThat(result).contains("\"dryRun\":false");
-    assertThat(result).contains("\"reloaded\":true");
-    assertThat(result).contains("\"published\":1");
-    verify(client).importBundle(any(DefinitionBundle.class), eq(false));
-    assertThat(sourceDir.resolve(".workbench/published/A.json")).doesNotExist();
-  }
-
-  @Test
-  void exportReturns409WhenSourceDirBlank() throws Exception {
-    buildHandlerWithBlankSourceDir();
-
-    mockMvc.perform(get("/api/dsl/definitions/export"))
-            .andExpect(status().isConflict())
-            .andExpect(result -> assertThat(result.getResponse().getContentAsString())
-                    .contains("NOT_CONFIGURED"));
-  }
-
-  @Test
-  void importReturns409WhenSourceDirBlank() throws Exception {
-    buildHandlerWithBlankSourceDir();
-
-    mockMvc.perform(post("/api/dsl/definitions/import")
-            .contentType(MediaType.APPLICATION_JSON)
-            .content("{}"))
-            .andExpect(status().isConflict())
-            .andExpect(result -> assertThat(result.getResponse().getContentAsString())
-                    .contains("NOT_CONFIGURED"));
-  }
-
-  private void buildHandlerWithBlankSourceDir() {
-    DslProperties blank = DslProperties.builder().sourceDir("").build();
-    DslDraftHandler handler = new DslDraftHandler(
-            blank,
-            new DslReloadHandler(blank, null, null, null, null, null, null, null),
-            new DslDefinitionHistoryService(blank, mapper),
-            mapper,
-            new DslDefinitionBundleService(mapper, Optional.empty(),
-                    DslProperties.bundleServiceDefaults()),
-            null, null, null, null, null, null, null);
-    DslDefinitionBundleRouterConfiguration router = new DslDefinitionBundleRouterConfiguration();
-
-    AnnotationConfigApplicationContext adviceContext = new AnnotationConfigApplicationContext();
-    adviceContext.registerBean(DslExceptionHandler.class,
-            () -> new DslExceptionHandler(new DefaultDslExceptionMapper()));
-    adviceContext.refresh();
-
-    ExceptionHandlerExceptionResolver exceptionResolver = new ExceptionHandlerExceptionResolver();
-    exceptionResolver.setApplicationContext(adviceContext);
-    exceptionResolver.setMessageConverters(List.of(new JacksonJsonHttpMessageConverter()));
-    exceptionResolver.afterPropertiesSet();
-
-    mockMvc = MockMvcBuilders.routerFunctions(router.dslDefinitionBundleRouter(handler))
-            .setMessageConverters(new StringHttpMessageConverter(),
-                    new JacksonJsonHttpMessageConverter(),
-                    new InputStreamHttpMessageConverter())
-            .setHandlerExceptionResolvers(exceptionResolver)
-            .build();
-  }
-
-  private void publish(String name, String version) throws Exception {
-    Path dir = sourceDir.resolve(".workbench/published");
-    Files.createDirectories(dir);
-    DraftRequest req = new DraftRequest(name, "process", "Published", version, "q", null, null);
-    Files.writeString(dir.resolve(name + ".json"), mapper.writeValueAsString(req),
-            StandardCharsets.UTF_8);
-  }
-
-  private void draft(String name, String version) throws Exception {
-    Path dir = sourceDir.resolve(".workbench/drafts");
-    Files.createDirectories(dir);
-    DraftRequest req = new DraftRequest(name, "process", "Draft", version, "q", null, null);
-    Files.writeString(dir.resolve(name + ".json"), mapper.writeValueAsString(req),
-            StandardCharsets.UTF_8);
-  }
-
-  private static final class InputStreamHttpMessageConverter
-          implements
-            HttpMessageConverter<InputStream> {
-
-    @Override
-    public boolean canRead(Class<?> clazz, MediaType mediaType) {
-      return InputStream.class.isAssignableFrom(clazz);
-    }
-
-    @Override
-    public boolean canWrite(Class<?> clazz, MediaType mediaType) {
-      return false;
-    }
-
-    @Override
-    public List<MediaType> getSupportedMediaTypes() {
-      return List.of(MediaType.ALL);
-    }
-
-    @Override
-    public InputStream read(Class<? extends InputStream> clazz, HttpInputMessage inputMessage)
-            throws IOException {
-      return inputMessage.getBody();
-    }
-
-    @Override
-    public void write(InputStream inputStream, MediaType contentType,
-            HttpOutputMessage outputMessage) {
-      throw new UnsupportedOperationException();
-    }
-  }
-
-  private void deleteRecursively(Path path) throws Exception {
-    if (!Files.exists(path)) {
-      return;
-    }
-    try (Stream<Path> stream = Files.walk(path)) {
-      stream.sorted((a, b) -> -a.compareTo(b)).forEach(p -> {
+  void tearDown() throws IOException {
+    GlobalManager.globalManager().replaceGlobalManager(previousGlobalManager);
+    GlobalManager.globalManager().resetForTests();
+    try (var stream = Files.walk(sourceDir).sorted((a, b) -> -a.compareTo(b))) {
+      stream.forEach(p -> {
         try {
           Files.deleteIfExists(p);
-        } catch (Exception e) {
-          // ignore
+        } catch (IOException ignored) {
         }
       });
     }
   }
 
+  @Test
+  void exportReadsHeadByDefault() throws Exception {
+    Files.writeString(sourceDir.resolve("A.java"), "class A { head }");
+    GlobalManager.globalManager().registerProcess(
+            cbs.nova.dsl.Dsl.process("A").execute(ctx -> cbs.nova.dsl.Result.success("ok"))
+                    .build());
+    when(sourcePathResolver.relativePath("A")).thenReturn(Optional.of("A.java"));
+    when(client.vcsShow("A.java", "HEAD")).thenReturn("class A { head }");
+
+    ServerResponse response = handler.exportBundle(getRequest(
+            "/api/dsl/definitions/export", null));
+
+    assertThat(response.statusCode().value()).isEqualTo(200);
+    DefinitionBundle body = (DefinitionBundle) ((EntityResponse<?>) response).entity();
+    assertThat(body.definitions()).hasSize(1);
+    assertThat(body.definitions().get(0).definition().source())
+            .isEqualTo("class A { head }");
+    assertThat(body.definitions().get(0).source()).isEqualTo("source");
+  }
+
+  @Test
+  void exportReadsWorkingTreeWithIncludeDrafts() throws Exception {
+    Files.writeString(sourceDir.resolve("A.java"), "class A { draft }");
+    GlobalManager.globalManager().registerProcess(
+            cbs.nova.dsl.Dsl.process("A").execute(ctx -> cbs.nova.dsl.Result.success("ok"))
+                    .build());
+    when(sourcePathResolver.relativePath("A")).thenReturn(Optional.of("A.java"));
+    when(client.readFile("A.java")).thenReturn(
+            new FileContentResponse("A.java", "class A { draft }", false, 0L));
+
+    ServerResponse response = handler.exportBundle(getRequest(
+            "/api/dsl/definitions/export?include=drafts", null));
+
+    assertThat(response.statusCode().value()).isEqualTo(200);
+    DefinitionBundle body = (DefinitionBundle) ((EntityResponse<?>) response).entity();
+    assertThat(body.definitions().get(0).definition().source())
+            .isEqualTo("class A { draft }");
+    assertThat(body.definitions().get(0).source()).isEqualTo("draft");
+  }
+
+  @Test
+  void importBundleWritesSourceFiles() throws Exception {
+    Files.createDirectories(sourceDir.resolve("dsl"));
+    when(sourcePathResolver.relativePath("A")).thenReturn(Optional.of("dsl/ADsl.java"));
+    when(client.commit(any())).thenReturn(
+            new CommitResult("import123", List.of("dsl/ADsl.java"), 1L, null, null));
+    when(client.compile(any())).thenReturn(
+            new cbs.nova.starter.model.CompileModels.CompileResult("s-1", true,
+                    List.of(), List.of(), 1));
+    when(client.downloadZip(anyString())).thenReturn(emptyZip());
+
+    DefinitionBundle bundle = bundle("class A {}");
+    ServerResponse response = handler.importBundle(postBundle(bundle));
+
+    assertThat(response.statusCode().value()).isEqualTo(200);
+    ImportBundleResult body = (ImportBundleResult) ((EntityResponse<?>) response).entity();
+    assertThat(body.reloaded()).isTrue();
+    assertThat(Files.readString(sourceDir.resolve("dsl/ADsl.java"))).isEqualTo("class A {}");
+  }
+
+  @Test
+  void importBundleCommitsAllWrittenPathsInOneCommit() throws Exception {
+    Files.createDirectories(sourceDir.resolve("dsl"));
+    when(sourcePathResolver.relativePath("A")).thenReturn(Optional.of("dsl/ADsl.java"));
+    when(sourcePathResolver.relativePath("B")).thenReturn(Optional.of("dsl/BDsl.java"));
+    when(client.commit(any())).thenReturn(
+            new CommitResult("import123", List.of("dsl/ADsl.java", "dsl/BDsl.java"), 1L, null,
+                    null));
+    when(client.compile(any())).thenReturn(
+            new cbs.nova.starter.model.CompileModels.CompileResult("s-1", true,
+                    List.of(), List.of(), 1));
+    when(client.downloadZip(anyString())).thenReturn(emptyZip());
+
+    DefinitionBundle bundle = new DefinitionBundle(1, "dev", "now", List.of(
+            new DefinitionBundleEntry(
+                    new DraftRequest("A", "process", null, null, null, "class A {}", null),
+                    "source"),
+            new DefinitionBundleEntry(
+                    new DraftRequest("B", "process", null, null, null, "class B {}", null),
+                    "source")),
+            null);
+
+    handler.importBundle(postBundle(bundle));
+
+    verify(client).commit(org.mockito.ArgumentMatchers.argThat(
+            r -> r.paths().containsAll(List.of("dsl/ADsl.java", "dsl/BDsl.java"))
+                    && r.message().equals("Import bundle")));
+  }
+
+  @Test
+  void importBundleDryRunDoesNotWriteFiles() throws Exception {
+    Files.createDirectories(sourceDir.resolve("dsl"));
+    Files.writeString(sourceDir.resolve("dsl/ADsl.java"), "class A { old }");
+    when(sourcePathResolver.relativePath("A")).thenReturn(Optional.of("dsl/ADsl.java"));
+
+    DefinitionBundle bundle = bundle("class A {}");
+    ServerResponse response = handler.importBundle(postBundle(bundle, true));
+
+    assertThat(response.statusCode().value()).isEqualTo(200);
+    ImportBundleResult body = (ImportBundleResult) ((EntityResponse<?>) response).entity();
+    assertThat(body.dryRun()).isTrue();
+    assertThat(Files.readString(sourceDir.resolve("dsl/ADsl.java"))).isEqualTo("class A { old }");
+  }
+
+  @Test
+  void importBundleSkipsUnknownNames() throws Exception {
+    Files.createDirectories(sourceDir.resolve("dsl"));
+    when(sourcePathResolver.relativePath("Unknown")).thenReturn(Optional.empty());
+
+    DefinitionBundle bundle = new DefinitionBundle(1, "dev", "now", List.of(
+            new DefinitionBundleEntry(
+                    new DraftRequest("Unknown", "process", null, null, null, "class U {}", null),
+                    "source")),
+            null);
+
+    ServerResponse response = handler.importBundle(postBundle(bundle));
+
+    ImportBundleResult body = (ImportBundleResult) ((EntityResponse<?>) response).entity();
+    assertThat(body.results().get(0).outcome()).isEqualTo("skipped");
+  }
+
+  @Test
+  void noWorkbenchDirCreatedDuringBundleOperations() throws Exception {
+    Files.writeString(sourceDir.resolve("A.java"), "class A {}");
+    GlobalManager.globalManager().registerProcess(
+            cbs.nova.dsl.Dsl.process("A").execute(ctx -> cbs.nova.dsl.Result.success("ok"))
+                    .build());
+    when(sourcePathResolver.relativePath("A")).thenReturn(Optional.of("A.java"));
+    when(client.vcsShow("A.java", "HEAD")).thenReturn("class A {}");
+
+    handler.exportBundle(getRequest("/api/dsl/definitions/export", null));
+
+    try (var stream = Files.list(sourceDir)) {
+      assertThat(stream.toList()).containsExactly(sourceDir.resolve("A.java"));
+    }
+  }
+
+  private DefinitionBundle bundle(String source) {
+    return new DefinitionBundle(1, "dev", "now", List.of(
+            new DefinitionBundleEntry(
+                    new DraftRequest("A", "process", null, null, null, source, null),
+                    "source")),
+            null);
+  }
+
+  private DslDraftHandler handler(DslBuilderClient client) {
+    return new DslDraftHandler(props,
+            new DslReloadHandler(props, new DefinitionLoader(), null, null, providerOf(client),
+                    null, null, null),
+            mapper, bundleService,
+            null, providerOf(client), null, null, null,
+            providerOfBean(sourcePathResolver), providerOfBean(gitStatusResolver),
+            providerOfBean(statusResolver));
+  }
+
+  private static ServerRequest getRequest(String path, Map<String, String> pathVariables) {
+    int q = path.indexOf('?');
+    String requestPath = q < 0 ? path : path.substring(0, q);
+    var req = new MockHttpServletRequest("GET", requestPath);
+    if (q >= 0) {
+      req.setQueryString(path.substring(q + 1));
+      for (String pair : path.substring(q + 1).split("&")) {
+        String[] kv = pair.split("=", 2);
+        if (kv.length == 2) {
+          req.addParameter(kv[0], kv[1]);
+        }
+      }
+    }
+    if (pathVariables != null && !pathVariables.isEmpty()) {
+      req.setAttribute(RouterFunctions.URI_TEMPLATE_VARIABLES_ATTRIBUTE, pathVariables);
+    }
+    return ServerRequest.create(req, CONVERTERS);
+  }
+
+  private static ServerRequest postBundle(String path, String body) {
+    int q = path.indexOf('?');
+    String requestPath = q < 0 ? path : path.substring(0, q);
+    var req = new MockHttpServletRequest("POST", requestPath);
+    if (q >= 0) {
+      req.setQueryString(path.substring(q + 1));
+      for (String pair : path.substring(q + 1).split("&")) {
+        String[] kv = pair.split("=", 2);
+        if (kv.length == 2) {
+          req.addParameter(kv[0], kv[1]);
+        }
+      }
+    }
+    req.setContentType("application/json");
+    req.setContent(body.getBytes(StandardCharsets.UTF_8));
+    return ServerRequest.create(req, CONVERTERS);
+  }
+
+  private ServerRequest postBundle(DefinitionBundle bundle) throws IOException {
+    return postBundle("/api/dsl/definitions/import", mapper.writeValueAsString(bundle));
+  }
+
+  private ServerRequest postBundle(DefinitionBundle bundle, boolean dryRun) throws IOException {
+    return postBundle("/api/dsl/definitions/import?dryRun=true", mapper.writeValueAsString(bundle));
+  }
+
+  private static final List<org.springframework.http.converter.HttpMessageConverter<?>> CONVERTERS = List
+          .of(new org.springframework.http.converter.ByteArrayHttpMessageConverter(),
+                  new org.springframework.http.converter.StringHttpMessageConverter());
+
+  @SuppressWarnings("unchecked")
+  private static <T> ObjectProvider<T> providerOfBean(T bean) {
+    ObjectProvider<T> provider = mock(ObjectProvider.class);
+    when(provider.getIfAvailable()).thenReturn(bean);
+    return provider;
+  }
 }

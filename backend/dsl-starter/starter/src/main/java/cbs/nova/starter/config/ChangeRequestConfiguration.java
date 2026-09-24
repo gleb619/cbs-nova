@@ -7,6 +7,7 @@ import cbs.nova.starter.persistence.ChangeRequestCrudRepository;
 import cbs.nova.starter.persistence.ChangeRequestRepository;
 import cbs.nova.starter.persistence.ExtendedSelectQueryExecutor;
 import cbs.nova.starter.service.DslAuditService;
+import cbs.nova.starter.service.DslSourcePathResolver;
 import javax.sql.DataSource;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -38,8 +39,9 @@ public class ChangeRequestConfiguration {
   ChangeRequestService changeRequestService(ChangeRequestRepository repository,
           DslProperties dslProperties, ObjectMapper objectMapper,
           ObjectProvider<DslDraftHandler> draftHandlerProvider,
+          ObjectProvider<DslSourcePathResolver> sourcePathResolverProvider,
           ObjectProvider<DslAuditService> auditService) {
     return new ChangeRequestService(repository, dslProperties, objectMapper, draftHandlerProvider,
-            auditService);
+            sourcePathResolverProvider, auditService);
   }
 }

@@ -23,44 +23,46 @@ public class DslDraftRouterConfiguration {
 
   @Bean
   @RouterOperations({
-      @RouterOperation(path = "/api/dsl/drafts/{name}/save", beanClass = DslDraftHandler.class, beanMethod = "save", method = RequestMethod.POST, operation = @Operation(operationId = "saveDraft", summary = "Persist a Workbench draft construct to disk", tags = {
+      @RouterOperation(path = "/api/dsl/drafts/{name}/save", beanClass = DslDraftHandler.class, beanMethod = "save", method = RequestMethod.POST, operation = @Operation(operationId = "saveDraft", summary = "Write DSL source for a definition to the source file", tags = {
           "DSL Admin"}, responses = {
-              @ApiResponse(responseCode = "200", description = "Draft saved"),
+              @ApiResponse(responseCode = "200", description = "Source saved"),
               @ApiResponse(responseCode = "400", description = "Invalid request", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+              @ApiResponse(responseCode = "404", description = "Definition has no source path", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
               @ApiResponse(responseCode = "409", description = "Source directory not configured or not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
           })),
-      @RouterOperation(path = "/api/dsl/drafts/{name}/publish", beanClass = DslDraftHandler.class, beanMethod = "publish", method = RequestMethod.POST, operation = @Operation(operationId = "publishDraft", summary = "Persist a Workbench construct as published and reload DSL", tags = {
+      @RouterOperation(path = "/api/dsl/drafts/{name}/publish", beanClass = DslDraftHandler.class, beanMethod = "publish", method = RequestMethod.POST, operation = @Operation(operationId = "publishDraft", summary = "Write supplied source, reload DSL and commit the source file", tags = {
           "DSL Admin"}, responses = {
               @ApiResponse(responseCode = "200", description = "Construct published"),
               @ApiResponse(responseCode = "400", description = "Invalid request", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
-              @ApiResponse(responseCode = "409", description = "Source directory not configured or not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+              @ApiResponse(responseCode = "404", description = "Definition has no source path", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+              @ApiResponse(responseCode = "409", description = "Source directory not configured or not found, or git requires builder", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
               @ApiResponse(responseCode = "500", description = "Reload failed", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
           })),
-      @RouterOperation(path = "/api/dsl/drafts/{name}/history", beanClass = DslDraftHandler.class, beanMethod = "history", method = RequestMethod.GET, operation = @Operation(operationId = "listPublishHistory", summary = "List published metadata snapshots for a construct", tags = {
+      @RouterOperation(path = "/api/dsl/drafts/{name}/history", beanClass = DslDraftHandler.class, beanMethod = "history", method = RequestMethod.GET, operation = @Operation(operationId = "listPublishHistory", summary = "List git commits for a definition's source path", tags = {
           "DSL Admin"}, responses = {
               @ApiResponse(responseCode = "200", description = "List of history entries"),
-              @ApiResponse(responseCode = "409", description = "Source directory not configured or not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+              @ApiResponse(responseCode = "404", description = "Definition has no source path", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+              @ApiResponse(responseCode = "409", description = "Source directory not configured or git requires builder", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
           })),
-      @RouterOperation(path = "/api/dsl/drafts/{name}/history/{timestamp}", beanClass = DslDraftHandler.class, beanMethod = "historyEntry", method = RequestMethod.GET, operation = @Operation(operationId = "readPublishHistoryEntry", summary = "Read a single published metadata snapshot's content", tags = {
+      @RouterOperation(path = "/api/dsl/drafts/{name}/history/{timestamp}", beanClass = DslDraftHandler.class, beanMethod = "historyEntry", method = RequestMethod.GET, operation = @Operation(operationId = "readPublishHistoryEntry", summary = "Read the DSL source file at a git commit", tags = {
           "DSL Admin"}, responses = {
               @ApiResponse(responseCode = "200", description = "History entry content"),
               @ApiResponse(responseCode = "404", description = "History entry not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
-              @ApiResponse(responseCode = "409", description = "Source directory not configured or not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+              @ApiResponse(responseCode = "409", description = "Source directory not configured or git requires builder", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
           })),
-      @RouterOperation(path = "/api/dsl/drafts/{name}/history/{timestamp}/diff", beanClass = DslDraftHandler.class, beanMethod = "historyDiff", method = RequestMethod.GET, operation = @Operation(operationId = "diffPublishHistoryEntry", summary = "Diff a published metadata snapshot against the current published definition", tags = {
+      @RouterOperation(path = "/api/dsl/drafts/{name}/history/{timestamp}/diff", beanClass = DslDraftHandler.class, beanMethod = "historyDiff", method = RequestMethod.GET, operation = @Operation(operationId = "diffPublishHistoryEntry", summary = "Diff a git commit against the current working-tree source", tags = {
           "DSL Admin"}, responses = {
-              @ApiResponse(responseCode = "200", description = "Line-level diff of entry vs published"),
+              @ApiResponse(responseCode = "200", description = "Line-level diff of entry vs current"),
               @ApiResponse(responseCode = "404", description = "History entry not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
-              @ApiResponse(responseCode = "409", description = "Source directory not configured or not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+              @ApiResponse(responseCode = "409", description = "Source directory not configured or git requires builder", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
           })),
-      @RouterOperation(path = "/api/dsl/drafts/{name}/history/{timestamp}/restore", beanClass = DslDraftHandler.class, beanMethod = "restore", method = RequestMethod.POST, operation = @Operation(operationId = "restorePublishHistory", summary = "Restore a published metadata snapshot and reload DSL", tags = {
+      @RouterOperation(path = "/api/dsl/drafts/{name}/history/{timestamp}/restore", beanClass = DslDraftHandler.class, beanMethod = "restore", method = RequestMethod.POST, operation = @Operation(operationId = "restorePublishHistory", summary = "Restore a git commit's source into the working tree", tags = {
           "DSL Admin"}, responses = {
               @ApiResponse(responseCode = "200", description = "Snapshot restored"),
               @ApiResponse(responseCode = "404", description = "History entry not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
-              @ApiResponse(responseCode = "409", description = "Source directory not configured or not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
-              @ApiResponse(responseCode = "500", description = "Reload failed", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+              @ApiResponse(responseCode = "409", description = "Source directory not configured or git requires builder", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
           })),
-      @RouterOperation(path = "/api/dsl/drafts/{name}/discard", beanClass = DslDraftHandler.class, beanMethod = "discard", method = RequestMethod.POST, operation = @Operation(operationId = "discardDraft", summary = "Discard working-tree changes for a definition and remove its legacy marker", tags = {
+      @RouterOperation(path = "/api/dsl/drafts/{name}/discard", beanClass = DslDraftHandler.class, beanMethod = "discard", method = RequestMethod.POST, operation = @Operation(operationId = "discardDraft", summary = "Discard working-tree changes for a definition", tags = {
           "DSL Admin"}, responses = {
               @ApiResponse(responseCode = "200", description = "Changes discarded"),
               @ApiResponse(responseCode = "404", description = "Definition has no source path", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
@@ -72,25 +74,24 @@ public class DslDraftRouterConfiguration {
               @ApiResponse(responseCode = "404", description = "Definition has no source path", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
               @ApiResponse(responseCode = "409", description = "Builder not available or source directory not configured", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
           })),
-      @RouterOperation(path = "/api/dsl/drafts/{name}", beanClass = DslDraftHandler.class, beanMethod = "delete", method = RequestMethod.DELETE, operation = @Operation(operationId = "deleteDraft", summary = "Delete a Workbench draft construct", tags = {
+      @RouterOperation(path = "/api/dsl/drafts/{name}", beanClass = DslDraftHandler.class, beanMethod = "delete", method = RequestMethod.DELETE, operation = @Operation(operationId = "deleteDraft", summary = "Discard working-tree changes for a definition", tags = {
           "DSL Admin"}, responses = {
-              @ApiResponse(responseCode = "200", description = "Draft deleted"),
-              @ApiResponse(responseCode = "400", description = "Invalid request", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
-              @ApiResponse(responseCode = "404", description = "Draft not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
-              @ApiResponse(responseCode = "409", description = "Source directory not configured or not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+              @ApiResponse(responseCode = "200", description = "Changes discarded"),
+              @ApiResponse(responseCode = "404", description = "Definition has no source path", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+              @ApiResponse(responseCode = "409", description = "Builder not available or source directory not configured", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
           })),
-      @RouterOperation(path = "/api/dsl/drafts/metadata", beanClass = DslDraftHandler.class, beanMethod = "metadata", method = RequestMethod.GET, operation = @Operation(operationId = "getDraftsMetadata", summary = "Return workspace setup metadata for the drafts folder (count, size, git branch, config)", tags = {
+      @RouterOperation(path = "/api/dsl/drafts/metadata", beanClass = DslDraftHandler.class, beanMethod = "metadata", method = RequestMethod.GET, operation = @Operation(operationId = "getDraftsMetadata", summary = "Return workspace setup metadata for the drafts folder: number of git-changed source files, total size, current branch, and git/history config", tags = {
           "DSL Admin"}, responses = {
               @ApiResponse(responseCode = "200", description = "Drafts metadata returned")
           })),
-      @RouterOperation(path = "/api/dsl/drafts", beanClass = DslDraftHandler.class, beanMethod = "list", method = RequestMethod.GET, operation = @Operation(operationId = "listDrafts", summary = "List Workbench draft summaries from .workbench/drafts", tags = {
+      @RouterOperation(path = "/api/dsl/drafts", beanClass = DslDraftHandler.class, beanMethod = "list", method = RequestMethod.GET, operation = @Operation(operationId = "listDrafts", summary = "List definitions whose source file has a git change", tags = {
           "DSL Admin"}, responses = {
               @ApiResponse(responseCode = "200", description = "List of draft summaries", content = @Content(mediaType = "application/json", schema = @Schema(implementation = PageResponse.class)))
           })),
-      @RouterOperation(path = "/api/dsl/drafts/{name}", beanClass = DslDraftHandler.class, beanMethod = "read", method = RequestMethod.GET, operation = @Operation(operationId = "readDraft", summary = "Read a single Workbench draft payload", tags = {
+      @RouterOperation(path = "/api/dsl/drafts/{name}", beanClass = DslDraftHandler.class, beanMethod = "read", method = RequestMethod.GET, operation = @Operation(operationId = "readDraft", summary = "Read the current DSL source file for a definition", tags = {
           "DSL Admin"}, responses = {
               @ApiResponse(responseCode = "200", description = "Draft payload returned"),
-              @ApiResponse(responseCode = "404", description = "Draft not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+              @ApiResponse(responseCode = "404", description = "Definition has no source path", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
           }))
   })
   RouterFunction<ServerResponse> dslDraftRouter(DslDraftHandler draftHandler) {
