@@ -95,15 +95,12 @@ onMounted(() => {
         :refresh="() => emit('refresh')"
       />
 
-      <DraftMetadataCard
-        :metadata="metadata"
-        :loading="metadataLoading"
-        :error="metadataError"
-      />
+      <DraftMetadataCard :metadata="metadata" :loading="metadataLoading" :error="metadataError" />
 
       <div class="flex items-center justify-between px-3 py-2 border-b border-gray-800">
         <span class="text-xs uppercase tracking-wide text-gray-400">
-          {{ drafts.length }} saved
+          {{ drafts.length }}
+          saved
         </span>
         <button
           type="button"

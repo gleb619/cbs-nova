@@ -66,8 +66,7 @@ public class NotificationRuleFiringRepository {
 
     ExtendedSelectQuery dataQuery = dslQueries.select()
             .from(r)
-            .select(NotificationRuleFiringQueryCriteria.fullSelection(t, r)
-                    )
+            .select(NotificationRuleFiringQueryCriteria.fullSelection(t, r))
             .whereIf(ruleId != null,
                     () -> NotificationRuleFiringQueryCriteria.matchesRuleId(t, r, ruleId))
             .orderByDesc(r.get(t.createdAt()))

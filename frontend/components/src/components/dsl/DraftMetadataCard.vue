@@ -13,11 +13,7 @@ defineProps<{
     data-testid="draft-metadata-card"
     class="border-b border-gray-800 px-3 py-3 text-xs text-gray-400"
   >
-    <p
-      v-if="error"
-      class="text-red-400"
-      data-testid="draft-metadata-card-error"
-    >
+    <p v-if="error" class="text-red-400" data-testid="draft-metadata-card-error">
       {{ error }}
     </p>
     <p
@@ -33,58 +29,37 @@ defineProps<{
       data-testid="draft-metadata-card-details"
     >
       <dt class="text-gray-500">Location</dt>
-      <dd
-        class="truncate font-mono text-gray-300"
-        data-testid="draft-metadata-card-path"
-      >
+      <dd class="truncate font-mono text-gray-300" data-testid="draft-metadata-card-path">
         {{ metadata.workbenchPath }}
       </dd>
 
       <dt class="text-gray-500">Drafts</dt>
-      <dd
-        class="text-gray-300"
-        data-testid="draft-metadata-card-count"
-      >
+      <dd class="text-gray-300" data-testid="draft-metadata-card-count">
         {{ metadata.draftCount }}
       </dd>
 
       <dt class="text-gray-500">Size</dt>
-      <dd
-        class="text-gray-300"
-        data-testid="draft-metadata-card-size"
-      >
+      <dd class="text-gray-300" data-testid="draft-metadata-card-size">
         {{ metadata.sizeMb != null ? `${metadata.sizeMb} MB` : '—' }}
       </dd>
 
       <dt class="text-gray-500">Branch</dt>
-      <dd
-        class="font-mono text-gray-300"
-        data-testid="draft-metadata-card-branch"
-      >
+      <dd class="font-mono text-gray-300" data-testid="draft-metadata-card-branch">
         {{ metadata.gitBranch ?? '—' }}
       </dd>
 
       <dt class="text-gray-500">Git</dt>
-      <dd
-        class="text-gray-300"
-        data-testid="draft-metadata-card-git"
-      >
+      <dd class="text-gray-300" data-testid="draft-metadata-card-git">
         {{ metadata.gitEnabled ? 'enabled' : 'disabled' }}
       </dd>
 
       <dt class="text-gray-500">Cache TTL</dt>
-      <dd
-        class="text-gray-300"
-        data-testid="draft-metadata-card-cache-ttl"
-      >
+      <dd class="text-gray-300" data-testid="draft-metadata-card-cache-ttl">
         {{ metadata.statusCacheTtlSeconds }}s
       </dd>
 
       <dt class="text-gray-500">History limit</dt>
-      <dd
-        class="text-gray-300"
-        data-testid="draft-metadata-card-history-limit"
-      >
+      <dd class="text-gray-300" data-testid="draft-metadata-card-history-limit">
         {{ metadata.historyLimit }}
       </dd>
     </dl>

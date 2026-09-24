@@ -151,8 +151,8 @@ public final class VcsModels {
    * @param workbenchPath
    *          workspace-relative path to the Workbench drafts directory (never an absolute path)
    * @param sizeMb
-   *          total size of all draft JSON files in MB, rounded to two decimal places;
-   *          {@code null} when the directory is inaccessible
+   *          total size of all draft JSON files in MB, rounded to two decimal places; {@code null}
+   *          when the directory is inaccessible
    * @param gitBranch
    *          name of the current git branch; {@code null} when git is disabled or no repo exists
    * @param gitEnabled
