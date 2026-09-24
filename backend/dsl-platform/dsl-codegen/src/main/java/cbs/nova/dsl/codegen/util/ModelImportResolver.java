@@ -1,6 +1,7 @@
 package cbs.nova.dsl.codegen.util;
 
 import cbs.nova.dsl.codegen.model.CodegenNaming;
+import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
@@ -13,16 +14,13 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+@RequiredArgsConstructor
 public final class ModelImportResolver {
 
   private static final Pattern IMPORT_LINE = Pattern.compile(
           "(?m)^(\\s*import\\s+)([A-Za-z_$][\\w$]*(?:\\.[A-Za-z_$*][\\w$*]*)*)(\\s*;[^\\n]*)$");
 
   private final CodegenNaming codegenNaming;
-
-  public ModelImportResolver(@NonNull CodegenNaming codegenNaming) {
-    this.codegenNaming = codegenNaming;
-  }
 
   public @NonNull List<ModelImport> extract(
           @NonNull String source,

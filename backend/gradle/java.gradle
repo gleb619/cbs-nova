@@ -1,3 +1,6 @@
+import java.nio.file.Path
+import java.util.regex.Pattern
+
 apply plugin: 'java'
 
 java {
@@ -8,4 +11,70 @@ java {
 
 tasks.withType(JavaCompile).configureEach {
   options.encoding = 'UTF-8'
+}
+
+abstract class FindLombokCandidatesTask extends DefaultTask {
+
+  @InputFiles
+  abstract ConfigurableFileCollection getSourceFiles()
+
+  @Input
+  abstract Property<String> getProjectRootPath()
+
+  @TaskAction
+  void performScan() {
+    println "Scanning for boilerplate constructor candidates..."
+    int candidateCount = 0
+
+    Path rootPath = Path.of(getProjectRootPath().get())
+
+    getSourceFiles().each { File srcFile ->
+      String text = srcFile.text
+      String className = srcFile.name.take(srcFile.name.lastIndexOf('.'))
+
+      // 1. Extract all 'private final' fields safely using Java/Groovy compatible Pattern API
+      Pattern fieldRegex = Pattern.compile(/private\s+final\s+([A-Za-z0-9_<>]+)\s+([A-Za-z0-9_]+)\s*;/)
+      def finalFields = []
+
+      // CORRECTED: Pass the string 'text' into the pattern matcher
+      def fieldMatcher = fieldRegex.matcher(text)
+      while (fieldMatcher.find()) {
+        finalFields << fieldMatcher.group(2)
+      }
+
+      if (finalFields.isEmpty()) return
+
+      // 2. Dynamically construct the match pattern for the target constructor
+      StringBuilder constructorPatternBuilder = new StringBuilder()
+      constructorPatternBuilder.append(/(?s)public\s+/).append(className).append(/\s*\([^)]*\)\s*\{/)
+
+      finalFields.each { fieldName ->
+        constructorPatternBuilder.append(/\s*(?:this\.)?/).append(fieldName).append(/\s*=\s*/).append(fieldName).append(/\s*;/)
+      }
+      constructorPatternBuilder.append(/\s*\}/)
+
+      Pattern lombokConstructorRegex = Pattern.compile(constructorPatternBuilder.toString())
+
+      // 3. Verify if the text matches the structural footprint
+      if (lombokConstructorRegex.matcher(text).find()) {
+        def relativePath = rootPath.relativize(srcFile.toPath()).toString()
+        println "Candidate found: ${relativePath}"
+        candidateCount++
+      }
+    }
+
+    println "\nScan finished. Found ${candidateCount} file(s) ready for @RequiredArgsConstructor."
+  }
+}
+
+tasks.register('findLombokCandidateConstructors', FindLombokCandidatesTask) {
+  group = 'Verification'
+  description = 'Lists files with boilerplate constructors that can be replaced with @RequiredArgsConstructor'
+
+  def targetSrcDir = file("src/main/java")
+  if (targetSrcDir.exists()) {
+    sourceFiles.from(fileTree(targetSrcDir).include('**/*.java'))
+  }
+
+  projectRootPath.set(rootProject.projectDir.absolutePath)
 }

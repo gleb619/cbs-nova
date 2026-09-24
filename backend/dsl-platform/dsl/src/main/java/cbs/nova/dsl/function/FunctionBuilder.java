@@ -20,6 +20,7 @@ import cbs.nova.dsl.model.MapOutput;
 import cbs.nova.dsl.model.ObjectBuilder;
 import cbs.nova.dsl.registry.DefaultParameterRegistry;
 import cbs.nova.dsl.registry.ParameterRegistry;
+import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
@@ -28,6 +29,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+@RequiredArgsConstructor
 public final class FunctionBuilder<I, O> implements ObjectBuilder<FunctionDslObject> {
 
   private final String name;
@@ -41,10 +43,6 @@ public final class FunctionBuilder<I, O> implements ObjectBuilder<FunctionDslObj
   private Function<FunctionContext<I>, Result<ExplainReport>> explainLogic;
   @Nullable
   private Supplier<DslDescriptor> descriptor;
-
-  public FunctionBuilder(@NonNull String name) {
-    this.name = name;
-  }
 
   @SuppressWarnings("unchecked")
   public <T> FunctionBuilder<T, O> input(@NonNull Class<T> type) {

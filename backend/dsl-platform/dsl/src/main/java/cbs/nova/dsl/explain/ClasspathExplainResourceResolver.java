@@ -3,17 +3,15 @@ package cbs.nova.dsl.explain;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 
+@RequiredArgsConstructor
 public final class ClasspathExplainResourceResolver implements ExplainResourceResolver {
 
   public static final String DEFAULT_PREFIX = "explain/";
 
   private final String prefix;
-
-  public ClasspathExplainResourceResolver(@NonNull String prefix) {
-    this.prefix = prefix;
-  }
 
   @Override
   public @NonNull String load(@NonNull String resourcePath) {

@@ -54,6 +54,14 @@ class LintCommand:
             print(f"\n{fails} backend build(s) failed spotlessCheck.")
             return 1
         print("\nBackend spotlessCheck passed.")
+
+        Printer.header("Running lombok constructor check...")
+        if Gradle.lombok_check():
+            Printer.ok("lombok constructor check")
+        else:
+            Printer.fail("lombok constructor check")
+            return 1
+
         return 0
 
     @staticmethod

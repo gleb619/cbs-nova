@@ -32,6 +32,13 @@ class Gradle:
         return result.returncode
 
     @staticmethod
+    def lombok_check() -> bool:
+        result = Gradle._run(
+            ["-p", "backend/dsl-platform", "findLombokCandidateConstructors", "--console=plain"], check=False
+        )
+        return result.returncode == 0
+
+    @staticmethod
     def bootrun_cmd() -> List[str]:
         return [
             str(Config.GRADLEW),
