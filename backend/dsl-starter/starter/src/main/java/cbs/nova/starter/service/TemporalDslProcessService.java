@@ -28,6 +28,7 @@ import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Scope;
 import io.sentry.Sentry;
 import java.util.Optional;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -61,6 +62,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 @Slf4j
+@RequiredArgsConstructor
 public class TemporalDslProcessService {
 
   private final DslRunRepository runRepository;
@@ -79,37 +81,8 @@ public class TemporalDslProcessService {
   private final ObjectProvider<TransactionTemplate> transactionTemplateProvider;
   private @Nullable ExecutionStatusEventPublisher statusPublisher;
 
-  public TemporalDslProcessService(
-          DslRunRepository runRepository,
-          ObjectMapper objectMapper,
-          ThreadPoolTaskExecutor dslProcessExecutor,
-          ScheduledExecutorService healthcheckExecutor,
-          Duration healthcheckInterval,
-          Duration staleThreshold,
-          boolean asyncDbSave,
-          long maxOutputBytes,
-          MeterRegistry meterRegistry,
-          RunIdentityResolver runIdentityResolver,
-          Optional<WebhookDispatcher> webhookDispatcher,
-          OpenTelemetry openTelemetry,
-          ObjectProvider<DomainEventPublisher> eventPublisherProvider,
-          ObjectProvider<TransactionTemplate> transactionTemplateProvider) {
-    this.runRepository = runRepository;
-    this.objectMapper = objectMapper;
-    this.dslProcessExecutor = dslProcessExecutor;
-    this.healthcheckExecutor = healthcheckExecutor;
-    this.healthcheckInterval = healthcheckInterval;
-    this.staleThreshold = staleThreshold;
-    this.asyncDbSave = asyncDbSave;
-    this.maxOutputBytes = maxOutputBytes;
-    this.meterRegistry = meterRegistry;
-    this.runIdentityResolver = runIdentityResolver;
-    this.webhookDispatcher = webhookDispatcher;
-    this.openTelemetry = openTelemetry;
-    this.eventPublisherProvider = eventPublisherProvider;
-    this.transactionTemplateProvider = transactionTemplateProvider;
-  }
-
+  //TODO: replace ctor with lomboks one
+  @Deprecated(forRemoval = true)
   public static TemporalDslProcessService withDefaults(
           DslRunRepository runRepository, ObjectMapper objectMapper,
           ThreadPoolTaskExecutor dslProcessExecutor, ScheduledExecutorService healthcheckExecutor,

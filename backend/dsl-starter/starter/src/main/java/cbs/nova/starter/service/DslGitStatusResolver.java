@@ -6,19 +6,17 @@ import cbs.nova.starter.builder.DslBuilderClient;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Optional;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class DslGitStatusResolver {
 
   private final ObjectProvider<DslBuilderClient> builderClientProvider;
-
-  public DslGitStatusResolver(ObjectProvider<DslBuilderClient> builderClientProvider) {
-    this.builderClientProvider = builderClientProvider;
-  }
 
   public Optional<RepoStatus> status(Path candidateDir) {
     return builderClient().vcsStatus();

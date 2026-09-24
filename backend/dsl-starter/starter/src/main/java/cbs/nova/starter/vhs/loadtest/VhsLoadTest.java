@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -27,25 +28,19 @@ import org.jspecify.annotations.Nullable;
  * Micrometer meters via the existing starter {@link MeterRegistry}.
  */
 @Slf4j
+@RequiredArgsConstructor
 public final class VhsLoadTest {
 
-  private final MeterRegistry meterRegistry;
-  private final CbsVhsReplayProperties replayProperties;
-  private final VhsTapeReader tapeReader;
+  private final @NonNull MeterRegistry meterRegistry;
+  private final @NonNull CbsVhsReplayProperties replayProperties;
+  private final @NonNull VhsTapeReader tapeReader;
 
+  //TODO: replace ctor with lomboks one
+  @Deprecated(forRemoval = true)
   public VhsLoadTest(
           @NonNull MeterRegistry meterRegistry,
           @NonNull CbsVhsReplayProperties replayProperties) {
     this(meterRegistry, replayProperties, new VhsTapeReader());
-  }
-
-  public VhsLoadTest(
-          @NonNull MeterRegistry meterRegistry,
-          @NonNull CbsVhsReplayProperties replayProperties,
-          @NonNull VhsTapeReader tapeReader) {
-    this.meterRegistry = meterRegistry;
-    this.replayProperties = replayProperties;
-    this.tapeReader = tapeReader;
   }
 
   /**

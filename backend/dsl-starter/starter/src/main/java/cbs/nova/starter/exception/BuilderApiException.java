@@ -1,18 +1,19 @@
 package cbs.nova.starter.exception;
 
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatusCode;
 
 @Getter
+@RequiredArgsConstructor
 public class BuilderApiException extends RuntimeException {
 
   private final HttpStatusCode statusCode;
   private final String code;
+  private final String message;
 
-  public BuilderApiException(HttpStatusCode statusCode, String code, String message) {
-    super(message);
-    this.statusCode = statusCode;
-    this.code = code;
+  @Override
+  public String getMessage() {
+    return message;
   }
-
 }

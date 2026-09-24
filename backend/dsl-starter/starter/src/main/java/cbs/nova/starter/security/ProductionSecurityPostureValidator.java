@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.stereotype.Component;
 import org.springframework.core.env.Environment;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Fail-fast guard for the {@code production} Spring profile (T413).
@@ -29,6 +30,7 @@ import org.springframework.core.env.Environment;
  * affected; the OIDC guard itself stays opt-in there (see {@code CbsSecurityOidcProperties}).
  */
 @Component
+@RequiredArgsConstructor
 public class ProductionSecurityPostureValidator implements SmartInitializingSingleton {
 
   /**
@@ -48,10 +50,6 @@ public class ProductionSecurityPostureValidator implements SmartInitializingSing
           .getLogger(ProductionSecurityPostureValidator.class);
 
   private final Environment environment;
-
-  public ProductionSecurityPostureValidator(Environment environment) {
-    this.environment = environment;
-  }
 
   @Override
   public void afterSingletonsInstantiated() {

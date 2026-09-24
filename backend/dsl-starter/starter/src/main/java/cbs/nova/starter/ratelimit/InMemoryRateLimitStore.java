@@ -2,21 +2,19 @@ package cbs.nova.starter.ratelimit;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.LongSupplier;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Per-instance token-bucket store. This is the original {@link RateLimitFilter} behaviour,
  * extracted into a reusable store and kept as the dev / single-node fallback.
  */
+@RequiredArgsConstructor
 public final class InMemoryRateLimitStore implements RateLimitStore {
 
   private static final long NANOS_PER_SECOND = 1_000_000_000L;
 
   private final ConcurrentHashMap<String, Bucket> buckets = new ConcurrentHashMap<>();
   private final LongSupplier nanoTime;
-
-  public InMemoryRateLimitStore(LongSupplier nanoTime) {
-    this.nanoTime = nanoTime;
-  }
 
   @Override
   public Consumption consume(String key, RateLimit rateLimit) {

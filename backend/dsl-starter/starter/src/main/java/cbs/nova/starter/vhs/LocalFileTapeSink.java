@@ -7,6 +7,7 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -23,28 +24,22 @@ import tools.jackson.databind.json.JsonMapper;
  * failing the execution.
  */
 @Slf4j
+@RequiredArgsConstructor
 public final class LocalFileTapeSink implements VhsTapeSink {
 
   private static final DateTimeFormatter FILE_NAME_FORMATTER = DateTimeFormatter
           .ofPattern("yyyyMMdd-HHmmss").withZone(ZoneOffset.UTC);
 
-  private final CbsVhsProperties properties;
-  private final ObjectMapper objectMapper;
-  private final VhsTapeWriter.InstantSource instantSource;
+  private final @NonNull CbsVhsProperties properties;
+  private final @NonNull ObjectMapper objectMapper;
+  private final VhsTapeWriter.@NonNull InstantSource instantSource;
   private final ConcurrentHashMap<String, VhsTapeWriter> writers = new ConcurrentHashMap<>();
   private final AtomicInteger openTapeCount = new AtomicInteger();
 
+  //TODO: replace ctor with lomboks one
+  @Deprecated(forRemoval = true)
   public LocalFileTapeSink(@NonNull CbsVhsProperties properties) {
     this(properties, JsonMapper.builder().build(), Instant::now);
-  }
-
-  public LocalFileTapeSink(
-          @NonNull CbsVhsProperties properties,
-          @NonNull ObjectMapper objectMapper,
-          VhsTapeWriter.@NonNull InstantSource instantSource) {
-    this.properties = properties;
-    this.objectMapper = objectMapper;
-    this.instantSource = instantSource;
   }
 
   @Override

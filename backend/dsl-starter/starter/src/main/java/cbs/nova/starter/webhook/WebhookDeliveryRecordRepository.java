@@ -10,6 +10,7 @@ import com.github.squigglesql.squigglesql.Selectable;
 import com.github.squigglesql.squigglesql.TableReference;
 import com.github.squigglesql.squigglesql.literal.Literal;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.RowMapper;
 
@@ -26,6 +27,7 @@ import org.springframework.jdbc.core.RowMapper;
  * {@link WebhookDeliveryCrudRepository}, and an explicit {@link RowMapper}. Selects are built with
  * squigglesql; the insert flows through the Spring Data CRUD repository.
  */
+@RequiredArgsConstructor
 public class WebhookDeliveryRecordRepository {
 
   private static final RowMapper<WebhookDeliveryRecord> ROW_MAPPER = (rs,
@@ -42,12 +44,6 @@ public class WebhookDeliveryRecordRepository {
 
   private final WebhookDeliveryCrudRepository crud;
   private final ExtendedSelectQueryExecutor dslQueries;
-
-  public WebhookDeliveryRecordRepository(WebhookDeliveryCrudRepository crud,
-          ExtendedSelectQueryExecutor dslQueries) {
-    this.crud = crud;
-    this.dslQueries = dslQueries;
-  }
 
   /**
    * Appends one delivery outcome row. The {@code id} and {@code occurredAt} on the given record are

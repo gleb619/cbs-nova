@@ -2,6 +2,9 @@ package cbs.nova.starter.config.properties;
 
 import java.time.Duration;
 import java.util.Map;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.RequiredArgsConstructor;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.ConstructorBinding;
 import org.springframework.boot.context.properties.bind.DefaultValue;
@@ -50,6 +53,15 @@ public record CbsDslManifestProperties(
 
   @ConstructorBinding
   public CbsDslManifestProperties {
+    ConstructorArgs args = new ConstructorArgs(enabled, path, flags, rateClasses, postCheck,
+            objectEnforcement, objectMode);
+    enabled = args.enabled;
+    path = args.path;
+    flags = args.flags;
+    rateClasses = args.rateClasses;
+    postCheck = args.postCheck;
+    objectEnforcement = args.objectEnforcement;
+    objectMode = args.objectMode;
     path = path == null || path.isBlank() ? "classpath:piece-manifest.yaml" : path;
     flags = flags == null ? Map.of() : Map.copyOf(flags);
     rateClasses = rateClasses == null ? Map.of() : Map.copyOf(rateClasses);
@@ -60,6 +72,20 @@ public record CbsDslManifestProperties(
     objectMode = objectMode == null ? ObjectMode.PERMISSIVE : objectMode;
   }
 
+  @Builder
+  @RequiredArgsConstructor
+  private static final class ConstructorArgs {
+
+    private final boolean enabled;
+    private final String path;
+    private final Map<String, Boolean> flags;
+    private final Map<String, RateClass> rateClasses;
+    private final PostCheck postCheck;
+    private final ObjectEnforcement objectEnforcement;
+    private final ObjectMode objectMode;
+  }
+
+  //TODO: redo to only one ctor, that accept a ConstructorArgs only, remove others
   public CbsDslManifestProperties(boolean enabled, String path) {
     this(enabled, path, null, null, null, null, null);
   }

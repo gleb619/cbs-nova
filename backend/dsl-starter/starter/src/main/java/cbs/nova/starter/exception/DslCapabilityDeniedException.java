@@ -1,6 +1,7 @@
 package cbs.nova.starter.exception;
 
 import cbs.nova.starter.core.StarterConstants;
+import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
@@ -9,37 +10,18 @@ import org.jspecify.annotations.Nullable;
  * guard. Carries enough context for the unified preview error envelope and production run failure
  * logs to report {@code CAPABILITY_DENIED} with the offending piece/object identity.
  */
+@RequiredArgsConstructor
 public final class DslCapabilityDeniedException extends RuntimeException {
 
-  private final String runId;
-  private final String objectType;
-  private final String objectName;
-  private final String pieceId;
-  private final String reason;
-  private final String correlationId;
-
-  public DslCapabilityDeniedException(
-          @Nullable String runId,
-          @NonNull String objectType,
-          @NonNull String objectName,
-          @Nullable String pieceId,
-          @NonNull String reason,
-          @Nullable String correlationId) {
-    super(String.format(
-            "Capability denied: %s (%s:%s) piece=%s reason=%s correlationId=%s",
-            StarterConstants.CAPABILITY_DENIED_CODE, objectType, objectName,
-            pieceId != null ? pieceId : "-", reason,
-            correlationId != null ? correlationId : "-"));
-    this.runId = runId != null ? runId : "";
-    this.objectType = objectType;
-    this.objectName = objectName;
-    this.pieceId = pieceId;
-    this.reason = reason;
-    this.correlationId = correlationId;
-  }
+  private final @Nullable String runId;
+  private final @NonNull String objectType;
+  private final @NonNull String objectName;
+  private final @Nullable String pieceId;
+  private final @NonNull String reason;
+  private final @Nullable String correlationId;
 
   public @NonNull String runId() {
-    return runId;
+    return runId != null ? runId : "";
   }
 
   public @NonNull String objectType() {
@@ -60,5 +42,14 @@ public final class DslCapabilityDeniedException extends RuntimeException {
 
   public @Nullable String correlationId() {
     return correlationId;
+  }
+
+  @Override
+  public String getMessage() {
+    return String.format(
+            "Capability denied: %s (%s:%s) piece=%s reason=%s correlationId=%s",
+            StarterConstants.CAPABILITY_DENIED_CODE, objectType, objectName,
+            pieceId != null ? pieceId : "-", reason,
+            correlationId != null ? correlationId : "-");
   }
 }

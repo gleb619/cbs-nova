@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -38,10 +39,14 @@ public final class VhsRecorder implements DslExecutionListener {
   private final List<String> recordableRoutes;
   private final ConcurrentHashMap<String, RunState> states = new ConcurrentHashMap<>();
 
+  //TODO: replace ctor with lomboks one
+  @Deprecated(forRemoval = true)
   public VhsRecorder(@NonNull VhsTapeSink sink, @NonNull List<String> recordableRoutes) {
     this(sink, recordableRoutes, VhsScrubber.disabled());
   }
 
+  //TODO: replace ctor with lomboks one
+  @Deprecated(forRemoval = true)
   public VhsRecorder(
           @NonNull VhsTapeSink sink,
           @NonNull List<String> recordableRoutes,
@@ -198,6 +203,7 @@ public final class VhsRecorder implements DslExecutionListener {
     return DateTimeFormatter.ISO_INSTANT.format(instant);
   }
 
+  @RequiredArgsConstructor
   private static final class RunState {
 
     final String route;
@@ -205,12 +211,6 @@ public final class VhsRecorder implements DslExecutionListener {
     final Instant startInstant;
     final List<CallStart> callStarts = new ArrayList<>();
     private int nextIndex;
-
-    RunState(String route, @Nullable String correlationId, Instant startInstant) {
-      this.route = route;
-      this.correlationId = correlationId;
-      this.startInstant = startInstant;
-    }
 
     int nextIndex() {
       return nextIndex++;

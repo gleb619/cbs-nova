@@ -1,6 +1,7 @@
 package cbs.nova.starter.capture;
 
 import cbs.nova.starter.core.recorder.ExternalCallRecorder;
+import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 
 import javax.sql.CommonDataSource;
@@ -23,6 +24,7 @@ import java.util.logging.Logger;
  * {@link RecordingConnection} so statement execution can be recorded by the
  * {@link ExternalCallRecorder}.
  */
+@RequiredArgsConstructor
 public class RecordingDataSource
         implements
           DataSource,
@@ -31,14 +33,8 @@ public class RecordingDataSource
           AutoCloseable,
           Closeable {
 
-  private final DataSource delegate;
-  private final ExternalCallRecorder externalCallRecorder;
-
-  public RecordingDataSource(@NonNull DataSource delegate,
-          @NonNull ExternalCallRecorder externalCallRecorder) {
-    this.delegate = delegate;
-    this.externalCallRecorder = externalCallRecorder;
-  }
+  private final @NonNull DataSource delegate;
+  private final @NonNull ExternalCallRecorder externalCallRecorder;
 
   @Override
   public Connection getConnection() throws SQLException {

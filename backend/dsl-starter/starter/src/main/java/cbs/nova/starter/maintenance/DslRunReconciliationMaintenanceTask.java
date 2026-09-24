@@ -2,6 +2,7 @@ package cbs.nova.starter.maintenance;
 
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.service.DslRunReconciliationService;
+import lombok.RequiredArgsConstructor;
 
 import java.time.Duration;
 
@@ -19,13 +20,10 @@ import java.time.Duration;
  * Registered under the task name {@code orphans}, which matches the
  * {@code dsl.maintenance.tasks.orphans.*} configuration key.
  */
+@RequiredArgsConstructor
 public class DslRunReconciliationMaintenanceTask implements MaintenanceTask {
 
   private final DslRunReconciliationService service;
-
-  public DslRunReconciliationMaintenanceTask(DslRunReconciliationService service) {
-    this.service = service;
-  }
 
   @Override
   public String name() {

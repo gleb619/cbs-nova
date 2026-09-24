@@ -17,6 +17,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -46,6 +47,7 @@ import org.jspecify.annotations.Nullable;
  * opt-in. The default target is {@code dry-run} (no side effects).
  */
 @Slf4j
+@RequiredArgsConstructor
 public final class VhsReplayEngine {
 
   @FunctionalInterface
@@ -56,36 +58,27 @@ public final class VhsReplayEngine {
 
   private static final long MS_IN_NANOS = 1_000_000L;
 
-  private final CbsVhsReplayProperties properties;
-  private final VhsCallDriver driver;
-  private final VhsTapeReader tapeReader;
-  private final Sleeper sleeper;
-  private final VhsReplayFaker faker;
+  private final @NonNull CbsVhsReplayProperties properties;
+  private final @NonNull VhsCallDriver driver;
+  private final @NonNull VhsTapeReader tapeReader;
+  private final @NonNull Sleeper sleeper;
+  private final @NonNull VhsReplayFaker faker;
 
+  //TODO: replace ctor with lomboks one
+  @Deprecated(forRemoval = true)
   public VhsReplayEngine(
           @NonNull CbsVhsReplayProperties properties, @NonNull VhsCallDriver driver) {
     this(properties, driver, new VhsTapeReader(), millis -> Thread.sleep(millis));
   }
 
+  //TODO: replace ctor with lomboks one
+  @Deprecated(forRemoval = true)
   public VhsReplayEngine(
           @NonNull CbsVhsReplayProperties properties,
           @NonNull VhsCallDriver driver,
           @NonNull VhsTapeReader tapeReader,
           @NonNull Sleeper sleeper) {
     this(properties, driver, tapeReader, sleeper, buildFaker(properties));
-  }
-
-  public VhsReplayEngine(
-          @NonNull CbsVhsReplayProperties properties,
-          @NonNull VhsCallDriver driver,
-          @NonNull VhsTapeReader tapeReader,
-          @NonNull Sleeper sleeper,
-          @NonNull VhsReplayFaker faker) {
-    this.properties = properties;
-    this.driver = driver;
-    this.tapeReader = tapeReader;
-    this.sleeper = sleeper;
-    this.faker = faker;
   }
 
   /**

@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -27,21 +28,13 @@ import tools.jackson.databind.ObjectMapper;
  * Persistence of job history is a follow-up task.
  */
 @Slf4j
+@RequiredArgsConstructor
 public final class VhsReplayJob {
 
-  private final CbsVhsReplayProperties baseProperties;
-  private final ObjectMapper objectMapper;
-  private final AsyncTaskExecutor executor;
+  private final @NonNull CbsVhsReplayProperties baseProperties;
+  private final @NonNull ObjectMapper objectMapper;
+  private final @Nullable AsyncTaskExecutor executor;
   private final Map<String, JobStatus> statuses = new ConcurrentHashMap<>();
-
-  public VhsReplayJob(
-          @NonNull CbsVhsReplayProperties baseProperties,
-          @NonNull ObjectMapper objectMapper,
-          @Nullable AsyncTaskExecutor executor) {
-    this.baseProperties = baseProperties;
-    this.objectMapper = objectMapper;
-    this.executor = executor;
-  }
 
   /**
    * Start a replay for the given tape file.

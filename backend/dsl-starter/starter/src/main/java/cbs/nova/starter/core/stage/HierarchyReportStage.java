@@ -15,15 +15,13 @@ import cbs.nova.starter.core.pipe.HierarchyAccumulators;
 import cbs.nova.starter.reporting.HierarchyDiagramRenderer;
 import java.util.ArrayList;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 
+@RequiredArgsConstructor
 public final class HierarchyReportStage implements DslPipeStage {
 
   private final HierarchyDiagramRenderer diagramRenderer;
-
-  public HierarchyReportStage(HierarchyDiagramRenderer diagramRenderer) {
-    this.diagramRenderer = diagramRenderer;
-  }
 
   @Override
   public @NonNull Result<?> execute(@NonNull DslPipeContext context, @NonNull Next next) {

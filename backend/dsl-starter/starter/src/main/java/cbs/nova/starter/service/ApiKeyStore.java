@@ -11,6 +11,7 @@ import java.time.Instant;
 import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,6 +49,7 @@ import tools.jackson.databind.ObjectMapper;
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor(onConstructor_ = @Autowired)
 public final class ApiKeyStore {
 
   private static final int RANDOM_BYTES = StarterConstants.API_KEY_RANDOM_BYTES;
@@ -61,16 +63,8 @@ public final class ApiKeyStore {
    * {@link #touchLastUsed(long)} from its own thread and we want the same proxied bean (e.g. for
    * {@code @Transactional}) to handle it, not a freshly-constructed unproxied instance.
    */
+  @Lazy
   private final ObjectProvider<ApiKeyStore> selfProvider;
-
-  @Autowired
-  public ApiKeyStore(JdbcApiKeyRepository repository,
-          ObjectMapper objectMapper,
-          @Lazy ObjectProvider<ApiKeyStore> selfProvider) {
-    this.repository = repository;
-    this.objectMapper = objectMapper;
-    this.selfProvider = selfProvider;
-  }
 
   /**
    * Result of a successful lookup — tells the auth filter which row matched so it can update

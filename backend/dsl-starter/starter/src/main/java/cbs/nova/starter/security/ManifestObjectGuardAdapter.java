@@ -3,6 +3,7 @@ package cbs.nova.starter.security;
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.security.ObjectGuard;
 import java.util.Optional;
+import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
@@ -12,13 +13,10 @@ import org.jspecify.annotations.Nullable;
  * helper/function invocation in the DSL runtime consults the same manifest-based guard as the
  * preview pipes.
  */
+@RequiredArgsConstructor
 public final class ManifestObjectGuardAdapter implements ObjectGuard {
 
   private final ManifestObjectGuard delegate;
-
-  public ManifestObjectGuardAdapter(@NonNull ManifestObjectGuard delegate) {
-    this.delegate = delegate;
-  }
 
   @Override
   public @NonNull Optional<Denial> check(

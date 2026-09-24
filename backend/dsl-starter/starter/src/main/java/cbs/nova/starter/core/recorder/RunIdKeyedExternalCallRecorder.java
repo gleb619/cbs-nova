@@ -8,6 +8,7 @@ import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.core.event.DslExecutionEvent.DslExternalCallEvent;
 import cbs.nova.starter.core.listener.DslExecutionEventBus;
 import cbs.nova.starter.core.listener.DslExecutionListener;
+import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
@@ -30,6 +31,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * calls for the same run without relying on ThreadLocal state. Abandoned runs are evicted by an
  * insertion-order capacity bound so an orphaned entry cannot leak memory forever.
  */
+@RequiredArgsConstructor
 public final class RunIdKeyedExternalCallRecorder implements ExternalCallRecorder {
 
   private final Map<String, List<ExternalCall>> callsByRunId = new ConcurrentHashMap<>();
@@ -40,14 +42,8 @@ public final class RunIdKeyedExternalCallRecorder implements ExternalCallRecorde
 
   private final List<DslExecutionListener> listeners = new CopyOnWriteArrayList<>();
   private final Map<String, Integer> globalCounts = new ConcurrentHashMap<>();
-  private final DryRunLoggingContext dryRunLoggingContext;
-  private final DslExecutionEventBus eventBus;
-
-  public RunIdKeyedExternalCallRecorder(@NonNull DryRunLoggingContext dryRunLoggingContext,
-          @Nullable DslExecutionEventBus eventBus) {
-    this.dryRunLoggingContext = dryRunLoggingContext;
-    this.eventBus = eventBus;
-  }
+  private final @NonNull DryRunLoggingContext dryRunLoggingContext;
+  private final @Nullable DslExecutionEventBus eventBus;
 
   @Override
   public void startRun(@NonNull String runId) {

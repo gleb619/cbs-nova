@@ -6,6 +6,7 @@ import com.github.squigglesql.squigglesql.TableReference;
 import com.github.squigglesql.squigglesql.literal.Literal;
 import java.util.List;
 import java.util.Objects;
+import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.RowMapper;
 
@@ -17,6 +18,7 @@ import org.springframework.jdbc.core.RowMapper;
  * Selects are built with squigglesql ({@link ExtendedSelectQueryExecutor}); the insert flows
  * through the Spring Data {@link NotificationRuleFiringCrudRepository}.
  */
+@RequiredArgsConstructor
 public class NotificationRuleFiringRepository {
 
   private static final RowMapper<NotificationRuleFiringEntity> ROW_MAPPER = (rs,
@@ -33,12 +35,6 @@ public class NotificationRuleFiringRepository {
 
   private final NotificationRuleFiringCrudRepository crud;
   private final ExtendedSelectQueryExecutor dslQueries;
-
-  public NotificationRuleFiringRepository(NotificationRuleFiringCrudRepository crud,
-          ExtendedSelectQueryExecutor dslQueries) {
-    this.crud = crud;
-    this.dslQueries = dslQueries;
-  }
 
   public long insert(NotificationRuleFiringEntity row) {
     Objects.requireNonNull(row, "row");

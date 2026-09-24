@@ -6,12 +6,14 @@ import cbs.nova.dsl.Result;
 import cbs.nova.starter.config.properties.CbsNovaLoggingProperties;
 import cbs.nova.starter.config.properties.CbsNovaLoggingProperties.Level;
 import cbs.nova.starter.config.properties.HttpCallProperties;
+import cbs.nova.starter.exception.ApiKeyNotFoundException;
 import cbs.nova.starter.helper.model.HttpCallContext;
 import cbs.nova.starter.helper.model.HttpCallIn;
 import cbs.nova.starter.helper.model.HttpCallIn.RedirectPolicy;
 import cbs.nova.starter.helper.model.HttpCallOut;
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.security.OutboundUrlValidator;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.slf4j.MDC;
@@ -30,42 +32,25 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 @Slf4j
-
+@RequiredArgsConstructor
 public class HttpCallHelper implements Executable<HttpCallIn, HttpCallOut> {
 
   private final HttpClient client;
   private final CbsNovaLoggingProperties loggingProperties;
   private final HttpCallProperties httpCallProperties;
-  private final Map<RedirectPolicy, HttpClient> clientsByPolicy;
+  private Map<RedirectPolicy, HttpClient> clientsByPolicy;
 
   /**
    * Convenience constructor with the legacy permissive guard config (no private-address blocking).
-   * The Spring-managed bean uses the three-argument constructor with the
-   * {@code cbs.dsl.helper.http-call} bound properties instead.
+   * The Spring-managed bean uses the three-argument Lombok-generated constructor with the
+   * {@code cbs.dsl.helper.http-call} bound properties instead. The per-policy client snapshot is
+   * built eagerly here (post-delegation) so legacy call sites keep their eager-snapshot semantics.
    */
+  //TODO: replace ctor with lomboks one
+  @Deprecated(forRemoval = true)
   public HttpCallHelper(HttpClient client, CbsNovaLoggingProperties loggingProperties) {
     this(client, loggingProperties, HttpCallProperties.permissive());
-  }
-
-  public HttpCallHelper(HttpClient client, CbsNovaLoggingProperties loggingProperties,
-          HttpCallProperties httpCallProperties) {
-    this.client = client;
-    this.loggingProperties = loggingProperties;
-    this.httpCallProperties = httpCallProperties;
-    // JDK HttpClient is configured once at build time and exposes no public config
-    // getters (connect timeout, executor, SSL context, etc.), so we cannot derive
-    // per-policy variants from the injected client. Instead we pre-build one client
-    // per RedirectPolicy up front (cheap, no per-call construction) and look them
-    // up at execute() time. The injected `client` is reused for NEVER since the JDK
-    // default redirect policy is NEVER — building a second identical client would
-    // just waste resources.
-    Map<RedirectPolicy, HttpClient> map = new EnumMap<>(RedirectPolicy.class);
-    map.put(RedirectPolicy.NEVER, client);
-    map.put(RedirectPolicy.NORMAL,
-            HttpClient.newBuilder().followRedirects(toJdkRedirects(RedirectPolicy.NORMAL)).build());
-    map.put(RedirectPolicy.ALWAYS,
-            HttpClient.newBuilder().followRedirects(toJdkRedirects(RedirectPolicy.ALWAYS)).build());
-    this.clientsByPolicy = Map.copyOf(map);
+    this.clientsByPolicy = buildClientsByPolicy(client);
   }
 
   @Override
@@ -83,7 +68,7 @@ public class HttpCallHelper implements Executable<HttpCallIn, HttpCallOut> {
       return Result.failure(e);
     }
 
-    HttpClient selectedClient = clientsByPolicy.get(call.redirectPolicy());
+    HttpClient selectedClient = clientsByPolicy().get(call.redirectPolicy());
     logRequest(request);
     // Single attempt when maxAttempts resolves to 1 — preserves the pre-T628 byte-for-byte
     // behaviour. The loop body runs exactly once, producing the same Result shape as today.
@@ -305,6 +290,39 @@ public class HttpCallHelper implements Executable<HttpCallIn, HttpCallOut> {
       case NORMAL -> HttpClient.Redirect.NORMAL;
       case ALWAYS -> HttpClient.Redirect.ALWAYS;
     };
+  }
+
+  /**
+   * JDK HttpClient is configured once at build time and exposes no public config getters
+   * (connect timeout, executor, SSL context, etc.), so we cannot derive per-policy variants from
+   * the injected client. Instead we build one client per RedirectPolicy up front and cache the
+   * immutable snapshot in {@code clientsByPolicy}. The injected {@code client} is reused for
+   * {@code NEVER} since the JDK default redirect policy is NEVER — building a second identical
+   * client would just waste resources.
+   *
+   * <p>
+   * For the two-argument convenience ctor the snapshot is built eagerly post-delegation; for the
+   * Lombok-generated three-argument ctor (the Spring path) it is built lazily on first access via
+   * {@link #clientsByPolicy()}. Both paths share the same immutable result, so HTTP client
+   * policy behaviour is unchanged.
+   */
+  private static Map<RedirectPolicy, HttpClient> buildClientsByPolicy(HttpClient client) {
+    Map<RedirectPolicy, HttpClient> map = new EnumMap<>(RedirectPolicy.class);
+    map.put(RedirectPolicy.NEVER, client);
+    map.put(RedirectPolicy.NORMAL,
+            HttpClient.newBuilder().followRedirects(toJdkRedirects(RedirectPolicy.NORMAL)).build());
+    map.put(RedirectPolicy.ALWAYS,
+            HttpClient.newBuilder().followRedirects(toJdkRedirects(RedirectPolicy.ALWAYS)).build());
+    return Map.copyOf(map);
+  }
+
+  private Map<RedirectPolicy, HttpClient> clientsByPolicy() {
+    Map<RedirectPolicy, HttpClient> snapshot = clientsByPolicy;
+    if (snapshot == null) {
+      snapshot = buildClientsByPolicy(client);
+      clientsByPolicy = snapshot;
+    }
+    return snapshot;
   }
 
   public static final class HttpCallFailure extends RuntimeException {

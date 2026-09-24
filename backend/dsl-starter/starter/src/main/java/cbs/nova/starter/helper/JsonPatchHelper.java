@@ -10,6 +10,7 @@ import cbs.nova.starter.helper.model.JsonPatchOut;
 import java.util.LinkedHashSet;
 import java.util.Locale;
 import java.util.Map.Entry;
+import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
@@ -31,18 +32,16 @@ import tools.jackson.databind.node.ObjectNode;
  * object strings; any deviation yields an {@link IllegalArgumentException}.
  */
 @Helper(name = "jsonPatch")
+@RequiredArgsConstructor
 public class JsonPatchHelper implements Executable<JsonPatchIn, JsonPatchOut> {
 
   private final ObjectMapper mapper;
   private final JsonPatchProperties properties;
 
+  //TODO: replace ctor with lomboks one
+  @Deprecated(forRemoval = true)
   public JsonPatchHelper() {
     this(new ObjectMapper(), new JsonPatchProperties(false));
-  }
-
-  public JsonPatchHelper(ObjectMapper mapper, JsonPatchProperties properties) {
-    this.mapper = mapper;
-    this.properties = properties;
   }
 
   @Override

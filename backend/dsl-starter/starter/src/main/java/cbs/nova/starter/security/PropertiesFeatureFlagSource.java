@@ -2,6 +2,7 @@ package cbs.nova.starter.security;
 
 import cbs.nova.starter.config.properties.CbsDslManifestProperties;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Default {@link FeatureFlagSource}: flags are static booleans bound from
@@ -10,13 +11,10 @@ import jakarta.servlet.http.HttpServletRequest;
  * manifest guard. The request argument is ignored; there is no per-principal variance in the
  * properties-backed default.
  */
+@RequiredArgsConstructor
 public final class PropertiesFeatureFlagSource implements FeatureFlagSource {
 
   private final CbsDslManifestProperties properties;
-
-  public PropertiesFeatureFlagSource(CbsDslManifestProperties properties) {
-    this.properties = properties;
-  }
 
   @Override
   public boolean isEnabled(String flag, HttpServletRequest request) {

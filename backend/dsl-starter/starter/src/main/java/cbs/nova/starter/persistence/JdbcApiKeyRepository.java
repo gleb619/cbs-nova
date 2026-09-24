@@ -7,6 +7,7 @@ import com.github.squigglesql.squigglesql.literal.Literal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.RowMapper;
 
@@ -19,6 +20,7 @@ import org.springframework.jdbc.core.RowMapper;
  * {@link ApiKeyCrudRepository}, plus an explicit {@link RowMapper}. The repository only stores and
  * looks up keys by their SHA-256 hash; the plaintext key never reaches this layer.
  */
+@RequiredArgsConstructor
 public class JdbcApiKeyRepository {
 
   private static final RowMapper<DslApiKeyEntity> ROW_MAPPER = (rs, rowNum) -> new DslApiKeyEntity(
@@ -34,12 +36,6 @@ public class JdbcApiKeyRepository {
 
   private final ApiKeyCrudRepository crud;
   private final ExtendedSelectQueryExecutor dslQueries;
-
-  public JdbcApiKeyRepository(ApiKeyCrudRepository crud,
-          ExtendedSelectQueryExecutor dslQueries) {
-    this.crud = crud;
-    this.dslQueries = dslQueries;
-  }
 
   /**
    * Looks up an active (non-revoked) row by its SHA-256 hex digest. The unique index on

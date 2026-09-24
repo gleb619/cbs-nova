@@ -10,6 +10,8 @@ import java.time.Duration;
 import tools.jackson.core.JacksonException;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import lombok.AccessLevel;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -29,27 +31,28 @@ import tools.jackson.databind.ObjectMapper;
  * {@link VhsCallDrivers}, which enforces the two-key production opt-in for any non-local target.
  */
 @Slf4j
+@RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 public final class LocalBackendCallDriver implements VhsCallDriver {
 
-  private final HttpClient httpClient;
   private final String baseUrl;
   private final Duration timeout;
   private final ObjectMapper objectMapper;
+  private final HttpClient httpClient;
 
+  //TODO: replace ctor with lomboks one
+  @Deprecated(forRemoval = true)
   public LocalBackendCallDriver(
           @NonNull String baseUrl, long requestTimeoutMs, @NonNull ObjectMapper objectMapper) {
-    this(baseUrl, requestTimeoutMs, objectMapper, HttpClient.newHttpClient());
+    this(normalizeBaseUrl(baseUrl), Duration.ofMillis(clampTimeoutMillis(requestTimeoutMs)),
+            objectMapper, HttpClient.newHttpClient());
   }
 
-  LocalBackendCallDriver(
-          @NonNull String baseUrl,
-          long requestTimeoutMs,
-          @NonNull ObjectMapper objectMapper,
-          @NonNull HttpClient httpClient) {
-    this.baseUrl = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
-    this.timeout = Duration.ofMillis(Math.max(1, requestTimeoutMs));
-    this.objectMapper = objectMapper;
-    this.httpClient = httpClient;
+  private static String normalizeBaseUrl(@NonNull String baseUrl) {
+    return baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
+  }
+
+  private static long clampTimeoutMillis(long requestTimeoutMs) {
+    return Math.max(1, requestTimeoutMs);
   }
 
   @Override

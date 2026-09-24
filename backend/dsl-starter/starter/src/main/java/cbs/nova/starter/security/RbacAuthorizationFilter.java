@@ -10,6 +10,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
@@ -45,6 +46,7 @@ import tools.jackson.databind.ObjectMapper;
  * fall back to {@link Role#VIEWER}.
  */
 @Slf4j
+@RequiredArgsConstructor
 public final class RbacAuthorizationFilter extends OncePerRequestFilter {
 
   private static final List<RouteRule> RULES = List.of(
@@ -84,11 +86,6 @@ public final class RbacAuthorizationFilter extends OncePerRequestFilter {
   private final RoleResolver roleResolver;
   private final ObjectMapper objectMapper;
   private final AntPathMatcher pathMatcher = new AntPathMatcher();
-
-  public RbacAuthorizationFilter(RoleResolver roleResolver, ObjectMapper objectMapper) {
-    this.roleResolver = roleResolver;
-    this.objectMapper = objectMapper;
-  }
 
   @Override
   protected void doFilterInternal(

@@ -4,33 +4,28 @@ import cbs.nova.dsl.logging.DryRunLoggingContext;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.AppenderBase;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
+@RequiredArgsConstructor
 public class DryRunLogbackAppender extends AppenderBase<ILoggingEvent> {
 
   @Getter
-  private final DryRunLoggingContext dryRunLoggingContext;
+  private final @NonNull DryRunLoggingContext dryRunLoggingContext;
 
   @Getter
-  private final DryRunLogBufferRegistry bufferRegistry;
+  private final @NonNull DryRunLogBufferRegistry bufferRegistry;
 
   @Getter
   private final @Nullable DryRunLogEventPublisher publisher;
 
+  //TODO: replace ctor with lomboks one
+  @Deprecated(forRemoval = true)
   public DryRunLogbackAppender(
           @NonNull DryRunLoggingContext dryRunLoggingContext,
           @NonNull DryRunLogBufferRegistry bufferRegistry) {
     this(dryRunLoggingContext, bufferRegistry, null);
-  }
-
-  public DryRunLogbackAppender(
-          @NonNull DryRunLoggingContext dryRunLoggingContext,
-          @NonNull DryRunLogBufferRegistry bufferRegistry,
-          @Nullable DryRunLogEventPublisher publisher) {
-    this.dryRunLoggingContext = dryRunLoggingContext;
-    this.bufferRegistry = bufferRegistry;
-    this.publisher = publisher;
   }
 
   @Override

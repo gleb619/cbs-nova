@@ -17,6 +17,7 @@ import java.util.Locale;
 import java.util.Map;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
@@ -24,18 +25,16 @@ import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ObjectNode;
 
 @Helper(name = "jwt")
+@RequiredArgsConstructor
 public class JwtHelper implements Executable<JwtIn, JwtOut> {
 
   private final ObjectMapper mapper;
   private final JwtProperties properties;
 
+  //TODO: replace ctor with lomboks one
+  @Deprecated(forRemoval = true)
   public JwtHelper() {
     this(new ObjectMapper(), new JwtProperties(null, null));
-  }
-
-  public JwtHelper(ObjectMapper mapper, JwtProperties properties) {
-    this.mapper = mapper;
-    this.properties = properties;
   }
 
   @Override

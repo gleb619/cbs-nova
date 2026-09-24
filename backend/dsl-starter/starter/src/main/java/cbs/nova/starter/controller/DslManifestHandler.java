@@ -9,6 +9,7 @@ import cbs.nova.starter.security.RoleResolver;
 import cbs.nova.starter.service.PieceManifestService;
 import java.util.List;
 import java.util.Locale;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.web.servlet.function.ServerRequest;
 import org.springframework.web.servlet.function.ServerResponse;
@@ -19,6 +20,7 @@ import org.springframework.web.servlet.function.ServerResponse;
  * hardcoded {@code RestController}, so host applications can opt out of exposing it when the
  * manifest loader is disabled.
  */
+@RequiredArgsConstructor
 public class DslManifestHandler {
 
   /**
@@ -28,11 +30,6 @@ public class DslManifestHandler {
 
   private final PieceManifestService pieceManifestService;
   private final RoleResolver roleResolver;
-
-  public DslManifestHandler(PieceManifestService pieceManifestService, RoleResolver roleResolver) {
-    this.pieceManifestService = pieceManifestService;
-    this.roleResolver = roleResolver;
-  }
 
   /**
    * POST /api/dsl/manifest/reload — reloads the configured manifest, validates it, and atomically

@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.LongSupplier;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.ObjectProvider;
@@ -76,6 +77,7 @@ import tools.jackson.databind.ObjectMapper;
  * list.
  */
 @Slf4j
+@RequiredArgsConstructor
 public final class PieceGuardFilter extends OncePerRequestFilter {
 
   public static final String PIECE_ID_ATTRIBUTE = "cbs.nova.piece.id";
@@ -100,6 +102,8 @@ public final class PieceGuardFilter extends OncePerRequestFilter {
   private final @Nullable PieceCheckBlockRegistry blockRegistry;
   private final ConcurrentHashMap<String, Bucket> buckets = new ConcurrentHashMap<>();
 
+  //TODO: replace ctor with lomboks one
+  @Deprecated(forRemoval = true)
   public PieceGuardFilter(
           PieceManifestService manifestService,
           RoleResolver roleResolver,
@@ -110,27 +114,6 @@ public final class PieceGuardFilter extends OncePerRequestFilter {
           LongSupplier nanoTime) {
     this(manifestService, roleResolver, flagSource, properties, auditServiceProvider,
             objectMapper, nanoTime, null, null);
-  }
-
-  public PieceGuardFilter(
-          PieceManifestService manifestService,
-          RoleResolver roleResolver,
-          FeatureFlagSource flagSource,
-          CbsDslManifestProperties properties,
-          ObjectProvider<DslAuditService> auditServiceProvider,
-          ObjectMapper objectMapper,
-          LongSupplier nanoTime,
-          @Nullable PieceCheckPipeline postCheckPipeline,
-          @Nullable PieceCheckBlockRegistry blockRegistry) {
-    this.manifestService = manifestService;
-    this.roleResolver = roleResolver;
-    this.flagSource = flagSource;
-    this.properties = properties;
-    this.auditServiceProvider = auditServiceProvider;
-    this.objectMapper = objectMapper;
-    this.nanoTime = nanoTime;
-    this.postCheckPipeline = postCheckPipeline;
-    this.blockRegistry = blockRegistry;
   }
 
   @Override

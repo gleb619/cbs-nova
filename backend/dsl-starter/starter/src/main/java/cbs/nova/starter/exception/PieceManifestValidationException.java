@@ -2,26 +2,25 @@ package cbs.nova.starter.exception;
 
 import cbs.nova.starter.model.ManifestReloadResponse;
 import java.util.List;
+import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Fail-fast exception thrown when the piece-manifest YAML contains malformed or semantically
  * invalid entries. The message names the first offending piece id and field; {@link #errors()}
  * carries the full list for reload responses.
  */
+@RequiredArgsConstructor
 public class PieceManifestValidationException extends IllegalStateException {
 
-  private final List<ManifestReloadResponse.ErrorEntry> errors;
-
-  public PieceManifestValidationException(List<ManifestReloadResponse.ErrorEntry> errors) {
-    super(formatMessage(errors));
-    this.errors = List.copyOf(errors);
-  }
+  private final @NonNull List<ManifestReloadResponse.ErrorEntry> errors;
 
   public List<ManifestReloadResponse.ErrorEntry> errors() {
-    return errors;
+    return List.copyOf(errors);
   }
 
-  private static String formatMessage(List<ManifestReloadResponse.ErrorEntry> errors) {
+  @Override
+  public String getMessage() {
     if (errors.isEmpty()) {
       return "piece manifest validation failed";
     }

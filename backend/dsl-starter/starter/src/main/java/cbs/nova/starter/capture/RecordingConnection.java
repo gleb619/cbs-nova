@@ -2,6 +2,7 @@ package cbs.nova.starter.capture;
 
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.core.recorder.ExternalCallRecorder;
+import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
@@ -31,17 +32,12 @@ import java.util.concurrent.Executor;
  * {@link RecordingCallableStatement}; every other method delegates directly. The recording target
  * (the JDBC URL, or {@link StarterConstants#JDBC_FALLBACK_TARGET}) is resolved once per connection.
  */
+@RequiredArgsConstructor
 public class RecordingConnection implements Connection {
 
-  private final Connection delegate;
-  private final ExternalCallRecorder externalCallRecorder;
+  private final @NonNull Connection delegate;
+  private final @NonNull ExternalCallRecorder externalCallRecorder;
   private @Nullable String target;
-
-  public RecordingConnection(@NonNull Connection delegate,
-          @NonNull ExternalCallRecorder externalCallRecorder) {
-    this.delegate = delegate;
-    this.externalCallRecorder = externalCallRecorder;
-  }
 
   @Override
   public Statement createStatement() throws SQLException {

@@ -8,7 +8,9 @@ import java.nio.file.Path;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Stream;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
@@ -35,26 +37,17 @@ import org.springframework.stereotype.Component;
  */
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class DslSourcePathResolver {
 
   private final DslProperties dslProperties;
   private final Function<String, Optional<String>> filenameLookup;
 
-  @org.springframework.beans.factory.annotation.Autowired
+  //TODO: replace ctor with lomboks one
+  @Deprecated(forRemoval = true)
+  @Autowired
   public DslSourcePathResolver(DslProperties dslProperties) {
     this(dslProperties, name -> GlobalManager.globalManager().findFilename(name));
-  }
-
-  /**
-   * Test seam: lets unit tests inject a stub filename lookup instead of touching
-   * {@link GlobalManager}.
-   */
-  public DslSourcePathResolver(DslProperties dslProperties,
-          Function<String, Optional<String>> filenameLookup) {
-    this.dslProperties = dslProperties;
-    this.filenameLookup = filenameLookup == null
-            ? name -> GlobalManager.globalManager().findFilename(name)
-            : filenameLookup;
   }
 
   /**
@@ -67,7 +60,7 @@ public class DslSourcePathResolver {
     if (definitionName == null || definitionName.isBlank()) {
       return Optional.empty();
     }
-    Optional<String> resolved = filenameLookup.apply(definitionName);
+    Optional<String> resolved = effectiveLookup().apply(definitionName);
     if (resolved.isEmpty() || resolved.get().isBlank()) {
       return Optional.empty();
     }
@@ -89,5 +82,16 @@ public class DslSourcePathResolver {
               e.getMessage());
     }
     return Optional.of(filename);
+  }
+
+  /**
+   * Returns the stored filename lookup, defaulting to {@link GlobalManager#findFilename(String)}
+   * when the lookup is {@code null}. Preserves the null-tolerance the original explicit
+   * constructor applied at construction time.
+   */
+  private Function<String, Optional<String>> effectiveLookup() {
+    return filenameLookup == null
+            ? name -> GlobalManager.globalManager().findFilename(name)
+            : filenameLookup;
   }
 }

@@ -32,9 +32,11 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Stream;
 import java.util.stream.Collectors;
 import java.util.regex.Pattern;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.core.io.DefaultResourceLoader;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.http.HttpStatus;
@@ -62,6 +64,7 @@ import org.yaml.snakeyaml.error.YAMLException;
  * calls.
  */
 @Slf4j
+@RequiredArgsConstructor
 public class PieceManifestService {
 
   private static final Set<String> VALID_FAIL_MODES = Set.of("deny", "audit-only");
@@ -82,22 +85,13 @@ public class PieceManifestService {
   private final AntPathMatcher pathMatcher = new AntPathMatcher();
   private volatile Snapshot snapshot;
 
+  //TODO: replace ctor with lomboks one
+  @Deprecated(forRemoval = true)
   public PieceManifestService(CbsDslManifestProperties properties,
           ResourceLoader resourceLoader,
           ObjectProvider<DslAuditService> auditServiceProvider) {
     this(properties, resourceLoader, auditServiceProvider, null);
-  }
-
-  public PieceManifestService(CbsDslManifestProperties properties,
-          ResourceLoader resourceLoader,
-          ObjectProvider<DslAuditService> auditServiceProvider,
-          @Nullable ObjectProvider<PieceCheckBlockRegistry> blockRegistryProvider) {
-    this.properties = Objects.requireNonNull(properties, "properties required");
-    this.resourceLoader = resourceLoader == null
-            ? new org.springframework.core.io.DefaultResourceLoader()
-            : resourceLoader;
-    this.auditServiceProvider = auditServiceProvider;
-    this.blockRegistryProvider = blockRegistryProvider;
+    Objects.requireNonNull(properties, "properties required");
     this.snapshot = loadSnapshot(properties.path());
   }
 
@@ -105,7 +99,7 @@ public class PieceManifestService {
    * Looks up a piece by its stable kebab-case id.
    */
   public Optional<Piece> find(String id) {
-    return Optional.ofNullable(snapshot.byId.get(id));
+    return Optional.ofNullable(snapshot().byId.get(id));
   }
 
   /**
@@ -114,14 +108,14 @@ public class PieceManifestService {
    * button piece, etc.
    */
   public List<Piece> byTarget(Target target) {
-    return snapshot.byTargetType.getOrDefault(target.type(), List.of());
+    return snapshot().byTargetType.getOrDefault(target.type(), List.of());
   }
 
   /**
    * Returns all object-target pieces whose {@code objectType} and {@code objectName} match exactly.
    */
   public List<Piece> findByObject(String objectType, String objectName) {
-    return snapshot.objectPieces.stream()
+    return snapshot().objectPieces.stream()
             .filter(p -> p.target() instanceof Target.ObjectTarget ot
                     && ot.objectType().equals(objectType)
                     && ot.objectName().equals(objectName))
@@ -134,7 +128,7 @@ public class PieceManifestService {
    */
   public Optional<Piece> findByRoute(String method, String path) {
     String methodUpper = method == null ? "" : method.toUpperCase(Locale.ROOT);
-    for (Piece piece : snapshot.apiPieces) {
+    for (Piece piece : snapshot().apiPieces) {
       if (piece.target() instanceof Target.ApiTarget api) {
         Route route = Route.parse(api.route());
         if (route.method().equals(methodUpper) && pathMatcher.match(route.path(), path)) {
@@ -232,7 +226,21 @@ public class PieceManifestService {
   }
 
   Snapshot snapshot() {
-    return snapshot;
+    Snapshot local = snapshot;
+    if (local == null) {
+      synchronized (reloadLock) {
+        local = snapshot;
+        if (local == null) {
+          local = loadSnapshot(properties.path());
+          snapshot = local;
+        }
+      }
+    }
+    return local;
+  }
+
+  private ResourceLoader resourceLoaderOrDefault() {
+    return resourceLoader != null ? resourceLoader : new DefaultResourceLoader();
   }
 
   private Snapshot loadSnapshot(String path) {
@@ -241,7 +249,7 @@ public class PieceManifestService {
       return Snapshot.empty();
     }
 
-    Resource resource = resourceLoader.getResource(path);
+    Resource resource = resourceLoaderOrDefault().getResource(path);
     if (!resource.exists() || !resource.isReadable()) {
       log.info("[Manifest] resource not readable at '{}' — starting with empty piece snapshot",
               path);

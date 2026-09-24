@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
@@ -34,19 +35,18 @@ import tools.jackson.databind.json.JsonMapper;
  * Any violation raises {@link VhsReplayException} with a specific message — a malformed or
  * truncated tape can never produce a partial replay.
  */
+@RequiredArgsConstructor
 public final class VhsTapeReader {
 
   public static final String SUPPORTED_TAPE_FORMAT_MAJOR = "1";
   public static final String SUPPORTED_SCHEMA_VERSION = "1";
 
-  private final ObjectMapper objectMapper;
+  private final @NonNull ObjectMapper objectMapper;
 
+  //TODO: replace ctor with lomboks one
+  @Deprecated(forRemoval = true)
   public VhsTapeReader() {
     this(JsonMapper.builder().build());
-  }
-
-  public VhsTapeReader(@NonNull ObjectMapper objectMapper) {
-    this.objectMapper = objectMapper;
   }
 
   /**

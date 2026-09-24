@@ -2,6 +2,9 @@ package cbs.nova.starter.model;
 
 import java.util.List;
 import java.util.Objects;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.RequiredArgsConstructor;
 
 /**
  * A single declarative piece of the cbs-nova control plane. Pieces are immutable; the service holds
@@ -16,14 +19,29 @@ public record Piece(
         ObjectAllow allow,
         ObjectDeny deny) {
 
+  @Builder
+  @RequiredArgsConstructor
+  private static final class ConstructorArgs {
+
+    private final String id;
+    private final Target target;
+    private final List<PreCheck> preCheck;
+    private final List<PostCheck> postCheck;
+    private final String failMode;
+    private final ObjectAllow allow;
+    private final ObjectDeny deny;
+  }
+
   public Piece {
-    Objects.requireNonNull(id, "id required");
-    Objects.requireNonNull(target, "target required");
-    preCheck = preCheck == null ? List.of() : List.copyOf(preCheck);
-    postCheck = postCheck == null ? List.of() : List.copyOf(postCheck);
-    failMode = failMode == null ? "deny" : failMode;
-    allow = allow == null ? new ObjectAllow(null, null, null) : allow;
-    deny = deny == null ? new ObjectDeny(null, null, null) : deny;
+    ConstructorArgs args = new ConstructorArgs(id, target, preCheck, postCheck, failMode, allow,
+            deny);
+    id = Objects.requireNonNull(args.id, "id required");
+    target = Objects.requireNonNull(args.target, "target required");
+    preCheck = args.preCheck == null ? List.of() : List.copyOf(args.preCheck);
+    postCheck = args.postCheck == null ? List.of() : List.copyOf(args.postCheck);
+    failMode = args.failMode == null ? "deny" : args.failMode;
+    allow = args.allow == null ? new ObjectAllow(null, null, null) : args.allow;
+    deny = args.deny == null ? new ObjectDeny(null, null, null) : args.deny;
   }
 
   public Piece(

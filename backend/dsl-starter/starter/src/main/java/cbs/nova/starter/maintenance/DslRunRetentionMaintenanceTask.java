@@ -2,6 +2,7 @@ package cbs.nova.starter.maintenance;
 
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.service.DslRunRetentionPurger;
+import lombok.RequiredArgsConstructor;
 
 import java.time.Duration;
 
@@ -14,13 +15,10 @@ import java.time.Duration;
  * Registered under the task name {@code run-retention}, which matches the
  * {@code dsl.maintenance.tasks.run-retention.*} configuration key.
  */
+@RequiredArgsConstructor
 public class DslRunRetentionMaintenanceTask implements MaintenanceTask {
 
   private final DslRunRetentionPurger purger;
-
-  public DslRunRetentionMaintenanceTask(DslRunRetentionPurger purger) {
-    this.purger = purger;
-  }
 
   @Override
   public String name() {
