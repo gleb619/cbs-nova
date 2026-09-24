@@ -37,7 +37,6 @@ class DslEventRepositoryTest {
 
   private static PGSimpleDataSource dataSource;
   private NamedParameterJdbcTemplate jdbcTemplate;
-  private ExtendedSelectQueryExecutor dslQueries;
   private DslEventRepository repository;
 
   @BeforeAll
@@ -55,8 +54,8 @@ class DslEventRepositoryTest {
   void setUp() {
     jdbcTemplate = new NamedParameterJdbcTemplate(dataSource);
     jdbcTemplate.getJdbcTemplate().execute("TRUNCATE dsl_events RESTART IDENTITY");
-    dslQueries = new ExtendedSelectQueryExecutor(jdbcTemplate);
-    repository = new DslEventRepository(jdbcTemplate, dslQueries);
+    var repos = CrudRepositories.over(dataSource);
+    repository = new DslEventRepository(repos.dslEvents(), repos.dslQueries());
   }
 
   @Test

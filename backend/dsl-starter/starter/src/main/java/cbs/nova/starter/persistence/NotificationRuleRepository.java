@@ -3,22 +3,16 @@ package cbs.nova.starter.persistence;
 import cbs.nova.starter.entity.NotificationRuleEntity;
 import com.github.squigglesql.squigglesql.TableReference;
 import com.github.squigglesql.squigglesql.literal.Literal;
-import java.sql.Timestamp;
-import java.sql.Types;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import org.springframework.jdbc.core.RowMapper;
-import org.springframework.jdbc.core.SqlParameterValue;
-import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
-import org.springframework.jdbc.support.GeneratedKeyHolder;
-import org.springframework.jdbc.support.KeyHolder;
 
 /**
  * JDBC access to {@code dsl_notification_rule}. Follows the
- * {@link cbs.nova.starter.persistence.DslEventRepository} idioms: constructor injection via Lombok,
- * named parameters, an explicit {@link RowMapper}, and generated keys surfaced from the insert.
+ * {@link cbs.nova.starter.persistence.JdbcDslRunRepository} idioms: reads via squigglesql, writes
+ * delegated to the Spring Data {@link NotificationRuleCrudRepository}, and an explicit
+ * {@link RowMapper}.
  */
 public class NotificationRuleRepository {
 
@@ -38,47 +32,33 @@ public class NotificationRuleRepository {
                   rs.getTimestamp("created_at").toInstant(),
                   rs.getTimestamp("updated_at").toInstant());
 
-  private final NamedParameterJdbcTemplate jdbcTemplate;
+  private final NotificationRuleCrudRepository crud;
   private final ExtendedSelectQueryExecutor dslQueries;
   private static final NotificationRuleTableColumns T = NotificationRuleTableColumns.of();
 
-  public NotificationRuleRepository(NamedParameterJdbcTemplate jdbcTemplate,
+  public NotificationRuleRepository(NotificationRuleCrudRepository crud,
           ExtendedSelectQueryExecutor dslQueries) {
-    this.jdbcTemplate = Objects.requireNonNull(jdbcTemplate);
+    this.crud = Objects.requireNonNull(crud);
     this.dslQueries = Objects.requireNonNull(dslQueries);
   }
 
   public long insert(NotificationRuleEntity row) {
     Objects.requireNonNull(row, "row");
-    var params = new MapSqlParameterSource()
-            .addValue("name", row.name())
-            .addValue("enabled", row.enabled())
-            .addValue("eventType", row.eventType())
-            .addValue("aggregateType", row.aggregateType())
-            .addValue("aggregateIdPattern", row.aggregateIdPattern())
-            .addValue("definitionPattern", row.definitionPattern())
-            .addValue("status", row.status())
-            .addValue("actions", new SqlParameterValue(Types.OTHER, row.actionsJson()))
-            .addValue("priority", row.priority())
-            .addValue("rateClass", row.rateClass())
-            .addValue("createdAt", Timestamp.from(row.createdAt()))
-            .addValue("updatedAt", Timestamp.from(row.updatedAt()));
-    KeyHolder keyHolder = new GeneratedKeyHolder();
-    jdbcTemplate.update("""
-            INSERT INTO dsl_notification_rule
-                    (name, enabled, event_type, aggregate_type, aggregate_id_pattern,
-                     definition_pattern, status, actions, priority, rate_class,
-                     created_at, updated_at)
-            VALUES (:name, :enabled, :eventType, :aggregateType, :aggregateIdPattern,
-                    :definitionPattern, :status, :actions, :priority, :rateClass,
-                    :createdAt, :updatedAt)
-            """, params, keyHolder, new String[]{"id"});
-    Number key = keyHolder.getKey();
-    if (key == null) {
-      throw new IllegalStateException(
-              "Insert into dsl_notification_rule returned no generated key");
-    }
-    return key.longValue();
+    NotificationRuleEntity saved = crud.save(new NotificationRuleEntity(
+            row.id(),
+            row.name(),
+            row.enabled(),
+            row.eventType(),
+            row.aggregateType(),
+            row.aggregateIdPattern(),
+            row.definitionPattern(),
+            row.status(),
+            row.actionsJson(),
+            row.priority(),
+            row.rateClass(),
+            row.createdAt(),
+            row.updatedAt()));
+    return saved.id();
   }
 
   public void update(NotificationRuleEntity row) {
@@ -86,28 +66,19 @@ public class NotificationRuleRepository {
     if (row.id() == null) {
       throw new IllegalArgumentException("Cannot update a rule without an id");
     }
-    var params = new MapSqlParameterSource()
-            .addValue("id", row.id())
-            .addValue("name", row.name())
-            .addValue("enabled", row.enabled())
-            .addValue("eventType", row.eventType())
-            .addValue("aggregateType", row.aggregateType())
-            .addValue("aggregateIdPattern", row.aggregateIdPattern())
-            .addValue("definitionPattern", row.definitionPattern())
-            .addValue("status", row.status())
-            .addValue("actions", new SqlParameterValue(Types.OTHER, row.actionsJson()))
-            .addValue("priority", row.priority())
-            .addValue("rateClass", row.rateClass())
-            .addValue("updatedAt", Timestamp.from(row.updatedAt()));
-    jdbcTemplate.update("""
-            UPDATE dsl_notification_rule
-            SET name = :name, enabled = :enabled, event_type = :eventType,
-                aggregate_type = :aggregateType, aggregate_id_pattern = :aggregateIdPattern,
-                definition_pattern = :definitionPattern, status = :status,
-                actions = :actions, priority = :priority, rate_class = :rateClass,
-                updated_at = :updatedAt
-            WHERE id = :id
-            """, params);
+    crud.update(
+            row.id(),
+            row.name(),
+            row.enabled(),
+            row.eventType(),
+            row.aggregateType(),
+            row.aggregateIdPattern(),
+            row.definitionPattern(),
+            row.status(),
+            row.actionsJson(),
+            row.priority(),
+            row.rateClass(),
+            row.updatedAt());
   }
 
   public Optional<NotificationRuleEntity> findById(long id) {
@@ -170,9 +141,7 @@ public class NotificationRuleRepository {
   }
 
   public boolean delete(long id) {
-    int deleted = jdbcTemplate.update("DELETE FROM dsl_notification_rule WHERE id = :id",
-            new MapSqlParameterSource("id", id));
-    return deleted > 0;
+    return crud.deleteById(id) > 0;
   }
 
   private static void checkPagination(int offset, int limit) {

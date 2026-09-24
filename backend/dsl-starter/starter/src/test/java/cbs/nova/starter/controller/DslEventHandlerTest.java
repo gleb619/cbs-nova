@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import cbs.nova.starter.config.router.DslEventRouterConfiguration;
 import cbs.nova.starter.converter.DefaultDslExceptionMapper;
 import cbs.nova.starter.entity.DslEventEntity;
+import cbs.nova.starter.persistence.CrudRepositories;
 import cbs.nova.starter.persistence.DslEventRepository;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -20,9 +21,7 @@ import org.springframework.context.annotation.AnnotationConfigApplicationContext
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.datasource.init.ScriptUtils;
-import cbs.nova.starter.persistence.ExtendedSelectQueryExecutor;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver;
@@ -36,21 +35,20 @@ import tools.jackson.databind.ObjectMapper;
 class DslEventHandlerTest {
 
   private MockMvc mockMvc;
-  private NamedParameterJdbcTemplate jdbcTemplate;
-  private ExtendedSelectQueryExecutor dslQueries;
   private DslEventRepository repository;
 
   @BeforeEach
   void setUp() throws Exception {
     var dataSource = new JdbcDataSource();
     dataSource.setURL("jdbc:h2:mem:events-handler-" + UUID.randomUUID().toString()
-            .replace("-", "") + ";DB_CLOSE_DELAY=-1");
+            .replace("-", "")
+            + ";DB_CLOSE_DELAY=-1;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE"
+            + ";CASE_INSENSITIVE_IDENTIFIERS=TRUE");
     dataSource.setUser("sa");
     ScriptUtils.executeSqlScript(dataSource.getConnection(),
             new ClassPathResource("db/migration/h2/V1__init.sql"));
-    jdbcTemplate = new NamedParameterJdbcTemplate(dataSource);
-    dslQueries = new ExtendedSelectQueryExecutor(jdbcTemplate);
-    repository = new DslEventRepository(jdbcTemplate, dslQueries);
+    var repos = CrudRepositories.over(dataSource);
+    repository = new DslEventRepository(repos.dslEvents(), repos.dslQueries());
 
     DslEventHandler handler = new DslEventHandler(repository, new ObjectMapper());
     DslEventRouterConfiguration router = new DslEventRouterConfiguration();

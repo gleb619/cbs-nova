@@ -3,7 +3,7 @@ package cbs.nova.starter.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import cbs.nova.starter.persistence.ExtendedSelectQueryExecutor;
+import cbs.nova.starter.persistence.CrudRepositories;
 import cbs.nova.starter.persistence.JdbcApiKeyRepository;
 import java.time.Instant;
 import java.util.List;
@@ -14,7 +14,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.core.io.ClassPathResource;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.datasource.init.ScriptUtils;
 import tools.jackson.databind.ObjectMapper;
 
@@ -31,13 +30,12 @@ class ApiKeyStoreTest {
   void setUp() throws Exception {
     var dataSource = new JdbcDataSource();
     dataSource.setURL("jdbc:h2:mem:api-key-store-" + UUID.randomUUID().toString().replace("-", "")
-            + ";DB_CLOSE_DELAY=-1");
+            + ";DB_CLOSE_DELAY=-1;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE");
     dataSource.setUser("sa");
     ScriptUtils.executeSqlScript(dataSource.getConnection(),
             new ClassPathResource("db/migration/h2/V1__init.sql"));
-    NamedParameterJdbcTemplate jdbcTemplate = new NamedParameterJdbcTemplate(dataSource);
-    ExtendedSelectQueryExecutor dslQueries = new ExtendedSelectQueryExecutor(jdbcTemplate);
-    repository = new JdbcApiKeyRepository(jdbcTemplate, dslQueries);
+    var repos = CrudRepositories.over(dataSource);
+    repository = new JdbcApiKeyRepository(repos.apiKeys(), repos.dslQueries());
     store = new ApiKeyStore(repository, new ObjectMapper(), new SelfProvider(storeOrNull()));
   }
 

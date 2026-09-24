@@ -2,25 +2,18 @@ package cbs.nova.starter.persistence;
 
 import cbs.nova.starter.entity.ChangeRequestEntity;
 import cbs.nova.starter.entity.ChangeRequestEntity.Status;
-import java.sql.Timestamp;
-import java.sql.Types;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.RowMapper;
-import org.springframework.jdbc.core.SqlParameterValue;
-import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
-import org.springframework.jdbc.support.GeneratedKeyHolder;
-import org.springframework.jdbc.support.KeyHolder;
 
 /**
  * JDBC access to {@code dsl_change_request} (T568). Follows the
- * {@link cbs.nova.starter.persistence.NotificationRuleRepository} idioms: constructor injection via
- * Lombok, named parameters, an explicit {@link RowMapper}, and generated keys surfaced from the
- * insert.
+ * {@link cbs.nova.starter.persistence.NotificationRuleRepository} idioms: reads via squigglesql,
+ * writes delegated to the Spring Data {@link ChangeRequestCrudRepository}, and an explicit
+ * {@link RowMapper}.
  */
 public class ChangeRequestRepository {
 
@@ -38,42 +31,28 @@ public class ChangeRequestRepository {
                           : rs.getTimestamp("approved_at").toInstant(),
                   rs.getString("comment"));
 
-  private final NamedParameterJdbcTemplate jdbcTemplate;
+  private final ChangeRequestCrudRepository crud;
   private final ExtendedSelectQueryExecutor dslQueries;
   private static final ChangeRequestTableColumns T = ChangeRequestTableColumns.of();
 
-  public ChangeRequestRepository(NamedParameterJdbcTemplate jdbcTemplate,
+  public ChangeRequestRepository(ChangeRequestCrudRepository crud,
           ExtendedSelectQueryExecutor dslQueries) {
-    this.jdbcTemplate = Objects.requireNonNull(jdbcTemplate);
+    this.crud = Objects.requireNonNull(crud);
     this.dslQueries = Objects.requireNonNull(dslQueries);
   }
 
   public long insert(ChangeRequestEntity row) {
     Objects.requireNonNull(row, "row");
-    var params = new MapSqlParameterSource()
-            .addValue("definitionName", row.definitionName())
-            .addValue("draftContent", new SqlParameterValue(Types.OTHER, row.draftContent()))
-            .addValue("requestedBy", row.requestedBy())
-            .addValue("requestedAt", Timestamp.from(row.requestedAt()))
-            .addValue("status", row.status().name())
-            .addValue("approvedBy", row.approvedBy())
-            .addValue("approvedAt",
-                    row.approvedAt() == null ? null : Timestamp.from(row.approvedAt()))
-            .addValue("comment", row.comment());
-    KeyHolder keyHolder = new GeneratedKeyHolder();
-    jdbcTemplate.update("""
-            INSERT INTO dsl_change_request
-                    (definition_name, draft_content, requested_by, requested_at, status,
-                     approved_by, approved_at, comment)
-            VALUES (:definitionName, :draftContent, :requestedBy, :requestedAt, :status,
-                    :approvedBy, :approvedAt, :comment)
-            """, params, keyHolder, new String[]{"id"});
-    Number key = keyHolder.getKey();
-    if (key == null) {
-      throw new IllegalStateException(
-              "Insert into dsl_change_request returned no generated key");
-    }
-    return key.longValue();
+    return crud.save(new ChangeRequestEntity(
+            row.id(),
+            row.definitionName(),
+            row.draftContent(),
+            row.requestedBy(),
+            row.requestedAt(),
+            row.status(),
+            row.approvedBy(),
+            row.approvedAt(),
+            row.comment())).id();
   }
 
   public Optional<ChangeRequestEntity> findById(long id) {
@@ -135,18 +114,7 @@ public class ChangeRequestRepository {
 
   public void updateStatus(long id, Status status, @Nullable String approvedBy,
           @Nullable Instant approvedAt, @Nullable String comment) {
-    var params = new MapSqlParameterSource()
-            .addValue("id", id)
-            .addValue("status", status.name())
-            .addValue("approvedBy", approvedBy)
-            .addValue("approvedAt", approvedAt == null ? null : Timestamp.from(approvedAt))
-            .addValue("comment", comment);
-    jdbcTemplate.update("""
-            UPDATE dsl_change_request
-            SET status = :status, approved_by = :approvedBy, approved_at = :approvedAt,
-                comment = :comment
-            WHERE id = :id
-            """, params);
+    crud.updateStatus(id, status.name(), approvedBy, approvedAt, comment);
   }
 
   public long count() {

@@ -9,7 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import cbs.nova.starter.config.router.ApiKeyAdminRouterConfiguration;
 import cbs.nova.starter.converter.DefaultDslExceptionMapper;
-import cbs.nova.starter.persistence.ExtendedSelectQueryExecutor;
+import cbs.nova.starter.persistence.CrudRepositories;
 import cbs.nova.starter.persistence.JdbcApiKeyRepository;
 import cbs.nova.starter.service.ApiKeyStore;
 import java.util.List;
@@ -25,7 +25,6 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.datasource.init.ScriptUtils;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -49,13 +48,12 @@ class ApiKeyAdminHandlerTest {
     var dataSource = new JdbcDataSource();
     dataSource
             .setURL("jdbc:h2:mem:api-keys-handler-" + UUID.randomUUID().toString().replace("-", "")
-                    + ";DB_CLOSE_DELAY=-1");
+                    + ";DB_CLOSE_DELAY=-1;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE");
     dataSource.setUser("sa");
     ScriptUtils.executeSqlScript(dataSource.getConnection(),
             new ClassPathResource("db/migration/h2/V1__init.sql"));
-    NamedParameterJdbcTemplate jdbcTemplate = new NamedParameterJdbcTemplate(dataSource);
-    ExtendedSelectQueryExecutor dslQueries = new ExtendedSelectQueryExecutor(jdbcTemplate);
-    JdbcApiKeyRepository repository = new JdbcApiKeyRepository(jdbcTemplate, dslQueries);
+    var repos = CrudRepositories.over(dataSource);
+    JdbcApiKeyRepository repository = new JdbcApiKeyRepository(repos.apiKeys(), repos.dslQueries());
     store = new ApiKeyStore(repository, objectMapper, new SelfProvider(() -> store));
     ApiKeyAdminHandler handler = new ApiKeyAdminHandler(store);
     ApiKeyAdminRouterConfiguration router = new ApiKeyAdminRouterConfiguration();

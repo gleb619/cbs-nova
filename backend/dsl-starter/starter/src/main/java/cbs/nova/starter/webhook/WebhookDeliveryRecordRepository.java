@@ -3,17 +3,15 @@ package cbs.nova.starter.webhook;
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.persistence.ExtendedSelectQuery;
 import cbs.nova.starter.persistence.ExtendedSelectQueryExecutor;
+import cbs.nova.starter.persistence.WebhookDeliveryCrudRepository;
 import cbs.nova.starter.persistence.WebhookDeliveryQueryCriteria;
 import cbs.nova.starter.persistence.WebhookDeliveryTableColumns;
 import com.github.squigglesql.squigglesql.Selectable;
 import com.github.squigglesql.squigglesql.TableReference;
 import com.github.squigglesql.squigglesql.literal.Literal;
-import java.sql.Timestamp;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.RowMapper;
-import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /**
  * JDBC access to the append-only {@code dsl_webhook_deliveries} table.
@@ -23,8 +21,10 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
  * convention, so there are no update or delete methods anywhere in the codebase.
  *
  * <p>
- * Follows the {@link cbs.nova.starter.persistence.JdbcDslRunRepository} idioms: explicit
- * constructor injection, named parameters, and an explicit {@link RowMapper}.
+ * Follows the {@link cbs.nova.starter.persistence.JdbcDslRunRepository} idioms: squigglesql reads
+ * via {@link ExtendedSelectQueryExecutor}, writes delegated to the Spring Data
+ * {@link WebhookDeliveryCrudRepository}, and an explicit {@link RowMapper}. Selects are built with
+ * squigglesql; the insert flows through the Spring Data CRUD repository.
  */
 public class WebhookDeliveryRecordRepository {
 
@@ -40,12 +40,12 @@ public class WebhookDeliveryRecordRepository {
                   rs.getString("last_error"),
                   rs.getObject("duration_ms", Long.class));
 
-  private final NamedParameterJdbcTemplate jdbcTemplate;
+  private final WebhookDeliveryCrudRepository crud;
   private final ExtendedSelectQueryExecutor dslQueries;
 
-  public WebhookDeliveryRecordRepository(NamedParameterJdbcTemplate jdbcTemplate,
+  public WebhookDeliveryRecordRepository(WebhookDeliveryCrudRepository crud,
           ExtendedSelectQueryExecutor dslQueries) {
-    this.jdbcTemplate = jdbcTemplate;
+    this.crud = crud;
     this.dslQueries = dslQueries;
   }
 
@@ -54,23 +54,16 @@ public class WebhookDeliveryRecordRepository {
    * used as supplied; callers normally pass a null identity and {@code Instant.now()}.
    */
   public void insert(WebhookDeliveryRecord row) {
-    var params = new MapSqlParameterSource()
-            .addValue("occurredAt", Timestamp.from(row.occurredAt()))
-            .addValue("subscriptionId", row.subscriptionId())
-            .addValue("eventType", row.eventType())
-            .addValue("url", truncate(row.url(), StarterConstants.WEBHOOK_URL_MAX_LENGTH))
-            .addValue("status", row.status())
-            .addValue("attempts", row.attempts())
-            .addValue("lastError", truncate(row.lastError(),
-                    StarterConstants.WEBHOOK_LAST_ERROR_MAX_LENGTH))
-            .addValue("durationMs", row.durationMs());
-    jdbcTemplate.update(
-            """
-                    INSERT INTO dsl_webhook_deliveries
-                            (occurred_at, subscription_id, event_type, url, status, attempts, last_error, duration_ms)
-                    VALUES (:occurredAt, :subscriptionId, :eventType, :url, :status, :attempts, :lastError, :durationMs)
-                    """,
-            params);
+    crud.save(new WebhookDeliveryRecord(
+            row.id(),
+            row.occurredAt(),
+            row.subscriptionId(),
+            row.eventType(),
+            truncate(row.url(), StarterConstants.WEBHOOK_URL_MAX_LENGTH),
+            row.status(),
+            row.attempts(),
+            truncate(row.lastError(), StarterConstants.WEBHOOK_LAST_ERROR_MAX_LENGTH),
+            row.durationMs()));
   }
 
   /**

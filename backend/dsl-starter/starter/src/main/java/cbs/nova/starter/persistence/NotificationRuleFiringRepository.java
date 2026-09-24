@@ -4,19 +4,18 @@ import cbs.nova.starter.entity.NotificationRuleFiringEntity;
 import com.github.squigglesql.squigglesql.Selectable;
 import com.github.squigglesql.squigglesql.TableReference;
 import com.github.squigglesql.squigglesql.literal.Literal;
-import java.sql.Timestamp;
 import java.util.List;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.RowMapper;
-import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
-import org.springframework.jdbc.support.GeneratedKeyHolder;
-import org.springframework.jdbc.support.KeyHolder;
 
 /**
  * JDBC access to the append-only {@code dsl_notification_rule_firing} audit table: an insert plus a
  * paged, filterable read. There is intentionally no update or delete path.
+ *
+ * <p>
+ * Selects are built with squigglesql ({@link ExtendedSelectQueryExecutor}); the insert flows
+ * through the Spring Data {@link NotificationRuleFiringCrudRepository}.
  */
 public class NotificationRuleFiringRepository {
 
@@ -32,38 +31,18 @@ public class NotificationRuleFiringRepository {
                   rs.getObject("duration_ms", Long.class),
                   rs.getTimestamp("created_at").toInstant());
 
-  private final NamedParameterJdbcTemplate jdbcTemplate;
+  private final NotificationRuleFiringCrudRepository crud;
   private final ExtendedSelectQueryExecutor dslQueries;
 
-  public NotificationRuleFiringRepository(NamedParameterJdbcTemplate jdbcTemplate,
+  public NotificationRuleFiringRepository(NotificationRuleFiringCrudRepository crud,
           ExtendedSelectQueryExecutor dslQueries) {
-    this.jdbcTemplate = jdbcTemplate;
+    this.crud = crud;
     this.dslQueries = dslQueries;
   }
 
   public long insert(NotificationRuleFiringEntity row) {
     Objects.requireNonNull(row, "row");
-    var params = new MapSqlParameterSource()
-            .addValue("eventId", row.eventId())
-            .addValue("ruleId", row.ruleId())
-            .addValue("ruleName", row.ruleName())
-            .addValue("sink", row.sink())
-            .addValue("outcome", row.outcome())
-            .addValue("detail", row.detail())
-            .addValue("durationMs", row.durationMs())
-            .addValue("createdAt", Timestamp.from(row.createdAt()));
-    KeyHolder keyHolder = new GeneratedKeyHolder();
-    jdbcTemplate.update("""
-            INSERT INTO dsl_notification_rule_firing
-                    (event_id, rule_id, rule_name, sink, outcome, detail, duration_ms, created_at)
-            VALUES (:eventId, :ruleId, :ruleName, :sink, :outcome, :detail, :durationMs, :createdAt)
-            """, params, keyHolder, new String[]{"id"});
-    Number key = keyHolder.getKey();
-    if (key == null) {
-      throw new IllegalStateException(
-              "Insert into dsl_notification_rule_firing returned no generated key");
-    }
-    return key.longValue();
+    return crud.save(row).id();
   }
 
   public NotificationRuleFiringSearchResult search(@Nullable Long ruleId, int offset, int limit) {

@@ -1,6 +1,8 @@
 package cbs.nova.starter.notification;
 
 import cbs.nova.starter.persistence.ExtendedSelectQueryExecutor;
+import cbs.nova.starter.persistence.NotificationRuleCrudRepository;
+import cbs.nova.starter.persistence.NotificationRuleFiringCrudRepository;
 import cbs.nova.starter.persistence.NotificationRuleFiringRepository;
 import cbs.nova.starter.persistence.NotificationRuleRepository;
 import cbs.nova.starter.service.DslAuditService;
@@ -14,7 +16,6 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.context.annotation.Bean;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import tools.jackson.databind.ObjectMapper;
 
@@ -43,17 +44,17 @@ public class NotificationConfiguration {
 
   @Bean
   @ConditionalOnBean(DataSource.class)
-  NotificationRuleRepository notificationRuleRepository(NamedParameterJdbcTemplate jdbcTemplate,
+  NotificationRuleRepository notificationRuleRepository(NotificationRuleCrudRepository crud,
           ExtendedSelectQueryExecutor dslQueries) {
-    return new NotificationRuleRepository(jdbcTemplate, dslQueries);
+    return new NotificationRuleRepository(crud, dslQueries);
   }
 
   @Bean
   @ConditionalOnBean(DataSource.class)
   NotificationRuleFiringRepository notificationRuleFiringRepository(
-          NamedParameterJdbcTemplate jdbcTemplate,
+          NotificationRuleFiringCrudRepository crud,
           ExtendedSelectQueryExecutor dslQueries) {
-    return new NotificationRuleFiringRepository(jdbcTemplate, dslQueries);
+    return new NotificationRuleFiringRepository(crud, dslQueries);
   }
 
   @Bean

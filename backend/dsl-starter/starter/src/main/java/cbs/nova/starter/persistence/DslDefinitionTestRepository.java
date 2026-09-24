@@ -3,22 +3,20 @@ package cbs.nova.starter.persistence;
 import cbs.nova.starter.entity.DslDefinitionTestEntity;
 import com.github.squigglesql.squigglesql.criteria.Criteria;
 import com.github.squigglesql.squigglesql.literal.Literal;
-import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 import org.springframework.jdbc.core.RowMapper;
-import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * JDBC access to the {@code dsl_definition_tests} sidecar table (T409).
  *
  * <p>
- * Follows the {@link DslEventRepository} idioms: constructor injection, named parameters, and an
- * explicit {@link RowMapper}. Reads are keyed by {@code definition_name}; authoring replaces a
- * whole definition's case set in one transaction ({@link #replaceAll}).
+ * Follows the {@link DslEventRepository} idioms: reads keyed by {@code definition_name} use
+ * squigglesql; writes flow through the Spring Data {@link DslDefinitionTestCrudRepository}, and an
+ * explicit {@link RowMapper}. Authoring replaces a whole definition's case set in one transaction
+ * ({@link #replaceAll}).
  */
 public class DslDefinitionTestRepository {
 
@@ -32,14 +30,14 @@ public class DslDefinitionTestRepository {
                   rs.getTimestamp("created_at").toInstant(),
                   rs.getTimestamp("updated_at").toInstant());
 
-  private final NamedParameterJdbcTemplate jdbcTemplate;
+  private final DslDefinitionTestCrudRepository crud;
   private final TransactionTemplate transactionTemplate;
   private final ExtendedSelectQueryExecutor dslQueries;
   private static final DslDefinitionTestTableColumns T = DslDefinitionTestTableColumns.of();
 
-  public DslDefinitionTestRepository(NamedParameterJdbcTemplate jdbcTemplate,
+  public DslDefinitionTestRepository(DslDefinitionTestCrudRepository crud,
           TransactionTemplate transactionTemplate, ExtendedSelectQueryExecutor dslQueries) {
-    this.jdbcTemplate = Objects.requireNonNull(jdbcTemplate);
+    this.crud = Objects.requireNonNull(crud);
     this.transactionTemplate = Objects.requireNonNull(transactionTemplate);
     this.dslQueries = Objects.requireNonNull(dslQueries);
   }
@@ -67,11 +65,14 @@ public class DslDefinitionTestRepository {
   }
 
   public void insert(DslDefinitionTestEntity row) {
-    jdbcTemplate.update("""
-            INSERT INTO dsl_definition_tests
-                    (definition_name, case_name, input, expected_output, created_at, updated_at)
-            VALUES (:definitionName, :caseName, :input, :expectedOutput, :createdAt, :updatedAt)
-            """, insertParams(row));
+    crud.save(new DslDefinitionTestEntity(
+            row.id(),
+            row.definitionName(),
+            row.caseName(),
+            row.inputJson(),
+            row.expectedOutputJson(),
+            row.createdAt(),
+            row.updatedAt()));
   }
 
   /**
@@ -94,17 +95,6 @@ public class DslDefinitionTestRepository {
   }
 
   public void deleteForDefinition(String definitionName) {
-    jdbcTemplate.update("DELETE FROM dsl_definition_tests WHERE definition_name = :definitionName",
-            new MapSqlParameterSource("definitionName", definitionName));
-  }
-
-  private static MapSqlParameterSource insertParams(DslDefinitionTestEntity row) {
-    return new MapSqlParameterSource()
-            .addValue("definitionName", row.definitionName())
-            .addValue("caseName", row.caseName())
-            .addValue("input", row.inputJson())
-            .addValue("expectedOutput", row.expectedOutputJson())
-            .addValue("createdAt", Timestamp.from(row.createdAt()))
-            .addValue("updatedAt", Timestamp.from(row.updatedAt()));
+    crud.deleteByDefinitionName(definitionName);
   }
 }

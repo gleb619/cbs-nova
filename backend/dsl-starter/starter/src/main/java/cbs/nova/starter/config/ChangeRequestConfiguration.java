@@ -3,6 +3,7 @@ package cbs.nova.starter.config;
 import cbs.nova.starter.service.ChangeRequestService;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.controller.DslDraftHandler;
+import cbs.nova.starter.persistence.ChangeRequestCrudRepository;
 import cbs.nova.starter.persistence.ChangeRequestRepository;
 import cbs.nova.starter.persistence.ExtendedSelectQueryExecutor;
 import cbs.nova.starter.service.DslAuditService;
@@ -10,7 +11,6 @@ import javax.sql.DataSource;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.context.annotation.Bean;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import tools.jackson.databind.ObjectMapper;
 
 // NOTE: deliberately NOT annotated @Configuration — like NotificationConfiguration this class
@@ -28,9 +28,9 @@ public class ChangeRequestConfiguration {
 
   @Bean
   @ConditionalOnBean(DataSource.class)
-  ChangeRequestRepository changeRequestRepository(NamedParameterJdbcTemplate jdbcTemplate,
+  ChangeRequestRepository changeRequestRepository(ChangeRequestCrudRepository crud,
           ExtendedSelectQueryExecutor dslQueries) {
-    return new ChangeRequestRepository(jdbcTemplate, dslQueries);
+    return new ChangeRequestRepository(crud, dslQueries);
   }
 
   @Bean

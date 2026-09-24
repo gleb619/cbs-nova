@@ -1,26 +1,23 @@
 package cbs.nova.starter.persistence;
 
-import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.entity.DslApiKeyEntity;
 import com.github.squigglesql.squigglesql.Selectable;
 import com.github.squigglesql.squigglesql.TableReference;
 import com.github.squigglesql.squigglesql.literal.Literal;
-import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.RowMapper;
-import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /**
  * JDBC access to the {@code dsl_api_keys} table (T410).
  *
  * <p>
- * Follows the {@link DslDefinitionTestRepository} idioms: constructor injection, named parameters,
- * and an explicit {@link RowMapper}. The repository only stores and looks up keys by their SHA-256
- * hash; the plaintext key never reaches this layer.
+ * Follows the {@link DslDefinitionTestRepository} idioms: reads via squigglesql
+ * ({@link ExtendedSelectQueryExecutor}) and writes delegated to the Spring Data
+ * {@link ApiKeyCrudRepository}, plus an explicit {@link RowMapper}. The repository only stores and
+ * looks up keys by their SHA-256 hash; the plaintext key never reaches this layer.
  */
 public class JdbcApiKeyRepository {
 
@@ -35,12 +32,12 @@ public class JdbcApiKeyRepository {
                   ? null
                   : rs.getTimestamp("last_used_at").toInstant());
 
-  private final NamedParameterJdbcTemplate jdbcTemplate;
+  private final ApiKeyCrudRepository crud;
   private final ExtendedSelectQueryExecutor dslQueries;
 
-  public JdbcApiKeyRepository(NamedParameterJdbcTemplate jdbcTemplate,
+  public JdbcApiKeyRepository(ApiKeyCrudRepository crud,
           ExtendedSelectQueryExecutor dslQueries) {
-    this.jdbcTemplate = jdbcTemplate;
+    this.crud = crud;
     this.dslQueries = dslQueries;
   }
 
@@ -78,19 +75,14 @@ public class JdbcApiKeyRepository {
   }
 
   public void insert(DslApiKeyEntity row) {
-    var params = new MapSqlParameterSource()
-            .addValue("label", row.label())
-            .addValue("keyHash", row.keyHash())
-            .addValue("keyPrefix", row.keyPrefix())
-            .addValue("createdAt", Timestamp.from(row.createdAt()))
-            .addValue("revokedAt", row.revokedAt() == null ? null : Timestamp.from(row.revokedAt()))
-            .addValue("lastUsedAt",
-                    row.lastUsedAt() == null ? null : Timestamp.from(row.lastUsedAt()));
-    jdbcTemplate.update("""
-            INSERT INTO dsl_api_keys
-                    (label, key_hash, key_prefix, created_at, revoked_at, last_used_at)
-            VALUES (:label, :keyHash, :keyPrefix, :createdAt, :revokedAt, :lastUsedAt)
-            """, params);
+    crud.save(new DslApiKeyEntity(
+            row.id(),
+            row.label(),
+            row.keyHash(),
+            row.keyPrefix(),
+            row.createdAt(),
+            row.revokedAt(),
+            row.lastUsedAt()));
   }
 
   /**
@@ -99,14 +91,7 @@ public class JdbcApiKeyRepository {
    * 404.
    */
   public boolean markRevoked(long id, Instant revokedAt) {
-    int rows = jdbcTemplate.update("""
-            UPDATE dsl_api_keys
-            SET revoked_at = :revokedAt
-            WHERE id = :id AND revoked_at IS NULL
-            """, new MapSqlParameterSource()
-            .addValue("id", id)
-            .addValue("revokedAt", Timestamp.from(revokedAt)));
-    return rows > 0;
+    return crud.markRevoked(id, revokedAt) > 0;
   }
 
   /**
@@ -115,13 +100,7 @@ public class JdbcApiKeyRepository {
    * {@code ApiKeyStore} swallows) so the auth hot path stays protected.
    */
   public void touchLastUsed(long id, Instant lastUsedAt) {
-    jdbcTemplate.update("""
-            UPDATE dsl_api_keys
-            SET last_used_at = :lastUsedAt
-            WHERE id = :id
-            """, new MapSqlParameterSource()
-            .addValue("id", id)
-            .addValue("lastUsedAt", Timestamp.from(lastUsedAt)));
+    crud.touchLastUsed(id, lastUsedAt);
   }
 
   public List<DslApiKeyEntity> listAll() {

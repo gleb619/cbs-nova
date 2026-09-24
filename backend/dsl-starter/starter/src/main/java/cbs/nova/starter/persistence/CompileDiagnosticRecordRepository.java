@@ -11,14 +11,11 @@ import cbs.nova.starter.model.CompileDiagnosticRecord;
 import cbs.nova.starter.model.CompileDiagnosticSource;
 import com.github.squigglesql.squigglesql.criteria.Criteria;
 import com.github.squigglesql.squigglesql.literal.Literal;
-import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.RowMapper;
-import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /**
  * JDBC access to the append-only {@code dsl_compile_diagnostics} table.
@@ -28,8 +25,9 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
  * convention, so there are no update or delete methods anywhere in the codebase.
  *
  * <p>
- * Follows the {@link cbs.nova.starter.webhook.WebhookDeliveryRecordRepository} idioms: constructor
- * injection via Lombok, named parameters, and an explicit {@link RowMapper}.
+ * Follows the {@link cbs.nova.starter.webhook.WebhookDeliveryRecordRepository} idioms: writes flow
+ * through the Spring Data {@link CompileDiagnosticCrudRepository}, reads via squigglesql, and an
+ * explicit {@link RowMapper}.
  */
 public class CompileDiagnosticRecordRepository {
 
@@ -46,13 +44,13 @@ public class CompileDiagnosticRecordRepository {
                   rs.getString("code"),
                   rs.getString("message"));
 
-  private final NamedParameterJdbcTemplate jdbcTemplate;
+  private final CompileDiagnosticCrudRepository crud;
   private final ExtendedSelectQueryExecutor dslQueries;
   private static final CompileDiagnosticTableColumns T = CompileDiagnosticTableColumns.of();
 
-  public CompileDiagnosticRecordRepository(NamedParameterJdbcTemplate jdbcTemplate,
+  public CompileDiagnosticRecordRepository(CompileDiagnosticCrudRepository crud,
           ExtendedSelectQueryExecutor dslQueries) {
-    this.jdbcTemplate = Objects.requireNonNull(jdbcTemplate);
+    this.crud = Objects.requireNonNull(crud);
     this.dslQueries = Objects.requireNonNull(dslQueries);
   }
 
@@ -61,24 +59,17 @@ public class CompileDiagnosticRecordRepository {
    * as supplied; callers normally pass a null identity and {@code Instant.now()}.
    */
   public void insert(CompileDiagnosticRecord row) {
-    var params = new MapSqlParameterSource()
-            .addValue("occurredAt", Timestamp.from(row.occurredAt()))
-            .addValue("source", truncate(row.source(), COMPILE_DIAGNOSTIC_SOURCE_MAX_LENGTH))
-            .addValue("definition",
-                    truncate(row.definition(), COMPILE_DIAGNOSTIC_DEFINITION_MAX_LENGTH))
-            .addValue("file", truncate(row.file(), COMPILE_DIAGNOSTIC_FILE_MAX_LENGTH))
-            .addValue("line", row.line() != null ? row.line().intValue() : null)
-            .addValue("colNumber", row.column() != null ? row.column().intValue() : null)
-            .addValue("severity", truncate(row.severity(), COMPILE_DIAGNOSTIC_SEVERITY_MAX_LENGTH))
-            .addValue("code", truncate(row.code(), COMPILE_DIAGNOSTIC_CODE_MAX_LENGTH))
-            .addValue("message", row.message());
-    jdbcTemplate.update(
-            """
-                    INSERT INTO dsl_compile_diagnostics
-                            (occurred_at, source, definition, file, line, col_number, severity, code, message)
-                    VALUES (:occurredAt, :source, :definition, :file, :line, :colNumber, :severity, :code, :message)
-                    """,
-            params);
+    crud.save(new CompileDiagnosticRecord(
+            row.id(),
+            row.occurredAt(),
+            truncate(row.source(), COMPILE_DIAGNOSTIC_SOURCE_MAX_LENGTH),
+            truncate(row.definition(), COMPILE_DIAGNOSTIC_DEFINITION_MAX_LENGTH),
+            truncate(row.file(), COMPILE_DIAGNOSTIC_FILE_MAX_LENGTH),
+            row.line(),
+            row.column(),
+            truncate(row.severity(), COMPILE_DIAGNOSTIC_SEVERITY_MAX_LENGTH),
+            truncate(row.code(), COMPILE_DIAGNOSTIC_CODE_MAX_LENGTH),
+            row.message()));
   }
 
   /**

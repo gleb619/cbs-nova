@@ -1,19 +1,12 @@
 package cbs.nova.starter.persistence;
 
 import cbs.nova.starter.entity.DslEventEntity;
-import java.sql.Timestamp;
-import java.sql.Types;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 
 import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.RowMapper;
-import org.springframework.jdbc.core.SqlParameterValue;
-import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
-import org.springframework.jdbc.support.GeneratedKeyHolder;
-import org.springframework.jdbc.support.KeyHolder;
 
 public class DslEventRepository {
 
@@ -27,39 +20,19 @@ public class DslEventRepository {
           rs.getInt("schema_version"),
           rs.getTimestamp("created_at").toInstant());
 
-  private final NamedParameterJdbcTemplate jdbcTemplate;
+  private final DslEventCrudRepository crud;
   private final ExtendedSelectQueryExecutor dslQueries;
   private static final DslEventTableColumns T = DslEventTableColumns.of();
 
-  public DslEventRepository(NamedParameterJdbcTemplate jdbcTemplate,
+  public DslEventRepository(DslEventCrudRepository crud,
           ExtendedSelectQueryExecutor dslQueries) {
-    this.jdbcTemplate = Objects.requireNonNull(jdbcTemplate);
+    this.crud = Objects.requireNonNull(crud);
     this.dslQueries = Objects.requireNonNull(dslQueries);
   }
 
   public long insert(DslEventEntity row) {
     Objects.requireNonNull(row, "row");
-    var params = new MapSqlParameterSource()
-            .addValue("eventType", row.eventType())
-            .addValue("aggregateType", row.aggregateType())
-            .addValue("aggregateId", row.aggregateId())
-            .addValue("correlationId", row.correlationId())
-            .addValue("payload", new SqlParameterValue(Types.OTHER, row.payloadJson()))
-            .addValue("schemaVersion", row.schemaVersion())
-            .addValue("createdAt", Timestamp.from(row.createdAt()));
-    KeyHolder keyHolder = new GeneratedKeyHolder();
-    jdbcTemplate.update("""
-            INSERT INTO dsl_events
-                    (event_type, aggregate_type, aggregate_id, correlation_id,
-                     payload, schema_version, created_at)
-            VALUES (:eventType, :aggregateType, :aggregateId, :correlationId,
-                    :payload, :schemaVersion, :createdAt)
-            """, params, keyHolder, new String[]{"id"});
-    Number key = keyHolder.getKey();
-    if (key == null) {
-      throw new IllegalStateException("Insert into dsl_events returned no generated key");
-    }
-    return key.longValue();
+    return crud.save(row).id();
   }
 
   /**
@@ -85,9 +58,7 @@ public class DslEventRepository {
    * Marks the row as successfully published to the MQ sink.
    */
   public void markPublished(long id) {
-    var params = new MapSqlParameterSource().addValue("id", id);
-    int updated = jdbcTemplate.update(
-            "UPDATE dsl_events SET mq_published = true WHERE id = :id", params);
+    int updated = crud.markPublished(id);
     if (updated == 0) {
       throw new IllegalStateException(
               "Marking dsl_events row published had no effect for id " + id);

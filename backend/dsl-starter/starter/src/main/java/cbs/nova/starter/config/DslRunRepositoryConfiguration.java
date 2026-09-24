@@ -9,8 +9,12 @@ import cbs.nova.starter.converter.DslAuditMapper;
 import cbs.nova.starter.converter.DslRunMapper;
 import cbs.nova.starter.converter.TransactionExecutionMapper;
 import cbs.nova.starter.persistence.AesFieldEncryptor;
+import cbs.nova.starter.persistence.ApiKeyCrudRepository;
+import cbs.nova.starter.persistence.CompileDiagnosticCrudRepository;
 import cbs.nova.starter.persistence.CompileDiagnosticRecordRepository;
+import cbs.nova.starter.persistence.DslDefinitionTestCrudRepository;
 import cbs.nova.starter.persistence.DslDefinitionTestRepository;
+import cbs.nova.starter.persistence.DslEventCrudRepository;
 import cbs.nova.starter.persistence.DslEventRepository;
 import cbs.nova.starter.persistence.DslAuditCrudRepository;
 import cbs.nova.starter.persistence.DslAuditStore;
@@ -24,6 +28,7 @@ import cbs.nova.starter.persistence.JdbcDslRunRepository;
 import cbs.nova.starter.persistence.JdbcTransactionExecutionRepository;
 import cbs.nova.starter.persistence.NoOpFieldEncryptor;
 import cbs.nova.starter.persistence.TransactionExecutionJdbcRepository;
+import cbs.nova.starter.persistence.WebhookDeliveryCrudRepository;
 import cbs.nova.starter.service.ApiKeyStore;
 import cbs.nova.starter.service.DomainEventPublisher;
 import cbs.nova.starter.service.DslAuditService;
@@ -107,26 +112,26 @@ public class DslRunRepositoryConfiguration {
   @Bean
   @ConditionalOnBean(DataSource.class)
   public WebhookDeliveryRecordRepository webhookDeliveryRecordRepository(
-          NamedParameterJdbcTemplate jdbcTemplate,
+          WebhookDeliveryCrudRepository crud,
           ExtendedSelectQueryExecutor dslQueries) {
-    return new WebhookDeliveryRecordRepository(jdbcTemplate, dslQueries);
+    return new WebhookDeliveryRecordRepository(crud, dslQueries);
   }
 
   @Bean
   @ConditionalOnBean(DataSource.class)
   public CompileDiagnosticRecordRepository compileDiagnosticRecordRepository(
-          NamedParameterJdbcTemplate jdbcTemplate,
+          CompileDiagnosticCrudRepository crud,
           ExtendedSelectQueryExecutor dslQueries) {
-    return new CompileDiagnosticRecordRepository(jdbcTemplate, dslQueries);
+    return new CompileDiagnosticRecordRepository(crud, dslQueries);
   }
 
   @Bean
   @ConditionalOnBean(DataSource.class)
   public DslDefinitionTestRepository dslDefinitionTestRepository(
-          NamedParameterJdbcTemplate jdbcTemplate,
+          DslDefinitionTestCrudRepository crud,
           TransactionTemplate transactionTemplate,
           ExtendedSelectQueryExecutor dslQueries) {
-    return new DslDefinitionTestRepository(jdbcTemplate, transactionTemplate, dslQueries);
+    return new DslDefinitionTestRepository(crud, transactionTemplate, dslQueries);
   }
 
   @Bean
@@ -157,9 +162,9 @@ public class DslRunRepositoryConfiguration {
   // publisher is absent and the write sites become no-ops rather than failing construction.
   @Bean
   @ConditionalOnBean(DataSource.class)
-  public DslEventRepository dslEventRepository(NamedParameterJdbcTemplate jdbcTemplate,
+  public DslEventRepository dslEventRepository(DslEventCrudRepository crud,
           ExtendedSelectQueryExecutor dslQueries) {
-    return new DslEventRepository(jdbcTemplate, dslQueries);
+    return new DslEventRepository(crud, dslQueries);
   }
 
   @Bean
@@ -174,9 +179,9 @@ public class DslRunRepositoryConfiguration {
 
   @Bean
   @ConditionalOnBean(DataSource.class)
-  public JdbcApiKeyRepository jdbcApiKeyRepository(NamedParameterJdbcTemplate jdbcTemplate,
+  public JdbcApiKeyRepository jdbcApiKeyRepository(ApiKeyCrudRepository crud,
           ExtendedSelectQueryExecutor dslQueries) {
-    return new JdbcApiKeyRepository(jdbcTemplate, dslQueries);
+    return new JdbcApiKeyRepository(crud, dslQueries);
   }
 
   @Bean
