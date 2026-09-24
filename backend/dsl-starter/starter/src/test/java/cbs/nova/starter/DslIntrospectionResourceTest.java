@@ -1,5 +1,7 @@
 package cbs.nova.starter;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -18,6 +20,7 @@ import cbs.nova.starter.config.router.DslIntrospectionRouterConfiguration;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.controller.DslIntrospectionHandler;
 import cbs.nova.starter.converter.RequestQueryConverter;
+import cbs.nova.starter.client.DslBuilderClient;
 import cbs.nova.starter.service.DslDefinitionStatusResolver;
 import cbs.nova.starter.service.DslGitStatusResolver;
 import cbs.nova.starter.service.DslSourcePathResolver;
@@ -27,6 +30,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -44,12 +48,15 @@ class DslIntrospectionResourceTest {
             .registerProcess(
                     Dsl.process("LoanDisbursement")
                             .execute(ctx -> Result.success("ok")).build());
+    DslBuilderClient client = mock(DslBuilderClient.class);
+    ObjectProvider<DslBuilderClient> provider = mock(ObjectProvider.class);
+    when(provider.getIfAvailable()).thenReturn(client);
     DslIntrospectionMapper mapper = Mappers.getMapper(DslIntrospectionMapper.class);
     DslIntrospectionService service = new DslIntrospectionService(
             new JacksonJsonSchemaGenerator(),
             mapper,
             new DslDefinitionStatusResolver(DslProperties.builder().build(),
-                    new DslGitStatusResolver(DslProperties.builder().build(), null),
+                    new DslGitStatusResolver(provider),
                     new DslSourcePathResolver(DslProperties.builder().build())));
     DslIntrospectionHandler handler = new DslIntrospectionHandler(service,
             new RequestQueryConverter());

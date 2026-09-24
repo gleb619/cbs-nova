@@ -1,16 +1,12 @@
 package cbs.nova.starter.persistence;
 
-import static cbs.nova.starter.core.StarterConstants.DSL_EVENT_COLUMNS;
-
-import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.entity.DslEventEntity;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import lombok.RequiredArgsConstructor;
+
 import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.SqlParameterValue;
@@ -19,10 +15,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 
-@RequiredArgsConstructor
 public class DslEventRepository {
-
-  private static final String COLUMNS = StarterConstants.DSL_EVENT_COLUMNS;
 
   private static final RowMapper<DslEventEntity> ROW_MAPPER = (rs, rowNum) -> new DslEventEntity(
           rs.getLong("id"),
@@ -35,6 +28,14 @@ public class DslEventRepository {
           rs.getTimestamp("created_at").toInstant());
 
   private final NamedParameterJdbcTemplate jdbcTemplate;
+  private final ExtendedSelectQueryExecutor dslQueries;
+  private static final DslEventTableColumns T = DslEventTableColumns.of();
+
+  public DslEventRepository(NamedParameterJdbcTemplate jdbcTemplate,
+          ExtendedSelectQueryExecutor dslQueries) {
+    this.jdbcTemplate = Objects.requireNonNull(jdbcTemplate);
+    this.dslQueries = Objects.requireNonNull(dslQueries);
+  }
 
   public long insert(DslEventEntity row) {
     Objects.requireNonNull(row, "row");
@@ -68,14 +69,16 @@ public class DslEventRepository {
     if (limit <= 0) {
       throw new IllegalArgumentException("limit must be positive, was " + limit);
     }
-    var params = new MapSqlParameterSource()
-            .addValue("limit", limit);
-    return jdbcTemplate.query("""
-            SELECT %s FROM dsl_events
-            WHERE mq_published = false
-            ORDER BY id ASC
-            LIMIT :limit
-            """.formatted(COLUMNS), params, ROW_MAPPER);
+    var r = T.refer();
+    ExtendedSelectQuery query = dslQueries.select()
+            .select(DslEventQueryCriteria.fullSelection(T, r)
+                    .toArray(new com.github.squigglesql.squigglesql.Selectable[0]))
+            .from(r)
+            .where(DslEventQueryCriteria.isUnpublished(T, r))
+            .orderByAsc(r.get(T.id()))
+            .limit(limit)
+            .build();
+    return dslQueries.query(query, ROW_MAPPER);
   }
 
   /**
@@ -106,43 +109,45 @@ public class DslEventRepository {
       throw new IllegalArgumentException("limit must be positive, was " + limit);
     }
 
-    StringBuilder where = new StringBuilder();
-    var params = new MapSqlParameterSource();
-    List<String> clauses = new ArrayList<>();
-    if (eventType != null && !eventType.isBlank()) {
-      clauses.add("event_type = :eventType");
-      params.addValue("eventType", eventType);
-    }
-    if (aggregateType != null && !aggregateType.isBlank()) {
-      clauses.add("aggregate_type = :aggregateType");
-      params.addValue("aggregateType", aggregateType);
-    }
-    if (aggregateId != null && !aggregateId.isBlank()) {
-      clauses.add("aggregate_id = :aggregateId");
-      params.addValue("aggregateId", aggregateId);
-    }
-    if (correlationId != null && !correlationId.isBlank()) {
-      clauses.add("correlation_id = :correlationId");
-      params.addValue("correlationId", correlationId);
-    }
-    if (since != null) {
-      clauses.add("created_at >= :since");
-      params.addValue("since", Timestamp.from(since));
-    }
-    if (!clauses.isEmpty()) {
-      where.append("WHERE ").append(String.join(" AND ", clauses));
+    var r = T.refer();
+    var builder = dslQueries.select()
+            .from(r)
+            .whereIf(eventType != null && !eventType.isBlank(),
+                    () -> DslEventQueryCriteria.matchesEventType(T, r, eventType))
+            .whereIf(aggregateType != null && !aggregateType.isBlank(),
+                    () -> DslEventQueryCriteria.matchesAggregateType(T, r, aggregateType))
+            .whereIf(aggregateId != null && !aggregateId.isBlank(),
+                    () -> DslEventQueryCriteria.matchesAggregateId(T, r, aggregateId))
+            .whereIf(correlationId != null && !correlationId.isBlank(),
+                    () -> DslEventQueryCriteria.matchesCorrelationId(T, r, correlationId))
+            .whereIf(since != null,
+                    () -> DslEventQueryCriteria.occurredSince(T, r, since));
+
+    Long total;
+    if (eventType == null && aggregateType == null && aggregateId == null
+            && (correlationId == null || correlationId.isBlank()) && since == null) {
+      ExtendedSelectQuery countQuery = dslQueries.select()
+              .select(com.github.squigglesql.squigglesql.literal.Literal.unsafe("COUNT(*)"))
+              .from(r)
+              .build();
+      total = dslQueries.queryForObject(countQuery, Long.class);
+    } else {
+      ExtendedSelectQuery countQuery = builder
+              .select(com.github.squigglesql.squigglesql.literal.Literal.unsafe("COUNT(*)"))
+              .build();
+      total = dslQueries.queryForObject(countQuery, Long.class);
     }
 
-    Long total = jdbcTemplate.queryForObject(
-            "SELECT COUNT(*) FROM dsl_events " + where, params, Long.class);
-
-    params.addValue("limit", limit);
-    params.addValue("offset", offset);
-    List<DslEventEntity> items = jdbcTemplate.query("""
-            SELECT %s FROM dsl_events %s
-            ORDER BY created_at DESC, id DESC
-            LIMIT :limit OFFSET :offset
-            """.formatted(COLUMNS, where), params, ROW_MAPPER);
+    ExtendedSelectQuery dataQuery = builder
+            .select(DslEventQueryCriteria.fullSelection(T, r)
+                    .toArray(new com.github.squigglesql.squigglesql.Selectable[0]))
+            .from(r)
+            .orderByDesc(r.get(T.createdAt()))
+            .orderByDesc(r.get(T.id()))
+            .limit(limit)
+            .offset(offset)
+            .build();
+    List<DslEventEntity> items = dslQueries.query(dataQuery, ROW_MAPPER);
     return new DslEventSearchResult(items, total != null ? total : 0L);
   }
 }

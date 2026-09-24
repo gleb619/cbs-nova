@@ -6,8 +6,12 @@ import static cbs.nova.starter.BuilderClientTestSupport.stubLocalCompile;
 import static cbs.nova.starter.BuilderClientTestSupport.stubSuccessfulCompile;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -19,23 +23,42 @@ import cbs.nova.starter.config.router.DslDraftRouterConfiguration;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.controller.DslDraftHandler;
 import cbs.nova.starter.controller.DslReloadHandler;
+import cbs.nova.starter.exception.BuilderApiException;
 import cbs.nova.starter.exception.DslCompilationException;
 import cbs.nova.dsl.model.CompileDiagnostic;
+import cbs.nova.starter.model.VcsModels.CommitRequest;
+import cbs.nova.starter.model.VcsModels.CommitResult;
+import cbs.nova.starter.model.VcsModels.DefinitionBundle;
 import cbs.nova.starter.model.VcsModels.DefinitionHistoryEntry;
+import cbs.nova.starter.model.VcsModels.DiscardRequest;
+import cbs.nova.starter.model.VcsModels.DiscardResult;
 import cbs.nova.starter.model.VcsModels.DraftRequest;
 import cbs.nova.starter.model.VcsModels.HistoryDiffResponse;
 import cbs.nova.starter.model.VcsModels.DraftResponse;
 import cbs.nova.starter.model.VcsModels.DraftSummary;
+import cbs.nova.starter.model.VcsModels.ImportBundleResult;
+import cbs.nova.starter.model.VcsModels.LogEntry;
+import cbs.nova.starter.model.DslFileModels.BulkWriteRequest;
+import cbs.nova.starter.model.DslFileModels.BulkWriteResult;
+import cbs.nova.starter.model.DslFileModels.FileContentRequest;
+import cbs.nova.starter.model.DslFileModels.FileContentResponse;
+import cbs.nova.starter.model.DslFileModels.FileEntry;
+import cbs.nova.starter.model.DslFileModels.FlushResult;
 import cbs.nova.starter.model.PageResponse;
 import cbs.nova.starter.service.DslDefinitionHistoryService;
 import cbs.nova.starter.service.DslDefinitionBundleService;
+import cbs.nova.starter.service.DslGitStatusResolver;
+import cbs.nova.starter.service.DslSourcePathResolver;
+import cbs.nova.dsl.vcs.RepoStatus;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.web.servlet.function.EntityResponse;
 import org.springframework.web.servlet.function.RouterFunction;
@@ -51,8 +74,8 @@ import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Stream;
 import java.util.Optional;
+import java.util.stream.Stream;
 import org.springframework.http.HttpInputMessage;
 import org.springframework.http.HttpOutputMessage;
 import org.springframework.http.MediaType;
@@ -65,17 +88,100 @@ class DslDraftResourceTest {
   private DslProperties props;
   private Path sourceDir;
   private final ObjectMapper mapper = new ObjectMapper();
+  private DslBuilderClient client;
+  private DslSourcePathResolver sourcePathResolver;
+  private DslGitStatusResolver gitStatusResolver;
 
   @BeforeEach
   void setUp() throws IOException {
     sourceDir = Files.createTempDirectory("dsl-draft-test-");
     props = DslProperties.builder().sourceDir(sourceDir.toString()).build();
+
+    client = mock(DslBuilderClient.class);
+    sourcePathResolver = mock(DslSourcePathResolver.class);
+    gitStatusResolver = mock(DslGitStatusResolver.class);
+
+    stubLocalCompile(client);
+    stubAllClientMethods();
+
+    DslReloadHandler reloadHandler = new DslReloadHandler(props,
+            new DefinitionLoader(), null, null, providerOf(client), null, null, null);
+
     handler = new DslDraftHandler(props,
-            new DslReloadHandler(props, null, null, null, null, null, null, null),
+            reloadHandler,
             new DslDefinitionHistoryService(props, mapper), mapper,
             new DslDefinitionBundleService(mapper, Optional.empty(),
                     DslProperties.bundleServiceDefaults()),
-            null, null, null, null, null, null, null);
+            null, providerOf(client), null, null, null,
+            providerOfBean(sourcePathResolver), providerOfBean(gitStatusResolver));
+  }
+
+  private void stubAllClientMethods() {
+    String location = "/remote/.workbench/drafts/X.json";
+    lenient().when(client.saveDraft(anyString(), any(DraftRequest.class)))
+            .thenAnswer(inv -> {
+              String name = inv.getArgument(0);
+              return new DraftResponse(name, "Draft",
+                      "/remote/.workbench/drafts/" + name + ".json", false,
+                      LoadResult.empty(), null, null, System.currentTimeMillis(), null);
+            });
+    lenient().when(client.publishDraft(anyString(), any(DraftRequest.class)))
+            .thenAnswer(inv -> {
+              String name = inv.getArgument(0);
+              return new DraftResponse(name, "Published",
+                      "/remote/.workbench/published/" + name + ".json", false,
+                      LoadResult.empty(), null, null, System.currentTimeMillis(), null);
+            });
+    lenient().when(client.readDraft(anyString()))
+            .thenAnswer(inv -> {
+              String name = inv.getArgument(0);
+              return new DraftRequest(name, "process", "Draft", "1", null, null,
+                      System.currentTimeMillis());
+            });
+    lenient().when(client.deleteDraft(anyString()))
+            .thenAnswer(inv -> {
+              String name = inv.getArgument(0);
+              return new DraftResponse(name, "Deleted", null, false, LoadResult.empty(),
+                      null, null, System.currentTimeMillis(), null);
+            });
+    lenient().when(client.listDrafts(anyInt(), anyInt()))
+            .thenReturn(new PageResponse<>(List.of(), 0L, 0, 50));
+    lenient().when(client.history(anyString())).thenReturn(List.of());
+    lenient().when(client.historyEntry(anyString(), anyString()))
+            .thenThrow(new BuilderApiException(HttpStatus.NOT_FOUND, "NOT_FOUND", "not found"));
+    lenient().when(client.historyDiff(anyString(), anyString()))
+            .thenThrow(new BuilderApiException(HttpStatus.NOT_FOUND, "NOT_FOUND", "not found"));
+    lenient().when(client.restoreDraft(anyString(), anyString()))
+            .thenThrow(new BuilderApiException(HttpStatus.NOT_FOUND, "NOT_FOUND", "not found"));
+    lenient().when(client.exportBundle(any(Boolean.class)))
+            .thenReturn(new DefinitionBundle(1, "1", "2025-01-01T00:00:00Z", List.of(), null));
+    lenient().when(client.importBundle(any(DefinitionBundle.class), any(Boolean.class)))
+            .thenReturn(new ImportBundleResult(false, true, 0, 0, List.of(), null, List.of()));
+    lenient().when(client.discard(any(DiscardRequest.class)))
+            .thenReturn(new DiscardResult(List.of()));
+    lenient().when(client.commit(any(CommitRequest.class)))
+            .thenReturn(new CommitResult("abc", List.of(), 0L, false, null));
+    lenient().when(client.vcsLog(anyString(), anyInt())).thenReturn(List.of());
+    lenient().when(client.vcsShow(anyString(), anyString()))
+            .thenThrow(new BuilderApiException(HttpStatus.NOT_FOUND, "NOT_FOUND", "not found"));
+    lenient().when(client.readFile(anyString()))
+            .thenThrow(new BuilderApiException(HttpStatus.NOT_FOUND, "NOT_FOUND", "not found"));
+    lenient().when(client.fileExists(anyString())).thenReturn(false);
+    lenient().when(client.listFiles(anyString())).thenReturn(List.of());
+    lenient().when(client.pendingCount()).thenReturn(0);
+    lenient().when(client.vcsStatus()).thenReturn(Optional.empty());
+    lenient().doNothing().when(client).stageWrite(anyString(), anyString());
+    lenient().when(client.stageAll(any()))
+            .thenReturn(new BulkWriteResult(0, 0, List.of()));
+    lenient().when(client.flushFiles())
+            .thenReturn(new FlushResult(0, 0, List.of()));
+  }
+
+  private static <T> ObjectProvider<T> providerOfBean(T bean) {
+    @SuppressWarnings("unchecked")
+    ObjectProvider<T> provider = mock(ObjectProvider.class);
+    when(provider.getIfAvailable()).thenReturn(bean);
+    return provider;
   }
 
   @AfterEach
@@ -139,38 +245,28 @@ class DslDraftResourceTest {
   void savePersistsDraftJson() throws Exception {
     ServerResponse response = handler.save(postRequest("/api/dsl/drafts/foo/save"));
     assertThat(response.statusCode().value()).isEqualTo(200);
-    Path draft = sourceDir.resolve(".workbench/drafts/foo.json");
-    assertThat(draft).exists();
-    String body = Files.readString(draft);
-    assertThat(body).contains("\"name\" : \"foo\"");
-    assertThat(body).contains("\"status\" : \"Draft\"");
-    assertThat(body).contains("\"savedAt\"");
+    verify(client).saveDraft(eq("foo"), any(DraftRequest.class));
   }
 
   @Test
   void publishPersistsPublishedJson() throws Exception {
     ServerResponse response = handler.publish(postRequest("/api/dsl/drafts/foo/publish"));
     assertThat(response.statusCode().value()).isEqualTo(200);
-    Path published = sourceDir.resolve(".workbench/published/foo.json");
-    assertThat(published).exists();
-    String body = Files.readString(published);
-    assertThat(body).contains("\"status\" : \"Published\"");
+    verify(client).publishDraft(eq("foo"), any(DraftRequest.class));
   }
 
   @Test
   void deleteRemovesDraftJson() throws Exception {
-    handler.save(postRequest("/api/dsl/drafts/foo/save"));
-    Path draft = sourceDir.resolve(".workbench/drafts/foo.json");
-    assertThat(draft).exists();
-
     ServerResponse response = handler.delete(deleteRequest("foo", "/api/dsl/drafts/foo"));
 
     assertThat(response.statusCode().value()).isEqualTo(200);
-    assertThat(draft).doesNotExist();
+    verify(client).deleteDraft("foo");
   }
 
   @Test
   void deleteReturns404WhenDraftUnknown() throws Exception {
+    when(client.deleteDraft("foo"))
+            .thenThrow(new BuilderApiException(HttpStatus.NOT_FOUND, "NOT_FOUND", "not found"));
     ServerResponse response = handler.delete(deleteRequest("foo", "/api/dsl/drafts/foo"));
 
     assertThat(response.statusCode().value()).isEqualTo(404);
@@ -179,32 +275,28 @@ class DslDraftResourceTest {
   @Test
   void deleteReturns409WhenSourceDirBlank() throws Exception {
     DslProperties blank = DslProperties.builder().sourceDir("").build();
+    DslBuilderClient blankClient = mock(DslBuilderClient.class);
+    stubLocalCompile(blankClient);
     handler = new DslDraftHandler(
             blank,
-            new DslReloadHandler(blank, null, null, null, null, null, null, null),
+            new DslReloadHandler(blank, new DefinitionLoader(), null, null,
+                    providerOf(blankClient), null, null, null),
             new DslDefinitionHistoryService(blank, mapper),
             mapper,
             new DslDefinitionBundleService(mapper, Optional.empty(),
                     DslProperties.bundleServiceDefaults()),
-            null, null, null, null, null, null, null);
+            null, providerOf(blankClient), null, null, null,
+            providerOfBean(sourcePathResolver), providerOfBean(gitStatusResolver));
     ServerResponse response = handler.delete(deleteRequest("foo", "/api/dsl/drafts/foo"));
     assertThat(response.statusCode().value()).isEqualTo(409);
   }
 
   @Test
   void deleteLeavesPublishedJsonUntouched() throws Exception {
-    handler.save(postRequest("/api/dsl/drafts/foo/save"));
-    handler.publish(postRequest("/api/dsl/drafts/foo/publish"));
-    Path draft = sourceDir.resolve(".workbench/drafts/foo.json");
-    Path published = sourceDir.resolve(".workbench/published/foo.json");
-    assertThat(draft).exists();
-    assertThat(published).exists();
-
     ServerResponse response = handler.delete(deleteRequest("foo", "/api/dsl/drafts/foo"));
 
     assertThat(response.statusCode().value()).isEqualTo(200);
-    assertThat(draft).doesNotExist();
-    assertThat(published).exists();
+    verify(client).deleteDraft("foo");
   }
 
   @Test
@@ -234,14 +326,18 @@ class DslDraftResourceTest {
   @Test
   void saveReturns409WhenSourceDirBlank() throws Exception {
     DslProperties blank = DslProperties.builder().sourceDir("").build();
+    DslBuilderClient blankClient = mock(DslBuilderClient.class);
+    stubLocalCompile(blankClient);
     handler = new DslDraftHandler(
             blank,
-            new DslReloadHandler(blank, null, null, null, null, null, null, null),
+            new DslReloadHandler(blank, new DefinitionLoader(), null, null,
+                    providerOf(blankClient), null, null, null),
             new DslDefinitionHistoryService(blank, mapper),
             mapper,
             new DslDefinitionBundleService(mapper, Optional.empty(),
                     DslProperties.bundleServiceDefaults()),
-            null, null, null, null, null, null, null);
+            null, providerOf(blankClient), null, null, null,
+            providerOfBean(sourcePathResolver), providerOfBean(gitStatusResolver));
     ServerResponse response = handler.save(postRequest("/api/dsl/drafts/foo/save"));
     assertThat(response.statusCode().value()).isEqualTo(409);
   }
@@ -271,14 +367,20 @@ class DslDraftResourceTest {
   @Test
   void listReturnsEmptyEnvelopeWhenSourceDirBlank() throws Exception {
     DslProperties blank = DslProperties.builder().sourceDir("").build();
+    DslBuilderClient blankClient = mock(DslBuilderClient.class);
+    stubLocalCompile(blankClient);
+    when(blankClient.listDrafts(anyInt(), anyInt()))
+            .thenReturn(new PageResponse<>(List.of(), 0L, 0, 50));
     handler = new DslDraftHandler(
             blank,
-            new DslReloadHandler(blank, null, null, null, null, null, null, null),
+            new DslReloadHandler(blank, new DefinitionLoader(), null, null,
+                    providerOf(blankClient), null, null, null),
             new DslDefinitionHistoryService(blank, mapper),
             mapper,
             new DslDefinitionBundleService(mapper, Optional.empty(),
                     DslProperties.bundleServiceDefaults()),
-            null, null, null, null, null, null, null);
+            null, providerOf(blankClient), null, null, null,
+            providerOfBean(sourcePathResolver), providerOfBean(gitStatusResolver));
 
     ServerResponse response = handler.list(getRequest("/api/dsl/drafts", null));
 
@@ -292,9 +394,11 @@ class DslDraftResourceTest {
 
   @Test
   void listReturnsPaginatedSummariesForSavedDrafts() throws Exception {
-    handler.save(postRequest("/api/dsl/drafts/foo/save"));
-    handler.save(postRequest("/api/dsl/drafts/bar/save", "bar"));
-    handler.publish(postRequest("/api/dsl/drafts/bar/publish", "bar"));
+    when(client.listDrafts(50, 0)).thenReturn(
+            new PageResponse<>(List.of(
+                    new DraftSummary("foo", "process", "Draft", "1", 1000L),
+                    new DraftSummary("bar", "process", "Published", "1", 2000L)),
+                    2L, 0, 50));
 
     ServerResponse response = handler.list(getRequest("/api/dsl/drafts", null));
 
@@ -317,10 +421,9 @@ class DslDraftResourceTest {
 
   @Test
   void listSkipsUnparseableDraftFiles() throws Exception {
-    handler.save(postRequest("/api/dsl/drafts/foo/save"));
-    Path drafts = sourceDir.resolve(".workbench/drafts");
-    Files.writeString(drafts.resolve("garbage.json"), "not-json",
-            UTF_8);
+    when(client.listDrafts(50, 0)).thenReturn(
+            new PageResponse<>(List.of(new DraftSummary("foo", "process", "Draft", "1", 1000L)),
+                    1L, 0, 50));
 
     ServerResponse response = handler.list(getRequest("/api/dsl/drafts", null));
 
@@ -335,7 +438,9 @@ class DslDraftResourceTest {
 
   @Test
   void readReturnsDraftPayload() throws Exception {
-    handler.save(postRequestWithSource("/api/dsl/drafts/foo/save", "foo", "1", "workbench"));
+    when(client.readDraft("foo")).thenReturn(
+            new DraftRequest("foo", "process", "Draft", "1", null, "workbench",
+                    System.currentTimeMillis()));
 
     ServerResponse response = handler
             .read(getRequest("/api/dsl/drafts/foo", Map.of("name", "foo")));
@@ -351,6 +456,8 @@ class DslDraftResourceTest {
 
   @Test
   void readReturns404WhenUnknown() throws Exception {
+    when(client.readDraft("missing"))
+            .thenThrow(new BuilderApiException(HttpStatus.NOT_FOUND, "NOT_FOUND", "not found"));
     ServerResponse response = handler
             .read(getRequest("/api/dsl/drafts/missing", Map.of("name", "missing")));
 
@@ -383,18 +490,23 @@ class DslDraftResourceTest {
   void publishSurfacesCompileDiagnosticsWhenReloadFails() throws Exception {
     Files.writeString(sourceDir.resolve("Broken.java"),
             "this is not valid Java at all; { class Broken { ???");
-    // T570: reload requires a DslBuilderClient — the local-compile fake surfaces compile
-    // diagnostics for the broken source; the handler-level builder provider stays null so the
-    // publish itself still writes locally.
     DslBuilderClient reloadClient = mock(DslBuilderClient.class);
     stubLocalCompile(reloadClient);
+    lenient().when(reloadClient.publishDraft(anyString(), any(DraftRequest.class)))
+            .thenAnswer(inv -> {
+              String name = inv.getArgument(0);
+              return new DraftResponse(name, "Published",
+                      "/remote/.workbench/published/" + name + ".json", false,
+                      LoadResult.empty(), null, null, null, null);
+            });
     DslDraftHandler localHandler = new DslDraftHandler(props,
             new DslReloadHandler(props, new DefinitionLoader(), null, null,
-                    BuilderClientTestSupport.providerOf(reloadClient), null, null, null),
+                    providerOf(reloadClient), null, null, null),
             new DslDefinitionHistoryService(props, mapper), mapper,
             new DslDefinitionBundleService(mapper, Optional.empty(),
                     DslProperties.bundleServiceDefaults()),
-            null, null, null, null, null, null, null);
+            null, providerOf(reloadClient), null, null, null,
+            providerOfBean(sourcePathResolver), providerOfBean(gitStatusResolver));
 
     ServerResponse response = localHandler.publish(postRequest("/api/dsl/drafts/foo/publish"));
     assertThat(response.statusCode().value()).isEqualTo(200);
@@ -406,37 +518,29 @@ class DslDraftResourceTest {
     assertThat(draft.reloaded()).isFalse();
     assertThat(draft.reloadError()).isNotBlank();
     assertThat(draft.diagnostics()).isNotEmpty();
-    // Diagnostics arrive from the dsl-builder as plain message strings (T570), so the file
-    // context is embedded in the message rather than a structured field.
     assertThat(draft.diagnostics().get(0).message()).contains("Broken.java");
     assertThat(draft.diagnostics().get(0).severity()).isEqualTo("error");
   }
 
   @Test
   void publishSnapshotsPreviousPublishedPayload() throws Exception {
+    when(client.publishDraft(eq("X"), any(DraftRequest.class)))
+            .thenAnswer(inv -> new DraftResponse("X", "Published",
+                    "/remote/.workbench/published/X.json", false, LoadResult.empty(),
+                    null, null, null, null));
+
     handler.publish(postRequest("/api/dsl/drafts/X/publish", "X", "A"));
     Thread.sleep(2);
     handler.publish(postRequest("/api/dsl/drafts/X/publish", "X", "B"));
 
-    Path historyDir = sourceDir.resolve(".workbench/history/X");
-    assertThat(historyDir).isDirectory();
-    List<Path> files;
-    try (Stream<Path> s = Files.list(historyDir)) {
-      files = s.filter(Files::isRegularFile).toList();
-    }
-    assertThat(files).hasSize(1);
-    DraftRequest snapshot = mapper.readValue(files.get(0).toFile(), DraftRequest.class);
-    assertThat(snapshot.name()).isEqualTo("X");
-    assertThat(snapshot.status()).isEqualTo("Published");
-    assertThat(snapshot.version()).isEqualTo("A");
+    verify(client).publishDraft(eq("X"), any(DraftRequest.class));
   }
 
   @Test
   void firstPublishCreatesNoHistoryEntry() throws Exception {
     handler.publish(postRequest("/api/dsl/drafts/X/publish", "X", "1"));
 
-    Path historyDir = sourceDir.resolve(".workbench/history/X");
-    assertThat(historyDir).doesNotExist();
+    verify(client).publishDraft(eq("X"), any(DraftRequest.class));
   }
 
   @Test
@@ -444,37 +548,36 @@ class DslDraftResourceTest {
     props = DslProperties.builder().sourceDir(sourceDir.toString())
             .drafts(new DslProperties.Drafts(2))
             .build();
+    DslBuilderClient limitClient = mock(DslBuilderClient.class);
+    stubLocalCompile(limitClient);
+    lenient().when(limitClient.publishDraft(anyString(), any(DraftRequest.class)))
+            .thenAnswer(inv -> {
+              String name = inv.getArgument(0);
+              return new DraftResponse(name, "Published",
+                      "/remote/.workbench/published/" + name + ".json", false,
+                      LoadResult.empty(), null, null, null, null);
+            });
     handler = new DslDraftHandler(props,
-            new DslReloadHandler(props, null, null, null, null, null, null, null),
+            new DslReloadHandler(props, new DefinitionLoader(), null, null,
+                    providerOf(limitClient), null, null, null),
             new DslDefinitionHistoryService(props, mapper), mapper,
             new DslDefinitionBundleService(mapper, Optional.empty(),
                     DslProperties.bundleServiceDefaults()),
-            null, null, null, null, null, null, null);
+            null, providerOf(limitClient), null, null, null,
+            providerOfBean(sourcePathResolver), providerOfBean(gitStatusResolver));
     for (int i = 1; i <= 4; i++) {
       handler.publish(postRequest("/api/dsl/drafts/X/publish", "X", String.valueOf(i)));
       Thread.sleep(2);
     }
 
-    Path historyDir = sourceDir.resolve(".workbench/history/X");
-    assertThat(historyDir).isDirectory();
-    List<String> timestamps;
-    try (Stream<Path> s = Files.list(historyDir)) {
-      timestamps = s.filter(Files::isRegularFile)
-              .map(p -> p.getFileName().toString())
-              .sorted(Comparator.reverseOrder())
-              .toList();
-    }
-    assertThat(timestamps).hasSize(2);
-    for (String timestamp : timestamps) {
-      assertThat(timestamp).endsWith(".json");
-    }
+    verify(limitClient, org.mockito.Mockito.times(4))
+            .publishDraft(eq("X"), any(DraftRequest.class));
   }
 
   @Test
   void historyReturnsNewestFirstEntries() throws Exception {
-    handler.publish(postRequest("/api/dsl/drafts/X/publish", "X", "1"));
-    Thread.sleep(2);
-    handler.publish(postRequest("/api/dsl/drafts/X/publish", "X", "2"));
+    when(client.history("X")).thenReturn(List.of(
+            new DefinitionHistoryEntry("abc", 2000L, 500L, 2000L)));
 
     ServerResponse response = handler.history(getRequest("/api/dsl/drafts/X/history",
             Map.of("name", "X")));
@@ -489,13 +592,19 @@ class DslDraftResourceTest {
     assertThat(entry.timestampMillis()).isGreaterThan(0L);
     assertThat(entry.sizeBytes()).isGreaterThan(0L);
     assertThat(entry.lastModifiedMillis()).isGreaterThan(0L);
+    verify(client).history("X");
   }
 
   @Test
   void restoreRollsBackPublishedMetadata() throws Exception {
-    handler.publish(postRequest("/api/dsl/drafts/X/publish", "X", "A"));
-    Thread.sleep(2);
-    handler.publish(postRequest("/api/dsl/drafts/X/publish", "X", "B"));
+    when(client.history("X")).thenReturn(List.of(
+            new DefinitionHistoryEntry("1000", 1000L, 500L, 1000L)));
+    when(client.historyEntry("X", "1000")).thenReturn(
+            new DraftRequest("X", "process", "Published", "A", null, "src-A", 1000L));
+    when(client.restoreDraft("X", "1000")).thenReturn(
+            new DraftResponse("X", "Published",
+                    "/remote/.workbench/published/X.json", false, LoadResult.empty(),
+                    null, null, 1000L, null));
 
     List<DefinitionHistoryEntry> entries = historyEntries("X");
     assertThat(entries).hasSize(1);
@@ -507,45 +616,34 @@ class DslDraftResourceTest {
             Map.of("name", "X", "timestamp", timestamp)));
 
     assertThat(response.statusCode().value()).isEqualTo(200);
-    Path published = sourceDir.resolve(".workbench/published/X.json");
-    DraftRequest current = mapper.readValue(published.toFile(), DraftRequest.class);
-    assertThat(current.version()).isEqualTo("A");
-    assertThat(current.status()).isEqualTo("Published");
-
-    List<DefinitionHistoryEntry> after = historyEntries("X");
-    assertThat(after).hasSize(2);
+    verify(client).restoreDraft("X", timestamp);
   }
 
   @Test
   void restoreUnknownTimestampReturns404() throws Exception {
-    handler.publish(postRequest("/api/dsl/drafts/X/publish", "X", "A"));
+    when(client.restoreDraft("X", "9999999999999"))
+            .thenThrow(new BuilderApiException(HttpStatus.NOT_FOUND, "NOT_FOUND", "not found"));
 
     ServerResponse response = handler.restore(getRequest(
             "/api/dsl/drafts/X/history/9999999999999/restore",
             Map.of("name", "X", "timestamp", "9999999999999")));
 
     assertThat(response.statusCode().value()).isEqualTo(404);
-    Path published = sourceDir.resolve(".workbench/published/X.json");
-    DraftRequest current = mapper.readValue(published.toFile(), DraftRequest.class);
-    assertThat(current.version()).isEqualTo("A");
   }
 
   @Test
   void restoreNonNumericTimestampReturns404() throws Exception {
-    handler.publish(postRequest("/api/dsl/drafts/X/publish", "X", "A"));
-
     ServerResponse response = handler.restore(getRequest(
             "/api/dsl/drafts/X/history/evil/restore",
             Map.of("name", "X", "timestamp", "evil")));
 
     assertThat(response.statusCode().value()).isEqualTo(404);
-    Path published = sourceDir.resolve(".workbench/published/X.json");
-    DraftRequest current = mapper.readValue(published.toFile(), DraftRequest.class);
-    assertThat(current.version()).isEqualTo("A");
   }
 
   @Test
   void historySanitizesTraversalName() throws Exception {
+    when(client.history("../../etc")).thenReturn(List.of());
+
     ServerResponse response = handler.history(getRequest("/api/dsl/drafts/../../etc/history",
             Map.of("name", "../../etc")));
 
@@ -554,15 +652,10 @@ class DslDraftResourceTest {
     List<DefinitionHistoryEntry> entries = (List<DefinitionHistoryEntry>) ((EntityResponse<?>) response)
             .entity();
     assertThat(entries).isEmpty();
-    Path escaped = sourceDir.resolve(".workbench/history/").toAbsolutePath().getParent().getParent()
-            .resolve("etc");
-    assertThat(escaped).doesNotExist();
   }
 
   @Test
   void restoreSanitizesTraversalName() throws Exception {
-    handler.publish(postRequest("/api/dsl/drafts/X/publish", "X", "A"));
-
     ServerResponse response = handler.restore(getRequest(
             "/api/dsl/drafts/../../etc/history/123/restore",
             Map.of("name", "../../etc", "timestamp", "123")));
@@ -573,14 +666,18 @@ class DslDraftResourceTest {
   @Test
   void historyReturns409WhenSourceDirBlank() throws Exception {
     DslProperties blank = DslProperties.builder().sourceDir("").build();
+    DslBuilderClient blankClient = mock(DslBuilderClient.class);
+    stubLocalCompile(blankClient);
     handler = new DslDraftHandler(
             blank,
-            new DslReloadHandler(blank, null, null, null, null, null, null, null),
+            new DslReloadHandler(blank, new DefinitionLoader(), null, null,
+                    providerOf(blankClient), null, null, null),
             new DslDefinitionHistoryService(blank, mapper),
             mapper,
             new DslDefinitionBundleService(mapper, Optional.empty(),
                     DslProperties.bundleServiceDefaults()),
-            null, null, null, null, null, null, null);
+            null, providerOf(blankClient), null, null, null,
+            providerOfBean(sourcePathResolver), providerOfBean(gitStatusResolver));
 
     ServerResponse response = handler.history(getRequest("/api/dsl/drafts/X/history",
             Map.of("name", "X")));
@@ -591,14 +688,18 @@ class DslDraftResourceTest {
   @Test
   void restoreReturns409WhenSourceDirBlank() throws Exception {
     DslProperties blank = DslProperties.builder().sourceDir("").build();
+    DslBuilderClient blankClient = mock(DslBuilderClient.class);
+    stubLocalCompile(blankClient);
     handler = new DslDraftHandler(
             blank,
-            new DslReloadHandler(blank, null, null, null, null, null, null, null),
+            new DslReloadHandler(blank, new DefinitionLoader(), null, null,
+                    providerOf(blankClient), null, null, null),
             new DslDefinitionHistoryService(blank, mapper),
             mapper,
             new DslDefinitionBundleService(mapper, Optional.empty(),
                     DslProperties.bundleServiceDefaults()),
-            null, null, null, null, null, null, null);
+            null, providerOf(blankClient), null, null, null,
+            providerOfBean(sourcePathResolver), providerOfBean(gitStatusResolver));
 
     ServerResponse response = handler.restore(getRequest(
             "/api/dsl/drafts/X/history/123/restore",
@@ -609,9 +710,10 @@ class DslDraftResourceTest {
 
   @Test
   void historyEntryReturnsEntryContent() throws Exception {
-    handler.publish(postRequest("/api/dsl/drafts/X/publish", "X", "A"));
-    Thread.sleep(2);
-    handler.publish(postRequest("/api/dsl/drafts/X/publish", "X", "B"));
+    when(client.history("X")).thenReturn(List.of(
+            new DefinitionHistoryEntry("1000", 1000L, 500L, 1000L)));
+    when(client.historyEntry("X", "1000")).thenReturn(
+            new DraftRequest("X", "process", "Published", "A", null, "src-A", 1000L));
 
     List<DefinitionHistoryEntry> entries = historyEntries("X");
     assertThat(entries).hasSize(1);
@@ -630,7 +732,8 @@ class DslDraftResourceTest {
 
   @Test
   void historyEntryUnknownTimestampReturns404() throws Exception {
-    handler.publish(postRequest("/api/dsl/drafts/X/publish", "X", "A"));
+    when(client.historyEntry("X", "9999999999999"))
+            .thenThrow(new BuilderApiException(HttpStatus.NOT_FOUND, "NOT_FOUND", "not found"));
 
     ServerResponse response = handler.historyEntry(getRequest(
             "/api/dsl/drafts/X/history/9999999999999",
@@ -641,9 +744,16 @@ class DslDraftResourceTest {
 
   @Test
   void historyDiffReturnsShapeWithHunks() throws Exception {
-    handler.publish(postRequest("/api/dsl/drafts/X/publish", "X", "A"));
-    Thread.sleep(2);
-    handler.publish(postRequest("/api/dsl/drafts/X/publish", "X", "B"));
+    when(client.history("X")).thenReturn(List.of(
+            new DefinitionHistoryEntry("1000", 1000L, 500L, 1000L)));
+    when(client.historyDiff("X", "1000")).thenReturn(
+            new HistoryDiffResponse("X", "1000",
+                    "{\"name\":\"X\",\"version\":\"B\",\"status\":\"Published\"}",
+                    "{\"name\":\"X\",\"version\":\"A\",\"status\":\"Published\"}",
+                    List.of(new cbs.nova.dsl.model.DiffHunk(1, 2, 1, 2,
+                            List.of("@@ -1,2 +1,2 @@", "-\"version\":\"B\"",
+                                    "+\"version\":\"A\""))),
+                    false));
 
     List<DefinitionHistoryEntry> entries = historyEntries("X");
     assertThat(entries).hasSize(1);
@@ -657,8 +767,8 @@ class DslDraftResourceTest {
     HistoryDiffResponse diff = (HistoryDiffResponse) ((EntityResponse<?>) response).entity();
     assertThat(diff.name()).isEqualTo("X");
     assertThat(diff.timestamp()).isEqualTo(timestamp);
-    assertThat(diff.before()).contains("\"version\" : \"B\"");
-    assertThat(diff.after()).contains("\"version\" : \"A\"");
+    assertThat(diff.before()).contains("B");
+    assertThat(diff.after()).contains("A");
     assertThat(diff.hunks()).isNotEmpty();
     assertThat(diff.hunks().stream().flatMap(h -> h.lines().stream()))
             .anyMatch(line -> line.startsWith("-") && line.contains("B"));
@@ -669,13 +779,14 @@ class DslDraftResourceTest {
 
   @Test
   void historyDiffWithoutPublishedReturnsNullBeforeAndNoHunks() throws Exception {
-    handler.publish(postRequest("/api/dsl/drafts/X/publish", "X", "A"));
-    Thread.sleep(2);
-    handler.publish(postRequest("/api/dsl/drafts/X/publish", "X", "B"));
+    when(client.history("X")).thenReturn(List.of(
+            new DefinitionHistoryEntry("1000", 1000L, 500L, 1000L)));
+    when(client.historyDiff("X", "1000")).thenReturn(
+            new HistoryDiffResponse("X", "1000", null,
+                    "{\"name\":\"X\",\"version\":\"A\",\"status\":\"Published\"}",
+                    List.of(), false));
     List<DefinitionHistoryEntry> entries = historyEntries("X");
     String timestamp = entries.get(0).timestamp();
-    // Simulate "published was deleted/never readable": no published file on disk.
-    Files.deleteIfExists(sourceDir.resolve(".workbench/published/X.json"));
 
     ServerResponse response = handler.historyDiff(getRequest(
             "/api/dsl/drafts/X/history/" + timestamp + "/diff",
@@ -691,6 +802,9 @@ class DslDraftResourceTest {
 
   @Test
   void historyDiffEmptyHistoryReturns404() throws Exception {
+    when(client.historyDiff("X", "123"))
+            .thenThrow(new BuilderApiException(HttpStatus.NOT_FOUND, "NOT_FOUND", "not found"));
+
     ServerResponse response = handler.historyDiff(getRequest(
             "/api/dsl/drafts/X/history/123/diff",
             Map.of("name", "X", "timestamp", "123")));
@@ -713,7 +827,6 @@ class DslDraftResourceTest {
         try {
           Files.deleteIfExists(p);
         } catch (IOException e) {
-          // ignore
         }
       });
     }
@@ -784,30 +897,30 @@ class DslDraftResourceTest {
 
   @Test
   void saveDelegatesToBuilderClient() throws Exception {
-    DslBuilderClient client = mock(DslBuilderClient.class);
-    stubSuccessfulCompile(client);
-    when(client.saveDraft(eq("foo"), any())).thenReturn(
+    DslBuilderClient testClient = mock(DslBuilderClient.class);
+    stubSuccessfulCompile(testClient);
+    when(testClient.saveDraft(eq("foo"), any())).thenReturn(
             new DraftResponse("foo", "Draft", "/remote/.workbench/drafts/foo.json", false,
                     LoadResult.empty(), null, null, null, null));
-    handler = builderDraftHandler(client);
+    handler = builderDraftHandler(testClient);
 
     ServerResponse response = handler.save(postRequest("/api/dsl/drafts/foo/save"));
 
     assertThat(response.statusCode().value()).isEqualTo(200);
     DraftResponse body = (DraftResponse) ((EntityResponse<?>) response).entity();
     assertThat(body.location()).isEqualTo("/remote/.workbench/drafts/foo.json");
-    verify(client).saveDraft(eq("foo"), any());
+    verify(testClient).saveDraft(eq("foo"), any());
     assertThat(sourceDir.resolve(".workbench/drafts/foo.json")).doesNotExist();
   }
 
   @Test
   void publishDelegatesToBuilderClientAndReloadsLocally() throws Exception {
-    DslBuilderClient client = mock(DslBuilderClient.class);
-    stubSuccessfulCompile(client);
-    when(client.publishDraft(eq("foo"), any())).thenReturn(
+    DslBuilderClient testClient = mock(DslBuilderClient.class);
+    stubSuccessfulCompile(testClient);
+    when(testClient.publishDraft(eq("foo"), any())).thenReturn(
             new DraftResponse("foo", "Published", "/remote/.workbench/published/foo.json", false,
                     LoadResult.empty(), null, null, null, null));
-    handler = builderDraftHandler(client);
+    handler = builderDraftHandler(testClient);
 
     ServerResponse response = handler.publish(postRequest("/api/dsl/drafts/foo/publish"));
 
@@ -823,14 +936,14 @@ class DslDraftResourceTest {
   void publishSurfacesReloadFailureWhenBuilderCompileFails() throws Exception {
     Files.writeString(sourceDir.resolve("Broken.java"),
             "this is not valid Java at all; { class Broken { ???");
-    DslBuilderClient client = mock(DslBuilderClient.class);
-    stubSuccessfulCompile(client);
-    when(client.compile(any())).thenThrow(new DslCompilationException("DSL compilation failed",
+    DslBuilderClient testClient = mock(DslBuilderClient.class);
+    stubSuccessfulCompile(testClient);
+    when(testClient.compile(any())).thenThrow(new DslCompilationException("DSL compilation failed",
             List.of(new CompileDiagnostic("Broken.java", 1L, null, "bad syntax", "error", null))));
-    when(client.publishDraft(eq("foo"), any())).thenReturn(
+    when(testClient.publishDraft(eq("foo"), any())).thenReturn(
             new DraftResponse("foo", "Published", "/remote/.workbench/published/foo.json", false,
                     LoadResult.empty(), null, null, null, null));
-    handler = builderDraftHandler(client);
+    handler = builderDraftHandler(testClient);
 
     ServerResponse response = handler.publish(postRequest("/api/dsl/drafts/foo/publish"));
 
@@ -843,25 +956,25 @@ class DslDraftResourceTest {
 
   @Test
   void deleteDelegatesToBuilderClient() throws Exception {
-    DslBuilderClient client = mock(DslBuilderClient.class);
-    when(client.deleteDraft("foo")).thenReturn(
+    DslBuilderClient testClient = mock(DslBuilderClient.class);
+    when(testClient.deleteDraft("foo")).thenReturn(
             new DraftResponse("foo", "Deleted", null, false, LoadResult.empty(), null, null, null,
                     null));
-    handler = builderDraftHandler(client);
+    handler = builderDraftHandler(testClient);
 
     ServerResponse response = handler.delete(deleteRequest("foo", "/api/dsl/drafts/foo"));
 
     assertThat(response.statusCode().value()).isEqualTo(200);
-    verify(client).deleteDraft("foo");
+    verify(testClient).deleteDraft("foo");
   }
 
   @Test
   void listDelegatesToBuilderClient() throws Exception {
-    DslBuilderClient client = mock(DslBuilderClient.class);
-    when(client.listDrafts(50, 0)).thenReturn(
+    DslBuilderClient testClient = mock(DslBuilderClient.class);
+    when(testClient.listDrafts(50, 0)).thenReturn(
             new PageResponse<>(List.of(new DraftSummary("foo", "process", "Draft", "1", 42)), 1,
                     0, 50));
-    handler = builderDraftHandler(client);
+    handler = builderDraftHandler(testClient);
 
     ServerResponse response = handler.list(getRequest("/api/dsl/drafts", null));
 
@@ -872,15 +985,16 @@ class DslDraftResourceTest {
     assertThat(body.items().get(0).name()).isEqualTo("foo");
   }
 
-  private DslDraftHandler builderDraftHandler(DslBuilderClient client) {
+  private DslDraftHandler builderDraftHandler(DslBuilderClient testClient) {
     return new DslDraftHandler(props,
-            new DslReloadHandler(props, new DefinitionLoader(), null, null, providerOf(client),
+            new DslReloadHandler(props, new DefinitionLoader(), null, null, providerOf(testClient),
                     null, null, null),
             new DslDefinitionHistoryService(props, mapper), mapper,
             new DslDefinitionBundleService(mapper, Optional.empty(),
                     DslProperties.bundleServiceDefaults()),
-            null, providerOf(client),
-            null, null, null, null, null);
+            null, providerOf(testClient),
+            null, null, null,
+            providerOfBean(sourcePathResolver), providerOfBean(gitStatusResolver));
   }
 
   @Test
@@ -926,16 +1040,24 @@ class DslDraftResourceTest {
     GlobalManager.globalManager().resetForTests();
     try {
       var audit = AuditTestSupport.h2();
-      // T570: reload requires a DslBuilderClient for the publish-triggered reload to succeed.
-      DslBuilderClient reloadClient = mock(DslBuilderClient.class);
-      stubLocalCompile(reloadClient);
+      DslBuilderClient auditClient = mock(DslBuilderClient.class);
+      stubLocalCompile(auditClient);
+      lenient().when(auditClient.publishDraft(anyString(), any(DraftRequest.class)))
+              .thenAnswer(inv -> {
+                String name = inv.getArgument(0);
+                return new DraftResponse(name, "Published",
+                        "/remote/.workbench/published/" + name + ".json", false,
+                        LoadResult.empty(), null, null, null, null);
+              });
       DslDraftHandler audited = new DslDraftHandler(props,
               new DslReloadHandler(props, new DefinitionLoader(), null, null,
-                      BuilderClientTestSupport.providerOf(reloadClient), null, null, null),
+                      providerOf(auditClient), null, null, null),
               new DslDefinitionHistoryService(props, mapper), mapper,
               new DslDefinitionBundleService(mapper, Optional.empty(),
                       DslProperties.bundleServiceDefaults()),
-              AuditTestSupport.providerOf(audit.service()), null, null, null, null, null, null);
+              AuditTestSupport.providerOf(audit.service()), providerOf(auditClient),
+              null, null, null,
+              providerOfBean(sourcePathResolver), providerOfBean(gitStatusResolver));
 
       ServerResponse response = audited.publish(postRequest("/api/dsl/drafts/foo/publish"));
 
@@ -953,12 +1075,31 @@ class DslDraftResourceTest {
 
   private DslDraftHandler auditedDraftHandler(AuditTestSupport.Harness audit,
           DslProperties properties) {
+    DslBuilderClient auditClient = mock(DslBuilderClient.class);
+    stubLocalCompile(auditClient);
+    lenient().when(auditClient.saveDraft(anyString(), any(DraftRequest.class)))
+            .thenAnswer(inv -> {
+              String name = inv.getArgument(0);
+              return new DraftResponse(name, "Draft",
+                      "/remote/.workbench/drafts/" + name + ".json", false,
+                      LoadResult.empty(), null, null, System.currentTimeMillis(), null);
+            });
+    lenient().when(auditClient.publishDraft(anyString(), any(DraftRequest.class)))
+            .thenAnswer(inv -> {
+              String name = inv.getArgument(0);
+              return new DraftResponse(name, "Published",
+                      "/remote/.workbench/published/" + name + ".json", false,
+                      LoadResult.empty(), null, null, null, null);
+            });
     return new DslDraftHandler(properties,
-            new DslReloadHandler(properties, null, null, null, null, null, null, null),
+            new DslReloadHandler(properties, new DefinitionLoader(), null, null,
+                    providerOf(auditClient), null, null, null),
             new DslDefinitionHistoryService(properties, mapper), mapper,
             new DslDefinitionBundleService(mapper, Optional.empty(),
                     DslProperties.bundleServiceDefaults()),
-            AuditTestSupport.providerOf(audit.service()), null, null, null, null, null, null);
+            AuditTestSupport.providerOf(audit.service()), providerOf(auditClient),
+            null, null, null,
+            providerOfBean(sourcePathResolver), providerOfBean(gitStatusResolver));
   }
 
   private static ServerRequest postRequestWithHeader(String path, String name, String header,

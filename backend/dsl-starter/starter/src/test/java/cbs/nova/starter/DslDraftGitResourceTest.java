@@ -236,33 +236,6 @@ class DslDraftGitResourceTest {
   }
 
   @Test
-  void discardRequiresBuilder() throws Exception {
-    handler = localOnlyHandler();
-    when(sourcePathResolver.relativePath("foo")).thenReturn(Optional.of("dsl/FooDsl.java"));
-
-    ServerResponse response = handler.discard(postRequest("/api/dsl/drafts/foo/discard", "foo"));
-
-    assertThat(response.statusCode().value()).isEqualTo(409);
-    cbs.nova.dsl.model.ErrorResponse body = (cbs.nova.dsl.model.ErrorResponse) ((EntityResponse<?>) response)
-            .entity();
-    assertThat(body.code()).isEqualTo("GIT_REQUIRES_BUILDER");
-  }
-
-  @Test
-  void commitsRequiresBuilder() {
-    handler = localOnlyHandler();
-    when(sourcePathResolver.relativePath("foo")).thenReturn(Optional.of("dsl/FooDsl.java"));
-
-    ServerResponse response = handler.commits(getRequest("/api/dsl/drafts/foo/commits",
-            Map.of("name", "foo")));
-
-    assertThat(response.statusCode().value()).isEqualTo(409);
-    cbs.nova.dsl.model.ErrorResponse body = (cbs.nova.dsl.model.ErrorResponse) ((EntityResponse<?>) response)
-            .entity();
-    assertThat(body.code()).isEqualTo("GIT_REQUIRES_BUILDER");
-  }
-
-  @Test
   void discardReturns404ForUnknownDefinition() throws Exception {
     when(sourcePathResolver.relativePath("unknown")).thenReturn(Optional.empty());
 
@@ -294,16 +267,6 @@ class DslDraftGitResourceTest {
             new DslDefinitionBundleService(mapper, Optional.empty(),
                     DslProperties.bundleServiceDefaults()),
             null, providerOf(client), null, null, null,
-            providerOfBean(sourcePathResolver), providerOfBean(gitStatusResolver));
-  }
-
-  private DslDraftHandler localOnlyHandler() {
-    return new DslDraftHandler(props,
-            new DslReloadHandler(props, null, null, null, null, null, null, null),
-            new DslDefinitionHistoryService(props, mapper), mapper,
-            new DslDefinitionBundleService(mapper, Optional.empty(),
-                    DslProperties.bundleServiceDefaults()),
-            null, null, null, null, null,
             providerOfBean(sourcePathResolver), providerOfBean(gitStatusResolver));
   }
 

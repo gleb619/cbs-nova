@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.dsl.model.ErrorResponse;
+import cbs.nova.starter.persistence.ExtendedSelectQueryExecutor;
 import cbs.nova.starter.persistence.JdbcApiKeyRepository;
 import cbs.nova.starter.service.ApiKeyStore;
 import jakarta.servlet.FilterChain;
@@ -39,7 +40,9 @@ class ApiKeyAuthFilterTest {
     dataSource.setUser("sa");
     ScriptUtils.executeSqlScript(dataSource.getConnection(),
             new ClassPathResource("db/migration/h2/V1__init.sql"));
-    repository = new JdbcApiKeyRepository(new NamedParameterJdbcTemplate(dataSource));
+    NamedParameterJdbcTemplate jdbcTemplate = new NamedParameterJdbcTemplate(dataSource);
+    ExtendedSelectQueryExecutor dslQueries = new ExtendedSelectQueryExecutor(jdbcTemplate);
+    repository = new JdbcApiKeyRepository(jdbcTemplate, dslQueries);
     store = new ApiKeyStore(repository, objectMapper, new SelfProvider(() -> store));
   }
 

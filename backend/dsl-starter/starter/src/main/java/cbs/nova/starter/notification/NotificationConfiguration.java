@@ -1,5 +1,6 @@
 package cbs.nova.starter.notification;
 
+import cbs.nova.starter.persistence.ExtendedSelectQueryExecutor;
 import cbs.nova.starter.persistence.NotificationRuleFiringRepository;
 import cbs.nova.starter.persistence.NotificationRuleRepository;
 import cbs.nova.starter.service.DslAuditService;
@@ -42,15 +43,17 @@ public class NotificationConfiguration {
 
   @Bean
   @ConditionalOnBean(DataSource.class)
-  NotificationRuleRepository notificationRuleRepository(NamedParameterJdbcTemplate jdbcTemplate) {
-    return new NotificationRuleRepository(jdbcTemplate);
+  NotificationRuleRepository notificationRuleRepository(NamedParameterJdbcTemplate jdbcTemplate,
+          ExtendedSelectQueryExecutor dslQueries) {
+    return new NotificationRuleRepository(jdbcTemplate, dslQueries);
   }
 
   @Bean
   @ConditionalOnBean(DataSource.class)
   NotificationRuleFiringRepository notificationRuleFiringRepository(
-          NamedParameterJdbcTemplate jdbcTemplate) {
-    return new NotificationRuleFiringRepository(jdbcTemplate);
+          NamedParameterJdbcTemplate jdbcTemplate,
+          ExtendedSelectQueryExecutor dslQueries) {
+    return new NotificationRuleFiringRepository(jdbcTemplate, dslQueries);
   }
 
   @Bean

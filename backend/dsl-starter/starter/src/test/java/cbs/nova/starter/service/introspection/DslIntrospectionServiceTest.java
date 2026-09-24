@@ -2,6 +2,8 @@ package cbs.nova.starter.service.introspection;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.Context;
@@ -28,10 +30,12 @@ import cbs.nova.starter.model.DslIntrospectionModels.LogicInfoDto;
 import cbs.nova.starter.model.DslIntrospectionModels.LogicStatus;
 import cbs.nova.starter.service.DslDefinitionStatusResolver;
 import cbs.nova.starter.service.DslSourcePathResolver;
+import cbs.nova.starter.client.DslBuilderClient;
 import cbs.nova.starter.service.DslGitStatusResolver;
 import cbs.nova.starter.service.DslIntrospectionService;
 import java.util.List;
 import java.util.Map;
+import org.springframework.beans.factory.ObjectProvider;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -44,12 +48,15 @@ class DslIntrospectionServiceTest {
   @BeforeEach
   void setUp() {
     GlobalManager.globalManager().resetForTests();
+    DslBuilderClient client = mock(DslBuilderClient.class);
+    ObjectProvider<DslBuilderClient> provider = mock(ObjectProvider.class);
+    when(provider.getIfAvailable()).thenReturn(client);
     DslIntrospectionMapper mapper = Mappers.getMapper(DslIntrospectionMapper.class);
     service = new DslIntrospectionService(
             new JacksonJsonSchemaGenerator(),
             mapper,
             new DslDefinitionStatusResolver(DslProperties.builder().build(),
-                    new DslGitStatusResolver(DslProperties.builder().build(), null),
+                    new DslGitStatusResolver(provider),
                     new DslSourcePathResolver(DslProperties.builder().build())));
   }
 

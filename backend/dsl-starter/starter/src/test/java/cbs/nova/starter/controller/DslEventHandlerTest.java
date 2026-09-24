@@ -22,6 +22,7 @@ import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.datasource.init.ScriptUtils;
+import cbs.nova.starter.persistence.ExtendedSelectQueryExecutor;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver;
@@ -36,6 +37,7 @@ class DslEventHandlerTest {
 
   private MockMvc mockMvc;
   private NamedParameterJdbcTemplate jdbcTemplate;
+  private ExtendedSelectQueryExecutor dslQueries;
   private DslEventRepository repository;
 
   @BeforeEach
@@ -47,7 +49,8 @@ class DslEventHandlerTest {
     ScriptUtils.executeSqlScript(dataSource.getConnection(),
             new ClassPathResource("db/migration/h2/V1__init.sql"));
     jdbcTemplate = new NamedParameterJdbcTemplate(dataSource);
-    repository = new DslEventRepository(jdbcTemplate);
+    dslQueries = new ExtendedSelectQueryExecutor(jdbcTemplate);
+    repository = new DslEventRepository(jdbcTemplate, dslQueries);
 
     DslEventHandler handler = new DslEventHandler(repository, new ObjectMapper());
     DslEventRouterConfiguration router = new DslEventRouterConfiguration();

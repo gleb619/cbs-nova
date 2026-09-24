@@ -22,7 +22,6 @@ import org.springframework.validation.annotation.Validated;
 @ConfigurationProperties(prefix = "cbs.dsl.builder-client")
 @Validated
 public record DslBuilderClientProperties(
-        @DefaultValue("true") Boolean enabled,
         @DefaultValue("http://localhost:8091") String baseUrl,
         @DefaultValue("true") Boolean http2,
         @Valid @DefaultValue Queue queue,
@@ -31,7 +30,6 @@ public record DslBuilderClientProperties(
         @Valid @DefaultValue Timeouts timeouts) {
 
   public DslBuilderClientProperties {
-    enabled = enabled == null ? true : enabled;
     baseUrl = baseUrl == null ? "http://localhost:8091" : baseUrl;
     http2 = http2 == null ? true : http2;
     queue = queue == null ? new Queue(100, 5000L, 4) : queue;

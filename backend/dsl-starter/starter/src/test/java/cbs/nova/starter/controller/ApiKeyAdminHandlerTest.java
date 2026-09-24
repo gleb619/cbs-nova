@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import cbs.nova.starter.config.router.ApiKeyAdminRouterConfiguration;
 import cbs.nova.starter.converter.DefaultDslExceptionMapper;
+import cbs.nova.starter.persistence.ExtendedSelectQueryExecutor;
 import cbs.nova.starter.persistence.JdbcApiKeyRepository;
 import cbs.nova.starter.service.ApiKeyStore;
 import java.util.List;
@@ -52,8 +53,9 @@ class ApiKeyAdminHandlerTest {
     dataSource.setUser("sa");
     ScriptUtils.executeSqlScript(dataSource.getConnection(),
             new ClassPathResource("db/migration/h2/V1__init.sql"));
-    JdbcApiKeyRepository repository = new JdbcApiKeyRepository(
-            new NamedParameterJdbcTemplate(dataSource));
+    NamedParameterJdbcTemplate jdbcTemplate = new NamedParameterJdbcTemplate(dataSource);
+    ExtendedSelectQueryExecutor dslQueries = new ExtendedSelectQueryExecutor(jdbcTemplate);
+    JdbcApiKeyRepository repository = new JdbcApiKeyRepository(jdbcTemplate, dslQueries);
     store = new ApiKeyStore(repository, objectMapper, new SelfProvider(() -> store));
     ApiKeyAdminHandler handler = new ApiKeyAdminHandler(store);
     ApiKeyAdminRouterConfiguration router = new ApiKeyAdminRouterConfiguration();

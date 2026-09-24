@@ -2,29 +2,17 @@ package cbs.nova.starter.service;
 
 import cbs.nova.starter.builder.DslBuilderClient;
 import cbs.nova.starter.config.properties.DslProperties;
-import cbs.nova.starter.exception.BuilderApiException;
 import cbs.nova.starter.model.DslFileModels.FileContentRequest;
 import cbs.nova.starter.model.DslFileModels.FileContentResponse;
 import cbs.nova.starter.model.DslFileModels.FileEntry;
 import cbs.nova.starter.model.DslFileModels.FlushResult;
 import cbs.nova.starter.repository.DslFileRepository;
-import jakarta.annotation.PostConstruct;
-import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.ReentrantLock;
 
 @Slf4j
 @Service
@@ -38,222 +26,41 @@ public class DslFileService {
   private final DslFileBulkhead bulkhead;
   private final ObjectProvider<DslBuilderClient> builderClientProvider;
 
-  // Cross-replica flush safety needs no DB lock: each replica has its own DslFileBuffer, and
-  // repository.write publishes whole files atomically (temp file + ATOMIC_MOVE), so concurrent
-  // flushes to a shared workspace are last-write-wins per file, never corruption. This lock
-  // only guards the drain against same-JVM concurrent flush callers (manual flush from the web
-  // thread, @PreDestroy stop) since the single-thread flushExecutor alone does not serialize
-  // those.
-  private final ReentrantLock flushLock = new ReentrantLock();
-  private ScheduledExecutorService flushExecutor;
-
-  @PostConstruct
-  public void start() {
-    int interval = dslProperties.files().flushIntervalSeconds();
-    if (interval > 0 && builderClient() == null) {
-      flushExecutor = Executors.newSingleThreadScheduledExecutor(r -> {
-        Thread thread = new Thread(r, "dsl-file-flush");
-        thread.setDaemon(true);
-        return thread;
-      });
-      flushExecutor.scheduleWithFixedDelay(this::flushPending, interval, interval,
-              TimeUnit.SECONDS);
-    }
-  }
-
-  @PreDestroy
-  public void stop() {
-    if (flushExecutor != null) {
-      flushExecutor.shutdown();
-      try {
-        if (!flushExecutor.awaitTermination(10, TimeUnit.SECONDS)) {
-          flushExecutor.shutdownNow();
-        }
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        flushExecutor.shutdownNow();
-      }
-    }
-    flushPending();
-  }
-
   public List<FileEntry> listFiles(String prefix) {
-    var builder = builderClient();
-    if (builder != null) {
-      return builder.listFiles(prefix);
-    }
-    ensureRoot();
-    return repository.list(workspaceRoot(), prefix);
+    return builderClient().listFiles(prefix);
   }
 
-  public FileContentResponse readFile(String relativePath) throws IOException {
-    var builder = builderClient();
-    if (builder != null) {
-      try {
-        return builder.readFile(relativePath);
-      } catch (BuilderApiException e) {
-        if (e.getStatusCode().value() != 404) {
-          throw e;
-        }
-        return readFileLocally(relativePath);
-      }
-    }
-    return readFileLocally(relativePath);
+  public FileContentResponse readFile(String relativePath) {
+    return builderClient().readFile(relativePath);
   }
 
   public boolean exists(String relativePath) {
-    var builder = builderClient();
-    if (builder != null) {
-      try {
-        return builder.fileExists(relativePath);
-      } catch (BuilderApiException e) {
-        if (e.getStatusCode().value() != 404) {
-          throw e;
-        }
-        return existsLocally(relativePath);
-      }
-    }
-    return existsLocally(relativePath);
-  }
-
-  private FileContentResponse readFileLocally(String relativePath) throws IOException {
-    ensureRoot();
-    String staged = buffer.get(relativePath);
-    if (staged != null) {
-      return new FileContentResponse(relativePath, staged, true, FileContentResponse.crc32(staged));
-    }
-    bulkhead.acquireRead();
-    try {
-      Path workspace = workspaceRoot();
-      if (repository.exists(workspace, relativePath)) {
-        String content = repository.read(workspace, relativePath);
-        return new FileContentResponse(relativePath, content, false,
-                FileContentResponse.crc32(content));
-      }
-      Path source = sourceRoot();
-      if (repository.exists(source, relativePath)) {
-        String content = repository.read(source, relativePath);
-        return new FileContentResponse(relativePath, content, false,
-                FileContentResponse.crc32(content));
-      }
-      throw new IOException("file not found: " + relativePath);
-    } finally {
-      bulkhead.releaseRead();
-    }
-  }
-
-  private boolean existsLocally(String relativePath) {
-    ensureRoot();
-    if (buffer.get(relativePath) != null) {
-      return true;
-    }
-    return repository.exists(workspaceRoot(), relativePath)
-            || repository.exists(sourceRoot(), relativePath);
+    return builderClient().fileExists(relativePath);
   }
 
   public void stageWrite(String relativePath, String content) {
-    var builder = builderClient();
-    if (builder != null) {
-      builder.stageWrite(relativePath, content);
-      return;
-    }
-    ensureRoot();
-    buffer.stage(relativePath, content);
-    if (buffer.pendingCount() >= dslProperties.files().maxQueueSize()) {
-      if (flushExecutor != null) {
-        flushExecutor.execute(this::flushPending);
-      }
-    }
+    builderClient().stageWrite(relativePath, content);
   }
 
   public int stageAll(List<FileContentRequest> files) {
-    var builder = builderClient();
-    if (builder != null) {
-      return builder.stageAll(files).staged();
-    }
-    ensureRoot();
-    int staged = 0;
-    for (FileContentRequest file : files) {
-      if (file.path() == null || file.path().isBlank()) {
-        continue;
-      }
-      buffer.stage(file.path(), file.content() == null ? "" : file.content());
-      staged++;
-    }
-    if (buffer.pendingCount() >= dslProperties.files().maxQueueSize()) {
-      if (flushExecutor != null) {
-        flushExecutor.execute(this::flushPending);
-      }
-    }
-    return staged;
+    return builderClient().stageAll(files).staged();
   }
 
   public FlushResult flushPending() {
-    var builder = builderClient();
-    if (builder != null) {
-      return builder.flushFiles();
-    }
-    ensureRoot();
-    if (!flushLock.tryLock()) {
-      return new FlushResult(0, 0, List.of("flush already in progress"));
-    }
-    try {
-      Map<String, String> snapshot = buffer.drain();
-      if (snapshot.isEmpty()) {
-        return new FlushResult(0, 0, List.of());
-      }
-      Path root = workspaceRoot();
-      int flushed = 0;
-      int failed = 0;
-      List<String> errors = new ArrayList<>();
-      for (Map.Entry<String, String> entry : snapshot.entrySet()) {
-        bulkhead.acquireWrite();
-        try {
-          repository.write(root, entry.getKey(), entry.getValue());
-          flushed++;
-        } catch (Exception e) {
-          failed++;
-          errors.add(entry.getKey() + ": " + e.getMessage());
-          log.warn("[DSL files] failed to flush {}: {}", entry.getKey(), e.getMessage());
-        } finally {
-          bulkhead.releaseWrite();
-        }
-      }
-      log.info("[DSL files] flushed {} files, {} failed", flushed, failed);
-      return new FlushResult(flushed, failed, errors);
-    } finally {
-      flushLock.unlock();
-    }
+    return builderClient().flushFiles();
   }
 
   public int pendingCount() {
-    var builder = builderClient();
-    if (builder != null) {
-      return builder.pendingCount();
-    }
-    return buffer.pendingCount();
+    return builderClient().pendingCount();
   }
 
   private DslBuilderClient builderClient() {
-    return builderClientProvider == null ? null : builderClientProvider.getIfAvailable();
-  }
-
-  private Path sourceRoot() {
-    return workspaceResolver.sourceRoot();
-  }
-
-  private Path workspaceRoot() {
-    return workspaceResolver.workspaceRoot();
-  }
-
-  private void ensureRoot() {
-    Path root = workspaceRoot();
-    if (!Files.isDirectory(root)) {
-      try {
-        Files.createDirectories(root);
-      } catch (IOException e) {
-        throw new IllegalStateException("cannot create workspace root: " + root, e);
-      }
+    DslBuilderClient client = builderClientProvider == null
+            ? null
+            : builderClientProvider.getIfAvailable();
+    if (client == null) {
+      throw new IllegalStateException("DslBuilderClient not available");
     }
+    return client;
   }
 }

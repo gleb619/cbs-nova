@@ -17,7 +17,6 @@ import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
 import java.net.http.HttpClient;
 import java.time.Duration;
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -28,7 +27,6 @@ import tools.jackson.databind.ObjectMapper;
 
 @Configuration
 @EnableConfigurationProperties(DslBuilderClientProperties.class)
-@ConditionalOnProperty(prefix = "cbs.dsl.builder-client", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class BuilderClientConfiguration {
 
   @Bean

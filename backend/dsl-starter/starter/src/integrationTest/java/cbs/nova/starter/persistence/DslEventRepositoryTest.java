@@ -15,6 +15,7 @@ import org.postgresql.ds.PGSimpleDataSource;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.datasource.init.ScriptUtils;
+import cbs.nova.starter.persistence.ExtendedSelectQueryExecutor;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -36,6 +37,7 @@ class DslEventRepositoryTest {
 
   private static PGSimpleDataSource dataSource;
   private NamedParameterJdbcTemplate jdbcTemplate;
+  private ExtendedSelectQueryExecutor dslQueries;
   private DslEventRepository repository;
 
   @BeforeAll
@@ -53,7 +55,8 @@ class DslEventRepositoryTest {
   void setUp() {
     jdbcTemplate = new NamedParameterJdbcTemplate(dataSource);
     jdbcTemplate.getJdbcTemplate().execute("TRUNCATE dsl_events RESTART IDENTITY");
-    repository = new DslEventRepository(jdbcTemplate);
+    dslQueries = new ExtendedSelectQueryExecutor(jdbcTemplate);
+    repository = new DslEventRepository(jdbcTemplate, dslQueries);
   }
 
   @Test

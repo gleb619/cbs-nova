@@ -3,6 +3,7 @@ package cbs.nova.starter.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import cbs.nova.starter.persistence.ExtendedSelectQueryExecutor;
 import cbs.nova.starter.persistence.JdbcApiKeyRepository;
 import java.time.Instant;
 import java.util.List;
@@ -34,7 +35,9 @@ class ApiKeyStoreTest {
     dataSource.setUser("sa");
     ScriptUtils.executeSqlScript(dataSource.getConnection(),
             new ClassPathResource("db/migration/h2/V1__init.sql"));
-    repository = new JdbcApiKeyRepository(new NamedParameterJdbcTemplate(dataSource));
+    NamedParameterJdbcTemplate jdbcTemplate = new NamedParameterJdbcTemplate(dataSource);
+    ExtendedSelectQueryExecutor dslQueries = new ExtendedSelectQueryExecutor(jdbcTemplate);
+    repository = new JdbcApiKeyRepository(jdbcTemplate, dslQueries);
     store = new ApiKeyStore(repository, new ObjectMapper(), new SelfProvider(storeOrNull()));
   }
 
@@ -134,7 +137,7 @@ class ApiKeyStoreTest {
     ApiKeyStore.CreatedKey created = store.create("touch");
     // Replace the repository with a stub that always throws. Store must still complete without
     // surfacing the exception to the caller.
-    JdbcApiKeyRepository throwingRepo = new JdbcApiKeyRepository(null) {
+    JdbcApiKeyRepository throwingRepo = new JdbcApiKeyRepository(null, null) {
       @Override
       public void touchLastUsed(long id, Instant lastUsedAt) {
         throw new IllegalStateException("boom");

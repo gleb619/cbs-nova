@@ -1,123 +1,29 @@
 package cbs.nova.starter.service;
 
 import cbs.nova.dsl.vcs.ChangeType;
-import cbs.nova.dsl.vcs.GitChangeClassifier;
 import cbs.nova.dsl.vcs.RepoStatus;
 import cbs.nova.starter.builder.DslBuilderClient;
-import cbs.nova.starter.config.properties.DslProperties;
-import java.io.IOException;
 import java.nio.file.Path;
-import java.time.Clock;
-import java.time.Duration;
-import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.eclipse.jgit.api.Git;
-import org.eclipse.jgit.api.Status;
-import org.eclipse.jgit.lib.Repository;
-import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class DslGitStatusResolver {
 
-  private final DslProperties dslProperties;
   private final ObjectProvider<DslBuilderClient> builderClientProvider;
-  private final ConcurrentHashMap<Path, Snapshot> cache = new ConcurrentHashMap<>();
-  private Clock clock = Clock.systemUTC();
 
-  void setClock(Clock clock) {
-    this.clock = clock;
+  public DslGitStatusResolver(ObjectProvider<DslBuilderClient> builderClientProvider) {
+    this.builderClientProvider = builderClientProvider;
   }
 
   public Optional<RepoStatus> status(Path candidateDir) {
-    var builder = builderClient();
-    if (builder != null) {
-      return builder.vcsStatus();
-    }
-    if (!gitEnabled()) {
-      return Optional.empty();
-    }
-    Path root = repositoryRoot(candidateDir);
-    Snapshot cached = cache.get(root);
-    if (cached != null && !cached.expired()) {
-      return Optional.of(cached.repoStatus);
-    }
-    try {
-      RepoStatus repoStatus = loadStatus(root);
-      cache.put(root, new Snapshot(repoStatus, clock.instant().plus(ttl()), clock));
-      return Optional.of(repoStatus);
-    } catch (Exception e) {
-      log.warn("[DSL git] failed to read status for {}: {}", root, e.getMessage());
-      return Optional.empty();
-    }
+    return builderClient().vcsStatus();
   }
 
-  private RepoStatus loadStatus(Path root) throws Exception {
-    FileRepositoryBuilder builder = new FileRepositoryBuilder().findGitDir(root.toFile());
-    if (builder.getGitDir() == null) {
-      throw new IOException("no git repository found under " + root);
-    }
-    Repository repository = builder.build();
-    try (Git git = new Git(repository)) {
-      Status status = git.status().call();
-      Map<String, ChangeType> changes = classify(status);
-      return RepoStatus.of(
-              repository.getWorkTree().toPath().toAbsolutePath().normalize(),
-              changes);
-    }
-  }
-
-  private boolean gitEnabled() {
-    return dslProperties.git() != null && dslProperties.git().enabled();
-  }
-
-  private Path repositoryRoot(Path candidateDir) {
-    String configured = dslProperties.git() != null
-            ? dslProperties.git().repositoryDir()
-            : null;
-    return configured != null && !configured.isBlank()
-            ? Path.of(configured).toAbsolutePath().normalize()
-            : candidateDir.toAbsolutePath().normalize();
-  }
-
-  private Duration ttl() {
-    int seconds = dslProperties.git() != null
-            ? dslProperties.git().statusCacheTtlSeconds()
-            : 5;
-    return Duration.ofSeconds(Math.max(0, seconds));
-  }
-
-  /**
-   * Classify a JGit {@link Status} into a path→{@link ChangeType} map via the shared
-   * {@link GitChangeClassifier}. Later writes win so precedence collapses to
-   * {@code CONFLICTING > DELETED > ADDED > UNTRACKED > MODIFIED}.
-   */
-  static Map<String, ChangeType> classify(Status status) {
-    return GitChangeClassifier.classify(
-            status.getAdded(),
-            status.getChanged(),
-            status.getModified(),
-            status.getUntracked(),
-            status.getRemoved(),
-            status.getMissing(),
-            status.getConflicting());
-  }
-
-  /**
-   * Find a git change key {@code K} in {@code changes} that matches the resolved source path
-   * {@code P}. Match rule: {@code K.equals(P)}, {@code K.endsWith("/" + P)}, or
-   * {@code P.endsWith("/" + K)}. The third clause lets {@code "dsl/LoanDsl.java"} match a builder
-   * key like {@code "repo/dsl/LoanDsl.java"}. Shared between the definition-status resolver and the
-   * draft publish-flow commit hook (see {@code DslDraftHandler.publishPayload}).
-   */
   public static Optional<ChangeType> matchChange(Map<String, ChangeType> changes, String path) {
     if (path == null || path.isBlank() || changes == null || changes.isEmpty()) {
       return Optional.empty();
@@ -144,12 +50,12 @@ public class DslGitStatusResolver {
   }
 
   private DslBuilderClient builderClient() {
-    return builderClientProvider == null ? null : builderClientProvider.getIfAvailable();
-  }
-
-  private record Snapshot(RepoStatus repoStatus, Instant expiresAt, Clock clock) {
-    boolean expired() {
-      return clock.instant().isAfter(expiresAt);
+    DslBuilderClient client = builderClientProvider == null
+            ? null
+            : builderClientProvider.getIfAvailable();
+    if (client == null) {
+      throw new IllegalStateException("DslBuilderClient not available");
     }
+    return client;
   }
 }

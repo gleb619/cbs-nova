@@ -65,16 +65,11 @@ and git work to the **dsl-builder** service that owns the workspace.
 
 Rules:
 
-1. **dsl-builder is the only writer of the workspace.** When a `DslBuilderClient` bean is present
-   (`cbs.dsl.builder-client.enabled=true`, the default), every starter handler delegates file,
-   draft and git work to dsl-builder.
-2. **Local mode** (no builder) is for single-process development. The starter then reads and
-   writes `cbs.dsl.source-dir` directly and computes git status with local JGit
-   (`cbs.dsl.git.*`). The git operations (discard, commits, git history) are not available there
-   and return `409 GIT_REQUIRES_BUILDER`.
-3. **Git is the source of truth for draft status.** Status is always derived from `git status`
+1. **dsl-builder is the only writer of the workspace.** Every starter handler unconditionally delegates file,
+   draft and git work to dsl-builder via the `DslBuilderClient` bean (always registered, no opt-out).
+2. **Git is the source of truth for draft status.** Status is always derived from `git status`
    and never stored.
-4. **Git model shared by both services.** `ChangeType`, `RepoStatus` and `GitChangeClassifier`
+3. **Git model shared by both services.** `ChangeType`, `RepoStatus` and `GitChangeClassifier`
    live in `dsl-api`, package `cbs.nova.dsl.vcs`. Both services use them, and neither side
    needs JGit to interpret a status.
 
@@ -117,8 +112,7 @@ unstaged changes are not separate states for the user. Renames show up as
 - `dirtyPaths` is the key set of `changes`. A payload without `changes` still parses, and
   `changes` is then empty.
 - `RepoStatus.changeOf(path)` looks up a single path.
-- The starter's `DslGitStatusResolver` returns `DslBuilderClient.vcsStatus()` in builder mode,
-  and runs JGit itself in local mode.
+- The starter's `DslGitStatusResolver` delegates to `DslBuilderClient.vcsStatus()` via the builder client.
 
 **Freshness.** A saved edit is visible as a draft immediately:
 
@@ -220,9 +214,9 @@ The BFF exposes all starter routes under `/api/v1/dsl/...`, as explicit Nitro ro
 contains a letter a–f. An all-digit `{ts}` addresses a Workbench history snapshot (§6). A
 snapshot is also used when the definition has no source path or git is not configured.
 
-`discard`, `commits` and git history need builder mode. In local mode they return
-`409 GIT_REQUIRES_BUILDER`. Without `cbs.dsl.source-dir` the handlers return
-`409 NOT_CONFIGURED`. If the directory does not exist they return `409 NOT_FOUND`.
+`discard`, `commits` and git history all go through the dsl-builder. Without
+`cbs.dsl.source-dir` the handlers return `409 NOT_CONFIGURED`. If the directory does not exist they
+return `409 NOT_FOUND`.
 
 ### 5.2 Starter: files and status
 
@@ -368,9 +362,8 @@ All keys use the `cbs.dsl.` prefix.
 |-----|---------|---------|---------|
 | `cbs.dsl.drafts.enabled` | `true` | starter | Registers `DslDraftHandler` and its routes |
 | `cbs.dsl.source-dir` | – | starter | DSL source dir. Required by the draft handlers. |
-| `cbs.dsl.git.{enabled,repository-dir,status-cache-ttl-seconds}` | –, –, `5` | starter | Local-mode git status |
 | `cbs.dsl.approval.required` | `false` | starter | Publish approval gate |
-| `cbs.dsl.builder-client.enabled` / `base-url` | `true` / `http://localhost:8091` | starter | Delegate to dsl-builder |
+| `cbs.dsl.builder-client.base-url` | `http://localhost:8091` | starter | Delegate to dsl-builder |
 | `cbs.dsl.builder.workspace-dir` / `source-dir` | – | dsl-builder | Workspace root (`source-dir` wins for the file API) |
 | `cbs.dsl.builder.git.{enabled,repository-dir,worktrees-dir,repo-url,sub-path,branch}` | `true`, … | dsl-builder | Worktree provisioning |
 | `cbs.dsl.builder.git.status-cache-ttl-seconds` | `5` | dsl-builder | Status cache TTL |

@@ -6,14 +6,15 @@ import static cbs.nova.starter.core.StarterConstants.COMPILE_DIAGNOSTIC_FILE_MAX
 import static cbs.nova.starter.core.StarterConstants.COMPILE_DIAGNOSTIC_SEVERITY_MAX_LENGTH;
 import static cbs.nova.starter.core.StarterConstants.COMPILE_DIAGNOSTIC_SOURCE_MAX_LENGTH;
 
-import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.dsl.model.CompileDiagnostic;
 import cbs.nova.starter.model.CompileDiagnosticRecord;
 import cbs.nova.starter.model.CompileDiagnosticSource;
+import com.github.squigglesql.squigglesql.criteria.Criteria;
+import com.github.squigglesql.squigglesql.literal.Literal;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
-import lombok.RequiredArgsConstructor;
+import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -30,10 +31,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
  * Follows the {@link cbs.nova.starter.webhook.WebhookDeliveryRecordRepository} idioms: constructor
  * injection via Lombok, named parameters, and an explicit {@link RowMapper}.
  */
-@RequiredArgsConstructor
 public class CompileDiagnosticRecordRepository {
-
-  private static final String COLUMNS = "id, occurred_at, source, definition, file, line, col_number, severity, code, message";
 
   private static final RowMapper<CompileDiagnosticRecord> ROW_MAPPER = (rs,
           rowNum) -> new CompileDiagnosticRecord(
@@ -49,6 +47,14 @@ public class CompileDiagnosticRecordRepository {
                   rs.getString("message"));
 
   private final NamedParameterJdbcTemplate jdbcTemplate;
+  private final ExtendedSelectQueryExecutor dslQueries;
+  private static final CompileDiagnosticTableColumns T = CompileDiagnosticTableColumns.of();
+
+  public CompileDiagnosticRecordRepository(NamedParameterJdbcTemplate jdbcTemplate,
+          ExtendedSelectQueryExecutor dslQueries) {
+    this.jdbcTemplate = Objects.requireNonNull(jdbcTemplate);
+    this.dslQueries = Objects.requireNonNull(dslQueries);
+  }
 
   /**
    * Appends one diagnostic row. The {@code id} and {@code occurredAt} on the given record are used
@@ -113,24 +119,38 @@ public class CompileDiagnosticRecordRepository {
       throw new IllegalArgumentException("limit must be positive, was " + limit);
     }
 
-    String where = "";
-    var params = new MapSqlParameterSource();
-    if (definition != null && !definition.isBlank()) {
-      where = "WHERE definition = :definition";
-      params.addValue("definition", definition);
+    var r = T.refer();
+    var builder = dslQueries.select()
+            .from(r)
+            .whereIf(definition != null && !definition.isBlank(),
+                    () -> Criteria.equal(r.get(T.definition()), Literal.of(definition)));
+
+    long total;
+    if (definition == null || definition.isBlank()) {
+      ExtendedSelectQuery countQuery = dslQueries.select()
+              .from(r)
+              .select(Literal.unsafe("COUNT(*)"))
+              .build();
+      total = dslQueries.queryForObject(countQuery, Long.class);
+    } else {
+      ExtendedSelectQuery countQuery = builder
+              .select(Literal.unsafe("COUNT(*)"))
+              .build();
+      total = dslQueries.queryForObject(countQuery, Long.class);
     }
 
-    Long total = jdbcTemplate.queryForObject(
-            "SELECT COUNT(*) FROM dsl_compile_diagnostics " + where, params, Long.class);
-
-    params.addValue("limit", limit);
-    params.addValue("offset", offset);
-    List<CompileDiagnosticRecord> items = jdbcTemplate.query("""
-            SELECT %s FROM dsl_compile_diagnostics %s
-            ORDER BY occurred_at DESC, id DESC
-            LIMIT :limit OFFSET :offset
-            """.formatted(COLUMNS, where), params, ROW_MAPPER);
-    return new CompileDiagnosticSearchResult(items, total != null ? total : 0L);
+    ExtendedSelectQuery dataQuery = builder
+            .select(r.get(T.id()), r.get(T.occurredAt()), r.get(T.source()),
+                    r.get(T.definition()), r.get(T.file()), r.get(T.line()),
+                    r.get(T.colNumber()), r.get(T.severity()), r.get(T.code()),
+                    r.get(T.message()))
+            .orderByDesc(r.get(T.occurredAt()))
+            .orderByDesc(r.get(T.id()))
+            .limit(limit)
+            .offset(offset)
+            .build();
+    List<CompileDiagnosticRecord> items = dslQueries.query(dataQuery, ROW_MAPPER);
+    return new CompileDiagnosticSearchResult(items, total);
   }
 
   private static @Nullable Long longOrNull(@Nullable Integer value) {

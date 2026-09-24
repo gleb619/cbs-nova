@@ -4,6 +4,7 @@ import cbs.nova.starter.service.ChangeRequestService;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.controller.DslDraftHandler;
 import cbs.nova.starter.persistence.ChangeRequestRepository;
+import cbs.nova.starter.persistence.ExtendedSelectQueryExecutor;
 import cbs.nova.starter.service.DslAuditService;
 import javax.sql.DataSource;
 import org.springframework.beans.factory.ObjectProvider;
@@ -27,8 +28,9 @@ public class ChangeRequestConfiguration {
 
   @Bean
   @ConditionalOnBean(DataSource.class)
-  ChangeRequestRepository changeRequestRepository(NamedParameterJdbcTemplate jdbcTemplate) {
-    return new ChangeRequestRepository(jdbcTemplate);
+  ChangeRequestRepository changeRequestRepository(NamedParameterJdbcTemplate jdbcTemplate,
+          ExtendedSelectQueryExecutor dslQueries) {
+    return new ChangeRequestRepository(jdbcTemplate, dslQueries);
   }
 
   @Bean

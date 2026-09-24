@@ -2,13 +2,14 @@ package cbs.nova.starter.persistence;
 
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.entity.DslApiKeyEntity;
+import com.github.squigglesql.squigglesql.Selectable;
+import com.github.squigglesql.squigglesql.TableReference;
+import com.github.squigglesql.squigglesql.literal.Literal;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
-import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
-import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -21,10 +22,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
  * and an explicit {@link RowMapper}. The repository only stores and looks up keys by their SHA-256
  * hash; the plaintext key never reaches this layer.
  */
-@RequiredArgsConstructor
 public class JdbcApiKeyRepository {
-
-  private static final String COLUMNS = StarterConstants.DSL_API_KEY_COLUMNS;
 
   private static final RowMapper<DslApiKeyEntity> ROW_MAPPER = (rs, rowNum) -> new DslApiKeyEntity(
           rs.getLong("id"),
@@ -38,6 +36,13 @@ public class JdbcApiKeyRepository {
                   : rs.getTimestamp("last_used_at").toInstant());
 
   private final NamedParameterJdbcTemplate jdbcTemplate;
+  private final ExtendedSelectQueryExecutor dslQueries;
+
+  public JdbcApiKeyRepository(NamedParameterJdbcTemplate jdbcTemplate,
+          ExtendedSelectQueryExecutor dslQueries) {
+    this.jdbcTemplate = jdbcTemplate;
+    this.dslQueries = dslQueries;
+  }
 
   /**
    * Looks up an active (non-revoked) row by its SHA-256 hex digest. The unique index on
@@ -45,16 +50,16 @@ public class JdbcApiKeyRepository {
    * plaintext-vs-stored comparison) so this is also the constant-time check.
    */
   public Optional<DslApiKeyEntity> findActiveByHash(String keyHash) {
-    try {
-      DslApiKeyEntity row = jdbcTemplate.queryForObject("""
-              SELECT %s FROM dsl_api_keys
-              WHERE key_hash = :keyHash AND revoked_at IS NULL
-              """.formatted(COLUMNS),
-              new MapSqlParameterSource("keyHash", keyHash), ROW_MAPPER);
-      return Optional.ofNullable(row);
-    } catch (EmptyResultDataAccessException notFound) {
-      return Optional.empty();
-    }
+    ApiKeyTableColumns t = ApiKeyTableColumns.of();
+    TableReference r = t.refer();
+    ExtendedSelectQuery query = dslQueries.select()
+            .from(r)
+            .select(ApiKeyQueryCriteria.fullSelection(t, r).toArray(Selectable[]::new))
+            .where(ApiKeyQueryCriteria.matchesKeyHash(t, r, keyHash))
+            .where(ApiKeyQueryCriteria.isActive(t, r))
+            .build();
+    List<DslApiKeyEntity> rows = dslQueries.query(query, ROW_MAPPER);
+    return rows.isEmpty() ? Optional.empty() : Optional.ofNullable(rows.get(0));
   }
 
   /**
@@ -62,10 +67,14 @@ public class JdbcApiKeyRepository {
    * even when no {@code cbs.dsl.auth.api-key} property is set.
    */
   public long countActive() {
-    Long count = jdbcTemplate.queryForObject(
-            "SELECT COUNT(*) FROM dsl_api_keys WHERE revoked_at IS NULL",
-            new MapSqlParameterSource(), Long.class);
-    return count != null ? count : 0L;
+    ApiKeyTableColumns t = ApiKeyTableColumns.of();
+    TableReference r = t.refer();
+    ExtendedSelectQuery query = dslQueries.select()
+            .from(r)
+            .select(Literal.unsafe("COUNT(*)"))
+            .where(ApiKeyQueryCriteria.isActive(t, r))
+            .build();
+    return dslQueries.queryForObject(query, Long.class);
   }
 
   public void insert(DslApiKeyEntity row) {
@@ -116,11 +125,15 @@ public class JdbcApiKeyRepository {
   }
 
   public List<DslApiKeyEntity> listAll() {
-    return jdbcTemplate.query("""
-            SELECT %s FROM dsl_api_keys
-            ORDER BY created_at DESC, id DESC
-            """.formatted(COLUMNS),
-            new MapSqlParameterSource(), ROW_MAPPER);
+    ApiKeyTableColumns t = ApiKeyTableColumns.of();
+    TableReference r = t.refer();
+    ExtendedSelectQuery query = dslQueries.select()
+            .from(r)
+            .select(ApiKeyQueryCriteria.fullSelection(t, r).toArray(Selectable[]::new))
+            .orderByDesc(r.get(t.createdAt()))
+            .orderByDesc(r.get(t.id()))
+            .build();
+    return dslQueries.query(query, ROW_MAPPER);
   }
 
   /**
@@ -128,15 +141,15 @@ public class JdbcApiKeyRepository {
    * historical (revoked) entries. Returns empty when the id is unknown.
    */
   public Optional<DslApiKeyEntity> findById(long id) {
-    try {
-      DslApiKeyEntity row = jdbcTemplate.queryForObject("""
-              SELECT %s FROM dsl_api_keys WHERE id = :id
-              """.formatted(COLUMNS),
-              new MapSqlParameterSource("id", id), ROW_MAPPER);
-      return Optional.ofNullable(row);
-    } catch (EmptyResultDataAccessException notFound) {
-      return Optional.empty();
-    }
+    ApiKeyTableColumns t = ApiKeyTableColumns.of();
+    TableReference r = t.refer();
+    ExtendedSelectQuery query = dslQueries.select()
+            .from(r)
+            .select(ApiKeyQueryCriteria.fullSelection(t, r).toArray(Selectable[]::new))
+            .where(ApiKeyQueryCriteria.matchesId(t, r, id))
+            .build();
+    List<DslApiKeyEntity> rows = dslQueries.query(query, ROW_MAPPER);
+    return rows.isEmpty() ? Optional.empty() : Optional.ofNullable(rows.get(0));
   }
 
   /**
@@ -145,15 +158,16 @@ public class JdbcApiKeyRepository {
    * {@code last_used_at} touched.
    */
   public Optional<DslApiKeyEntity> findActiveById(long id) {
-    try {
-      DslApiKeyEntity row = jdbcTemplate.queryForObject("""
-              SELECT %s FROM dsl_api_keys WHERE id = :id AND revoked_at IS NULL
-              """.formatted(COLUMNS),
-              new MapSqlParameterSource("id", id), ROW_MAPPER);
-      return Optional.ofNullable(row);
-    } catch (EmptyResultDataAccessException notFound) {
-      return Optional.empty();
-    }
+    ApiKeyTableColumns t = ApiKeyTableColumns.of();
+    TableReference r = t.refer();
+    ExtendedSelectQuery query = dslQueries.select()
+            .from(r)
+            .select(ApiKeyQueryCriteria.fullSelection(t, r).toArray(Selectable[]::new))
+            .where(ApiKeyQueryCriteria.matchesId(t, r, id))
+            .where(ApiKeyQueryCriteria.isActive(t, r))
+            .build();
+    List<DslApiKeyEntity> rows = dslQueries.query(query, ROW_MAPPER);
+    return rows.isEmpty() ? Optional.empty() : Optional.ofNullable(rows.get(0));
   }
 
   @SuppressWarnings("unused")

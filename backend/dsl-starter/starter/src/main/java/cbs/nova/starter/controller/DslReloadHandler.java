@@ -71,10 +71,9 @@ import org.springframework.web.servlet.function.ServerResponse;
  * requests — the runtime is never bricked.
  *
  * <h2>Compilation</h2> Sources are always compiled remotely by the dsl-builder service (via the
- * {@link DslBuilderClient} bean, gated by {@code cbs.dsl.builder-client.enabled}, on by default)
- * and the generated classes are downloaded as a zip. The builder client is mandatory: if the bean
- * is absent, reload fails fast with an {@link IllegalStateException} instead of degrading to an
- * in-process compile.
+ * {@link DslBuilderClient} bean) and the generated classes are downloaded as a zip. The builder
+ * client is mandatory: if the bean is absent, reload fails fast with an
+ * {@link IllegalStateException} instead of degrading to an in-process compile.
  *
  * <h2>Concurrency</h2> A {@link ReentrantLock} serializes overlapping reload calls. Policy: the
  * second (and any further) concurrent caller <em>waits</em> for the first to complete and then runs
@@ -217,13 +216,6 @@ public class DslReloadHandler {
 
   private void compileSources(Path sourceDir, Path outputDir) throws IOException {
     var builder = builderClient();
-    if (builder == null) {
-      throw new IllegalStateException(
-              "DSL reload requires a DslBuilderClient bean but none is available; in-process"
-                      + " javac compilation was removed (T570). Enable"
-                      + " cbs.dsl.builder-client.enabled (default) and ensure the dsl-builder"
-                      + " service is configured.");
-    }
     var sources = collectSources(sourceDir);
     if (sources.isEmpty()) {
       return;
@@ -255,7 +247,14 @@ public class DslReloadHandler {
   }
 
   private DslBuilderClient builderClient() {
-    return builderClientProvider == null ? null : builderClientProvider.getIfAvailable();
+    DslBuilderClient client = builderClientProvider == null
+            ? null
+            : builderClientProvider.getIfAvailable();
+    if (client == null) {
+      throw new IllegalStateException(
+              "DslBuilderClient bean is required for DSL reload but was not registered");
+    }
+    return client;
   }
 
   private static Map<String, String> collectSources(Path sourceDir) throws IOException {

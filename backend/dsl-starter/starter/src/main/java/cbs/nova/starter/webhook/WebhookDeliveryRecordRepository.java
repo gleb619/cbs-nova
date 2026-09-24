@@ -1,11 +1,15 @@
 package cbs.nova.starter.webhook;
 
-import static cbs.nova.starter.core.StarterConstants.DSL_WEBHOOK_DELIVERY_COLUMNS;
-
 import cbs.nova.starter.core.StarterConstants;
+import cbs.nova.starter.persistence.ExtendedSelectQuery;
+import cbs.nova.starter.persistence.ExtendedSelectQueryExecutor;
+import cbs.nova.starter.persistence.WebhookDeliveryQueryCriteria;
+import cbs.nova.starter.persistence.WebhookDeliveryTableColumns;
+import com.github.squigglesql.squigglesql.Selectable;
+import com.github.squigglesql.squigglesql.TableReference;
+import com.github.squigglesql.squigglesql.literal.Literal;
 import java.sql.Timestamp;
 import java.util.List;
-import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -19,10 +23,9 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
  * convention, so there are no update or delete methods anywhere in the codebase.
  *
  * <p>
- * Follows the {@link cbs.nova.starter.persistence.JdbcDslRunRepository} idioms: constructor
- * injection via Lombok, named parameters, and an explicit {@link RowMapper}.
+ * Follows the {@link cbs.nova.starter.persistence.JdbcDslRunRepository} idioms: explicit
+ * constructor injection, named parameters, and an explicit {@link RowMapper}.
  */
-@RequiredArgsConstructor
 public class WebhookDeliveryRecordRepository {
 
   private static final RowMapper<WebhookDeliveryRecord> ROW_MAPPER = (rs,
@@ -38,6 +41,13 @@ public class WebhookDeliveryRecordRepository {
                   rs.getObject("duration_ms", Long.class));
 
   private final NamedParameterJdbcTemplate jdbcTemplate;
+  private final ExtendedSelectQueryExecutor dslQueries;
+
+  public WebhookDeliveryRecordRepository(NamedParameterJdbcTemplate jdbcTemplate,
+          ExtendedSelectQueryExecutor dslQueries) {
+    this.jdbcTemplate = jdbcTemplate;
+    this.dslQueries = dslQueries;
+  }
 
   /**
    * Appends one delivery outcome row. The {@code id} and {@code occurredAt} on the given record are
@@ -75,24 +85,37 @@ public class WebhookDeliveryRecordRepository {
       throw new IllegalArgumentException("limit must be positive, was " + limit);
     }
 
-    String where = "";
-    var params = new MapSqlParameterSource();
-    if (subscriptionId != null && !subscriptionId.isBlank()) {
-      where = "WHERE subscription_id = :subscriptionId";
-      params.addValue("subscriptionId", subscriptionId);
+    WebhookDeliveryTableColumns t = WebhookDeliveryTableColumns.of();
+    TableReference r = t.refer();
+
+    long total;
+    if (subscriptionId == null || subscriptionId.isBlank()) {
+      ExtendedSelectQuery countQuery = dslQueries.select()
+              .from(r)
+              .select(Literal.unsafe("COUNT(*)"))
+              .build();
+      total = dslQueries.queryForObject(countQuery, Long.class);
+    } else {
+      ExtendedSelectQuery countQuery = dslQueries.select()
+              .from(r)
+              .select(Literal.unsafe("COUNT(*)"))
+              .where(WebhookDeliveryQueryCriteria.matchesSubscriptionId(t, r, subscriptionId))
+              .build();
+      total = dslQueries.queryForObject(countQuery, Long.class);
     }
 
-    Long total = jdbcTemplate.queryForObject(
-            "SELECT COUNT(*) FROM dsl_webhook_deliveries " + where, params, Long.class);
-
-    params.addValue("limit", limit);
-    params.addValue("offset", offset);
-    List<WebhookDeliveryRecord> items = jdbcTemplate.query("""
-            SELECT %s FROM dsl_webhook_deliveries %s
-            ORDER BY occurred_at DESC, id DESC
-            LIMIT :limit OFFSET :offset
-            """.formatted(DSL_WEBHOOK_DELIVERY_COLUMNS, where), params, ROW_MAPPER);
-    return new WebhookDeliverySearchResult(items, total != null ? total : 0L);
+    ExtendedSelectQuery dataQuery = dslQueries.select()
+            .from(r)
+            .select(WebhookDeliveryQueryCriteria.fullSelection(t, r).toArray(Selectable[]::new))
+            .whereIf(subscriptionId != null && !subscriptionId.isBlank(),
+                    () -> WebhookDeliveryQueryCriteria.matchesSubscriptionId(t, r, subscriptionId))
+            .orderByDesc(r.get(t.occurredAt()))
+            .orderByDesc(r.get(t.id()))
+            .limit(limit)
+            .offset(offset)
+            .build();
+    List<WebhookDeliveryRecord> items = dslQueries.query(dataQuery, ROW_MAPPER);
+    return new WebhookDeliverySearchResult(items, total);
   }
 
   private static @Nullable String truncate(@Nullable String value, int maxLength) {

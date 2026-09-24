@@ -67,18 +67,6 @@ class CbsDslPropertyPrefixTest {
             });
   }
 
-  @Test
-  void builderClientDisabledViaCbsEnabledFalse() {
-    runner()
-            .withUserConfiguration(BuilderClientInfrastructureConfig.class,
-                    BuilderClientConfiguration.class)
-            .withPropertyValues("cbs.dsl.builder-client.enabled=false")
-            .run(ctx -> {
-              assertThat(ctx).doesNotHaveBean(DslBuilderClient.class);
-              assertThat(ctx).doesNotHaveBean(DslBuilderClientProperties.class);
-            });
-  }
-
   @Configuration
   @EnableConfigurationProperties(DslProperties.class)
   static class DraftsTestConfig {

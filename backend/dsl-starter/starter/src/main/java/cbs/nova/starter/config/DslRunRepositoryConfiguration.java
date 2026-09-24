@@ -107,23 +107,26 @@ public class DslRunRepositoryConfiguration {
   @Bean
   @ConditionalOnBean(DataSource.class)
   public WebhookDeliveryRecordRepository webhookDeliveryRecordRepository(
-          NamedParameterJdbcTemplate jdbcTemplate) {
-    return new WebhookDeliveryRecordRepository(jdbcTemplate);
+          NamedParameterJdbcTemplate jdbcTemplate,
+          ExtendedSelectQueryExecutor dslQueries) {
+    return new WebhookDeliveryRecordRepository(jdbcTemplate, dslQueries);
   }
 
   @Bean
   @ConditionalOnBean(DataSource.class)
   public CompileDiagnosticRecordRepository compileDiagnosticRecordRepository(
-          NamedParameterJdbcTemplate jdbcTemplate) {
-    return new CompileDiagnosticRecordRepository(jdbcTemplate);
+          NamedParameterJdbcTemplate jdbcTemplate,
+          ExtendedSelectQueryExecutor dslQueries) {
+    return new CompileDiagnosticRecordRepository(jdbcTemplate, dslQueries);
   }
 
   @Bean
   @ConditionalOnBean(DataSource.class)
   public DslDefinitionTestRepository dslDefinitionTestRepository(
           NamedParameterJdbcTemplate jdbcTemplate,
-          TransactionTemplate transactionTemplate) {
-    return new DslDefinitionTestRepository(jdbcTemplate, transactionTemplate);
+          TransactionTemplate transactionTemplate,
+          ExtendedSelectQueryExecutor dslQueries) {
+    return new DslDefinitionTestRepository(jdbcTemplate, transactionTemplate, dslQueries);
   }
 
   @Bean
@@ -154,8 +157,9 @@ public class DslRunRepositoryConfiguration {
   // publisher is absent and the write sites become no-ops rather than failing construction.
   @Bean
   @ConditionalOnBean(DataSource.class)
-  public DslEventRepository dslEventRepository(NamedParameterJdbcTemplate jdbcTemplate) {
-    return new DslEventRepository(jdbcTemplate);
+  public DslEventRepository dslEventRepository(NamedParameterJdbcTemplate jdbcTemplate,
+          ExtendedSelectQueryExecutor dslQueries) {
+    return new DslEventRepository(jdbcTemplate, dslQueries);
   }
 
   @Bean
@@ -170,8 +174,9 @@ public class DslRunRepositoryConfiguration {
 
   @Bean
   @ConditionalOnBean(DataSource.class)
-  public JdbcApiKeyRepository jdbcApiKeyRepository(NamedParameterJdbcTemplate jdbcTemplate) {
-    return new JdbcApiKeyRepository(jdbcTemplate);
+  public JdbcApiKeyRepository jdbcApiKeyRepository(NamedParameterJdbcTemplate jdbcTemplate,
+          ExtendedSelectQueryExecutor dslQueries) {
+    return new JdbcApiKeyRepository(jdbcTemplate, dslQueries);
   }
 
   @Bean

@@ -84,7 +84,6 @@ public class DslDraftHandler {
   static final long HISTORY_SIZE_UNKNOWN = -1L;
   static final String DEFAULT_LOG_LIMIT = "20";
   static final int MAX_LOG_LIMIT = 200;
-  static final String GIT_REQUIRES_BUILDER_CODE = "GIT_REQUIRES_BUILDER";
   static final String COMMIT_ERROR_DETAIL = "commitError";
 
   private final DslProperties dslProperties;
@@ -118,33 +117,15 @@ public class DslDraftHandler {
     }
     var payload = withStatus(withSavedAt(body), "Draft");
     var builder = builderClient();
-    if (builder != null) {
-      try {
-        DraftResponse saved = builder.saveDraft(name, payload);
-        audit(request, ACTION_DRAFT_WRITE, name, StarterConstants.OUTCOME_SUCCESS,
-                Map.of("location", String.valueOf(saved.location())));
-        publishEventBestEffort(new DomainEvent.DraftSaved(
-                name, payload.version(), payload.taskQueue(), null, correlationIdOf(request)));
-        log.info("[DSL drafts] saved {} via DSL builder", name);
-        return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(saved);
-      } catch (RuntimeException e) {
-        audit(request, ACTION_DRAFT_WRITE, name, StarterConstants.OUTCOME_FAILURE,
-                Map.of("error", String.valueOf(e.getMessage())));
-        throw e;
-      }
-    }
     try {
-      Path file = writePayload(dir.path().resolve(WORKBENCH_DRAFTS_DIR), payload);
+      DraftResponse saved = builder.saveDraft(name, payload);
       audit(request, ACTION_DRAFT_WRITE, name, StarterConstants.OUTCOME_SUCCESS,
-              Map.of("location", file.toString()));
+              Map.of("location", String.valueOf(saved.location())));
       publishEventBestEffort(new DomainEvent.DraftSaved(
               name, payload.version(), payload.taskQueue(), null, correlationIdOf(request)));
-      log.info("[DSL drafts] saved {} to {}", name, file);
-      return ServerResponse.ok()
-              .contentType(MediaType.APPLICATION_JSON)
-              .body(new DraftResponse(name, "Draft", file.toString(), false, LoadResult.empty(),
-                      null, null, payload.savedAt(), null));
-    } catch (IOException | RuntimeException e) {
+      log.info("[DSL drafts] saved {} via DSL builder", name);
+      return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(saved);
+    } catch (RuntimeException e) {
       audit(request, ACTION_DRAFT_WRITE, name, StarterConstants.OUTCOME_FAILURE,
               Map.of("error", String.valueOf(e.getMessage())));
       throw e;
@@ -193,66 +174,41 @@ public class DslDraftHandler {
     }
     var payload = withStatus(body, "Published");
     var builder = builderClient();
-    if (builder != null) {
-      try {
-        var published = builder.publishDraft(name, payload);
-        log.info("[DSL drafts] published {} via DSL builder", name);
-        DraftResponse response = finishPublish(name, published.location(), dir.path());
-        boolean success = response.reloadError() == null;
-        // Spec §3.3 + I2: publish is atomic per request. The reload must hold *before* we
-        // commit the working tree; if reload failed or the file isn't actually dirty in
-        // git, leave the draft uncommitted so the user sees the diagnostic and retries.
-        String commitId = null;
-        if (success && response.reloaded()) {
-          commitId = commitIfDirty(builder, request, name);
-        }
-        DraftResponse withCommit = commitId == null
-                ? response
-                : new DraftResponse(response.name(), response.status(), response.location(),
-                        response.reloaded(), response.loadResult(), response.reloadError(),
-                        response.diagnostics(), response.savedAt(), commitId);
-        audit(request, ACTION_DEFINITION_PUBLISH, name,
-                success ? StarterConstants.OUTCOME_SUCCESS : StarterConstants.OUTCOME_FAILURE,
-                Map.of("location", String.valueOf(published.location()),
-                        "reloaded", withCommit.reloaded(),
-                        "commitId", String.valueOf(commitId),
-                        "error", success ? "" : String.valueOf(withCommit.reloadError())));
-        publishEventBestEffort(new DomainEvent.DraftPublished(
-                name, payload.version(), payload.taskQueue(),
-                withCommit.reloaded(), withCommit.location(), null,
-                correlationIdOf(request)));
-        return ServerResponse.ok()
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(withCommit);
-      } catch (DslCompilationException e) {
-        recordDiagnostics(CompileDiagnosticSource.PUBLISH, name, e.diagnostics());
-        audit(request, ACTION_DEFINITION_PUBLISH, name, StarterConstants.OUTCOME_FAILURE,
-                Map.of("error", String.valueOf(e.getMessage())));
-        throw e;
-      } catch (IOException | RuntimeException e) {
-        audit(request, ACTION_DEFINITION_PUBLISH, name, StarterConstants.OUTCOME_FAILURE,
-                Map.of("error", String.valueOf(e.getMessage())));
-        throw e;
-      }
-    }
     try {
-      historyService.snapshotBeforePublish(dir.path(), name);
-      Path file = writePayload(dir.path().resolve(WORKBENCH_PUBLISHED_DIR), payload);
-      log.info("[DSL drafts] published {} to {}", name, file);
-      DraftResponse response = finishPublish(name, file.toString(), dir.path());
+      var published = builder.publishDraft(name, payload);
+      log.info("[DSL drafts] published {} via DSL builder", name);
+      DraftResponse response = finishPublish(name, published.location(), dir.path());
       boolean success = response.reloadError() == null;
+      // Spec §3.3 + I2: publish is atomic per request. The reload must hold *before* we
+      // commit the working tree; if reload failed or the file isn't actually dirty in
+      // git, leave the draft uncommitted so the user sees the diagnostic and retries.
+      String commitId = null;
+      if (success && response.reloaded()) {
+        commitId = commitIfDirty(builder, request, name);
+      }
+      DraftResponse withCommit = commitId == null
+              ? response
+              : new DraftResponse(response.name(), response.status(), response.location(),
+                      response.reloaded(), response.loadResult(), response.reloadError(),
+                      response.diagnostics(), response.savedAt(), commitId);
       audit(request, ACTION_DEFINITION_PUBLISH, name,
               success ? StarterConstants.OUTCOME_SUCCESS : StarterConstants.OUTCOME_FAILURE,
-              Map.of("location", file.toString(),
-                      "reloaded", response.reloaded(),
-                      "error", success ? "" : String.valueOf(response.reloadError())));
+              Map.of("location", String.valueOf(published.location()),
+                      "reloaded", withCommit.reloaded(),
+                      "commitId", String.valueOf(commitId),
+                      "error", success ? "" : String.valueOf(withCommit.reloadError())));
       publishEventBestEffort(new DomainEvent.DraftPublished(
               name, payload.version(), payload.taskQueue(),
-              response.reloaded(), response.location(), null,
+              withCommit.reloaded(), withCommit.location(), null,
               correlationIdOf(request)));
       return ServerResponse.ok()
               .contentType(MediaType.APPLICATION_JSON)
-              .body(response);
+              .body(withCommit);
+    } catch (DslCompilationException e) {
+      recordDiagnostics(CompileDiagnosticSource.PUBLISH, name, e.diagnostics());
+      audit(request, ACTION_DEFINITION_PUBLISH, name, StarterConstants.OUTCOME_FAILURE,
+              Map.of("error", String.valueOf(e.getMessage())));
+      throw e;
     } catch (IOException | RuntimeException e) {
       audit(request, ACTION_DEFINITION_PUBLISH, name, StarterConstants.OUTCOME_FAILURE,
               Map.of("error", String.valueOf(e.getMessage())));
@@ -267,30 +223,26 @@ public class DslDraftHandler {
       return dir.response();
     }
     var builder = builderClient();
-    if (builder != null) {
-      var sourcePath = resolveSourcePath(name);
-      if (sourcePath.isPresent()) {
-        try {
-          String path = sourcePath.get();
-          List<LogEntry> entries = builder.vcsLog(path, HISTORY_LIMIT);
-          List<DefinitionHistoryEntry> history = entries.stream()
-                  .map(e -> new DefinitionHistoryEntry(e.commitId(), e.timestampMillis(),
-                          HISTORY_SIZE_UNKNOWN, e.timestampMillis()))
-                  .toList();
-          return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(history);
-        } catch (RuntimeException e) {
-          if (isGitNotConfigured(e)) {
-            log.debug("[DSL drafts] git not configured for {} — falling back to JSON history",
-                    name);
-            return historyViaBuilderJson(name, builder);
-          }
-          throw e;
+    var sourcePath = resolveSourcePath(name);
+    if (sourcePath.isPresent()) {
+      try {
+        String path = sourcePath.get();
+        List<LogEntry> entries = builder.vcsLog(path, HISTORY_LIMIT);
+        List<DefinitionHistoryEntry> history = entries.stream()
+                .map(e -> new DefinitionHistoryEntry(e.commitId(), e.timestampMillis(),
+                        HISTORY_SIZE_UNKNOWN, e.timestampMillis()))
+                .toList();
+        return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(history);
+      } catch (RuntimeException e) {
+        if (isGitNotConfigured(e)) {
+          log.debug("[DSL drafts] git not configured for {} — falling back to JSON history",
+                  name);
+          return historyViaBuilderJson(name, builder);
         }
+        throw e;
       }
-      return historyViaBuilderJson(name, builder);
     }
-    List<DefinitionHistoryEntry> entries = historyService.list(dir.path(), name);
-    return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(entries);
+    return historyViaBuilderJson(name, builder);
   }
 
   public ServerResponse historyEntry(ServerRequest request) throws IOException {
@@ -301,44 +253,37 @@ public class DslDraftHandler {
       return dir.response();
     }
     var builder = builderClient();
-    if (builder != null) {
-      var sourcePath = resolveSourcePath(name);
-      if (sourcePath.isPresent() && isGitCommitId(timestamp)) {
-        String path = sourcePath.get();
-        try {
-          String content = builder.vcsShow(path, timestamp);
-          DraftRequest meta = readDraftMetadataIgnoring404(builder, name);
-          DraftRequest response = new DraftRequest(
-                  name,
-                  meta != null ? meta.type() : null,
-                  "History",
-                  meta != null ? meta.version() : null,
-                  meta != null ? meta.taskQueue() : null,
-                  content,
-                  null);
-          return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(response);
-        } catch (BuilderApiException e) {
-          if (e.getStatusCode().value() == HttpStatus.NOT_FOUND.value()) {
-            return historyEntryNotFound(name, timestamp);
-          }
-          if (isGitNotConfigured(e)) {
-            return historyEntryViaBuilderJson(name, timestamp, builder);
-          }
-          throw e;
-        } catch (RuntimeException e) {
-          if (isGitNotConfigured(e)) {
-            return historyEntryViaBuilderJson(name, timestamp, builder);
-          }
-          throw e;
+    var sourcePath = resolveSourcePath(name);
+    if (sourcePath.isPresent() && isGitCommitId(timestamp)) {
+      String path = sourcePath.get();
+      try {
+        String content = builder.vcsShow(path, timestamp);
+        DraftRequest meta = readDraftMetadataIgnoring404(builder, name);
+        DraftRequest response = new DraftRequest(
+                name,
+                meta != null ? meta.type() : null,
+                "History",
+                meta != null ? meta.version() : null,
+                meta != null ? meta.taskQueue() : null,
+                content,
+                null);
+        return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(response);
+      } catch (BuilderApiException e) {
+        if (e.getStatusCode().value() == HttpStatus.NOT_FOUND.value()) {
+          return historyEntryNotFound(name, timestamp);
         }
+        if (isGitNotConfigured(e)) {
+          return historyEntryViaBuilderJson(name, timestamp, builder);
+        }
+        throw e;
+      } catch (RuntimeException e) {
+        if (isGitNotConfigured(e)) {
+          return historyEntryViaBuilderJson(name, timestamp, builder);
+        }
+        throw e;
       }
-      return historyEntryViaBuilderJson(name, timestamp, builder);
     }
-    var entry = historyService.readEntry(dir.path(), name, timestamp);
-    if (entry.isEmpty()) {
-      return historyEntryNotFound(name, timestamp);
-    }
-    return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(entry.get());
+    return historyEntryViaBuilderJson(name, timestamp, builder);
   }
 
   /**
@@ -354,54 +299,33 @@ public class DslDraftHandler {
       return dir.response();
     }
     var builder = builderClient();
-    if (builder != null) {
-      var sourcePath = resolveSourcePath(name);
-      if (sourcePath.isPresent() && isGitCommitId(timestamp)) {
-        String path = sourcePath.get();
-        try {
-          String before = builder.vcsShow(path, timestamp);
-          String after = builder.readFile(path).content();
-          LineDiff.Result result = LineDiff.diff(before, after, StarterConstants.DEFAULT_MAX_HUNKS,
-                  StarterConstants.LINE_DIFF_CONTEXT_LINES);
-          return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON)
-                  .body(new HistoryDiffResponse(name, timestamp, before, after, result.hunks(),
-                          result.truncated()));
-        } catch (BuilderApiException e) {
-          if (e.getStatusCode().value() == HttpStatus.NOT_FOUND.value()) {
-            return historyEntryNotFound(name, timestamp);
-          }
-          if (isGitNotConfigured(e)) {
-            return historyDiffViaBuilderJson(name, timestamp, builder);
-          }
-          throw e;
-        } catch (RuntimeException e) {
-          if (isGitNotConfigured(e)) {
-            return historyDiffViaBuilderJson(name, timestamp, builder);
-          }
-          throw e;
+    var sourcePath = resolveSourcePath(name);
+    if (sourcePath.isPresent() && isGitCommitId(timestamp)) {
+      String path = sourcePath.get();
+      try {
+        String before = builder.vcsShow(path, timestamp);
+        String after = builder.readFile(path).content();
+        LineDiff.Result result = LineDiff.diff(before, after, StarterConstants.DEFAULT_MAX_HUNKS,
+                StarterConstants.LINE_DIFF_CONTEXT_LINES);
+        return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON)
+                .body(new HistoryDiffResponse(name, timestamp, before, after, result.hunks(),
+                        result.truncated()));
+      } catch (BuilderApiException e) {
+        if (e.getStatusCode().value() == HttpStatus.NOT_FOUND.value()) {
+          return historyEntryNotFound(name, timestamp);
         }
+        if (isGitNotConfigured(e)) {
+          return historyDiffViaBuilderJson(name, timestamp, builder);
+        }
+        throw e;
+      } catch (RuntimeException e) {
+        if (isGitNotConfigured(e)) {
+          return historyDiffViaBuilderJson(name, timestamp, builder);
+        }
+        throw e;
       }
-      return historyDiffViaBuilderJson(name, timestamp, builder);
     }
-    var entry = historyService.readEntry(dir.path(), name, timestamp);
-    if (entry.isEmpty()) {
-      return historyEntryNotFound(name, timestamp);
-    }
-    String after = pretty(entry.get());
-    var published = historyService.readPublished(dir.path(), name);
-    String before = null;
-    List<DiffHunk> hunks = List.of();
-    boolean truncated = false;
-    if (published.isPresent()) {
-      before = pretty(published.get());
-      LineDiff.Result result = LineDiff.diff(before, after, StarterConstants.DEFAULT_MAX_HUNKS,
-              StarterConstants.LINE_DIFF_CONTEXT_LINES);
-      hunks = result.hunks();
-      truncated = result.truncated();
-    }
-    return ServerResponse.ok()
-            .contentType(MediaType.APPLICATION_JSON)
-            .body(new HistoryDiffResponse(name, timestamp, before, after, hunks, truncated));
+    return historyDiffViaBuilderJson(name, timestamp, builder);
   }
 
   public ServerResponse restore(ServerRequest request) throws IOException {
@@ -412,52 +336,39 @@ public class DslDraftHandler {
       return dir.response();
     }
     var builder = builderClient();
-    if (builder != null) {
-      var sourcePath = resolveSourcePath(name);
-      if (sourcePath.isPresent() && isGitCommitId(timestamp)) {
-        String path = sourcePath.get();
-        try {
-          String content = builder.vcsShow(path, timestamp);
-          builder.stageWrite(path, content);
-          builder.flushFiles();
-          DraftResponse response = new DraftResponse(name, "Draft", path, false,
-                  LoadResult.empty(), null, null, System.currentTimeMillis(), null);
-          audit(request, ACTION_DRAFT_RESTORE, name, StarterConstants.OUTCOME_SUCCESS,
-                  Map.of("location", path, "commitId", timestamp));
-          log.info("[DSL drafts] restored {} (path={}) from commit {}", name, path, timestamp);
-          return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(response);
-        } catch (BuilderApiException e) {
-          audit(request, ACTION_DRAFT_RESTORE, name, StarterConstants.OUTCOME_FAILURE,
-                  Map.of("error", String.valueOf(e.getMessage())));
-          if (e.getStatusCode().value() == HttpStatus.NOT_FOUND.value()) {
-            return historyEntryNotFound(name, timestamp);
-          }
-          if (isGitNotConfigured(e)) {
-            return restoreViaBuilderJson(name, timestamp, builder, dir.path());
-          }
-          throw e;
-        } catch (RuntimeException e) {
-          audit(request, ACTION_DRAFT_RESTORE, name, StarterConstants.OUTCOME_FAILURE,
-                  Map.of("error", String.valueOf(e.getMessage())));
-          if (isGitNotConfigured(e)) {
-            return restoreViaBuilderJson(name, timestamp, builder, dir.path());
-          }
-          throw e;
+    var sourcePath = resolveSourcePath(name);
+    if (sourcePath.isPresent() && isGitCommitId(timestamp)) {
+      String path = sourcePath.get();
+      try {
+        String content = builder.vcsShow(path, timestamp);
+        builder.stageWrite(path, content);
+        builder.flushFiles();
+        DraftResponse response = new DraftResponse(name, "Draft", path, false,
+                LoadResult.empty(), null, null, System.currentTimeMillis(), null);
+        audit(request, ACTION_DRAFT_RESTORE, name, StarterConstants.OUTCOME_SUCCESS,
+                Map.of("location", path, "commitId", timestamp));
+        log.info("[DSL drafts] restored {} (path={}) from commit {}", name, path, timestamp);
+        return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(response);
+      } catch (BuilderApiException e) {
+        audit(request, ACTION_DRAFT_RESTORE, name, StarterConstants.OUTCOME_FAILURE,
+                Map.of("error", String.valueOf(e.getMessage())));
+        if (e.getStatusCode().value() == HttpStatus.NOT_FOUND.value()) {
+          return historyEntryNotFound(name, timestamp);
         }
+        if (isGitNotConfigured(e)) {
+          return restoreViaBuilderJson(name, timestamp, builder, dir.path());
+        }
+        throw e;
+      } catch (RuntimeException e) {
+        audit(request, ACTION_DRAFT_RESTORE, name, StarterConstants.OUTCOME_FAILURE,
+                Map.of("error", String.valueOf(e.getMessage())));
+        if (isGitNotConfigured(e)) {
+          return restoreViaBuilderJson(name, timestamp, builder, dir.path());
+        }
+        throw e;
       }
-      return restoreViaBuilderJson(name, timestamp, builder, dir.path());
     }
-    var entry = historyService.readEntry(dir.path(), name, timestamp);
-    if (entry.isEmpty()) {
-      return historyEntryNotFound(name, timestamp);
-    }
-    historyService.snapshotBeforePublish(dir.path(), name);
-    var payload = withStatus(entry.get(), "Published");
-    Path file = writePayload(dir.path().resolve(WORKBENCH_PUBLISHED_DIR), payload);
-    log.info("[DSL drafts] restored {} to published {} from history {}", name, file, timestamp);
-    return ServerResponse.ok()
-            .contentType(MediaType.APPLICATION_JSON)
-            .body(finishPublish(name, file.toString(), dir.path()));
+    return restoreViaBuilderJson(name, timestamp, builder, dir.path());
   }
 
   public ServerResponse delete(ServerRequest request) throws IOException {
@@ -467,24 +378,9 @@ public class DslDraftHandler {
       return dir.response();
     }
     var builder = builderClient();
-    if (builder != null) {
-      DraftResponse deleted = builder.deleteDraft(name);
-      log.info("[DSL drafts] deleted {} via DSL builder", name);
-      return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(deleted);
-    }
-    Path draftsDir = dir.path().resolve(WORKBENCH_DRAFTS_DIR);
-    Path draftFile = draftsDir.resolve(safeFileName(name) + ".json").normalize();
-    if (!draftFile.startsWith(draftsDir) || !Files.exists(draftFile)) {
-      return error(HttpStatus.NOT_FOUND,
-              new ErrorResponse("NOT_FOUND", "Draft not found: " + name, name, null, null, null,
-                      null, null, null));
-    }
-    Files.delete(draftFile);
-    log.info("[DSL drafts] deleted {} from {}", name, draftFile);
-    return ServerResponse.ok()
-            .contentType(MediaType.APPLICATION_JSON)
-            .body(new DraftResponse(name, "Deleted", null, false, LoadResult.empty(), null, null,
-                    null, null));
+    DraftResponse deleted = builder.deleteDraft(name);
+    log.info("[DSL drafts] deleted {} via DSL builder", name);
+    return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(deleted);
   }
 
   public ServerResponse list(ServerRequest request) {
@@ -499,50 +395,8 @@ public class DslDraftHandler {
               .body(new PageResponse<>(List.of(), 0L, skip, pageSize));
     }
     var builder = builderClient();
-    if (builder != null) {
-      return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON)
-              .body(builder.listDrafts(pageSize, skip));
-    }
-    Path drafts = draftsDir(dir.path());
-    if (!Files.isDirectory(drafts)) {
-      return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON)
-              .body(new PageResponse<>(List.of(), 0L, skip, pageSize));
-    }
-    List<DraftSummary> summaries = new ArrayList<>();
-    try (var stream = Files.list(drafts)) {
-      var files = stream
-              .filter(Files::isRegularFile)
-              .filter(p -> p.getFileName().toString().endsWith(".json"))
-              .sorted((a, b) -> a.getFileName().toString().compareTo(b.getFileName().toString()))
-              .toList();
-      for (Path file : files) {
-        try {
-          DraftRequest draft = objectMapper.readValue(file.toFile(), DraftRequest.class);
-          long updatedAt = Files.getLastModifiedTime(file).toMillis();
-          summaries.add(new DraftSummary(
-                  draft.name(),
-                  draft.type(),
-                  draft.status(),
-                  draft.version(),
-                  updatedAt));
-        } catch (Exception e) {
-          log.warn("[DSL drafts] skipping unparseable draft file {}: {}", file,
-                  e.getMessage());
-        }
-      }
-    } catch (IOException e) {
-      log.warn("[DSL drafts] failed to list drafts in {}: {}", drafts, e.getMessage());
-      return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON)
-              .body(new PageResponse<>(List.of(), 0L, skip, pageSize));
-    }
-    long total = summaries.size();
-    List<DraftSummary> paged = summaries.stream()
-            .skip(skip)
-            .limit(pageSize)
-            .toList();
-    log.info("[DSL drafts] listed {} drafts from {} (total {})", paged.size(), drafts, total);
     return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON)
-            .body(new PageResponse<>(paged, total, skip, pageSize));
+            .body(builder.listDrafts(pageSize, skip));
   }
 
   public ServerResponse read(ServerRequest request) throws IOException {
@@ -552,20 +406,8 @@ public class DslDraftHandler {
       return dir.response();
     }
     var builder = builderClient();
-    if (builder != null) {
-      DraftRequest payload = builder.readDraft(name);
-      log.info("[DSL drafts] read {} via DSL builder", name);
-      return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(payload);
-    }
-    Path drafts = draftsDir(dir.path());
-    Path draftFile = drafts.resolve(safeFileName(name) + ".json").normalize();
-    if (!draftFile.startsWith(drafts) || !Files.exists(draftFile)) {
-      return error(HttpStatus.NOT_FOUND,
-              new ErrorResponse("NOT_FOUND", "Draft not found: " + name, name, null, null, null,
-                      null, null, null));
-    }
-    DraftRequest payload = objectMapper.readValue(draftFile.toFile(), DraftRequest.class);
-    log.info("[DSL drafts] read {} from {}", name, draftFile);
+    DraftRequest payload = builder.readDraft(name);
+    log.info("[DSL drafts] read {} via DSL builder", name);
     return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(payload);
   }
 
@@ -576,14 +418,8 @@ public class DslDraftHandler {
     }
     boolean includeDrafts = request.param("include").map("drafts"::equals).orElse(false);
     var builder = builderClient();
-    if (builder != null) {
-      DefinitionBundle bundle = builder.exportBundle(includeDrafts);
-      log.info("[DSL bundle] exported {} definitions via DSL builder (includeDrafts={})",
-              bundle.definitions().size(), includeDrafts);
-      return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(bundle);
-    }
-    DefinitionBundle bundle = bundleService.export(dir.path(), includeDrafts);
-    log.info("[DSL bundle] exported {} definitions (includeDrafts={})",
+    DefinitionBundle bundle = builder.exportBundle(includeDrafts);
+    log.info("[DSL bundle] exported {} definitions via DSL builder (includeDrafts={})",
             bundle.definitions().size(), includeDrafts);
     return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(bundle);
   }
@@ -650,38 +486,7 @@ public class DslDraftHandler {
     }
 
     var builder = builderClient();
-    if (builder != null) {
-      return importBundleViaBuilder(request, bundle, bundleTarget(bundle));
-    }
-
-    List<ImportEntryResult> results = new ArrayList<>();
-    String bulkTarget = bundleTarget(bundle);
-    try {
-      for (DefinitionBundleEntry entry : bundle.definitions()) {
-        DraftRequest payload = withStatus(entry.definition(), "Published");
-        String name = payload.name();
-        historyService.snapshotBeforePublish(dir.path(), name);
-        Path file = writePayload(dir.path().resolve(WORKBENCH_PUBLISHED_DIR), payload);
-        results.add(new ImportEntryResult(name, "published", null));
-        log.info("[DSL bundle] imported published marker {} to {}", name, file);
-      }
-      audit(request, ACTION_DRAFT_BULK_WRITE, bulkTarget, StarterConstants.OUTCOME_SUCCESS,
-              Map.of("count", results.size()));
-    } catch (RuntimeException e) {
-      audit(request, ACTION_DRAFT_BULK_WRITE, bulkTarget, StarterConstants.OUTCOME_FAILURE,
-              Map.of("error", String.valueOf(e.getMessage()),
-                      "succeeded", results.size(),
-                      "attempted", bundle.definitions().size()));
-      throw e;
-    }
-
-    ReloadOutcome outcome = reloadOutcome(bulkTarget);
-    long publishedCount = results.stream().filter(r -> "published".equals(r.outcome())).count();
-    long failedCount = results.size() - publishedCount;
-    ImportBundleResult result = new ImportBundleResult(false, outcome.reloaded(),
-            (int) publishedCount,
-            (int) failedCount, results, outcome.error(), outcome.diagnostics());
-    return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(result);
+    return importBundleViaBuilder(request, bundle, bundleTarget(bundle));
   }
 
   private ServerResponse importBundleViaBuilder(ServerRequest request, DefinitionBundle bundle,
@@ -785,7 +590,13 @@ public class DslDraftHandler {
   }
 
   private DslBuilderClient builderClient() {
-    return builderClientProvider == null ? null : builderClientProvider.getIfAvailable();
+    DslBuilderClient client = builderClientProvider == null
+            ? null
+            : builderClientProvider.getIfAvailable();
+    if (client == null) {
+      throw new IllegalStateException("DslBuilderClient bean required");
+    }
+    return client;
   }
 
   /**
@@ -855,13 +666,7 @@ public class DslDraftHandler {
               new ErrorResponse("NOT_FOUND", "No source path for definition: " + name, name,
                       null, null, null, null, null, null));
     }
-    var builder = builderClient();
-    if (builder == null) {
-      return error(HttpStatus.CONFLICT,
-              new ErrorResponse(GIT_REQUIRES_BUILDER_CODE,
-                      "Discard requires the DSL builder (git-backed workspace)", name,
-                      null, null, null, null, null, null));
-    }
+    DslBuilderClient builder = builderClient();
     String path = sourcePath.get();
     try {
       builder.discard(new DiscardRequest(List.of(path)));
@@ -899,13 +704,7 @@ public class DslDraftHandler {
               new ErrorResponse("NOT_FOUND", "No source path for definition: " + name, name,
                       null, null, null, null, null, null));
     }
-    var builder = builderClient();
-    if (builder == null) {
-      return error(HttpStatus.CONFLICT,
-              new ErrorResponse(GIT_REQUIRES_BUILDER_CODE,
-                      "Commit history requires the DSL builder (git-backed workspace)", name,
-                      null, null, null, null, null, null));
-    }
+    DslBuilderClient builder = builderClient();
     int limit = parseLimit(request);
     String path = sourcePath.get();
     List<LogEntry> entries = builder.vcsLog(path, limit);

@@ -1,10 +1,12 @@
 package cbs.nova.starter.persistence;
 
 import cbs.nova.starter.entity.NotificationRuleFiringEntity;
+import com.github.squigglesql.squigglesql.Selectable;
+import com.github.squigglesql.squigglesql.TableReference;
+import com.github.squigglesql.squigglesql.literal.Literal;
 import java.sql.Timestamp;
 import java.util.List;
 import java.util.Objects;
-import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -16,11 +18,7 @@ import org.springframework.jdbc.support.KeyHolder;
  * JDBC access to the append-only {@code dsl_notification_rule_firing} audit table: an insert plus a
  * paged, filterable read. There is intentionally no update or delete path.
  */
-@RequiredArgsConstructor
 public class NotificationRuleFiringRepository {
-
-  private static final String COLUMNS = "id, event_id, rule_id, rule_name, sink, outcome, detail,"
-          + " duration_ms, created_at";
 
   private static final RowMapper<NotificationRuleFiringEntity> ROW_MAPPER = (rs,
           rowNum) -> new NotificationRuleFiringEntity(
@@ -35,6 +33,13 @@ public class NotificationRuleFiringRepository {
                   rs.getTimestamp("created_at").toInstant());
 
   private final NamedParameterJdbcTemplate jdbcTemplate;
+  private final ExtendedSelectQueryExecutor dslQueries;
+
+  public NotificationRuleFiringRepository(NamedParameterJdbcTemplate jdbcTemplate,
+          ExtendedSelectQueryExecutor dslQueries) {
+    this.jdbcTemplate = jdbcTemplate;
+    this.dslQueries = dslQueries;
+  }
 
   public long insert(NotificationRuleFiringEntity row) {
     Objects.requireNonNull(row, "row");
@@ -69,23 +74,29 @@ public class NotificationRuleFiringRepository {
       throw new IllegalArgumentException("limit must be positive, was " + limit);
     }
 
-    String where = "";
-    var params = new MapSqlParameterSource();
-    if (ruleId != null) {
-      where = "WHERE rule_id = :ruleId";
-      params.addValue("ruleId", ruleId);
-    }
+    NotificationRuleFiringTableColumns t = NotificationRuleFiringTableColumns.of();
+    TableReference r = t.refer();
 
-    Long total = jdbcTemplate.queryForObject(
-            "SELECT COUNT(*) FROM dsl_notification_rule_firing " + where, params, Long.class);
+    ExtendedSelectQuery countQuery = dslQueries.select()
+            .from(r)
+            .select(Literal.unsafe("COUNT(*)"))
+            .whereIf(ruleId != null,
+                    () -> NotificationRuleFiringQueryCriteria.matchesRuleId(t, r, ruleId))
+            .build();
+    long total = dslQueries.queryForObject(countQuery, Long.class);
 
-    params.addValue("limit", limit);
-    params.addValue("offset", offset);
-    List<NotificationRuleFiringEntity> items = jdbcTemplate.query("""
-            SELECT %s FROM dsl_notification_rule_firing %s
-            ORDER BY created_at DESC, id DESC
-            LIMIT :limit OFFSET :offset
-            """.formatted(COLUMNS, where), params, ROW_MAPPER);
-    return new NotificationRuleFiringSearchResult(items, total != null ? total : 0L);
+    ExtendedSelectQuery dataQuery = dslQueries.select()
+            .from(r)
+            .select(NotificationRuleFiringQueryCriteria.fullSelection(t, r)
+                    .toArray(Selectable[]::new))
+            .whereIf(ruleId != null,
+                    () -> NotificationRuleFiringQueryCriteria.matchesRuleId(t, r, ruleId))
+            .orderByDesc(r.get(t.createdAt()))
+            .orderByDesc(r.get(t.id()))
+            .limit(limit)
+            .offset(offset)
+            .build();
+    List<NotificationRuleFiringEntity> items = dslQueries.query(dataQuery, ROW_MAPPER);
+    return new NotificationRuleFiringSearchResult(items, total);
   }
 }

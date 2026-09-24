@@ -1,12 +1,12 @@
 package cbs.nova.starter.persistence;
 
-import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.entity.DslDefinitionTestEntity;
+import com.github.squigglesql.squigglesql.criteria.Criteria;
+import com.github.squigglesql.squigglesql.literal.Literal;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
-import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -20,10 +20,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * explicit {@link RowMapper}. Reads are keyed by {@code definition_name}; authoring replaces a
  * whole definition's case set in one transaction ({@link #replaceAll}).
  */
-@RequiredArgsConstructor
 public class DslDefinitionTestRepository {
-
-  private static final String COLUMNS = StarterConstants.DSL_DEFINITION_TEST_COLUMNS;
 
   private static final RowMapper<DslDefinitionTestEntity> ROW_MAPPER = (rs,
           rowNum) -> new DslDefinitionTestEntity(
@@ -37,20 +34,35 @@ public class DslDefinitionTestRepository {
 
   private final NamedParameterJdbcTemplate jdbcTemplate;
   private final TransactionTemplate transactionTemplate;
+  private final ExtendedSelectQueryExecutor dslQueries;
+  private static final DslDefinitionTestTableColumns T = DslDefinitionTestTableColumns.of();
+
+  public DslDefinitionTestRepository(NamedParameterJdbcTemplate jdbcTemplate,
+          TransactionTemplate transactionTemplate, ExtendedSelectQueryExecutor dslQueries) {
+    this.jdbcTemplate = Objects.requireNonNull(jdbcTemplate);
+    this.transactionTemplate = Objects.requireNonNull(transactionTemplate);
+    this.dslQueries = Objects.requireNonNull(dslQueries);
+  }
 
   public List<DslDefinitionTestEntity> listForDefinition(String definitionName) {
-    return jdbcTemplate.query("""
-            SELECT %s FROM dsl_definition_tests
-            WHERE definition_name = :definitionName
-            ORDER BY case_name ASC
-            """.formatted(COLUMNS),
-            new MapSqlParameterSource("definitionName", definitionName), ROW_MAPPER);
+    var r = T.refer();
+    ExtendedSelectQuery query = dslQueries.select()
+            .select(r.get(T.id()), r.get(T.definitionName()), r.get(T.caseName()),
+                    r.get(T.input()), r.get(T.expectedOutput()), r.get(T.createdAt()),
+                    r.get(T.updatedAt()))
+            .where(Criteria.equal(r.get(T.definitionName()), Literal.of(definitionName)))
+            .orderByAsc(r.get(T.caseName()))
+            .build();
+    return dslQueries.query(query, ROW_MAPPER);
   }
 
   public int countByDefinition(String definitionName) {
-    Long count = jdbcTemplate.queryForObject(
-            "SELECT COUNT(*) FROM dsl_definition_tests WHERE definition_name = :definitionName",
-            new MapSqlParameterSource("definitionName", definitionName), Long.class);
+    var r = T.refer();
+    ExtendedSelectQuery query = dslQueries.select()
+            .select(Literal.unsafe("COUNT(*)"))
+            .where(Criteria.equal(r.get(T.definitionName()), Literal.of(definitionName)))
+            .build();
+    Long count = dslQueries.queryForObject(query, Long.class);
     return count != null ? count.intValue() : 0;
   }
 

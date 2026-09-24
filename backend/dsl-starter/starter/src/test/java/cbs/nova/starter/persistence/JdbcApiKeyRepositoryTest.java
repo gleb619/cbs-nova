@@ -38,7 +38,8 @@ class JdbcApiKeyRepositoryTest {
     ScriptUtils.executeSqlScript(dataSource.getConnection(),
             new ClassPathResource("db/migration/h2/V1__init.sql"));
     jdbcTemplate = new NamedParameterJdbcTemplate(dataSource);
-    repository = new JdbcApiKeyRepository(jdbcTemplate);
+    ExtendedSelectQueryExecutor dslQueries = new ExtendedSelectQueryExecutor(jdbcTemplate);
+    repository = new JdbcApiKeyRepository(jdbcTemplate, dslQueries);
   }
 
   @Test

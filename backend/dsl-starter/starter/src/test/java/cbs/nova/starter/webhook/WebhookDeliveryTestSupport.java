@@ -1,5 +1,6 @@
 package cbs.nova.starter.webhook;
 
+import cbs.nova.starter.persistence.ExtendedSelectQueryExecutor;
 import java.util.UUID;
 import org.h2.jdbcx.JdbcDataSource;
 import org.springframework.core.io.ClassPathResource;
@@ -26,6 +27,8 @@ public final class WebhookDeliveryTestSupport {
     } catch (Exception e) {
       throw new IllegalStateException("failed to set up in-memory dsl_webhook_deliveries table", e);
     }
-    return new WebhookDeliveryRecordRepository(new NamedParameterJdbcTemplate(dataSource));
+    var jdbcTemplate = new NamedParameterJdbcTemplate(dataSource);
+    var dslQueries = new ExtendedSelectQueryExecutor(jdbcTemplate);
+    return new WebhookDeliveryRecordRepository(jdbcTemplate, dslQueries);
   }
 }

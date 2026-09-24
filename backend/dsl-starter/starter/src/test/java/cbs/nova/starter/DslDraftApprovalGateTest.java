@@ -1,16 +1,30 @@
 package cbs.nova.starter;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import cbs.nova.dsl.model.ErrorResponse;
+import cbs.nova.dsl.model.LoadResult;
+import cbs.nova.starter.builder.DslBuilderClient;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.controller.DslDraftHandler;
+import cbs.nova.starter.controller.DslReloadHandler;
 import cbs.nova.starter.core.StarterConstants;
+import cbs.nova.starter.model.VcsModels.CommitRequest;
+import cbs.nova.starter.model.VcsModels.CommitResult;
+import cbs.nova.starter.model.VcsModels.DiscardRequest;
+import cbs.nova.starter.model.VcsModels.DiscardResult;
+import cbs.nova.starter.model.VcsModels.DraftRequest;
+import cbs.nova.starter.model.VcsModels.DraftResponse;
 import cbs.nova.starter.security.Role;
 import cbs.nova.starter.security.RoleResolver;
 import cbs.nova.starter.service.DslDefinitionBundleService;
 import cbs.nova.starter.service.DslDefinitionHistoryService;
-import cbs.nova.starter.controller.DslReloadHandler;
+import cbs.nova.starter.service.DslGitStatusResolver;
+import cbs.nova.starter.service.DslSourcePathResolver;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -102,7 +116,6 @@ class DslDraftApprovalGateTest {
     ServerResponse response = handler.publish(postPublishRequest("LoanA"));
 
     assertThat(response.statusCode().value()).isEqualTo(200);
-    assertThat(sourceDir.resolve(".workbench/published/LoanA.json")).exists();
   }
 
   @Test
@@ -113,7 +126,6 @@ class DslDraftApprovalGateTest {
     ServerResponse response = handler.publish(postPublishRequest("LoanA"));
 
     assertThat(response.statusCode().value()).isEqualTo(200);
-    assertThat(sourceDir.resolve(".workbench/published/LoanA.json")).exists();
   }
 
   private DslProperties gatedProps(boolean required) {
@@ -124,13 +136,45 @@ class DslDraftApprovalGateTest {
   }
 
   private DslDraftHandler handler(DslProperties props, AuditTestSupport.Harness audit) {
+    DslBuilderClient client = mock(DslBuilderClient.class);
+    BuilderClientTestSupport.stubLocalCompile(client);
+    when(client.publishDraft(anyString(), any(DraftRequest.class))).thenAnswer(invocation -> {
+      String name = invocation.getArgument(0);
+      return new DraftResponse(name, "Published", "/mock/location/" + name + ".json", false,
+              LoadResult.empty(), null, null, System.currentTimeMillis(), null);
+    });
+    when(client.saveDraft(anyString(), any(DraftRequest.class))).thenAnswer(invocation -> {
+      String name = invocation.getArgument(0);
+      return new DraftResponse(name, "Draft", "/mock/location/" + name + ".json", false,
+              LoadResult.empty(), null, null, System.currentTimeMillis(), null);
+    });
+    when(client.commit(any(CommitRequest.class)))
+            .thenReturn(new CommitResult("abc123", List.of(), 0L, null, null));
+    when(client.deleteDraft(anyString()))
+            .thenReturn(new DraftResponse(null, "Deleted", null, false, LoadResult.empty(), null,
+                    null, null, null));
+    when(client.discard(any(DiscardRequest.class))).thenReturn(new DiscardResult(List.of()));
+    ObjectProvider<DslBuilderClient> providerOfClient = BuilderClientTestSupport.providerOf(client);
+
+    DslSourcePathResolver sourcePathResolver = mock(DslSourcePathResolver.class);
+    DslGitStatusResolver gitStatusResolver = mock(DslGitStatusResolver.class);
+
     return new DslDraftHandler(props,
-            new DslReloadHandler(props, null, null, null, null, null, null, null),
+            new DslReloadHandler(props, null, null, AuditTestSupport.providerOf(audit.service()),
+                    providerOfClient, null, null, null),
             new DslDefinitionHistoryService(props, mapper), mapper,
             new DslDefinitionBundleService(mapper, Optional.empty(),
                     DslProperties.bundleServiceDefaults()),
-            AuditTestSupport.providerOf(audit.service()), null, null, null,
-            roleResolverProvider(), null, null);
+            AuditTestSupport.providerOf(audit.service()), providerOfClient, null, null,
+            roleResolverProvider(), providerOfBean(sourcePathResolver),
+            providerOfBean(gitStatusResolver));
+  }
+
+  private static <T> ObjectProvider<T> providerOfBean(T bean) {
+    @SuppressWarnings("unchecked")
+    ObjectProvider<T> provider = mock(ObjectProvider.class);
+    when(provider.getIfAvailable()).thenReturn(bean);
+    return provider;
   }
 
   private static ObjectProvider<RoleResolver> roleResolverProvider() {

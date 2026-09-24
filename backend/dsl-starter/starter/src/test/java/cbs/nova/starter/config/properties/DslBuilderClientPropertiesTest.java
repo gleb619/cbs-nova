@@ -19,7 +19,6 @@ class DslBuilderClientPropertiesTest {
   void defaultsAreApplied() {
     runner.run(ctx -> {
       DslBuilderClientProperties properties = ctx.getBean(DslBuilderClientProperties.class);
-      assertThat(properties.enabled()).isTrue();
       assertThat(properties.baseUrl()).isEqualTo("http://localhost:8091");
       assertThat(properties.http2()).isTrue();
       assertThat(properties.queue().capacity()).isEqualTo(100);

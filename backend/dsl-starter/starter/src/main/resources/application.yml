@@ -169,7 +169,6 @@ cbs:
 # ignored — ThreadPoolBulkhead rejects immediately when its bounded queue is full.
   dsl:
     builder-client:
-      enabled: true
       base-url: http://localhost:8091
       http2: true
       queue:

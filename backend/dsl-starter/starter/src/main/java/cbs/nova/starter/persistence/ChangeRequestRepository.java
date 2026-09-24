@@ -8,7 +8,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.SqlParameterValue;
@@ -23,11 +22,7 @@ import org.springframework.jdbc.support.KeyHolder;
  * Lombok, named parameters, an explicit {@link RowMapper}, and generated keys surfaced from the
  * insert.
  */
-@RequiredArgsConstructor
 public class ChangeRequestRepository {
-
-  private static final String COLUMNS = "id, definition_name, draft_content, requested_by,"
-          + " requested_at, status, approved_by, approved_at, comment";
 
   private static final RowMapper<ChangeRequestEntity> ROW_MAPPER = (rs,
           rowNum) -> new ChangeRequestEntity(
@@ -44,6 +39,14 @@ public class ChangeRequestRepository {
                   rs.getString("comment"));
 
   private final NamedParameterJdbcTemplate jdbcTemplate;
+  private final ExtendedSelectQueryExecutor dslQueries;
+  private static final ChangeRequestTableColumns T = ChangeRequestTableColumns.of();
+
+  public ChangeRequestRepository(NamedParameterJdbcTemplate jdbcTemplate,
+          ExtendedSelectQueryExecutor dslQueries) {
+    this.jdbcTemplate = Objects.requireNonNull(jdbcTemplate);
+    this.dslQueries = Objects.requireNonNull(dslQueries);
+  }
 
   public long insert(ChangeRequestEntity row) {
     Objects.requireNonNull(row, "row");
@@ -74,28 +77,38 @@ public class ChangeRequestRepository {
   }
 
   public Optional<ChangeRequestEntity> findById(long id) {
-    List<ChangeRequestEntity> items = jdbcTemplate.query(
-            "SELECT %s FROM dsl_change_request WHERE id = :id".formatted(COLUMNS),
-            new MapSqlParameterSource("id", id), ROW_MAPPER);
+    var r = T.refer();
+    ExtendedSelectQuery query = dslQueries.select()
+            .select(ChangeRequestQueryCriteria.fullSelection(T, r)
+                    .toArray(new com.github.squigglesql.squigglesql.Selectable[0]))
+            .where(ChangeRequestQueryCriteria.matchesId(T, r, id))
+            .build();
+    List<ChangeRequestEntity> items = dslQueries.query(query, ROW_MAPPER);
     return items.stream().findFirst();
   }
 
   public List<ChangeRequestEntity> findByDefinitionName(String definitionName) {
-    return jdbcTemplate.query("""
-            SELECT %s FROM dsl_change_request
-            WHERE definition_name = :definitionName
-            ORDER BY requested_at DESC, id DESC
-            """.formatted(COLUMNS), new MapSqlParameterSource("definitionName", definitionName),
-            ROW_MAPPER);
+    var r = T.refer();
+    ExtendedSelectQuery query = dslQueries.select()
+            .select(ChangeRequestQueryCriteria.fullSelection(T, r)
+                    .toArray(new com.github.squigglesql.squigglesql.Selectable[0]))
+            .where(ChangeRequestQueryCriteria.matchesDefinitionName(T, r, definitionName))
+            .orderByDesc(r.get(T.requestedAt()))
+            .orderByDesc(r.get(T.id()))
+            .build();
+    return dslQueries.query(query, ROW_MAPPER);
   }
 
   public Optional<ChangeRequestEntity> findPendingByDefinitionName(String definitionName) {
-    List<ChangeRequestEntity> items = jdbcTemplate.query("""
-            SELECT %s FROM dsl_change_request
-            WHERE definition_name = :definitionName AND status = 'PENDING'
-            ORDER BY id DESC
-            """.formatted(COLUMNS), new MapSqlParameterSource("definitionName", definitionName),
-            ROW_MAPPER);
+    var r = T.refer();
+    ExtendedSelectQuery query = dslQueries.select()
+            .select(ChangeRequestQueryCriteria.fullSelection(T, r)
+                    .toArray(new com.github.squigglesql.squigglesql.Selectable[0]))
+            .where(ChangeRequestQueryCriteria.matchesDefinitionName(T, r, definitionName))
+            .where(ChangeRequestQueryCriteria.matchesStatus(T, r, "PENDING"))
+            .orderByDesc(r.get(T.id()))
+            .build();
+    List<ChangeRequestEntity> items = dslQueries.query(query, ROW_MAPPER);
     return items.stream().findFirst();
   }
 
@@ -104,19 +117,20 @@ public class ChangeRequestRepository {
    */
   public List<ChangeRequestEntity> findAll(@Nullable String definitionName,
           @Nullable Status status) {
-    var params = new MapSqlParameterSource();
-    StringBuilder sql = new StringBuilder(
-            "SELECT %s FROM dsl_change_request WHERE 1=1".formatted(COLUMNS));
-    if (definitionName != null) {
-      sql.append(" AND definition_name = :definitionName");
-      params.addValue("definitionName", definitionName);
-    }
-    if (status != null) {
-      sql.append(" AND status = :status");
-      params.addValue("status", status.name());
-    }
-    sql.append(" ORDER BY requested_at DESC, id DESC");
-    return jdbcTemplate.query(sql.toString(), params, ROW_MAPPER);
+    var r = T.refer();
+    var builder = dslQueries.select()
+            .whereIf(definitionName != null,
+                    () -> ChangeRequestQueryCriteria.matchesDefinitionName(T, r, definitionName))
+            .whereIf(status != null,
+                    () -> ChangeRequestQueryCriteria.matchesStatus(T, r, status.name()));
+
+    ExtendedSelectQuery query = builder
+            .select(ChangeRequestQueryCriteria.fullSelection(T, r)
+                    .toArray(new com.github.squigglesql.squigglesql.Selectable[0]))
+            .orderByDesc(r.get(T.requestedAt()))
+            .orderByDesc(r.get(T.id()))
+            .build();
+    return dslQueries.query(query, ROW_MAPPER);
   }
 
   public void updateStatus(long id, Status status, @Nullable String approvedBy,
@@ -136,8 +150,11 @@ public class ChangeRequestRepository {
   }
 
   public long count() {
-    Long total = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM dsl_change_request",
-            new MapSqlParameterSource(), Long.class);
+    var r = T.refer();
+    ExtendedSelectQuery query = dslQueries.select()
+            .select(com.github.squigglesql.squigglesql.literal.Literal.unsafe("COUNT(*)"))
+            .build();
+    Long total = dslQueries.queryForObject(query, Long.class);
     return total != null ? total : 0;
   }
 }

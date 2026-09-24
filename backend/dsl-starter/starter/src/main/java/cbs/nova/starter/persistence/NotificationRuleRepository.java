@@ -1,12 +1,13 @@
 package cbs.nova.starter.persistence;
 
 import cbs.nova.starter.entity.NotificationRuleEntity;
+import com.github.squigglesql.squigglesql.TableReference;
+import com.github.squigglesql.squigglesql.literal.Literal;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.SqlParameterValue;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -19,12 +20,7 @@ import org.springframework.jdbc.support.KeyHolder;
  * {@link cbs.nova.starter.persistence.DslEventRepository} idioms: constructor injection via Lombok,
  * named parameters, an explicit {@link RowMapper}, and generated keys surfaced from the insert.
  */
-@RequiredArgsConstructor
 public class NotificationRuleRepository {
-
-  private static final String COLUMNS = "id, name, enabled, event_type, aggregate_type,"
-          + " aggregate_id_pattern, definition_pattern, status, actions, priority, rate_class,"
-          + " created_at, updated_at";
 
   private static final RowMapper<NotificationRuleEntity> ROW_MAPPER = (rs,
           rowNum) -> new NotificationRuleEntity(
@@ -43,6 +39,14 @@ public class NotificationRuleRepository {
                   rs.getTimestamp("updated_at").toInstant());
 
   private final NamedParameterJdbcTemplate jdbcTemplate;
+  private final ExtendedSelectQueryExecutor dslQueries;
+  private static final NotificationRuleTableColumns T = NotificationRuleTableColumns.of();
+
+  public NotificationRuleRepository(NamedParameterJdbcTemplate jdbcTemplate,
+          ExtendedSelectQueryExecutor dslQueries) {
+    this.jdbcTemplate = Objects.requireNonNull(jdbcTemplate);
+    this.dslQueries = Objects.requireNonNull(dslQueries);
+  }
 
   public long insert(NotificationRuleEntity row) {
     Objects.requireNonNull(row, "row");
@@ -107,25 +111,35 @@ public class NotificationRuleRepository {
   }
 
   public Optional<NotificationRuleEntity> findById(long id) {
-    List<NotificationRuleEntity> items = jdbcTemplate.query(
-            "SELECT %s FROM dsl_notification_rule WHERE id = :id".formatted(COLUMNS),
-            new MapSqlParameterSource("id", id), ROW_MAPPER);
+    var r = T.refer();
+    ExtendedSelectQuery query = dslQueries.select()
+            .select(NotificationRuleQueryCriteria.fullSelection(T, r)
+                    .toArray(new com.github.squigglesql.squigglesql.Selectable[0]))
+            .where(NotificationRuleQueryCriteria.matchesId(T, r, id))
+            .build();
+    List<NotificationRuleEntity> items = dslQueries.query(query, ROW_MAPPER);
     return items.stream().findFirst();
   }
 
   public NotificationRuleSearchResult findAll(int offset, int limit) {
     checkPagination(offset, limit);
-    var params = new MapSqlParameterSource()
-            .addValue("limit", limit)
-            .addValue("offset", offset);
-    Long total = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM dsl_notification_rule", params,
-            Long.class);
-    List<NotificationRuleEntity> items = jdbcTemplate.query("""
-            SELECT %s FROM dsl_notification_rule
-            ORDER BY priority DESC, id ASC
-            LIMIT :limit OFFSET :offset
-            """.formatted(COLUMNS), params, ROW_MAPPER);
-    return new NotificationRuleSearchResult(items, total != null ? total : 0L);
+    var r = T.refer();
+    ExtendedSelectQuery countQuery = dslQueries.select()
+            .select(Literal.unsafe("COUNT(*)"))
+            .from(r)
+            .build();
+    long total = dslQueries.queryForObject(countQuery, Long.class);
+    ExtendedSelectQuery dataQuery = dslQueries.select()
+            .select(NotificationRuleQueryCriteria.fullSelection(T, r)
+                    .toArray(new com.github.squigglesql.squigglesql.Selectable[0]))
+            .from(r)
+            .orderByDesc(r.get(T.priority()))
+            .orderByAsc(r.get(T.id()))
+            .limit(limit)
+            .offset(offset)
+            .build();
+    List<NotificationRuleEntity> items = dslQueries.query(dataQuery, ROW_MAPPER);
+    return new NotificationRuleSearchResult(items, total);
   }
 
   /**
@@ -133,18 +147,26 @@ public class NotificationRuleRepository {
    * desc, id asc). Finer filter dimensions are matched in memory by the engine.
    */
   public List<NotificationRuleEntity> findMatchingEnabled(String eventType) {
-    return jdbcTemplate.query("""
-            SELECT %s FROM dsl_notification_rule
-            WHERE enabled = TRUE AND event_type = :eventType
-            ORDER BY priority DESC, id ASC
-            """.formatted(COLUMNS), new MapSqlParameterSource("eventType", eventType),
-            ROW_MAPPER);
+    var r = T.refer();
+    ExtendedSelectQuery query = dslQueries.select()
+            .select(NotificationRuleQueryCriteria.fullSelection(T, r)
+                    .toArray(new com.github.squigglesql.squigglesql.Selectable[0]))
+            .from(r)
+            .where(NotificationRuleQueryCriteria.isEnabled(T, r))
+            .where(NotificationRuleQueryCriteria.matchesEventType(T, r, eventType))
+            .orderByDesc(r.get(T.priority()))
+            .orderByAsc(r.get(T.id()))
+            .build();
+    return dslQueries.query(query, ROW_MAPPER);
   }
 
   public long count() {
-    Long total = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM dsl_notification_rule",
-            new MapSqlParameterSource(), Long.class);
-    return total != null ? total : 0L;
+    var r = T.refer();
+    ExtendedSelectQuery query = dslQueries.select()
+            .select(Literal.unsafe("COUNT(*)"))
+            .from(r)
+            .build();
+    return dslQueries.queryForObject(query, Long.class);
   }
 
   public boolean delete(long id) {
