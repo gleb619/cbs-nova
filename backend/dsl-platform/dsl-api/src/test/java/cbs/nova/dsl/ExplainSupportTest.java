@@ -77,7 +77,7 @@ class ExplainSupportTest {
     assertThat(report.description())
             .contains("Helper `null`")
             .contains("untyped")
-            .contains("has side effects");
+            .contains("output `untyped`");
   }
 
   @Test
