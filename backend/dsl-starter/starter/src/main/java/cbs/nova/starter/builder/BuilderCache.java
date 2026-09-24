@@ -86,6 +86,9 @@ public class BuilderCache {
             || key.startsWith(CACHE_HISTORY_PREFIX + name)
             || key.startsWith(CACHE_HISTORY_ENTRY_PREFIX + name)
             || key.startsWith(CACHE_HISTORY_DIFF_PREFIX + name));
+    // Drafts page is a paged list across all names; any mutation to one draft makes the page
+    // stale. Drop every page entry rather than try to compute a precise invalidation.
+    invalidatePrefix(CACHE_DRAFTS_PAGE_PREFIX);
   }
 
   public void invalidateFile(String path) {
@@ -102,6 +105,10 @@ public class BuilderCache {
 
   public void invalidateVcsStatus() {
     cache.invalidate(CACHE_VCS_STATUS_KEY);
+  }
+
+  public void invalidatePendingCount() {
+    cache.invalidate(CACHE_PENDING_COUNT_KEY);
   }
 
   public void clear() {

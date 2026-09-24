@@ -119,6 +119,31 @@ class GitStatusServiceTest {
   }
 
   @Test
+  void invalidateForcesRescanWithinTtl() throws Exception {
+    // Gap G6 / invariant I5: a pending write that flushes mid-request must be visible
+    // before the cache TTL elapses. {@code invalidate()} drops every cached snapshot so the
+    // very next {@link GitStatusService#status(Path)} call walks git again.
+    Path repo = initRepo();
+    var clock = mutableClock();
+    var service = newService(git(true, null, 3600), clock);
+
+    GitStatusService.RepoStatus first = service.status(repo).orElseThrow();
+    assertThat(first.dirtyPaths()).isEmpty();
+    assertThat(first).isSameAs(service.status(repo).orElseThrow());
+
+    Files.writeString(repo.resolve("after.txt"), "after");
+
+    // Clock hasn't moved — without invalidation the next read would still return the stale
+    // snapshot. The invalidate hook restores fresh-status behaviour.
+    service.invalidate();
+
+    GitStatusService.RepoStatus second = service.status(repo).orElseThrow();
+
+    assertThat(second.dirtyPaths()).contains("after.txt");
+    assertThat(second).isNotSameAs(first);
+  }
+
+  @Test
   void usesConfiguredRepositoryDirOverCandidate() throws Exception {
     Path configuredRepo = initRepo();
     Path unrelated = tempDir.resolve("unrelated-" + UUID.randomUUID());

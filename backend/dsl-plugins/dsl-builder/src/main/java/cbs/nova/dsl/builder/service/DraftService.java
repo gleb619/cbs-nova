@@ -22,15 +22,14 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.ObjectMapper;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class DraftService {
 
   private static final int MAX_LIMIT = 500;
@@ -39,6 +38,17 @@ public class DraftService {
   private final ObjectMapper objectMapper;
   private final DefinitionHistoryService historyService;
   private final DefinitionBundleService bundleService;
+  private final ObjectProvider<GitStatusService> gitStatusService;
+
+  public DraftService(DslBuilderProperties properties, ObjectMapper objectMapper,
+          DefinitionHistoryService historyService, DefinitionBundleService bundleService,
+          ObjectProvider<GitStatusService> gitStatusService) {
+    this.properties = properties;
+    this.objectMapper = objectMapper;
+    this.historyService = historyService;
+    this.bundleService = bundleService;
+    this.gitStatusService = gitStatusService;
+  }
 
   public DraftResponse save(String name, DraftRequest body) throws IOException {
     requireName(name, body);
@@ -48,6 +58,7 @@ public class DraftService {
     DraftRequest payload = withStatus(stamped, "Draft");
     Path file = writePayload(dir.resolve(workbench().draftsDir()), payload);
     log.info("[DSL drafts] saved {} to {}", name, file);
+    invalidateGitStatus();
     return new DraftResponse(name, "Draft", file.toString(), false, LoadResult.empty(), null, null,
             payload.savedAt());
   }
@@ -60,6 +71,7 @@ public class DraftService {
     Path file = writePayload(dir.resolve(workbench().publishedDir()), payload);
     deleteDraftMarker(dir, name);
     log.info("[DSL drafts] published {} to {}", name, file);
+    invalidateGitStatus();
     return new DraftResponse(name, "Published", file.toString(), false, LoadResult.empty(), null,
             null, payload.savedAt());
   }
@@ -105,6 +117,7 @@ public class DraftService {
     DraftRequest payload = withStatus(entry, "Published");
     Path file = writePayload(dir.resolve(workbench().publishedDir()), payload);
     log.info("[DSL drafts] restored {} to published {} from history {}", name, file, timestamp);
+    invalidateGitStatus();
     return new DraftResponse(name, "Published", file.toString(), false, LoadResult.empty(), null,
             null, payload.savedAt());
   }
@@ -118,6 +131,7 @@ public class DraftService {
     }
     Files.delete(draftFile);
     log.info("[DSL drafts] deleted {} from {}", name, draftFile);
+    invalidateGitStatus();
     return new DraftResponse(name, "Deleted", null, false, LoadResult.empty(), null, null, null);
   }
 
@@ -188,8 +202,16 @@ public class DraftService {
       log.info("[DSL bundle] imported published marker {} to {}", name, file);
     }
     long publishedCount = results.stream().filter(r -> "published".equals(r.outcome())).count();
+    invalidateGitStatus();
     return new ImportBundleResult(false, false, (int) publishedCount,
             results.size() - (int) publishedCount, results, null, null);
+  }
+
+  private void invalidateGitStatus() {
+    GitStatusService service = gitStatusService.getIfAvailable();
+    if (service != null) {
+      service.invalidate();
+    }
   }
 
   private List<DraftSummary> readSummaries(Path drafts) {

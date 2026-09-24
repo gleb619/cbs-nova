@@ -38,6 +38,15 @@ public class GitStatusService {
     this.clock = clock;
   }
 
+  /**
+   * Drop every per-root cached snapshot so the next {@link #status(Path)} call rescans git. Called
+   * by {@link FileService} after a pending write flush and by {@code VcsController} before a status
+   * read so a just-staged edit shows up immediately (gap G6 / invariant I5).
+   */
+  public void invalidate() {
+    cache.clear();
+  }
+
   public Optional<RepoStatus> status(Path candidateDir) {
     if (!gitEnabled() || candidateDir == null) {
       return Optional.empty();
@@ -102,8 +111,8 @@ public class GitStatusService {
 
   /**
    * Snapshot of a repository: the work tree path, the union of all changed paths
-   * ({@code dirtyPaths}), and the typed classification per path ({@code changes}).
-   * Backward compatible: the legacy 2-arg constructor leaves {@code changes} empty.
+   * ({@code dirtyPaths}), and the typed classification per path ({@code changes}). Backward
+   * compatible: the legacy 2-arg constructor leaves {@code changes} empty.
    */
   public record RepoStatus(Path workTree, Set<String> dirtyPaths,
           Map<String, ChangeType> changes) {

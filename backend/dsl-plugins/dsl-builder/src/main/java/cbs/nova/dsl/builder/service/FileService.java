@@ -18,22 +18,32 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class FileService {
 
   private final DslBuilderProperties properties;
   private final FileRepository repository;
   private final FileBuffer buffer;
   private final FileBulkhead bulkhead;
+  private final ObjectProvider<GitStatusService> gitStatusService;
 
   private final ReentrantLock flushLock = new ReentrantLock();
   private ScheduledExecutorService flushExecutor;
+
+  public FileService(DslBuilderProperties properties, FileRepository repository,
+          FileBuffer buffer, FileBulkhead bulkhead,
+          ObjectProvider<GitStatusService> gitStatusService) {
+    this.properties = properties;
+    this.repository = repository;
+    this.buffer = buffer;
+    this.bulkhead = bulkhead;
+    this.gitStatusService = gitStatusService;
+  }
 
   @PostConstruct
   public void start() {
@@ -153,9 +163,22 @@ public class FileService {
         }
       }
       log.info("[DSL files] flushed {} files, {} failed", flushed, failed);
+      // Invariant I5 / gap G6: a just-flushed edit must show as a draft on the next status
+      // read. Invalidate the per-root snapshot so the caller rescans git. Skip when nothing
+      // landed — a no-op flush shouldn't drop a still-fresh snapshot.
+      if (flushed > 0) {
+        invalidateGitStatus();
+      }
       return new FlushResult(flushed, failed, errors);
     } finally {
       flushLock.unlock();
+    }
+  }
+
+  private void invalidateGitStatus() {
+    GitStatusService service = gitStatusService.getIfAvailable();
+    if (service != null) {
+      service.invalidate();
     }
   }
 

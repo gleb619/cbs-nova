@@ -63,11 +63,20 @@ public class DslBuilderClient {
   }
 
   public DraftResponse saveDraft(String name, DraftRequest body) {
-    return execute(() -> doSaveDraft(name, body));
+    DraftResponse response = execute(() -> doSaveDraft(name, body));
+    // Gap G6 / invariant I5: a successful draft write must be visible on the next read of
+    // the draft, its history pages and the global drafts list, plus the vcs status (the
+    // marker JSON now counts as a working-tree change).
+    cache.invalidateDraft(name);
+    cache.invalidateVcsStatus();
+    return response;
   }
 
   public DraftResponse publishDraft(String name, DraftRequest body) {
-    return execute(() -> doPublishDraft(name, body));
+    DraftResponse response = execute(() -> doPublishDraft(name, body));
+    cache.invalidateDraft(name);
+    cache.invalidateVcsStatus();
+    return response;
   }
 
   public List<DefinitionHistoryEntry> history(String name) {
@@ -85,11 +94,17 @@ public class DslBuilderClient {
   }
 
   public DraftResponse restoreDraft(String name, String timestamp) {
-    return execute(() -> doRestoreDraft(name, timestamp));
+    DraftResponse response = execute(() -> doRestoreDraft(name, timestamp));
+    cache.invalidateDraft(name);
+    cache.invalidateVcsStatus();
+    return response;
   }
 
   public DraftResponse deleteDraft(String name) {
-    return execute(() -> doDeleteDraft(name));
+    DraftResponse response = execute(() -> doDeleteDraft(name));
+    cache.invalidateDraft(name);
+    cache.invalidateVcsStatus();
+    return response;
   }
 
   public PageResponse<DraftSummary> listDrafts(int limit, int offset) {
@@ -105,7 +120,13 @@ public class DslBuilderClient {
   }
 
   public ImportBundleResult importBundle(DefinitionBundle bundle, boolean dryRun) {
-    return execute(() -> doImportBundle(bundle, dryRun));
+    ImportBundleResult result = execute(() -> doImportBundle(bundle, dryRun));
+    // A non-dry-run import rewrites every definition marker — drop the whole cache so the
+    // next read reflects the new state. Dry-run leaves no on-disk change so no invalidation.
+    if (!dryRun) {
+      cache.clear();
+    }
+    return result;
   }
 
   public List<FileEntry> listFiles(String prefix) {
@@ -122,14 +143,27 @@ public class DslBuilderClient {
 
   public void stageWrite(String path, String content) {
     execute(() -> doStageWrite(path, content));
+    // The staged file is now a pending draft (invariant I5). Drop the file cache so a
+    // follow-up read re-fetches from the builder (which serves the pending buffer), and
+    // drop vcs status + pending count so a status read sees the new pending count.
+    cache.invalidateFile(path);
+    cache.invalidateVcsStatus();
+    cache.invalidatePendingCount();
   }
 
   public BulkWriteResult stageAll(List<FileContentRequest> files) {
-    return execute(() -> doStageAll(files));
+    BulkWriteResult result = execute(() -> doStageAll(files));
+    cache.invalidateFiles();
+    cache.invalidateVcsStatus();
+    return result;
   }
 
   public FlushResult flushFiles() {
-    return execute(this::doFlushFiles);
+    FlushResult result = execute(this::doFlushFiles);
+    // After a forced flush every cached file read is stale and the vcs status snapshot is too.
+    cache.invalidateFiles();
+    cache.invalidateVcsStatus();
+    return result;
   }
 
   public int pendingCount() {

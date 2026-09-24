@@ -5,7 +5,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import cbs.nova.dsl.builder.config.BuilderServiceConfiguration;
 import cbs.nova.dsl.builder.config.DslBuilderProperties;
+import cbs.nova.dsl.builder.repository.FileRepository;
+import cbs.nova.dsl.builder.service.FileService;
 import cbs.nova.dsl.builder.service.GitStatusService;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -25,7 +28,8 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(VcsController.class)
-@Import({GitStatusService.class, VcsControllerTest.Config.class})
+@Import({GitStatusService.class, FileService.class, FileRepository.class,
+    BuilderServiceConfiguration.class, VcsControllerTest.Config.class})
 class VcsControllerTest {
 
   private static final Path WORKSPACE = Path.of(System.getProperty("java.io.tmpdir"),
@@ -33,6 +37,9 @@ class VcsControllerTest {
 
   @Autowired
   MockMvc mockMvc;
+
+  @Autowired
+  org.springframework.beans.factory.ObjectProvider<FileService> fileServiceRef;
 
   @BeforeEach
   void cleanWorkspace() throws IOException {
@@ -103,6 +110,23 @@ class VcsControllerTest {
             .andExpect(jsonPath("$.dirtyPaths").isArray())
             .andExpect(jsonPath("$.dirtyPaths[0]").value("dsl/LoanDsl.java"))
             .andExpect(jsonPath("$.changes['dsl/LoanDsl.java']").value("UNTRACKED"));
+  }
+
+  @Test
+  void flushesPendingWritesBeforeReportingStatus() throws Exception {
+    initRepositoryWithUntrackedFile();
+    FileService fileService = fileServiceRef.getIfAvailable();
+    fileService.stageWrite("dsl/StagedDsl.java", "class StagedDsl {}");
+    assertThat(fileService.pendingCount()).isPositive();
+
+    // Gap G6 / invariant I5: the file is still in the pending buffer when status is requested.
+    // The controller must flush it before scanning so it shows up as a draft on the same request.
+    mockMvc.perform(get("/api/dsl/vcs/status"))
+            .andExpect(status().isOk())
+            .andExpect(
+                    jsonPath("$.dirtyPaths", org.hamcrest.Matchers.hasItem("dsl/StagedDsl.java")))
+            .andExpect(jsonPath("$.changes['dsl/StagedDsl.java']").value("UNTRACKED"));
+    assertThat(fileService.pendingCount()).isZero();
   }
 
   private void initRepositoryWithUntrackedFile() throws IOException {
