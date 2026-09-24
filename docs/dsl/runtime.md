@@ -4,7 +4,7 @@ This page describes the runtime abstractions (registry, runner, manager), the th
 environment-agnostic `DslRuntime` interface, and dynamic configuration resolution.
 
 > **See also:** [Configuration Reference](configuration.md) — the consolidated reference for every starter
-> `@ConfigurationProperties` key (`cbs.nova.*`, `cbs.security.*`, `cbs.health.*`, `cbs.runs.*`, `dsl.*`, and the
+> `@ConfigurationProperties` key (`cbs.nova.*`, `cbs.security.*`, `cbs.health.*`, `cbs.runs.*`, `cbs.dsl.*`, and the
 > Temporal / server env vars), with defaults taken from the code.
 
 ## Registry abstraction
@@ -175,7 +175,7 @@ always run locally.
 ### Route table
 
 All paths are relative to the application root. The reload and draft routers are gated by
-`dsl.reload.enabled` and `dsl.drafts.enabled` respectively (both default `true`).
+`cbs.dsl.reload.enabled` and `cbs.dsl.drafts.enabled` respectively (both default `true`).
 
 | Method | Path                                | Purpose                                                | Request / Response                                                                             |
 |--------|-------------------------------------|--------------------------------------------------------|------------------------------------------------------------------------------------------------|
@@ -194,7 +194,7 @@ All paths are relative to the application root. The reload and draft routers are
 | GET    | `/api/executions/stats`             | Aggregate execution statistics                         | query param `topProcesses` → `ExecutionStatsResponse`                                          |
 | GET    | `/api/executions/{id}`              | Single execution run                                   | `ExecutionDto`                                                                                 |
 | POST   | `/api/executions/{id}/cancel`       | Cancel a running execution run                         | `ExecutionDto`                                                                                 |
-| POST   | `/api/dsl/reload`                   | Reload DSL definitions from `dsl.source-dir`           | `ReloadResponse`                                                                               |
+| POST   | `/api/dsl/reload`                   | Reload DSL definitions from `cbs.dsl.source-dir`           | `ReloadResponse`                                                                               |
 | POST   | `/api/dsl/drafts/{name}/save`       | Persist a Workbench draft                              | `DraftRequest` body → `DraftResponse`                                                          |
 | POST   | `/api/dsl/drafts/{name}/publish`    | Persist as published and reload DSL                    | `DraftRequest` body → `DraftResponse`                                                          |
 | DELETE | `/api/dsl/drafts/{name}`            | Delete a Workbench draft                               | `DraftResponse`                                                                                |
@@ -243,7 +243,7 @@ curl -s -X POST http://localhost:8090/api/dsl/explain/LoanDisbursementProcess \
 RUN_ID="<run-id>"
 curl -s -X POST "http://localhost:8090/api/executions/${RUN_ID}/cancel"
 
-# Reload DSL definitions from dsl.source-dir
+# Reload DSL definitions from cbs.dsl.source-dir
 curl -s -X POST http://localhost:8090/api/dsl/reload
 
 # Save a Workbench draft
@@ -268,7 +268,7 @@ Every successful `POST /api/dsl/drafts/{name}/publish` snapshots the previous
 `.workbench/history/{name}/{timestamp}.json` before overwriting it. Snapshots are
 **metadata only** (the published `DraftRequest` record: name, type, status,
 version, taskQueue); DSL source code is not captured. The number of retained
-snapshots per definition is controlled by `dsl.drafts.history-limit`
+snapshots per definition is controlled by `cbs.dsl.drafts.history-limit`
 (default `20`; `u003c= 0` keeps unlimited history).
 
 | Method | Route | Behaviour |
@@ -329,7 +329,7 @@ The BFF exposes the same routes under `/api/v1/dsl/definitions/export` and
 ### Auth and ops notes
 
 - **API key filter** — `cbs.nova.starter.web.ApiKeyAuthFilter` is registered for `/api/*` but only
-  enforces authentication when `dsl.auth.api-key` is a non-blank string. When configured, every
+  enforces authentication when `cbs.dsl.auth.api-key` is a non-blank string. When configured, every
   request must carry the exact value in the `X-Api-Key` header; otherwise the filter returns
   `401 UNAUTHORIZED` with a JSON `ErrorResponse`.
 - **OIDC / JWT** — Setting `cbs.security.oidc.enabled=true` (default `false`) switches from the

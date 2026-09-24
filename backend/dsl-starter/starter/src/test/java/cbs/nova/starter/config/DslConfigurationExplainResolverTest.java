@@ -31,7 +31,7 @@ class DslConfigurationExplainResolverTest {
           .withUserConfiguration(DslConfiguration.class, CollaboratorConfiguration.class);
 
   private ApplicationContextRunner withSourceDir() {
-    return runner.withPropertyValues("csb.dsl.source-dir=target/test-dsl");
+    return runner.withPropertyValues("cbs.dsl.source-dir=target/test-dsl");
   }
 
   @AfterEach

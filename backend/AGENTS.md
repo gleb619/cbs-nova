@@ -40,7 +40,7 @@ Execution: Generated -> `GlobalManager.getInstance()` -> Managers -> Runners -> 
   `FileController` (`/api/dsl/files/**`, Caffeine + bulkhead `cbs.dsl.builder.files|file-buffer.*`),
   `VcsController` (`/api/dsl/vcs/status`). Publish/restore/import write files only; registry reload stays in starter.
 - Starter talks to builder via `cbs.nova.starter.builder.DslBuilderClient`
-  (`csb.dsl.builder-client.enabled=true`, `csb.dsl.builder-client.base-url=http://localhost:8091`). Reload
+  (`cbs.dsl.builder-client.enabled=true`, `cbs.dsl.builder-client.base-url=http://localhost:8091`). Reload
   compiles remotely (HTTP/2 via JDK `HttpClient`, h2c prior-knowledge) and swaps registry locally;
   drafts/files/bundles/VCS delegate to builder. Bounded queue (`queue.*`), semaphore bulkhead (`bulkhead.*`),
   circuit breaker (`breaker.*`): builder 5xx/network -> 503 `BUILDER_UNAVAILABLE`; 429 -> 429 `BUILDER_BUSY`;

@@ -104,7 +104,7 @@ cbs:
   dsl:
     git:
       enabled: true
-      # repository-dir: # defaults to dsl.source-dir
+      # repository-dir: # defaults to cbs.dsl.source-dir
     # Override with `CBS_DSL_SOURCE_DIR` env
     source-dir: ../dsl-examples
 

@@ -1,16 +1,14 @@
 temporal:
   connection-target: ${TEMPORAL_ADDRESS:127.0.0.1:7233}
 
-dsl:
-  worker:
-    enabled: false
-
 cbs:
   nova:
     events:
       mq:
         enabled: false
   dsl:
+    worker:
+      enabled: false
     source-dir: dsl-examples
 
 spring:
@@ -23,7 +21,7 @@ spring:
     url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE
     driver-class-name: org.h2.Driver
   flyway:
-    enabled: false
+      enabled: false
   main:
     # Allow test slices that scan the starter package to override mock beans declared by other
     # test slices. Several @SpringBootTest classes (e.g. SecurityConfigurationTest,

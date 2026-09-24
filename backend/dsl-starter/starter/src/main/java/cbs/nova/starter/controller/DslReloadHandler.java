@@ -71,7 +71,7 @@ import org.springframework.web.servlet.function.ServerResponse;
  * requests — the runtime is never bricked.
  *
  * <h2>Compilation</h2> Sources are always compiled remotely by the dsl-builder service (via the
- * {@link DslBuilderClient} bean, gated by {@code csb.dsl.builder-client .enabled}, on by default)
+ * {@link DslBuilderClient} bean, gated by {@code cbs.dsl.builder-client.enabled}, on by default)
  * and the generated classes are downloaded as a zip. The builder client is mandatory: if the bean
  * is absent, reload fails fast with an {@link IllegalStateException} instead of degrading to an
  * in-process compile.
@@ -83,7 +83,7 @@ import org.springframework.web.servlet.function.ServerResponse;
  * rejection that they have to retry.
  */
 @Component
-@ConditionalOnProperty(prefix = "csb.dsl.reload", name = "enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(prefix = "cbs.dsl.reload", name = "enabled", havingValue = "true", matchIfMissing = true)
 @RequiredArgsConstructor
 @Slf4j
 public class DslReloadHandler {
@@ -108,9 +108,9 @@ public class DslReloadHandler {
     var sourceDirProperty = dslProperties.sourceDir();
     if (sourceDirProperty == null || sourceDirProperty.isBlank()) {
       audit(request, "-", StarterConstants.OUTCOME_FAILURE,
-              Map.of("error", "NOT_CONFIGURED: csb.dsl.source-dir is not configured"));
+              Map.of("error", "NOT_CONFIGURED: cbs.dsl.source-dir is not configured"));
       return error(HttpStatus.CONFLICT, new ErrorResponse("NOT_CONFIGURED",
-              "csb.dsl.source-dir is not configured", null, null, null, null, null, null, null));
+              "cbs.dsl.source-dir is not configured", null, null, null, null, null, null, null));
     }
     var dir = Path.of(sourceDirProperty);
     if (!Files.isDirectory(dir)) {
@@ -165,7 +165,7 @@ public class DslReloadHandler {
   public LoadResult reloadDefinitions() throws IOException {
     var sourceDirProperty = dslProperties.sourceDir();
     if (sourceDirProperty == null || sourceDirProperty.isBlank()) {
-      throw new IllegalStateException("csb.dsl.source-dir is not configured");
+      throw new IllegalStateException("cbs.dsl.source-dir is not configured");
     }
     var dir = Path.of(sourceDirProperty);
     if (!Files.isDirectory(dir)) {
@@ -221,7 +221,7 @@ public class DslReloadHandler {
       throw new IllegalStateException(
               "DSL reload requires a DslBuilderClient bean but none is available; in-process"
                       + " javac compilation was removed (T570). Enable"
-                      + " csb.dsl.builder-client.enabled (default) and ensure the dsl-builder"
+                      + " cbs.dsl.builder-client.enabled (default) and ensure the dsl-builder"
                       + " service is configured.");
     }
     var sources = collectSources(sourceDir);

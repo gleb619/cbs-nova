@@ -28,7 +28,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 @Testcontainers
 @SpringBootTest(classes = IntegrationTestApplication.class, properties = {
-    "csb.dsl.worker.enabled=false"})
+    "cbs.dsl.worker.enabled=false"})
 class TransactionExecutionJdbcRepositorySmokeTest {
 
   @Container

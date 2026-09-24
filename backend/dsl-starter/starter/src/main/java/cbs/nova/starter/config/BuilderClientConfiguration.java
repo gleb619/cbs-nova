@@ -28,7 +28,7 @@ import tools.jackson.databind.ObjectMapper;
 
 @Configuration
 @EnableConfigurationProperties(DslBuilderClientProperties.class)
-@ConditionalOnProperty(prefix = "csb.dsl.builder-client", name = "enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(prefix = "cbs.dsl.builder-client", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class BuilderClientConfiguration {
 
   @Bean

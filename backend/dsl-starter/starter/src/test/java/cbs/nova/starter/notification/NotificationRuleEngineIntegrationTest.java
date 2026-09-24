@@ -42,7 +42,7 @@ import org.springframework.test.context.jdbc.Sql;
     "classpath:sql/truncate-dsl-events.sql",
     "classpath:sql/truncate-notification-rules.sql"})
 @TestPropertySource(properties = {
-    "csb.dsl.worker.enabled=false",
+    "cbs.dsl.worker.enabled=false",
     "cbs.nova.dsl.webhooks.allow-plain-http=true",
     "cbs.nova.dsl.webhooks.max-retries=1"
 })

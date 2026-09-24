@@ -29,7 +29,7 @@ import org.springframework.context.annotation.Import;
     "spring.flyway.enabled=false",
     "spring.sql.init.mode=never",
     "temporal.connection-target=127.0.0.1:1",
-    "csb.dsl.worker.enabled=false"
+    "cbs.dsl.worker.enabled=false"
 })
 @Import(HelperBeanIntegrationTest.ProbeHelperConfiguration.class)
 class HelperBeanIntegrationTest {

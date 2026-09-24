@@ -19,7 +19,7 @@ import org.springframework.context.SmartLifecycle;
 import org.springframework.context.annotation.Bean;
 
 @Configuration
-@ConditionalOnProperty(name = "csb.dsl.worker.enabled", havingValue = "true")
+@ConditionalOnProperty(name = "cbs.dsl.worker.enabled", havingValue = "true")
 public class DslWorkerConfiguration {
 
   @Bean

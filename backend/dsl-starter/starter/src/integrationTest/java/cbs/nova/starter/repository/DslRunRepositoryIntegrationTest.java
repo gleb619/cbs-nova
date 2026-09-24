@@ -32,7 +32,7 @@ import java.util.UUID;
 
 @Testcontainers
 @SpringBootTest(classes = IntegrationTestApplication.class, properties = {
-    "csb.dsl.worker.enabled=false"})
+    "cbs.dsl.worker.enabled=false"})
 class DslRunRepositoryIntegrationTest {
 
   @Container

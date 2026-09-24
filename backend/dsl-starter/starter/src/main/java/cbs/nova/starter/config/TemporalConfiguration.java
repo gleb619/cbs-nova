@@ -95,7 +95,7 @@ public class TemporalConfiguration {
 
   @Bean
   @Order(Ordered.LOWEST_PRECEDENCE)
-  @ConditionalOnProperty(name = "csb.dsl.worker.enabled", havingValue = "true")
+  @ConditionalOnProperty(name = "cbs.dsl.worker.enabled", havingValue = "true")
   @ConditionalOnMissingBean(name = "dslWorkerFactory")
   ApplicationRunner temporalWorkerRegistrationRunner(WorkerFactory workerFactory) {
     return args -> {

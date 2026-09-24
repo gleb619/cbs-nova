@@ -38,7 +38,7 @@ import java.time.Instant;
  */
 @Testcontainers
 @SpringBootTest(classes = IntegrationTestApplication.class, properties = {
-    "csb.dsl.worker.enabled=false"})
+    "cbs.dsl.worker.enabled=false"})
 class DslRunStatsIntegrationTest {
 
   @Container

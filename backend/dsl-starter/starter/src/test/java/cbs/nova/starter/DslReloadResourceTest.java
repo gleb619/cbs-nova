@@ -118,7 +118,7 @@ class DslReloadResourceTest {
     // RouterFunction in a host that only enables it via that property.
     new ApplicationContextRunner()
             .withUserConfiguration(DslPropertiesConfiguration.class)
-            .withPropertyValues("csb.dsl.reload.enabled=false")
+            .withPropertyValues("cbs.dsl.reload.enabled=false")
             .run(ctx -> {
               assertThat(ctx).hasNotFailed();
               assertThat(ctx).doesNotHaveBean(RouterFunction.class);

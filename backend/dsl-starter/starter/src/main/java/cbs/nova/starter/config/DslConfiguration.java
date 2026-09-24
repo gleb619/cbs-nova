@@ -174,7 +174,7 @@ public class DslConfiguration {
   public DslWorkspaceResolver dslWorkspaceResolver(DslProperties dslProperties) {
     String sourceDir = dslProperties.sourceDir();
     if (sourceDir == null || sourceDir.isBlank()) {
-      throw new IllegalStateException("csb.dsl.source-dir is not configured");
+      throw new IllegalStateException("cbs.dsl.source-dir is not configured");
     }
 
     var sourceRoot = Path.of(sourceDir).normalize();

@@ -34,7 +34,7 @@ import tools.jackson.databind.ObjectMapper;
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, classes = NotificationTestApplication.class)
 @TestPropertySource(properties = {
-    "csb.dsl.worker.enabled=false",
+    "cbs.dsl.worker.enabled=false",
     "spring.flyway.enabled=true",
     "spring.flyway.locations=classpath:db/migration/h2",
     // Dedicated H2 instance: the default shared testdb is already populated by other tests in a

@@ -25,7 +25,7 @@ import java.util.List;
 @Sql(scripts = {"classpath:db/migration/h2/V1__init.sql",
     "classpath:sql/truncate-dsl-tables.sql"})
 @TestPropertySource(properties = {
-    "csb.dsl.worker.enabled=false"
+    "cbs.dsl.worker.enabled=false"
 })
 class JdbcDslRunRepositoryPurgeTest {
 

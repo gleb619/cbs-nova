@@ -67,6 +67,8 @@ class PieceManifestCoverageTest {
           // Draft delete — degenerate from saving the empty draft, covered by workbench-publish
           // audit
           "DELETE /api/dsl/drafts/{name}",
+          // Draft discard — reverts working-tree changes; covered by workbench-publish audit flow
+          "POST /api/dsl/drafts/{name}/discard",
           // Preview — sandbox-only execution, audit-only object policy will cover via T552
           // follow-up
           "POST /api/dsl/preview/{name}",

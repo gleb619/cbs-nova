@@ -163,11 +163,10 @@ cbs:
       object-mode: permissive
 
 # DSL builder HTTP client resilience (T498).
-# Wired from csb.dsl.builder-client.* (namespace preserved for backwards compatibility).
 # The circuit breaker, bulkhead and request queue are Resilience4j core primitives.
+cbs:
 # Note: the request queue's offerTimeoutMillis is kept for backwards compatibility but is
 # ignored — ThreadPoolBulkhead rejects immediately when its bounded queue is full.
-csb:
   dsl:
     builder-client:
       enabled: true

@@ -23,7 +23,7 @@ import org.springframework.test.context.jdbc.Sql;
 @Sql(scripts = {"classpath:db/migration/h2/V1__init.sql",
     "classpath:sql/truncate-change-requests.sql"})
 @TestPropertySource(properties = {
-    "csb.dsl.worker.enabled=false"
+    "cbs.dsl.worker.enabled=false"
 })
 class ChangeRequestRepositoryTest {
 

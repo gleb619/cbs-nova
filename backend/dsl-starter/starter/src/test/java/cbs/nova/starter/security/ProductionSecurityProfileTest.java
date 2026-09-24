@@ -99,7 +99,7 @@ class ProductionSecurityProfileTest {
       // Dummy issuer so ProductionSecurityPostureValidator passes — the value is never
       // dereferenced because the OIDC chain does not run without a real web container.
       "spring.security.oauth2.resourceserver.jwt.issuer-uri=https://idp.example/realms/cbs-nova",
-      "csb.dsl.worker.enabled=false"
+      "cbs.dsl.worker.enabled=false"
   })
   class ProductionProfileBootsAllGuards {
 
@@ -153,7 +153,7 @@ class ProductionSecurityProfileTest {
   @ActiveProfiles("production")
   @TestPropertySource(properties = {
       "spring.security.oauth2.resourceserver.jwt.issuer-uri=https://idp.example/realms/cbs-nova",
-      "csb.dsl.worker.enabled=false",
+      "cbs.dsl.worker.enabled=false",
       // Documented escape hatch: properties outrank the profile yml. Pin the contract.
       "cbs.dsl.auth.enabled=false"
   })

@@ -661,7 +661,7 @@ default), `requestedBy`, `requestedAt`, `status:"PENDING"`, `approvedBy:null`,
 `approvedAt:null`, `comment:null`. The submit always emits an audit row
 `CHANGE_REQUEST_CREATE` (`actor` = current actor, `outcome` = `SUCCESS` / `FAILURE`,
 target = `change-request:<id>`). **No request body** — the snapshot is read from the
-draft file under `csb.dsl.source-dir/.workbench/drafts/<name>.json`.
+draft file under `cbs.dsl.source-dir/.workbench/drafts/<name>.json`.
 
 ### List pending change requests
 
@@ -735,8 +735,8 @@ The publish is still audited as `DEFINITION_PUBLISH` with `outcome:"FAILURE"` an
 | Symptom | HTTP | Cause | Fix |
 |---|---|---|---|
 | `403 FORBIDDEN "publish requires approval"` (direct publish under gate) | 403 | `cbs.dsl.approval.required=true` and the caller is below `OPERATOR`. | Use the change-request flow above; an ADMIN/OPERATOR can still publish directly. |
-| `404 NOT_FOUND` on `POST /change-request` | 404 | No draft file under `csb.dsl.source-dir/.workbench/drafts/<safe(name)>.json` for this definition. | Save a draft first (`POST /api/v1/dsl/drafts/{name}/save`), then re-submit. |
-| `409 CONFLICT "csb.dsl.source-dir is not configured"` | 409 | `cbs.dsl.source-dir` is blank. | Set the property in `application.yml` and restart. The draft store has nowhere to look. |
+| `404 NOT_FOUND` on `POST /change-request` | 404 | No draft file under `cbs.dsl.source-dir/.workbench/drafts/<safe(name)>.json` for this definition. | Save a draft first (`POST /api/v1/dsl/drafts/{name}/save`), then re-submit. |
+| `409 CONFLICT "cbs.dsl.source-dir is not configured"` | 409 | `cbs.dsl.source-dir` is blank. | Set the property in `application.yml` and restart. The draft store has nowhere to look. |
 | `403 FORBIDDEN` on submit | 403 | RBAC: submit requires `Role.AUTHOR`. | Re-authenticate as a principal at `AUTHOR+` (or use the API key, which `RoleResolver` maps to `ADMIN`). |
 | `403 FORBIDDEN` on approve/reject with message "Change request requester cannot approve or reject their own request" | 403 | Caller is the requester and is not `ADMIN`. The gate is two-person by design. | Have a different principal approve, or escalate to `ADMIN`. |
 | `403 FORBIDDEN` on approve/reject with message "Role AUTHOR is required to decide change requests …" | 403 | Caller rank `< AUTHOR` (VIEWER / RUNNER). | Use an `AUTHOR+` principal. The requester's rank is re-checked at the approve/reject boundary, not just at submit. |

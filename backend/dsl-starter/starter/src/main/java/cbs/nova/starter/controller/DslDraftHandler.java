@@ -69,7 +69,7 @@ import tools.jackson.databind.ObjectMapper;
 
 @Slf4j
 @Component
-@ConditionalOnProperty(prefix = "csb.dsl.drafts", name = "enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(prefix = "cbs.dsl.drafts", name = "enabled", havingValue = "true", matchIfMissing = true)
 @AllArgsConstructor
 public class DslDraftHandler {
 
@@ -1039,7 +1039,7 @@ public class DslDraftHandler {
   private Path sourceDir() {
     String sourceDirProperty = dslProperties.sourceDir();
     if (sourceDirProperty == null || sourceDirProperty.isBlank()) {
-      throw new IllegalStateException("csb.dsl.source-dir is not configured");
+      throw new IllegalStateException("cbs.dsl.source-dir is not configured");
     }
     return Path.of(sourceDirProperty);
   }
@@ -1088,7 +1088,7 @@ public class DslDraftHandler {
     var sourceDirProperty = dslProperties.sourceDir();
     if (sourceDirProperty == null || sourceDirProperty.isBlank()) {
       return new PathResult.Err(error(HttpStatus.CONFLICT,
-              new ErrorResponse("NOT_CONFIGURED", "csb.dsl.source-dir is not configured", name,
+              new ErrorResponse("NOT_CONFIGURED", "cbs.dsl.source-dir is not configured", name,
                       null, null, null, null, null, null)));
     }
     Path dir = Path.of(sourceDirProperty);

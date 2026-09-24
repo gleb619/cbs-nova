@@ -65,7 +65,7 @@ work to the **dsl-builder** service that owns the workspace.
 Rules:
 
 1. **dsl-builder is the only component that writes the workspace.** The starter never touches
-   files when a `DslBuilderClient` bean is present (`csb.dsl.builder-client.enabled=true`, the
+   files when a `DslBuilderClient` bean is present (`cbs.dsl.builder-client.enabled=true`, the
    default). Every handler branches on `builderClient() != null` and delegates.
 2. The starter's local-filesystem branch (`cbs.dsl.source-dir`) exists only for single-process
    development without a builder. It must keep the same observable behaviour.
@@ -278,7 +278,7 @@ All starter paths are also exposed by the BFF under `/api/v1/dsl/...` (explicit 
 | GET        | `/api/dsl/working-set`                                                      | `DslIntrospectionHandler.workingSet` | definitions + `DefinitionStatus` |
 
 When no source dir is configured, the handlers return `409 NOT_CONFIGURED`
-(`csb.dsl.source-dir is not configured`). If the dir does not exist they return
+(`cbs.dsl.source-dir is not configured`). If the dir does not exist they return
 `409 NOT_FOUND`.
 
 ### 5.2 dsl-builder endpoints
@@ -350,11 +350,11 @@ curl -X POST localhost:8090/api/dsl/drafts/LoanDisbursement/history/172715000000
 
 | Key | Default | Owner | Purpose |
 |-----|---------|-------|---------|
-| `csb.dsl.drafts.enabled` | `true` | starter | Registers `DslDraftHandler`. (`docs/dsl/runtime.md` spells it `dsl.drafts.enabled`, but the code prefix is `csb.dsl.drafts`.) |
+| `cbs.dsl.drafts.enabled` | `true` | starter | Registers `DslDraftHandler` and its router. The legacy `csb.dsl.drafts.enabled` is still honoured for one release, with a deprecation warning. |
 | `cbs.dsl.source-dir` | – | starter | Local-mode workspace. Required by the draft handlers even in builder mode, because they call `ensureConfigured`. |
 | `cbs.dsl.git.{enabled,repository-dir,status-cache-ttl-seconds}` | –, –, 5 | starter | Local JGit status (used only without a builder) |
 | `cbs.dsl.approval.required` | `false` | starter | Publish approval gate (T568) |
-| `csb.dsl.builder-client.enabled` / `base-url` | `true` / `http://localhost:8091` | starter | Delegate all draft/file/vcs calls to dsl-builder |
+| `cbs.dsl.builder-client.enabled` / `base-url` | `true` / `http://localhost:8091` | starter | Delegate all draft/file/vcs calls to dsl-builder |
 | `cbs.dsl.builder.workspace-dir` / `source-dir` | – | builder | Workspace root (`source-dir` wins for the file API) |
 | `cbs.dsl.builder.git.{enabled,repository-dir,worktrees-dir,repo-url,sub-path,branch,status-cache-ttl-seconds,push-on-commit,remote}` | `true`,…,5,`false`,`origin` | builder | Worktree provisioning + status |
 | `cbs.dsl.builder.files.{flush-interval-seconds,max-queue-size,read/write-bulkhead-permits}` | 5, 100, 32, 8 | builder | Write buffer |
@@ -374,7 +374,7 @@ curl -X POST localhost:8090/api/dsl/drafts/LoanDisbursement/history/172715000000
 | G5 | Discard = checkout HEAD | Delete = remove marker | **Closed** (step 4): `POST /api/dsl/drafts/{name}/discard`. |
 | G6 | Pending writes count as drafts (I5) | Status is read from disk only (5s cache) | **Closed** (step 3): flush-before-status plus cache invalidation. |
 | G7 | One copy of status logic | `GitStatusService` (builder) and `DslGitStatusResolver` (starter) duplicate JGit code | **Closed.** `ChangeType`, `RepoStatus` and `GitChangeClassifier` live in `dsl-api` `cbs.nova.dsl.vcs`. |
-| G8 | Property name consistency | Draft gate `csb.dsl.drafts.*` vs docs `dsl.drafts.*` | **Open.** |
+| G8 | Property name consistency | Draft gate `csb.dsl.drafts.*` vs docs `dsl.drafts.*` | **Closed.** The canonical prefix is `cbs.dsl.*`. Legacy `csb.dsl.*` keys are copied over by `CbsDslLegacyPropertyPrefixPostProcessor`, which logs a deprecation warning; this compatibility lasts one release. |
 
 ### Migration path (incremental, each step shippable)
 
@@ -394,8 +394,7 @@ Steps 1–4, git history/restore, optional push and G7 have landed on `main`. Re
    `GET /api/dsl/vcs/log?path=`. Re-point `DraftService.publish/delete/history/restore` at them.
    Keep the `DraftResponse`/`DefinitionHistoryEntry` shapes so the BFF and UI do not change.
    Retire `.workbench/published` and `.workbench/history` after a one-off import commit.
-5. **Property cleanup (G8).** Accept both prefixes for one release, then drop `csb.` and fix
-   `runtime.md`.
+5. **Property cleanup (G8).** Done: both prefixes are accepted for one release, and the `csb.` compatibility bridge is removed in the release after.
 
 ---
 

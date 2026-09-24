@@ -16,7 +16,7 @@ import org.springframework.test.context.TestPropertySource;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, classes = HealthProbeEndpointsTest.TestApplication.class, properties = "csb.dsl.worker.enabled=false")
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, classes = HealthProbeEndpointsTest.TestApplication.class, properties = "cbs.dsl.worker.enabled=false")
 @TestPropertySource(properties = {
     "cbs.health.temporal.fail-status=DOWN",
     "temporal.connection-target=127.0.0.1:1",

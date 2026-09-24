@@ -220,7 +220,7 @@ Defensive caps applied before persistence / workflow submission.
 
 ---
 
-## `dsl.*`
+## `cbs.dsl.*`
 
 ### `dsl`
 
@@ -229,11 +229,11 @@ hot-reload toggles.
 
 | Key | Type | Default | Effect |
 |-----|------|---------|--------|
-| `dsl.source-dir` | `String` | — (unset; no initializer) | Location of the DSL source files the starter compiles/loads. |
-| `dsl.task-queue` | `String` | `dsl-task-queue` | Default Temporal task queue used for generated workflows/activities. |
-| `dsl.worker.enabled` | `boolean` | `false` | Whether a Temporal worker is started. |
-| `dsl.reload.enabled` | `boolean` | `false` | Whether hot reload of DSL definitions is enabled. |
-| `dsl.auth.api-key` | `String` | — (unset; no initializer) | API key for authenticated DSL endpoints (e.g. reload). |
+| `cbs.dsl.source-dir` | `String` | — (unset; no initializer) | Location of the DSL source files the starter compiles/loads. |
+| `cbs.dsl.task-queue` | `String` | `dsl-task-queue` | Default Temporal task queue used for generated workflows/activities. |
+| `cbs.dsl.worker.enabled` | `boolean` | `false` | Whether a Temporal worker is started. |
+| `cbs.dsl.reload.enabled` | `boolean` | `false` | Whether hot reload of DSL definitions is enabled. |
+| `cbs.dsl.auth.api-key` | `String` | — (unset; no initializer) | API key for authenticated DSL endpoints (e.g. reload). |
 
 ---
 

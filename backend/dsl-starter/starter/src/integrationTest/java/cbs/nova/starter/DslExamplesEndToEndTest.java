@@ -22,7 +22,7 @@ import org.springframework.context.annotation.Import;
 import java.util.List;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, classes = IntegrationTestApplication.class, properties = {
-    "csb.dsl.worker.enabled=true",
+    "cbs.dsl.worker.enabled=true",
     "cbs.dsl.task-queue=BatchProcessing-queue"})
 @Import(TemporalTestConfiguration.class)
 class DslExamplesEndToEndTest extends BaseContainers {

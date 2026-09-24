@@ -155,7 +155,7 @@ public class ChangeRequestService {
   private String readDraftSnapshot(String definitionName) {
     var sourceDirProperty = dslProperties.sourceDir();
     if (sourceDirProperty == null || sourceDirProperty.isBlank()) {
-      throw new ChangeRequestException("CONFLICT", "csb.dsl.source-dir is not configured");
+      throw new ChangeRequestException("CONFLICT", "cbs.dsl.source-dir is not configured");
     }
     Path draftsDir = Path.of(sourceDirProperty).resolve(StarterConstants.WORKBENCH_DRAFTS_DIR);
     Path draftFile = draftsDir.resolve(safeFileName(definitionName) + ".json").normalize();

@@ -16,7 +16,7 @@ import org.springframework.test.context.TestPropertySource;
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, classes = NotificationTestApplication.class)
 @TestPropertySource(properties = {
-    "csb.dsl.worker.enabled=false",
+    "cbs.dsl.worker.enabled=false",
     "cbs.nova.events.mq.enabled=false"
 })
 class MqEventDisabledIntegrationTest {

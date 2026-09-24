@@ -42,7 +42,7 @@ import java.sql.SQLException;
 import java.time.Duration;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, classes = IntegrationTestApplication.class, properties = {
-    "csb.dsl.worker.enabled=false",
+    "cbs.dsl.worker.enabled=false",
     "cbs.runs.max-input-bytes=100",
     "cbs.runs.max-output-bytes=50",
     "cbs.nova.process.async-db-save=false"
