@@ -1,7 +1,6 @@
 package cbs.nova.starter;
 
 import static java.nio.charset.StandardCharsets.*;
-import cbs.nova.starter.config.CbsDslLegacyPropertyPrefixInitializer;
 import static cbs.nova.starter.BuilderClientTestSupport.providerOf;
 import static cbs.nova.starter.BuilderClientTestSupport.stubLocalCompile;
 import static cbs.nova.starter.BuilderClientTestSupport.stubSuccessfulCompile;
@@ -377,14 +376,6 @@ class DslDraftResourceTest {
             .withUserConfiguration(DslDraftTestConfig.class,
                     DslDraftRouterConfiguration.class, DslDraftHandler.class)
             .withPropertyValues("cbs.dsl.drafts.enabled=false")
-            .run(ctx -> assertThat(ctx).doesNotHaveBean(RouterFunction.class));
-  }
-  @Test
-  void routerFunctionSkippedWhenLegacyPrefixDisabled() {
-    new ApplicationContextRunner().withInitializer(new CbsDslLegacyPropertyPrefixInitializer())
-            .withUserConfiguration(DslDraftTestConfig.class,
-                    DslDraftRouterConfiguration.class, DslDraftHandler.class)
-            .withPropertyValues("csb.dsl.drafts.enabled=false")
             .run(ctx -> assertThat(ctx).doesNotHaveBean(RouterFunction.class));
   }
 

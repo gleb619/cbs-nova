@@ -2,7 +2,6 @@ package cbs.nova.starter.config.properties;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import cbs.nova.starter.config.CbsDslLegacyPropertyPrefixInitializer;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
@@ -14,7 +13,6 @@ import org.springframework.context.annotation.Configuration;
 class DslBuilderClientPropertiesTest {
 
   private final ApplicationContextRunner runner = new ApplicationContextRunner()
-          .withInitializer(new CbsDslLegacyPropertyPrefixInitializer())
           .withUserConfiguration(DslBuilderClientPropertiesConfiguration.class);
 
   @Test
@@ -51,29 +49,6 @@ class DslBuilderClientPropertiesTest {
             .run(ctx -> {
               DslBuilderClientProperties properties = ctx.getBean(DslBuilderClientProperties.class);
               assertThat(properties.baseUrl()).isEqualTo("http://builder:8080");
-              assertThat(properties.queue().capacity()).isEqualTo(50);
-              assertThat(properties.queue().workers()).isEqualTo(8);
-              assertThat(properties.bulkhead().permits()).isEqualTo(16);
-              assertThat(properties.breaker().failureThreshold()).isEqualTo(10);
-              assertThat(properties.breaker().openDurationSeconds()).isEqualTo(60L);
-              assertThat(properties.timeouts().readMillis()).isEqualTo(30000L);
-            });
-  }
-
-  @Test
-  void legacyPrefixCustomValuesAreBound() {
-    runner
-            .withPropertyValues(
-                    "csb.dsl.builder-client.base-url=http://legacy-builder:8080",
-                    "csb.dsl.builder-client.queue.capacity=50",
-                    "csb.dsl.builder-client.queue.workers=8",
-                    "csb.dsl.builder-client.bulkhead.permits=16",
-                    "csb.dsl.builder-client.breaker.failure-threshold=10",
-                    "csb.dsl.builder-client.breaker.open-duration-seconds=60",
-                    "csb.dsl.builder-client.timeouts.read-millis=30000")
-            .run(ctx -> {
-              DslBuilderClientProperties properties = ctx.getBean(DslBuilderClientProperties.class);
-              assertThat(properties.baseUrl()).isEqualTo("http://legacy-builder:8080");
               assertThat(properties.queue().capacity()).isEqualTo(50);
               assertThat(properties.queue().workers()).isEqualTo(8);
               assertThat(properties.bulkhead().permits()).isEqualTo(16);

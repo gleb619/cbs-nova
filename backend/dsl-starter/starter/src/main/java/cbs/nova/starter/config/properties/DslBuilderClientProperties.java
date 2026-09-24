@@ -10,8 +10,7 @@ import org.springframework.validation.annotation.Validated;
  * Configuration for the DSL builder HTTP client and its resilience primitives.
  *
  * <p>
- * Namespace is {@code cbs.dsl.builder-client.*}. The misspelled {@code csb.dsl.builder-client.*}
- * prefix is still honoured for this release.
+ * Namespace is {@code cbs.dsl.builder-client.*}.
  *
  * <p>
  * T498 migrated the hand-rolled circuit breaker, bulkhead and request queue to Resilience4j core.

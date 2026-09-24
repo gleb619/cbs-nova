@@ -24,14 +24,12 @@ import tools.jackson.databind.ObjectMapper;
 
 /**
  * Verifies that the canonical {@code cbs.dsl.*} property prefix is used everywhere and that the
- * deprecated {@code csb.dsl.*} prefix is still honoured for one release via
- * {@link CbsDslLegacyPropertyPrefixPostProcessor}.
+ * conditional beans are wired based on {@code cbs.dsl.*} keys.
  */
-class CbsDslPropertyPrefixCompatibilityTest {
+class CbsDslPropertyPrefixTest {
 
   private static ApplicationContextRunner runner() {
-    return new ApplicationContextRunner()
-            .withInitializer(new CbsDslLegacyPropertyPrefixInitializer());
+    return new ApplicationContextRunner();
   }
 
   @Test
@@ -46,22 +44,6 @@ class CbsDslPropertyPrefixCompatibilityTest {
     runner()
             .withUserConfiguration(DraftsTestConfig.class, DslDraftHandler.class)
             .withPropertyValues("cbs.dsl.drafts.enabled=false")
-            .run(ctx -> assertThat(ctx).doesNotHaveBean(DslDraftHandler.class));
-  }
-
-  @Test
-  void draftsHandlerAbsentWhenLegacyCsbDisabled() {
-    runner()
-            .withUserConfiguration(DraftsTestConfig.class, DslDraftHandler.class)
-            .withPropertyValues("csb.dsl.drafts.enabled=false")
-            .run(ctx -> assertThat(ctx).doesNotHaveBean(DslDraftHandler.class));
-  }
-
-  @Test
-  void cbsDraftsKeyWinsOverLegacy() {
-    runner()
-            .withUserConfiguration(DraftsTestConfig.class, DslDraftHandler.class)
-            .withPropertyValues("cbs.dsl.drafts.enabled=false", "csb.dsl.drafts.enabled=true")
             .run(ctx -> assertThat(ctx).doesNotHaveBean(DslDraftHandler.class));
   }
 
@@ -82,17 +64,6 @@ class CbsDslPropertyPrefixCompatibilityTest {
             .run(ctx -> {
               DslBuilderClientProperties properties = ctx.getBean(DslBuilderClientProperties.class);
               assertThat(properties.baseUrl()).isEqualTo("http://builder:8080");
-            });
-  }
-
-  @Test
-  void builderClientPropertiesBoundFromLegacyCsb() {
-    runner()
-            .withUserConfiguration(BuilderClientPropertiesConfig.class)
-            .withPropertyValues("csb.dsl.builder-client.base-url=http://legacy-builder:8080")
-            .run(ctx -> {
-              DslBuilderClientProperties properties = ctx.getBean(DslBuilderClientProperties.class);
-              assertThat(properties.baseUrl()).isEqualTo("http://legacy-builder:8080");
             });
   }
 
