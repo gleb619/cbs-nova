@@ -273,7 +273,7 @@ class GitStatusServiceTest {
     RepoStatus legacy = new RepoStatus(Path.of("/repo"), Set.of("a.txt", "b.txt"));
 
     assertThat(legacy.changes()).isEmpty();
-    assertThat(legacy.dirtyPaths()).containsExactly("a.txt", "b.txt");
+    assertThat(legacy.dirtyPaths()).containsExactlyInAnyOrder("a.txt", "b.txt");
     assertThat(legacy.changeOf("a.txt")).isEmpty();
   }
 
