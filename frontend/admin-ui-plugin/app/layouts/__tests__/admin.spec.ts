@@ -5,7 +5,7 @@ import { defineComponent, h, nextTick, Suspense, type VNode } from 'vue'
 import AdminLayout from '../admin.vue'
 
 const { dslApi } = vi.hoisted(() => ({
-  dslApi: { listDrafts: vi.fn() },
+  dslApi: { getDraftsMetadata: vi.fn(), listDrafts: vi.fn() },
 }))
 
 vi.mock('@cbs/admin-ui-plugin/composables/useDslApi', () => ({
@@ -144,6 +144,16 @@ describe('admin.vue saved drafts widget', () => {
     resetSavedDraftsState()
     dslApi.listDrafts.mockReset()
     dslApi.listDrafts.mockResolvedValue([])
+    dslApi.getDraftsMetadata.mockReset()
+    dslApi.getDraftsMetadata.mockResolvedValue({
+      draftCount: 0,
+      workbenchPath: '.workbench/drafts',
+      sizeMb: 0,
+      gitBranch: 'main',
+      gitEnabled: true,
+      statusCacheTtlSeconds: 5,
+      historyLimit: 20,
+    })
     navigateToMock.mockReset()
     vi.mocked(useRuntimeConfig as Mock).mockReturnValue({
       public: { authEnabled: false },
@@ -186,6 +196,30 @@ describe('admin.vue saved drafts widget', () => {
     const items = wrapper.findAll('[data-testid="dsl-saved-drafts-item"]')
     expect(items).toHaveLength(1)
     expect(items[0].text()).toContain('alpha')
+  })
+
+  it('loads and displays draft metadata when Details is opened', async () => {
+    dslApi.getDraftsMetadata.mockResolvedValueOnce({
+      draftCount: 7,
+      workbenchPath: 'workspace/.workbench/drafts',
+      sizeMb: 1.25,
+      gitBranch: 'feature/drafts',
+      gitEnabled: true,
+      statusCacheTtlSeconds: 5,
+      historyLimit: 20,
+    })
+
+    const wrapper = mountLayout()
+    await flush()
+    await wrapper.find('[data-testid="dsl-saved-drafts-widget-details"]').trigger('click')
+    await flush()
+
+    expect(dslApi.getDraftsMetadata).toHaveBeenCalledOnce()
+    expect(wrapper.find('[data-testid="draft-metadata-card-count"]').text()).toBe('7')
+    expect(wrapper.find('[data-testid="draft-metadata-card-path"]').text()).toBe(
+      'workspace/.workbench/drafts',
+    )
+    expect(wrapper.find('[data-testid="draft-metadata-card-branch"]').text()).toBe('feature/drafts')
   })
 
   it('routes to the workbench with the draft in the query when nothing handles the pick', async () => {

@@ -183,6 +183,23 @@ describe('useDslApi', () => {
     expect(result).toEqual([{ name: 'legacy-draft', type: 'helper' }])
   })
 
+  it('getDraftsMetadata GETs /api/v1/dsl/drafts/metadata', async () => {
+    const metadata = {
+      draftCount: 3,
+      workbenchPath: '.workbench/drafts',
+      sizeMb: 0.5,
+      gitBranch: 'main',
+      gitEnabled: true,
+      statusCacheTtlSeconds: 5,
+      historyLimit: 20,
+    }
+    fetchMock.mockResolvedValueOnce(metadata)
+    const api = useDslApi()
+
+    await expect(api.getDraftsMetadata()).resolves.toEqual(metadata)
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/drafts/metadata')
+  })
+
   it('readDraft GETs /api/v1/dsl/drafts/{name}', async () => {
     fetchMock.mockResolvedValueOnce({ name: 'draft-1', type: 'helper' })
     const api = useDslApi()

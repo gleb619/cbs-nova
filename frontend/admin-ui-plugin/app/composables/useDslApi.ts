@@ -7,6 +7,7 @@ import {
   type DiagnosticsPage,
   type DomainEventPage,
   type DomainEventQuery,
+  type DraftsMetadata,
   type HelperCatalogEntry,
   type NotificationChannel,
   type NotificationFireLogPage,
@@ -234,6 +235,17 @@ export function useDslApi() {
     log.info('listDrafts request')
     const result = await bffListDrafts()
     return unwrapList(result)
+  }
+
+  async function getDraftsMetadata(): Promise<DraftsMetadata> {
+    log.info('getDraftsMetadata request')
+    try {
+      return (await $fetch('/api/v1/dsl/drafts/metadata')) as DraftsMetadata
+    } catch (err) {
+      const message = extractApiError(err).message
+      log.error('failed to load drafts metadata', { error: message })
+      throw new Error(message)
+    }
   }
 
   async function readDraft(name: string) {
@@ -604,6 +616,7 @@ export function useDslApi() {
     readDslFile,
     writeDslFile,
     listDrafts,
+    getDraftsMetadata,
     readDraft,
     listPublishHistory,
     restorePublishHistory,

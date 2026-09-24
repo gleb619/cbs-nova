@@ -11,7 +11,7 @@ import {
   useSavedDrafts,
 } from '@cbs/components'
 import { navigateTo, useRoute } from 'nuxt/app'
-import { computed, onBeforeUnmount, onMounted } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { NuxtLink } from '#components'
 
 function handleSaveHotkey(event: KeyboardEvent) {
@@ -41,6 +41,24 @@ const {
   refresh: refreshDrafts,
   select: selectDraft,
 } = useSavedDrafts({ fetcher: () => dslApi.listDrafts() })
+
+const draftsMetadata = ref<import('@cbs/components').DraftsMetadata | null>(null)
+const draftsMetadataLoading = ref(false)
+const draftsMetadataError = ref<string | null>(null)
+
+async function refreshDraftsMetadata() {
+  if (draftsMetadataLoading.value) return
+  draftsMetadataLoading.value = true
+  draftsMetadataError.value = null
+  try {
+    draftsMetadata.value = await dslApi.getDraftsMetadata()
+  } catch (err) {
+    draftsMetadata.value = null
+    draftsMetadataError.value = err instanceof Error ? err.message : String(err)
+  } finally {
+    draftsMetadataLoading.value = false
+  }
+}
 
 async function onDraftSelect(name: string) {
   // The workbench handles selection itself when mounted. Anywhere else, send
@@ -115,7 +133,11 @@ const displayName = computed(
         :loading="draftsLoading"
         :error="draftsError"
         :selected-name="draftsSelectedName"
+        :metadata="draftsMetadata"
+        :metadata-loading="draftsMetadataLoading"
+        :metadata-error="draftsMetadataError"
         auto-load
+        @open="refreshDraftsMetadata"
         @select="onDraftSelect"
         @refresh="refreshDrafts"
       />

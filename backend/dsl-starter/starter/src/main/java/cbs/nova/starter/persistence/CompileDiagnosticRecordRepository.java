@@ -111,26 +111,20 @@ public class CompileDiagnosticRecordRepository {
     }
 
     var r = T.refer();
-    var builder = dslQueries.select()
+    boolean hasDefinition = definition != null && !definition.isBlank();
+
+    ExtendedSelectQuery countQuery = dslQueries.select()
             .from(r)
-            .whereIf(definition != null && !definition.isBlank(),
-                    () -> Criteria.equal(r.get(T.definition()), Literal.of(definition)));
+            .whereIf(hasDefinition,
+                    () -> Criteria.equal(r.get(T.definition()), Literal.of(definition)))
+            .select(Literal.unsafe("COUNT(*)"))
+            .build();
+    long total = dslQueries.queryForObject(countQuery, Long.class);
 
-    long total;
-    if (definition == null || definition.isBlank()) {
-      ExtendedSelectQuery countQuery = dslQueries.select()
-              .from(r)
-              .select(Literal.unsafe("COUNT(*)"))
-              .build();
-      total = dslQueries.queryForObject(countQuery, Long.class);
-    } else {
-      ExtendedSelectQuery countQuery = builder
-              .select(Literal.unsafe("COUNT(*)"))
-              .build();
-      total = dslQueries.queryForObject(countQuery, Long.class);
-    }
-
-    ExtendedSelectQuery dataQuery = builder
+    ExtendedSelectQuery dataQuery = dslQueries.select()
+            .from(r)
+            .whereIf(hasDefinition,
+                    () -> Criteria.equal(r.get(T.definition()), Literal.of(definition)))
             .select(r.get(T.id()), r.get(T.occurredAt()), r.get(T.source()),
                     r.get(T.definition()), r.get(T.file()), r.get(T.line()),
                     r.get(T.colNumber()), r.get(T.severity()), r.get(T.code()),
