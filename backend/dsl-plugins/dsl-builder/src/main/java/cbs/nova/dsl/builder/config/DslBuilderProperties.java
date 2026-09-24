@@ -39,7 +39,7 @@ public record DslBuilderProperties(
     queue = queue == null ? new Queue(100, 4) : queue;
     drafts = drafts == null ? new Drafts(20) : drafts;
     files = files == null ? new Files(5, 100, 32, 8, 5L) : files;
-    git = git == null ? new Git(true, null, null, null, null, null, 5) : git;
+    git = git == null ? new Git(true, null, null, null, null, null, 5, false, "origin") : git;
     fileBuffer = fileBuffer == null ? new FileBuffer(1000, 3600L) : fileBuffer;
     workbench = workbench == null
             ? new Workbench(".workbench/drafts", ".workbench/published", ".workbench/history",
@@ -86,7 +86,9 @@ public record DslBuilderProperties(
           String repoUrl,
           String subPath,
           String branch,
-          @DefaultValue("5") int statusCacheTtlSeconds) {
+          @DefaultValue("5") int statusCacheTtlSeconds,
+          @DefaultValue("false") boolean pushOnCommit,
+          @DefaultValue("origin") String remote) {
   }
 
   public record FileBuffer(

@@ -21,6 +21,7 @@ import java.util.Optional;
 import java.util.UUID;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.lib.Repository;
+import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.junit.jupiter.api.Test;
@@ -332,7 +333,7 @@ class WorkspaceGitServiceTest {
     Files.writeString(repo.resolve("README.md"), "v2");
 
     var properties = dslBuilderProperties(repo,
-            new DslBuilderProperties.Git(false, null, null, null, null, null, 5));
+            new DslBuilderProperties.Git(false, null, null, null, null, null, 5, false, "origin"));
     var status = new GitStatusService(properties, Clock.systemUTC());
     var service = new WorkspaceGitService(properties, () -> status) {
     };
@@ -349,6 +350,116 @@ class WorkspaceGitServiceTest {
   void failsWhenNoRepositoryAvailable() {
     var service = newService(tempDir, null);
     assertThat(service.log("README.md", 20)).isEmpty();
+  }
+
+  @Test
+  void pushOnCommitTrueReachesBareRepo() throws Exception {
+    Path bare = initBareRepo();
+    Path workspace = cloneWorkspace(bare);
+    Files.writeString(workspace.resolve("README.md"), "v2");
+
+    var service = newService(workspace, null, true, "origin");
+
+    CommitResult result = service.commit(List.of("README.md"),
+            "publish", "actor", "actor@example.com");
+
+    assertThat(result.commitId()).isNotNull();
+    assertThat(result.pushed()).isTrue();
+    assertThat(result.pushError()).isNull();
+    assertThat(bareHead(bare)).isEqualTo(result.commitId());
+    assertThat(workspaceHead(workspace)).isEqualTo(result.commitId());
+  }
+
+  @Test
+  void pushRejectedKeepsLocalCommit() throws Exception {
+    Path bare = initBareRepo();
+    Path workspace1 = cloneWorkspace(bare);
+    Path workspace2 = cloneWorkspace(bare);
+
+    // Advance the bare repo from a second clone so workspace1 becomes behind.
+    Files.writeString(workspace2.resolve("README.md"), "from-ws2");
+    try (Git git = Git.open(workspace2.toFile())) {
+      git.add().addFilepattern("README.md").call();
+      git.commit().setMessage("ws2 commit").setAuthor("b", "b@example.com")
+              .setCommitter("b", "b@example.com").call();
+      git.push().call();
+    }
+
+    Files.writeString(workspace1.resolve("README.md"), "from-ws1");
+    var service = newService(workspace1, null, true, "origin");
+
+    CommitResult result = service.commit(List.of("README.md"),
+            "ws1 commit", "actor", "actor@example.com");
+
+    assertThat(result.commitId()).isNotNull();
+    assertThat(result.pushed()).isFalse();
+    assertThat(result.pushError()).isNotBlank().containsIgnoringCase("REJECTED_NONFASTFORWARD");
+    // Commit must stay in the local repo even though push failed.
+    assertThat(workspaceHead(workspace1)).isEqualTo(result.commitId());
+    // Bare repo must still point at the commit from workspace2.
+    try (Git git = Git.open(workspace2.toFile())) {
+      String ws2Head = git.log().call().iterator().next().getName();
+      assertThat(bareHead(bare)).isEqualTo(ws2Head);
+    }
+  }
+
+  @Test
+  void pushOnCommitFalseDoesNotPush() throws Exception {
+    Path bare = initBareRepo();
+    Path workspace = cloneWorkspace(bare);
+    String bareBefore = bareHead(bare);
+    Files.writeString(workspace.resolve("README.md"), "v2");
+
+    var service = newService(workspace, null, false, "origin");
+
+    CommitResult result = service.commit(List.of("README.md"),
+            "publish", "actor", "actor@example.com");
+
+    assertThat(result.commitId()).isNotNull();
+    assertThat(result.pushed()).isNull();
+    assertThat(result.pushError()).isNull();
+    assertThat(bareHead(bare)).isEqualTo(bareBefore);
+    assertThat(workspaceHead(workspace)).isEqualTo(result.commitId());
+  }
+
+  private Path initBareRepo() throws Exception {
+    // Build a normal repo with an initial commit, then clone it as a bare repo so the
+    // bare origin reliably has refs/heads/main and a HEAD that JGit clients can follow.
+    Path normal = tempDir.resolve("normal-" + UUID.randomUUID());
+    try (Git git = Git.init().setDirectory(normal.toFile()).setInitialBranch("main").call()) {
+      Files.writeString(normal.resolve("README.md"), "v1");
+      git.add().addFilepattern("README.md").call();
+      git.commit().setMessage("initial").setAuthor("dsl-builder-test", "test@example.com")
+              .setCommitter("dsl-builder-test", "test@example.com").call();
+    }
+    Path bareDir = tempDir.resolve("bare-" + UUID.randomUUID());
+    Git.cloneRepository().setURI(normal.toUri().toString())
+            .setDirectory(bareDir.toFile()).setBare(true).setBranch("main").call();
+    return bareDir;
+  }
+
+  private Path cloneWorkspace(Path bareDir) throws Exception {
+    Path workspace = tempDir.resolve("ws-" + UUID.randomUUID());
+    Git.cloneRepository().setURI(bareDir.toUri().toString())
+            .setDirectory(workspace.toFile()).setBranch("main").call();
+    return workspace;
+  }
+
+  private static String bareHead(Path bareDir) throws Exception {
+    try (Repository repository = new FileRepositoryBuilder()
+            .setGitDir(bareDir.toFile()).build()) {
+      ObjectId head = repository.resolve("refs/heads/main");
+      return head != null ? head.getName() : null;
+    }
+  }
+
+  private static String workspaceHead(Path workspace) throws Exception {
+    try (Repository repository = new FileRepositoryBuilder()
+            .findGitDir(workspace.toFile())
+            .build()) {
+      ObjectId head = repository.resolve("HEAD");
+      return head != null ? head.getName() : null;
+    }
   }
 
   // --- helpers ---
@@ -368,9 +479,14 @@ class WorkspaceGitServiceTest {
   }
 
   private static WorkspaceGitService newService(Path workspaceDir, String configuredRepoDir) {
+    return newService(workspaceDir, configuredRepoDir, false, "origin");
+  }
+
+  private static WorkspaceGitService newService(Path workspaceDir, String configuredRepoDir,
+          boolean pushOnCommit, String remote) {
     var properties = dslBuilderProperties(workspaceDir,
             new DslBuilderProperties.Git(true, configuredRepoDir,
-                    null, null, null, null, 5));
+                    null, null, null, null, 5, pushOnCommit, remote));
     var status = new GitStatusService(properties, Clock.systemUTC());
     return new WorkspaceGitService(properties, () -> status) {
     };
@@ -378,9 +494,14 @@ class WorkspaceGitServiceTest {
 
   private static WorkspaceGitService newThrowingService(Path workspaceDir,
           String configuredRepoDir) {
+    return newThrowingService(workspaceDir, configuredRepoDir, false, "origin");
+  }
+
+  private static WorkspaceGitService newThrowingService(Path workspaceDir,
+          String configuredRepoDir, boolean pushOnCommit, String remote) {
     var properties = dslBuilderProperties(workspaceDir,
             new DslBuilderProperties.Git(true, configuredRepoDir,
-                    null, null, null, null, 5));
+                    null, null, null, null, 5, pushOnCommit, remote));
     var status = new GitStatusService(properties, Clock.systemUTC());
     return new WorkspaceGitService(properties, () -> status) {
       @Override

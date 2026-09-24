@@ -468,6 +468,42 @@ class DslBuilderClientTest {
     assertThat(client.vcsStatus().get().dirtyPaths()).isEmpty();
   }
 
+  @Test
+  void commitParsesPushFields() {
+    var client = client(circuitBreaker(5, 30, 3));
+    server.expect(requestTo("http://localhost:8091/api/dsl/vcs/commit"))
+            .andExpect(method(HttpMethod.POST))
+            .andRespond(withSuccess(
+                    "{\"commitId\":\"abc123\",\"paths\":[\"dsl/LoanDsl.java\"],"
+                            + "\"timestampMillis\":42,\"pushed\":true,\"pushError\":\"nope\"}",
+                    MediaType.APPLICATION_JSON));
+
+    var result = client.commit(new cbs.nova.starter.model.VcsModels.CommitRequest(
+            List.of("dsl/LoanDsl.java"), "Publish Loan", "alice", "alice@cbs-nova.local"));
+
+    assertThat(result.commitId()).isEqualTo("abc123");
+    assertThat(result.pushed()).isTrue();
+    assertThat(result.pushError()).isEqualTo("nope");
+  }
+
+  @Test
+  void commitParsesLegacyJsonWithoutPushFields() {
+    var client = client(circuitBreaker(5, 30, 3));
+    server.expect(requestTo("http://localhost:8091/api/dsl/vcs/commit"))
+            .andExpect(method(HttpMethod.POST))
+            .andRespond(withSuccess(
+                    "{\"commitId\":\"abc123\",\"paths\":[\"dsl/LoanDsl.java\"],"
+                            + "\"timestampMillis\":42}",
+                    MediaType.APPLICATION_JSON));
+
+    var result = client.commit(new cbs.nova.starter.model.VcsModels.CommitRequest(
+            List.of("dsl/LoanDsl.java"), "Publish Loan", "alice", "alice@cbs-nova.local"));
+
+    assertThat(result.commitId()).isEqualTo("abc123");
+    assertThat(result.pushed()).isNull();
+    assertThat(result.pushError()).isNull();
+  }
+
   private DslBuilderClient client(CircuitBreaker circuitBreaker) {
     var properties = DslBuilderClientProperties.builder().build();
     var errorHandler = new BuilderApiErrorHandler(new ObjectMapper());

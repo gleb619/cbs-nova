@@ -101,7 +101,7 @@ class DslDraftGitResourceTest {
             Map.of("dsl/FooDsl.java", ChangeType.MODIFIED));
     when(gitStatusResolver.status(sourceDir)).thenReturn(Optional.of(status));
     when(client.commit(any()))
-            .thenReturn(new CommitResult("abc123", List.of("dsl/FooDsl.java"), 42));
+            .thenReturn(new CommitResult("abc123", List.of("dsl/FooDsl.java"), 42, null, null));
 
     ServerResponse response = handler.publish(postRequest("/api/dsl/drafts/foo/publish", "foo"));
 

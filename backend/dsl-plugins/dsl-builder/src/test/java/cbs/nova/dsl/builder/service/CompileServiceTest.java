@@ -157,7 +157,7 @@ class CompileServiceTest {
   void compilesFromConfiguredGitRepository() throws Exception {
     var origin = createRepositoryWithCommit();
     var git = new DslBuilderProperties.Git(
-            true, null, null, origin.toString(), null, "main", 5);
+            true, null, null, origin.toString(), null, "main", 5, false, "origin");
     var request = new CompileRequest("v1", null, null, null, null, null, null);
 
     var result = service(properties(git)).compile(request);

@@ -116,7 +116,9 @@ public final class VcsModels {
   public record CommitResult(
           String commitId,
           List<String> paths,
-          long timestampMillis) {
+          long timestampMillis,
+          @JsonInclude(JsonInclude.Include.NON_NULL) Boolean pushed,
+          @JsonInclude(JsonInclude.Include.NON_NULL) String pushError) {
 
   }
 

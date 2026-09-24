@@ -324,7 +324,8 @@ class GitStatusServiceTest {
 
   private static DslBuilderProperties.Git git(boolean enabled, String repositoryDir,
           int ttlSeconds) {
-    return new DslBuilderProperties.Git(enabled, repositoryDir, null, null, null, null, ttlSeconds);
+    return new DslBuilderProperties.Git(enabled, repositoryDir, null, null, null, null, ttlSeconds,
+            false, "origin");
   }
 
   private static MutableClock mutableClock() {

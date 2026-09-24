@@ -37,6 +37,8 @@ import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
+import org.eclipse.jgit.transport.PushResult;
+import org.eclipse.jgit.transport.RemoteRefUpdate;
 import org.eclipse.jgit.treewalk.TreeWalk;
 import org.eclipse.jgit.treewalk.filter.PathFilter;
 import org.springframework.beans.factory.ObjectProvider;
@@ -158,7 +160,15 @@ public class WorkspaceGitService {
                 commitFailure.getMessage());
       }
       invalidateGitStatus();
-      return new CommitResult(commit.getName(), paths, commit.getCommitTime() * 1000L);
+      Boolean pushed = null;
+      String pushError = null;
+      if (properties.git() != null && properties.git().pushOnCommit()) {
+        PushResult pushResult = push();
+        pushed = pushResult.ok();
+        pushError = pushResult.message();
+      }
+      return new CommitResult(commit.getName(), paths, commit.getCommitTime() * 1000L,
+              pushed, pushError);
     } catch (BuilderApiException e) {
       throw e;
     } catch (IOException | GitAPIException e) {
@@ -310,6 +320,53 @@ public class WorkspaceGitService {
     } catch (IOException e) {
       throw new BuilderApiException(HttpStatus.INTERNAL_SERVER_ERROR, "VCS_ERROR", e.getMessage());
     }
+  }
+
+  /**
+   * Push the current branch to the configured {@code cbs.dsl.builder.git.remote}. Never
+   * force-pushes. Returns a {@link PushResult} with {@code ok=false} and a message when any remote
+   * ref update is not OK / up-to-date.
+   */
+  public PushResult push() {
+    if (!gitEnabled()) {
+      return new PushResult(false, "git is disabled in builder configuration");
+    }
+    Path repoRoot = findRepoRoot();
+    if (repoRoot == null) {
+      return new PushResult(false, "no git repository found under workspace");
+    }
+    String remote = properties.git() != null ? properties.git().remote() : null;
+    if (remote == null || remote.isBlank()) {
+      return new PushResult(false, "remote is not configured");
+    }
+    try (Repository repository = openRepository();
+            Git git = new Git(repository)) {
+      String branch = repository.getBranch();
+      Iterable<org.eclipse.jgit.transport.PushResult> results = git.push()
+              .setRemote(remote)
+              .add(branch)
+              .call();
+      for (org.eclipse.jgit.transport.PushResult result : results) {
+        for (RemoteRefUpdate update : result.getRemoteUpdates()) {
+          RemoteRefUpdate.Status status = update.getStatus();
+          if (status != RemoteRefUpdate.Status.OK
+                  && status != RemoteRefUpdate.Status.UP_TO_DATE) {
+            String detail = update.getMessage() != null ? ": " + update.getMessage() : "";
+            return new PushResult(false,
+                    "push to " + remote + "/" + update.getRemoteName() + " failed: "
+                            + status.name() + detail);
+          }
+        }
+      }
+      return new PushResult(true, null);
+    } catch (IOException | GitAPIException e) {
+      log.warn("[DSL vcs] push to {} failed: {}", remote, e.getMessage());
+      return new PushResult(false, "push failed: " + e.getMessage());
+    }
+  }
+
+  /** Result of a {@link #push()}: ok + an optional message (null on success). */
+  public record PushResult(boolean ok, String message) {
   }
 
   // --- path / repo helpers ---

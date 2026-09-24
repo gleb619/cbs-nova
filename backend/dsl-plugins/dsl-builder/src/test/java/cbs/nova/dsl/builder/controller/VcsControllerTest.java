@@ -83,7 +83,7 @@ class VcsControllerTest {
               null,
               null,
               new DslBuilderProperties.Git(true, null, null, null, null,
-                      null, 0),
+                      null, 0, true, "origin"),
               null,
               null,
               null,
@@ -178,7 +178,8 @@ class VcsControllerTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.commitId").isString())
             .andExpect(jsonPath("$.paths[0]").value("dsl/LoanDsl.java"))
-            .andExpect(jsonPath("$.timestampMillis").isNumber());
+            .andExpect(jsonPath("$.timestampMillis").isNumber())
+            .andExpect(jsonPath("$.pushed").value(false));
 
     try (Git git = Git.open(WORKSPACE.toFile())) {
       assertThat(git.log().call().iterator().next().getShortMessage()).isEqualTo("publish loan");

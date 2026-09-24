@@ -60,6 +60,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -831,10 +832,17 @@ public class DslDraftHandler {
       CommitResult result = builder.commit(new CommitRequest(List.of(path),
               "Publish " + name, actor, actor + "@cbs-nova.local"));
       log.info("[DSL drafts] committed {} (path={}) as {}", name, path, result.commitId());
-      audit(request, ACTION_DRAFT_COMMIT, name, StarterConstants.OUTCOME_SUCCESS,
-              Map.of("commitId", String.valueOf(result.commitId()),
-                      "location", path,
-                      "message", "Publish " + name));
+      Map<String, Object> details = new LinkedHashMap<>();
+      details.put("commitId", String.valueOf(result.commitId()));
+      details.put("location", path);
+      details.put("message", "Publish " + name);
+      if (result.pushed() != null) {
+        details.put("pushed", result.pushed());
+      }
+      if (result.pushError() != null) {
+        details.put("pushError", result.pushError());
+      }
+      audit(request, ACTION_DRAFT_COMMIT, name, StarterConstants.OUTCOME_SUCCESS, details);
       return result.commitId();
     } catch (RuntimeException e) {
       log.warn("[DSL drafts] commit for {} (path={}) failed: {}", name, path, e.getMessage());
