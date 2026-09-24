@@ -42,7 +42,7 @@ public final class AuditTestSupport {
     dataSource.setUser("sa");
     try {
       ScriptUtils.executeSqlScript(dataSource.getConnection(),
-              new ClassPathResource("db/migration/h2/V2__dsl_audit.sql"));
+              new ClassPathResource("db/migration/h2/V1__init.sql"));
     } catch (Exception e) {
       throw new IllegalStateException("failed to set up in-memory dsl_audit table", e);
     }

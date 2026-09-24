@@ -46,7 +46,7 @@ class DslEventRepositoryTest {
     dataSource.setPassword(postgres.getPassword());
 
     ScriptUtils.executeSqlScript(dataSource.getConnection(),
-            new ClassPathResource("db/migration/postgres/V7__dsl_events.sql"));
+            new ClassPathResource("db/migration/postgres/V1__init.sql"));
   }
 
   @BeforeEach

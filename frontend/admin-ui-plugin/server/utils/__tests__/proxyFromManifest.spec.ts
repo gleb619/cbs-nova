@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, type vi } from 'vitest'
-import { proxyFromManifest } from '../proxyFromManifest'
 import type { BffRouteSpec } from '../proxyFromManifest'
+import { proxyFromManifest } from '../proxyFromManifest'
 
 type HeaderMap = Record<string, string | undefined>
 let headerMap: HeaderMap = {}
@@ -68,10 +68,7 @@ describe('proxyFromManifest', () => {
 
       await proxyFromManifest(event, GET_SPEC)
 
-      const [, opts] = mockedFetch().mock.calls[0] as [
-        string,
-        { headers: Record<string, string> },
-      ]
+      const [, opts] = mockedFetch().mock.calls[0] as [string, { headers: Record<string, string> }]
       expect(opts.headers['X-Request-Id']).toBe('rid-abc-123')
       expect(opts.headers.Authorization).toBe('Bearer abc.def.ghi')
     })
@@ -112,10 +109,7 @@ describe('proxyFromManifest', () => {
 
       await proxyFromManifest(event, spec)
 
-      const [, opts] = mockedFetch().mock.calls[0] as [
-        string,
-        { method: string; body: unknown },
-      ]
+      const [, opts] = mockedFetch().mock.calls[0] as [string, { method: string; body: unknown }]
       expect(opts.method).toBe('POST')
       expect(opts.body).toEqual({ name: 'draft-1', dsl: 'workflow X {}' })
     })
@@ -123,7 +117,11 @@ describe('proxyFromManifest', () => {
     it('still proxies GETs when explicitMethod is set', async () => {
       const event = makeEvent({}, { id: 'run-42' })
       mockedFetch().mockResolvedValueOnce({})
-      const spec: BffRouteSpec = { ...GET_SPEC, operationId: 'readPublishHistoryEntry', explicitMethod: true }
+      const spec: BffRouteSpec = {
+        ...GET_SPEC,
+        operationId: 'readPublishHistoryEntry',
+        explicitMethod: true,
+      }
 
       await proxyFromManifest(event, spec)
 
@@ -144,10 +142,7 @@ describe('proxyFromManifest', () => {
 
       await proxyFromManifest(event, GET_SPEC)
 
-      const [, opts] = mockedFetch().mock.calls[0] as [
-        string,
-        { query?: Record<string, unknown> },
-      ]
+      const [, opts] = mockedFetch().mock.calls[0] as [string, { query?: Record<string, unknown> }]
       expect(opts.query).toBeUndefined()
     })
   })

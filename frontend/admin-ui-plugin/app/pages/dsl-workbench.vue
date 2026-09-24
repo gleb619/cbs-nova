@@ -6,54 +6,56 @@ import { useDraftSave } from '@cbs/admin-ui-plugin/composables/useDraftSave'
 import { useDslApi } from '@cbs/admin-ui-plugin/composables/useDslApi'
 import { useDslWorkbench } from '@cbs/admin-ui-plugin/composables/useDslWorkbench'
 import { useManifestGuard } from '@cbs/admin-ui-plugin/composables/useManifestGuard'
+import { useWorkbenchBeforeUnload } from '@cbs/admin-ui-plugin/composables/useWorkbenchBeforeUnload'
+import { useWorkbenchDeepLink } from '@cbs/admin-ui-plugin/composables/useWorkbenchDeepLink'
+import { useWorkbenchDelete } from '@cbs/admin-ui-plugin/composables/useWorkbenchDelete'
 import { useWorkbenchDraft } from '@cbs/admin-ui-plugin/composables/useWorkbenchDraft'
+import { useWorkbenchMenus } from '@cbs/admin-ui-plugin/composables/useWorkbenchMenus'
+import { useWorkbenchNewDefinition } from '@cbs/admin-ui-plugin/composables/useWorkbenchNewDefinition'
+import { useWorkbenchObjectSearch } from '@cbs/admin-ui-plugin/composables/useWorkbenchObjectSearch'
+import { useWorkbenchPanels } from '@cbs/admin-ui-plugin/composables/useWorkbenchPanels'
+import { useWorkbenchSavedDrafts } from '@cbs/admin-ui-plugin/composables/useWorkbenchSavedDrafts'
+import { useWorkbenchSelection } from '@cbs/admin-ui-plugin/composables/useWorkbenchSelection'
+import { useWorkbenchShareLink } from '@cbs/admin-ui-plugin/composables/useWorkbenchShareLink'
+import { useWorkbenchShortcuts } from '@cbs/admin-ui-plugin/composables/useWorkbenchShortcuts'
+import { useWorkbenchStructure } from '@cbs/admin-ui-plugin/composables/useWorkbenchStructure'
 import type {
   DslConstruct,
   EditorMarker,
-  HelperCatalogEntry,
-  HelperSearchFilters,
   ObjectSearchResult,
-  ObjectStructureDto,
   ValidationError,
 } from '@cbs/components'
 import {
-  CbsDrawer,
-  createNamespacedLocalStorageState,
-  DropdownMenu,
-  type DropdownMenuItem,
   DslBodyEditor,
   DslConstructExplorer,
-  DslDefinitionTestsPanel,
   DslDeleteDraftConfirmationModal,
-  DslDiagnosticsHistoryPanel,
-  DslDraftRestoreBanner,
-  DslHelperCatalog,
   DslMetadataPanel,
   DslObjectsSearchPanel,
   DslPlainConstructList,
-  ErrorBanner,
-  HotkeyTooltip,
-  useHelperSearch,
-  useSavedDrafts,
+  useToast,
 } from '@cbs/components'
-import { useToast } from '@cbs/components/composables'
-import { useEventListener } from '@vueuse/core'
-import { useCookie, useRoute } from 'nuxt/app'
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { onBeforeRouteLeave } from 'vue-router'
+import { useRoute } from 'nuxt/app'
+import { computed, onMounted, ref, watch } from 'vue'
 import type { RunnerOutput } from '~/types'
-import DslHistoryPanel from '../components/DslHistoryPanel.vue'
-import DslTemplateGallery from '../components/DslTemplateGallery.vue'
-import type { DslTemplate } from '../utils/dslTemplates'
+import WorkbenchDrawers from '../components/workbench/WorkbenchDrawers.vue'
+import WorkbenchEditorBanners from '../components/workbench/WorkbenchEditorBanners.vue'
+import WorkbenchHeader from '../components/workbench/WorkbenchHeader.vue'
+import WorkbenchNewDefinitionModal from '../components/workbench/WorkbenchNewDefinitionModal.vue'
 import { buildHelperSnippet } from '../utils/helperSnippet'
 
+// ---------------------------------------------------------------------------
+// Top-level dependencies (workbench store, DSL API, approvals, guard, logger).
+// ---------------------------------------------------------------------------
+
 const workbench = useDslWorkbench()
+const dslApi = useDslApi()
+const log = useClientLogger('dsl-workbench')
+const toast = useToast()
 const route = useRoute()
-// T568 — change-request approvals for the selected draft (submit + pending badge).
-const { items: approvalItems, load: loadApprovals, submit: submitApproval } = useApprovals()
-// T551 — defense-in-depth button guard: the backend resolves the verdict server-side
-// (PieceGuardFilter stays the real gate); this only disables the Publish action when denied.
+const draftDirty = useDraftDirty()
 const { allowed: guardAllowed } = useManifestGuard()
+const { items: approvalItems, load: loadApprovals, submit: submitApproval } = useApprovals()
+
 const {
   state,
   selectedConstruct,
@@ -78,43 +80,6 @@ const selectedPendingApproval = computed(() => {
   return approvalItems.value.some((r) => r.definitionName === name && r.status === 'PENDING')
 })
 
-const draftDirty = useDraftDirty()
-
-const useWorkbenchStorage = createNamespacedLocalStorageState('cbs-nova:dsl-workbench')
-
-const explorerOpen = useWorkbenchStorage<boolean>('explorer-open', true)
-const explorerCollapsed = useWorkbenchStorage<boolean>('explorer-collapsed', false, {
-  useCookie,
-})
-// Two-way bound to `<DslConstructExplorer>` so the `?objectName=<name>` deep
-// link can pre-fill the filter alongside selecting the matched construct.
-const explorerFilter = ref('')
-
-// Seeded from `?activeTab=<name>` so deep links land on the requested tab.
-// Implemented via `bodyEditorRef.setTab(...)` (event/listen style) rather
-// than v-model — the editor never writes back, so URL stays stable on click.
-const BODY_EDITOR_TABS = ['structure', 'code', 'preview', 'explain', 'problems'] as const
-type BodyEditorTab = (typeof BODY_EDITOR_TABS)[number]
-const objectsSearchOpen = useWorkbenchStorage<boolean>('objects-search-open', false)
-const helperCatalogOpen = useWorkbenchStorage<boolean>('helper-catalog-open', false)
-const historyPanelOpen = useWorkbenchStorage<boolean>('history-panel-open', false)
-const diagnosticsPanelOpen = useWorkbenchStorage<boolean>('diagnostics-panel-open', false)
-const testsPanelOpen = useWorkbenchStorage<boolean>('tests-panel-open', false)
-
-function toggleHistoryPanel() {
-  historyPanelOpen.value = !historyPanelOpen.value
-}
-
-function toggleDiagnosticsPanel() {
-  diagnosticsPanelOpen.value = !diagnosticsPanelOpen.value
-}
-
-function toggleTestsPanel() {
-  testsPanelOpen.value = !testsPanelOpen.value
-}
-
-// Translate `state.value.validationErrors` into Monaco marker records. Scoped to the
-// selected construct — no file filter needed today (YAGNI).
 const editorMarkers = computed<EditorMarker[]>(() =>
   state.value.validationErrors.map((err) => ({
     line: err.line ?? null,
@@ -124,111 +89,49 @@ const editorMarkers = computed<EditorMarker[]>(() =>
   })),
 )
 
-const bodyEditorRef = ref<InstanceType<typeof DslBodyEditor> | null>(null)
+// ---------------------------------------------------------------------------
+// Persisted UI state (explorer + drawers). All seven flags live in
+// `useWorkbenchPanels` so the page owns them and the drawers component can
+// stay declarative (props + v-model).
+// ---------------------------------------------------------------------------
 
-function onHelperSelect(result: ObjectSearchResult) {
-  bodyEditorRef.value?.insertAtCursor(buildHelperSnippet(result))
+const {
+  explorerOpen,
+  explorerCollapsed,
+  objectsSearchOpen,
+  helperCatalogOpen,
+  historyPanelOpen,
+  diagnosticsPanelOpen,
+  testsPanelOpen,
+} = useWorkbenchPanels()
+
+// Two-way bound to `<DslConstructExplorer>` so the `?objectName=<name>` deep
+// link can pre-fill the filter alongside selecting the matched construct.
+const explorerFilter = ref('')
+
+function toggleExplorer() {
+  explorerOpen.value = !explorerOpen.value
 }
 
-function onHistoryRestored() {
-  reloadDefinitions()
-}
+// ---------------------------------------------------------------------------
+// Saved-drafts store (navbar widget picks land here). The selection is
+// created later in this script, so the savedDrafts `selectConstruct` callback
+// resolves through a lazy ref that points at `safeSelectConstruct` once the
+// selection composable has returned.
+// ---------------------------------------------------------------------------
 
-const dslApi = useDslApi()
-const log = useClientLogger('dsl-workbench')
-
-const savedDrafts = useSavedDrafts({
-  fetcher: () => dslApi.listDrafts(),
-  onError: (message) => log.error('failed to load drafts', { error: message }),
-  // The navbar widget dispatches picks here while this page is mounted.
-  onSelect: (name) => safeSelectConstruct(name),
+let safeSelectConstructRef: ((name: string) => void) | undefined
+const savedDrafts = useWorkbenchSavedDrafts({
+  listDrafts: () => dslApi.listDrafts(),
+  logError: (message, fields) => log.error(message, fields),
+  selectConstruct: (name) =>
+    (safeSelectConstructRef ?? ((fallback: string) => selectConstruct(fallback)))(name),
 })
 const { drafts, refresh: refreshDrafts, selectedName: draftsSelectedName } = savedDrafts
 
-function safeSelectConstruct(name: string) {
-  if (state.value.isDirty && !window.confirm('Discard unsaved changes to this construct?')) {
-    return
-  }
-  selectConstruct(name)
-  syncSelectionEffects()
-}
-
-// Remove the objectName query param once we have consumed the deep link.
-// Keeps reloads from re-overriding the user's persisted selection.
-function consumeObjectNameQuery() {
-  if (typeof window === 'undefined') return
-  const url = new URL(window.location.href)
-  if (!url.searchParams.has('objectName')) return
-  url.searchParams.delete('objectName')
-  window.history.replaceState({}, '', url.toString())
-}
-
-// Side effects that follow every workbench selection change: mirroring the
-// selection into the shared drafts store (so the navbar widget can highlight
-// the active draft) and loading the source file for file-backed constructs.
-function mirrorSelectionToDrafts() {
-  draftsSelectedName.value = state.value.selectedName ?? null
-}
-
-// Object search filters are persisted so the user's previous query is
-// restored on the next visit. The workbench now loads the DSL working set
-// (/api/dsl/working-set); this storage can later seed that request instead of
-// a separate /api/dsl/objects/search call.
-const objectSearchFilters = useWorkbenchStorage<HelperSearchFilters>('object-search-filters', {
-  query: '',
-  mode: 'exact',
-})
-
-const objectSearch = useHelperSearch({
-  fetch: async (filters: HelperSearchFilters) => {
-    const page = await dslApi.searchObjects({
-      query: filters.query,
-      mode: filters.mode,
-      size: 100,
-    })
-    return (page.items ?? []) as ObjectSearchResult[]
-  },
-  debounceMs: 250,
-  initialFilters: objectSearchFilters.value,
-})
-
-watch(
-  objectSearch.filters,
-  (filters) => {
-    objectSearchFilters.value = { ...filters }
-  },
-  { deep: true },
-)
-
-async function loadHelpersPage(params: {
-  search: string
-  mode: string
-  offset: number
-  limit: number
-}) {
-  return dslApi.listHelpers({
-    search: params.search,
-    mode: params.mode,
-    limit: params.limit,
-    offset: params.offset,
-  })
-}
-
-async function fetchHelperCatalog(): Promise<HelperCatalogEntry[]> {
-  const result = await dslApi.listHelpers({ limit: 500 })
-  return result.items ?? []
-}
-
-// Reuses the constructs already loaded into the workbench store (no extra
-// fetch layer); loads them on first demand only.
-async function fetchConstructs(): Promise<DslConstruct[]> {
-  if (!state.value.constructs.length) await loadConstructs()
-  return state.value.constructs as DslConstruct[]
-}
-
-function toggleHelperCatalog() {
-  helperCatalogOpen.value = !helperCatalogOpen.value
-}
+// ---------------------------------------------------------------------------
+// Editor + draft body + autosave (server-side autosave via workbench).
+// ---------------------------------------------------------------------------
 
 const workbenchDraft = useWorkbenchDraft(state.value.selectedName ?? '', {
   server: {
@@ -251,97 +154,104 @@ const {
   autosaveOffline,
 } = workbenchDraft
 
-// Source-file-backed constructs load their Java source from the backend.
-const fileCode = ref('')
-const fileCodeLoading = ref(false)
-const isFileBacked = computed(() => !!selectedConstruct.value?.filePath)
-const editorCode = computed(() => (isFileBacked.value ? fileCode.value : draftBody.value))
+// ---------------------------------------------------------------------------
+// Selection: source-file loading + draft mirroring + safe select.
+// ---------------------------------------------------------------------------
 
-// Header label — show the source file basename for file-backed constructs
-// (e.g. `dsl/BatchProcessingDsl.java` → `BatchProcessingDsl.java`); fall back
-// to the construct name when no source file is associated (helpers/functions).
-const basename = (path: string) => path.split(/[\\/]/).pop() ?? path
-const selectedConstructLabel = computed(() => {
-  const construct = selectedConstruct.value
-  if (!construct) return ''
-  return basename(construct.filePath ?? construct.name)
+const selection = useWorkbenchSelection({
+  selectedConstruct,
+  selectedName: computed(() => state.value.selectedName),
+  readDslFile: (name) => dslApi.readDslFile(name),
+  logError: (message, fields) => log.error(message, fields),
+  markDirty: () => markDirty(),
+  selectConstruct: (name) => selectConstruct(name),
+  isDirty: computed(() => state.value.isDirty),
+  syncSelectionEffects: () => syncSelectionEffects(),
+  draftsSelectedName,
+  draftBody,
+  clearDraft: () => clearDraft(),
+})
+const {
+  fileCodeLoading,
+  isFileBacked,
+  editorCode,
+  selectedConstructLabel,
+  safeSelectConstruct,
+  mirrorSelectionToDrafts,
+  loadSourceFile,
+  onCodeChange,
+} = selection
+
+// Now that the selection composable has returned, point the lazy
+// savedDrafts callback at the safe path so navbar-widget picks honour the
+// dirty-changes confirm prompt.
+safeSelectConstructRef = safeSelectConstruct
+
+const draftSave = useDraftSave({ getContent: () => editorCode.value })
+
+// ---------------------------------------------------------------------------
+// Structure tab: fetch-on-select with retry.
+// ---------------------------------------------------------------------------
+
+const structureApi = useWorkbenchStructure({
+  selectedConstruct,
+  fetchObjectStructure: (constructType, name) => dslApi.fetchObjectStructure(constructType, name),
 })
 
-async function loadSourceFile(construct: typeof selectedConstruct.value) {
-  if (!construct?.filePath) {
-    fileCode.value = ''
-    return
-  }
-  clearDraft()
-  fileCode.value = ''
-  fileCodeLoading.value = true
-  try {
-    const content = await dslApi.readDslFile(construct.name)
-    fileCode.value = content
-    log.info('source file loaded', { name: construct.name, path: construct.filePath })
-  } catch (err) {
-    log.error('failed to load source file', {
-      name: construct.name,
-      error: (err as Error).message,
-    })
-  } finally {
-    fileCodeLoading.value = false
-  }
-}
+// ---------------------------------------------------------------------------
+// Side effects that follow every selection change: mirror drafts + load
+// source file + load structure. Bound to `safeSelectConstruct` and the deep
+// link resolver below.
+// ---------------------------------------------------------------------------
 
 function syncSelectionEffects() {
   mirrorSelectionToDrafts()
   workbenchDraft.setName(state.value.selectedName ?? '')
   void loadSourceFile(selectedConstruct.value)
-  void loadStructure(state.value.selectedName ?? '')
+  void structureApi.loadStructure(state.value.selectedName ?? '')
 }
 
-// Introspected whole-object structure for the Structure tab, keyed by the
-// selected construct name. Called from syncSelectionEffects (fetch-on-select);
-// the 404 (unknown object) case resolves to `null` and renders a friendly
-// empty state in the tab.
-const structure = ref<ObjectStructureDto | null>(null)
-const structureLoading = ref(false)
-const structureError = ref<string | null>(null)
-const structureName = ref<string | null>(null)
+// ---------------------------------------------------------------------------
+// Object search + helper catalog fetchers.
+// ---------------------------------------------------------------------------
 
-async function loadStructure(name: string, force = false) {
-  const constructType = selectedConstruct.value?.type
-  if (!name || !constructType) {
-    structure.value = null
-    structureError.value = null
-    structureName.value = null
-    return
+const objectSearch = useWorkbenchObjectSearch({
+  searchObjects: (params) => dslApi.searchObjects(params),
+  listHelpers: (params) => dslApi.listHelpers(params),
+})
+
+function onHelperSelect(result: ObjectSearchResult) {
+  bodyEditorRef.value?.insertAtCursor(buildHelperSnippet(result))
+}
+
+function toggleHelperCatalog() {
+  helperCatalogOpen.value = !helperCatalogOpen.value
+}
+
+function toggleObjectsSearch() {
+  objectsSearchOpen.value = !objectsSearchOpen.value
+}
+watch(objectsSearchOpen, (open) => {
+  if (!open) {
+    void workbench.loadConstructs()
   }
-  if (!force && structureName.value === name) return
-  structureName.value = name
-  structureLoading.value = true
-  structureError.value = null
-  try {
-    structure.value = await dslApi.fetchObjectStructure(constructType, name)
-  } catch (err) {
-    structure.value = null
-    structureError.value = (err as Error).message
-  } finally {
-    structureLoading.value = false
-  }
+})
+
+async function handleSaveSearch() {
+  await objectSearch.save()
+  objectsSearchOpen.value = false
 }
 
-function retryStructure() {
-  void loadStructure(structureName.value ?? '', true)
+async function handleClearSavedSearch() {
+  await objectSearch.clearSaved()
+  objectsSearchOpen.value = false
 }
 
-function onCodeChange(value: string) {
-  if (isFileBacked.value) {
-    fileCode.value = value
-  } else {
-    draftBody.value = value
-  }
-  if (selectedConstruct.value) markDirty()
-}
-
-function handleEditorSave() {
-  draftSave.save().then(() => refreshDrafts())
+// Reuses the constructs already loaded into the workbench store (no extra
+// fetch layer); loads them on first demand only.
+async function fetchConstructs(): Promise<DslConstruct[]> {
+  if (!state.value.constructs.length) await loadConstructs()
+  return state.value.constructs as DslConstruct[]
 }
 
 async function runPreview(
@@ -360,187 +270,9 @@ async function runExplain(
   return (await dslApi.explain(name, body, metadata)) as RunnerOutput
 }
 
-function toggleExplorer() {
-  explorerOpen.value = !explorerOpen.value
-}
-
-function toggleObjectsSearch() {
-  objectsSearchOpen.value = !objectsSearchOpen.value
-}
-
-const pendingDeleteName = ref<string | null>(null)
-const isDeleting = ref(false)
-const deleteError = ref<string | null>(null)
-const showDeleteModal = computed(() => !!pendingDeleteName.value)
-
-function requestDelete(name: string) {
-  pendingDeleteName.value = name
-  deleteError.value = null
-}
-
-async function confirmDelete() {
-  if (!pendingDeleteName.value || isDeleting.value) return
-  isDeleting.value = true
-  deleteError.value = null
-  try {
-    await deleteConstruct(pendingDeleteName.value)
-    pendingDeleteName.value = null
-    syncSelectionEffects()
-    await refreshDrafts()
-  } catch (err) {
-    deleteError.value = (err as Error).message
-  } finally {
-    isDeleting.value = false
-  }
-}
-
-function cancelDelete() {
-  if (isDeleting.value) return
-  pendingDeleteName.value = null
-}
-
-function handleBeforeUnload(event: BeforeUnloadEvent) {
-  if (!state.value.isDirty) return
-  event.preventDefault()
-  event.returnValue = ''
-}
-
-onBeforeRouteLeave(() => {
-  if (state.value.isDirty && !window.confirm('You have unsaved changes. Leave anyway?')) {
-    return false
-  }
-  return true
-})
-
-const showNewPanel = ref(false)
-const newName = ref('')
-const selectedTemplate = ref<DslTemplate | null>(null)
-const VALID_NAME_RE = /^[A-Za-z0-9._-]+$/
-
-const newNameError = computed(() => {
-  const name = newName.value.trim()
-  if (!name) return null
-  if (!VALID_NAME_RE.test(name)) {
-    return 'Name may only contain letters, numbers, dots, dashes and underscores.'
-  }
-  const existsInConstructs = state.value.constructs.some((c) => c.name === name)
-  const existsInDrafts = drafts.value.some((d) => d.name === name)
-  if (existsInConstructs || existsInDrafts) {
-    return `A definition or draft named "${name}" already exists.`
-  }
-  return null
-})
-
-function openNewPanel() {
-  showNewPanel.value = true
-  newName.value = ''
-  selectedTemplate.value = null
-}
-
-function closeNewPanel() {
-  showNewPanel.value = false
-  newName.value = ''
-  selectedTemplate.value = null
-}
-
-function handleTemplateSelect(template: DslTemplate) {
-  selectedTemplate.value = template
-}
-
-async function confirmCreate() {
-  const name = newName.value.trim()
-  if (!name || newNameError.value || !selectedTemplate.value) return
-  const parsed = JSON.parse(selectedTemplate.value.body) as { type?: string }
-  const type =
-    (parsed.type as 'Process' | 'Transaction' | 'Function' | 'Helper' | undefined) ?? 'Process'
-  createConstruct(name, type)
-  syncSelectionEffects()
-  await nextTick()
-  draftBody.value = selectedTemplate.value.body
-  markDirty()
-  closeNewPanel()
-}
-
-type ActionValue = 'share-link' | 'publish' | 'submit-approval'
-type HelpersMenuValue = 'history' | 'diagnostics' | 'tests'
-
-const helpersMenuItems = computed<DropdownMenuItem[]>(() => [
-  // Objects / Helpers toggles moved to the ConstructExplorer footer.
-  {
-    label: historyPanelOpen.value ? 'Close History' : 'History',
-    value: 'history',
-    disabled: !selectedConstruct.value,
-  },
-  {
-    label: diagnosticsPanelOpen.value ? 'Close Diagnostics' : 'Diagnostics',
-    value: 'diagnostics',
-  },
-  {
-    label: testsPanelOpen.value ? 'Close Tests' : 'Tests',
-    value: 'tests',
-    disabled: !selectedConstruct.value,
-  },
-])
-
-function runHelpersMenu(item: DropdownMenuItem) {
-  switch (item.value as HelpersMenuValue) {
-    case 'history':
-      toggleHistoryPanel()
-      break
-    case 'diagnostics':
-      toggleDiagnosticsPanel()
-      break
-    case 'tests':
-      toggleTestsPanel()
-      break
-  }
-}
-
-const actionItems = computed<DropdownMenuItem[]>(() => [
-  {
-    label: 'Share Link',
-    value: 'share-link',
-    disabled: !selectedConstruct.value,
-  },
-  {
-    label: 'Publish',
-    value: 'publish',
-    disabled:
-      !selectedConstruct.value || state.value.isSaving || !guardAllowed('workbench-publish'),
-    variant: 'primary',
-  },
-  {
-    label: 'Submit for approval',
-    value: 'submit-approval',
-    disabled:
-      !selectedConstruct.value || state.value.isSaving || !guardAllowed('workbench-approve'),
-  },
-])
-
-function runAction(item: DropdownMenuItem) {
-  switch (item.value as ActionValue) {
-    case 'share-link':
-      void shareLink()
-      break
-    case 'publish':
-      publishConstruct().then(() => refreshDrafts())
-      break
-    case 'submit-approval':
-      submitApproval(state.value.selectedName ?? '')
-        .then(() => {
-          refreshDrafts()
-          loadApprovals()
-        })
-        .catch((err: unknown) => {
-          log.error('failed to submit for approval', { error: (err as Error).message })
-        })
-      break
-  }
-}
-
-// Refresh and Validate moved to the Code tab toolbar (T589). Keeping the
-// implementations here so the page owns the wiring (reload + sync selection
-// effects + draft refresh; validation just delegates to the workbench).
+// Refresh and Validate moved to the Code tab toolbar (T589). The page owns
+// the wiring (reload + sync selection effects + draft refresh; validation
+// just delegates to the workbench).
 async function onEditorRefresh() {
   await reloadDefinitions()
   syncSelectionEffects()
@@ -551,234 +283,174 @@ async function onEditorValidate() {
   await validateConstruct()
 }
 
-// Share Link — builds a deep-link URL for the current selection + open body
-// editor tab and copies it to the clipboard. Active tab is read at click time
-// from the body editor's localStorage (it owns that state and does not emit).
-const toast = useToast()
+// ---------------------------------------------------------------------------
+// Delete modal.
+// ---------------------------------------------------------------------------
 
-function readActiveBodyEditorTab(): BodyEditorTab {
-  if (typeof window === 'undefined') return 'structure'
-  try {
-    const raw = window.localStorage.getItem('cbs-nova:body-editor:active-tab')
-    if (!raw) return 'structure'
-    const parsed = JSON.parse(raw) as unknown
-    if (typeof parsed === 'string' && (BODY_EDITOR_TABS as readonly string[]).includes(parsed)) {
-      return parsed as BodyEditorTab
-    }
-  } catch {
-    // fall through to default
-  }
-  return 'structure'
+const deletion = useWorkbenchDelete({
+  deleteConstruct: (name) => deleteConstruct(name),
+  syncSelectionEffects: () => syncSelectionEffects(),
+  refreshDrafts: () => refreshDrafts(),
+})
+const {
+  pendingDeleteName,
+  isDeleting,
+  deleteError,
+  showDeleteModal,
+  requestDelete,
+  confirmDelete,
+  cancelDelete,
+} = deletion
+
+// ---------------------------------------------------------------------------
+// Menus (Actions / Misc) + Share Link + Publish + Submit for approval.
+// ---------------------------------------------------------------------------
+
+const { shareLink } = useWorkbenchShareLink({
+  toast,
+  logError: (message, fields) => log.error(message, fields),
+})
+
+const menus = useWorkbenchMenus({
+  hasSelectedConstruct: computed(() => !!selectedConstruct.value),
+  isSaving: computed(() => state.value.isSaving),
+  guardAllowed: (action) => guardAllowed(action),
+  historyPanelOpen,
+  diagnosticsPanelOpen,
+  testsPanelOpen,
+  handlers: {
+    shareLink: () => shareLink(state.value.selectedName),
+    publish: () => publishConstruct().then(() => refreshDrafts()),
+    submitApproval: () =>
+      submitApproval(state.value.selectedName ?? '')
+        .then(() => {
+          refreshDrafts()
+          loadApprovals()
+        })
+        .catch((err: unknown) => {
+          log.error('failed to submit for approval', { error: (err as Error).message })
+        }),
+  },
+})
+const { helpersMenuItems, actionItems, runHelpersMenu, runAction } = menus
+
+// ---------------------------------------------------------------------------
+// New-definition modal.
+// ---------------------------------------------------------------------------
+
+const newDefinition = useWorkbenchNewDefinition({
+  constructs: computed(() => state.value.constructs as DslConstruct[]),
+  drafts,
+})
+const {
+  showNewPanel,
+  newName,
+  selectedTemplate,
+  newNameError,
+  openNewPanel,
+  closeNewPanel,
+  handleTemplateSelect,
+  confirmCreate,
+} = newDefinition
+
+async function handleConfirmCreate() {
+  await confirmCreate({
+    name: newName.value,
+    body: selectedTemplate.value?.body ?? '',
+    createConstruct: (name, type) => createConstruct(name, type),
+    onBodySet: (body) => {
+      draftBody.value = body
+    },
+    markDirty: () => markDirty(),
+  })
 }
 
-async function shareLink() {
-  const name = state.value.selectedName
-  if (!name) return
-  const tab = readActiveBodyEditorTab()
-  const url = new URL(window.location.href)
-  url.search = ''
-  url.searchParams.set('objectName', name)
-  url.searchParams.set('activeTab', tab)
-  const link = url.toString()
-  try {
-    if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(link)
-    } else {
-      throw new Error('Clipboard API unavailable')
-    }
-    toast.success(`Copied to a clipboard!`)
-  } catch (err) {
-    log.error('failed to copy share link', { error: (err as Error).message })
-    toast.error('Could not copy share link to clipboard.')
-  }
-}
+// ---------------------------------------------------------------------------
+// Keyboard shortcuts + beforeunload + route leave guard.
+// ---------------------------------------------------------------------------
 
 const isAnyModalOpen = computed(() => showDeleteModal.value || showNewPanel.value)
 
-const draftSave = useDraftSave({ getContent: () => editorCode.value })
+const { newShortcut, actionsShortcut, miscShortcut } = useWorkbenchShortcuts({
+  draftDirty,
+  draftSave,
+  isAnyModalOpen,
+  openNewPanel,
+})
 
-function handleSaveShortcut(event: KeyboardEvent) {
-  if ((event.key !== 's' && event.key !== 'S') || (!event.metaKey && !event.ctrlKey)) {
-    return
-  }
-  // Let Monaco / other focused editors consume the shortcut first.
-  if (event.defaultPrevented) return
-  // Only intercept when there are unsaved server-side changes and no modal is open.
-  if (!draftDirty.isDirty.value || isAnyModalOpen.value) return
-  event.preventDefault()
-  void draftSave.save()
+useWorkbenchBeforeUnload({ isDirty: computed(() => state.value.isDirty) })
+
+// ---------------------------------------------------------------------------
+// Body editor ref + history-restore handler.
+// ---------------------------------------------------------------------------
+
+const bodyEditorRef = ref<InstanceType<typeof DslBodyEditor> | null>(null)
+
+function onHistoryRestored() {
+  reloadDefinitions()
 }
 
-// Platform-aware modifier label — mirrors CodeTab's pattern so the tooltips
-// stay consistent across the page (⌘ on Mac, Ctrl elsewhere).
-const isMac =
-  typeof navigator !== 'undefined' &&
-  /Mac|iPhone|iPad|iPod/.test(navigator.platform || navigator.userAgent || '')
-const MOD = computed(() => (isMac ? '⌘' : 'Ctrl'))
-const ALT = 'Alt'
-
-const newShortcut = computed(() => `${MOD.value}+${ALT}+N`)
-const actionsShortcut = computed(() => `${MOD.value}+${ALT}+A`)
-const miscShortcut = computed(() => `${MOD.value}+${ALT}+M`)
-
-function isEditableTarget(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) return false
-  const tag = target.tagName
-  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable
+function handleEditorSave() {
+  draftSave.save().then(() => refreshDrafts())
 }
 
-// Dispatch a synthetic click on the named DropdownMenu trigger. In real DOM
-// this opens the menu via the component's own toggle handler; in tests the
-// DropdownMenu is stub-replaced so this becomes a no-op (the keydown handler
-// is still verified to not throw).
-function clickDropdownTrigger(testId: string) {
-  if (typeof document === 'undefined') return
-  const trigger = document.querySelector<HTMLButtonElement>(
-    `[data-testid="${testId}"] [data-testid="dropdown-menu-trigger"]`,
-  )
-  trigger?.click()
-}
+// ---------------------------------------------------------------------------
+// Deep-link wiring (mounted hook).
+// ---------------------------------------------------------------------------
 
-function handleHeaderShortcuts(event: KeyboardEvent) {
-  // Ctrl/Cmd + Alt + <N|A|M>. Avoids browser-reserved chords (Ctrl+N, Cmd+M, etc.).
-  const mod = isMac ? event.metaKey : event.ctrlKey
-  if (!mod) return
-  if (!event.altKey) return
-  if (event.shiftKey) return
-  // Reject the mixed case where both modifiers are held — only one platform's chord is meaningful.
-  if (event.metaKey && event.ctrlKey) return
-  if (event.repeat) return
-  // Let focused editors own the key first.
-  if (event.defaultPrevented) return
-  // Don't intercept typing inside form fields / contenteditable surfaces.
-  if (isEditableTarget(event.target)) return
-  // No header action while a blocking modal is open.
-  if (isAnyModalOpen.value) return
-
-  const key = event.key.toLowerCase()
-  if (key === 'n') {
-    event.preventDefault()
-    openNewPanel()
-    return
-  }
-  if (key === 'a') {
-    event.preventDefault()
-    clickDropdownTrigger('workbench-hotkey-actions')
-    return
-  }
-  if (key === 'm') {
-    event.preventDefault()
-    clickDropdownTrigger('workbench-hotkey-misc')
-  }
-}
-
-useEventListener(window, 'keydown', handleSaveShortcut)
-useEventListener(window, 'keydown', handleHeaderShortcuts)
+const deepLink = useWorkbenchDeepLink({
+  routeQuery: route.query,
+  setExplorerFilter: (value) => {
+    explorerFilter.value = value
+  },
+  safeSelectConstruct: (name) => safeSelectConstruct(name),
+  selectConstruct: (name) => selectConstruct(name),
+})
 
 onMounted(async () => {
   // Deep-link target: `?objectName=<name>` (e.g. from CLI / search results).
   // Seeds the explorer filter and selects the matching construct once the
   // list has loaded — keeps ConstructExplorer free of URL navigation.
-  const requestedObject = route.query.objectName
-  const objectName = Array.isArray(requestedObject) ? requestedObject[0] : requestedObject
-  if (objectName) {
-    explorerFilter.value = String(objectName)
-  }
+  deepLink.applyObjectName()
 
   // Deep-link target: `?activeTab=<structure|code|preview|explain|problems>`
   // Emits a window CustomEvent; BodyEditor listens (event-bus pattern).
-  const requestedTab = route.query.activeTab
-  const tabCandidate = Array.isArray(requestedTab) ? requestedTab[0] : requestedTab
-  if (
-    typeof tabCandidate === 'string' &&
-    (BODY_EDITOR_TABS as readonly string[]).includes(tabCandidate) &&
-    typeof window !== 'undefined'
-  ) {
-    window.dispatchEvent(
-      new CustomEvent<BodyEditorTab>('cbs:body-editor:set-tab', {
-        detail: tabCandidate as BodyEditorTab,
-      }),
-    )
-  }
+  deepLink.applyActiveTab()
 
   await loadConstructs()
   syncSelectionEffects()
   void loadApprovals()
 
-  if (objectName) {
-    safeSelectConstruct(String(objectName))
-    consumeObjectNameQuery()
-  }
+  deepLink.resolveDeepLink()
 
   refreshDrafts()
-  // A draft picked from the navbar widget on another route arrives as a query.
-  const requested = route.query.draft
-  const requestedName = Array.isArray(requested) ? requested[0] : requested
-  if (requestedName) {
-    selectConstruct(String(requestedName))
+
+  // A draft picked from the navbar widget on another route arrives as a
+  // query. `applyDraft()` returns true only when a non-empty name is
+  // present — so the trailing `syncSelectionEffects` matches the original
+  // truthy-check (empty-string drafts no longer trigger it).
+  if (deepLink.applyDraft()) {
     syncSelectionEffects()
   }
-  window.addEventListener('beforeunload', handleBeforeUnload)
-})
-
-onBeforeUnmount(() => {
-  window.removeEventListener('beforeunload', handleBeforeUnload)
 })
 </script>
 
 <template>
   <div class="flex flex-col h-full bg-surface">
-    <header class="flex items-center px-4 py-2 bg-white border-b border-line">
-      <div class="flex items-center gap-3">
-        <button
-          type="button"
-          class="md:hidden p-1.5 rounded hover:bg-surface"
-          aria-label="Toggle explorer"
-          @click="toggleExplorer"
-        >
-          ☰
-        </button>
-        <h1 class="text-lg font-semibold text-ink">DSL Workbench</h1>
-        <span
-          v-if="selectedConstruct"
-          class="text-sm text-ink-muted"
-          data-testid="workbench-selected-construct-label"
-          :title="selectedConstruct.filePath ?? selectedConstruct.name"
-        >
-          / {{ selectedConstructLabel }}
-        </span>
-        <span
-          v-if="selectedPendingApproval"
-          class="px-2 py-0.5 text-xs font-medium rounded-full border border-warning-300 bg-warning-100 text-warning-800"
-          data-testid="workbench-pending-approval"
-        >
-          Pending approval
-        </span>
-      </div>
-      <div class="ml-auto flex items-center gap-3">
-        <HotkeyTooltip :keys="newShortcut" data-testid="workbench-hotkey-new">
-          <button
-            type="button"
-            class="px-3 py-1.5 text-sm rounded border border-line hover:bg-surface"
-            data-testid="workbench-new-definition"
-            @click="openNewPanel"
-          >
-            New
-          </button>
-        </HotkeyTooltip>
-        <HotkeyTooltip :keys="actionsShortcut" data-testid="workbench-hotkey-actions">
-          <DropdownMenu label="Actions" align="right" :items="actionItems" @select="runAction" />
-        </HotkeyTooltip>
-        <HotkeyTooltip :keys="miscShortcut" data-testid="workbench-hotkey-misc">
-          <DropdownMenu
-            label="Misc"
-            align="right"
-            :items="helpersMenuItems"
-            @select="runHelpersMenu"
-          />
-        </HotkeyTooltip>
-      </div>
-    </header>
+    <WorkbenchHeader
+      :selected-construct="selectedConstruct"
+      :selected-construct-label="selectedConstructLabel"
+      :selected-pending-approval="selectedPendingApproval"
+      :new-shortcut="newShortcut"
+      :actions-shortcut="actionsShortcut"
+      :misc-shortcut="miscShortcut"
+      :action-items="actionItems"
+      :helpers-menu-items="helpersMenuItems"
+      @toggle-explorer="toggleExplorer"
+      @new-definition="openNewPanel"
+      @select-action="runAction"
+      @select-helpers-menu="runHelpersMenu"
+    />
 
     <div class="flex flex-1 overflow-hidden">
       <aside
@@ -792,6 +464,7 @@ onBeforeUnmount(() => {
           :constructs="displayConstructs"
           :selected-name="state.selectedName"
           :loading="loaders.constructs"
+          :object-filters-active="objectSearch.hasActiveFilters.value"
           @select="safeSelectConstruct"
           @open-objects="toggleObjectsSearch"
           @open-helpers="toggleHelperCatalog"
@@ -810,26 +483,15 @@ onBeforeUnmount(() => {
 
       <main class="flex-1 flex flex-col overflow-hidden">
         <DslMetadataPanel :construct="selectedConstruct" :loading="fileCodeLoading" />
-        <div v-if="restoredFromDraft && !isFileBacked" class="px-3 pt-2">
-          <DslDraftRestoreBanner :saved-at="draftSavedAt" @discard="clearDraft" />
-        </div>
-        <div v-if="autosaveOffline && !isFileBacked" class="px-3 pt-2">
-          <div
-            role="status"
-            class="flex items-center gap-2 px-3 py-2 text-sm rounded border border-amber-200 bg-amber-50 text-amber-800"
-            data-testid="dsl-autosave-offline-banner"
-          >
-            <span aria-hidden="true">⚠</span>
-            <span>
-              Autosave offline — draft kept in this browser only. It will retry on the next edit or
-              manual save.
-            </span>
-          </div>
-        </div>
-
-        <div v-if="deleteError" class="px-3 pt-2" data-testid="dsl-workbench-delete-error">
-          <ErrorBanner :message="deleteError" @retry="confirmDelete" />
-        </div>
+        <WorkbenchEditorBanners
+          :is-file-backed="isFileBacked"
+          :restored-from-draft="restoredFromDraft"
+          :draft-saved-at="draftSavedAt"
+          :autosave-offline="autosaveOffline"
+          :delete-error="deleteError"
+          @discard-draft="clearDraft"
+          @retry-delete="confirmDelete"
+        />
         <div class="flex-1 overflow-hidden">
           <DslBodyEditor
             ref="bodyEditorRef"
@@ -837,7 +499,7 @@ onBeforeUnmount(() => {
             :construct="selectedConstruct"
             :save-status="draftSave.status.value"
             :last-saved-at="draftSave.lastSavedAt.value"
-            :helper-catalog-fetch="fetchHelperCatalog"
+            :helper-catalog-fetch="objectSearch.fetchHelperCatalog"
             :constructs-fetch="fetchConstructs"
             :preview="runPreview"
             :explain="runExplain"
@@ -848,79 +510,46 @@ onBeforeUnmount(() => {
             :errors="displayValidationErrors"
             :diagnostics-fetch="dslApi.fetchDiagnostics"
             :diagnostics-definition="selectedConstruct?.name ?? ''"
-            :structure="structure"
-            :structure-loading="structureLoading"
-            :structure-error="structureError"
+            :structure="structureApi.structure.value"
+            :structure-loading="structureApi.structureLoading.value"
+            :structure-error="structureApi.structureError.value"
             @update:code="onCodeChange"
             @save="handleEditorSave"
-            @retry-structure="retryStructure"
+            @retry-structure="structureApi.retryStructure"
           />
         </div>
       </main>
 
-      <CbsDrawer
-        v-model:open="helperCatalogOpen"
-        title="Helpers Catalog"
-        test-id="helper-catalog-drawer"
-        close-label="Close helper catalog"
-        width-class="w-96"
-      >
-        <DslHelperCatalog :fetch="loadHelpersPage" />
-      </CbsDrawer>
-
-      <CbsDrawer
-        v-model:open="historyPanelOpen"
-        title="History"
-        test-id="history-drawer"
-        close-label="Close publish history"
-        width-class="w-[28rem]"
-      >
-        <DslHistoryPanel
-          :key="selectedConstruct?.name ?? ''"
-          :name="selectedConstruct?.name ?? ''"
-          :list-history="dslApi.listPublishHistory"
-          :get-entry="dslApi.getHistoryEntry"
-          :get-diff="dslApi.getHistoryDiff"
-          :restore="dslApi.restorePublishHistory"
-          @restored="onHistoryRestored"
-        />
-      </CbsDrawer>
-
-      <CbsDrawer
-        v-model:open="diagnosticsPanelOpen"
-        title="Diagnostics"
-        test-id="diagnostics-drawer"
-        close-label="Close diagnostics history"
-        width-class="w-[34rem]"
-      >
-        <DslDiagnosticsHistoryPanel :fetch-page="dslApi.fetchDiagnostics" />
-      </CbsDrawer>
-
-      <CbsDrawer
-        v-model:open="testsPanelOpen"
-        title="Test cases"
-        test-id="tests-drawer"
-        close-label="Close definition test cases"
-        width-class="w-[40rem]"
-      >
-        <DslDefinitionTestsPanel
-          :key="selectedConstruct?.name ?? ''"
-          :name="selectedConstruct?.name ?? ''"
-          :fetch-tests="dslApi.fetchDefinitionTests"
-          :save-tests="dslApi.saveDefinitionTests"
-          :run-tests="dslApi.runDefinitionTests"
-        />
-      </CbsDrawer>
+      <WorkbenchDrawers
+        v-model:helper-catalog-open="helperCatalogOpen"
+        v-model:history-panel-open="historyPanelOpen"
+        v-model:diagnostics-panel-open="diagnosticsPanelOpen"
+        v-model:tests-panel-open="testsPanelOpen"
+        :selected-name="selectedConstruct?.name ?? ''"
+        :load-helpers-page="objectSearch.loadHelpersPage"
+        :list-publish-history="dslApi.listPublishHistory"
+        :get-history-entry="dslApi.getHistoryEntry"
+        :get-history-diff="dslApi.getHistoryDiff"
+        :restore-publish-history="dslApi.restorePublishHistory"
+        :fetch-diagnostics="dslApi.fetchDiagnostics"
+        :fetch-definition-tests="dslApi.fetchDefinitionTests"
+        :save-definition-tests="dslApi.saveDefinitionTests"
+        :run-definition-tests="dslApi.runDefinitionTests"
+        @history-restored="onHistoryRestored"
+      />
 
       <DslObjectsSearchPanel
         v-model:open="objectsSearchOpen"
         v-model:query="objectSearch.filters.value.query"
         v-model:mode="objectSearch.filters.value.mode"
+        v-model:type="objectSearch.filters.value.type"
         :results="objectSearch.results.value"
         :is-loading="objectSearch.isLoading.value"
         :error="objectSearch.error.value"
         @search="objectSearch.search"
         @clear="objectSearch.clearFilters"
+        @save="handleSaveSearch"
+        @clear-saved="handleClearSavedSearch"
         @select="onHelperSelect"
       />
     </div>
@@ -934,71 +563,15 @@ onBeforeUnmount(() => {
       @cancel="cancelDelete"
     />
 
-    <!-- biome-ignore lint/a11y/useKeyWithClickEvents: backdrop click dismisses modal -->
-    <div
-      v-if="showNewPanel"
-      class="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="workbench-new-title"
-      @click.self="closeNewPanel"
-    >
-      <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full flex flex-col max-h-[90vh]">
-        <header class="px-6 py-4 border-b border-line">
-          <h2 id="workbench-new-title" class="text-lg font-semibold text-ink">New definition</h2>
-          <p class="text-sm text-ink-muted mt-1">
-            Choose a starter template and name for the new DSL definition.
-          </p>
-        </header>
-
-        <div class="px-6 py-4 overflow-y-auto">
-          <div class="mb-4">
-            <label for="workbench-new-name" class="block text-sm font-medium text-ink mb-1">
-              Name
-            </label>
-            <input
-              id="workbench-new-name"
-              v-model="newName"
-              type="text"
-              class="w-full px-3 py-2 border border-line rounded focus:outline-none focus:ring-2 focus:ring-accent-500"
-              placeholder="Definition name"
-              data-testid="workbench-new-name"
-            >
-            <p
-              v-if="newNameError"
-              class="mt-1 text-xs text-danger"
-              data-testid="workbench-new-name-error"
-            >
-              {{ newNameError }}
-            </p>
-          </div>
-
-          <DslTemplateGallery @select="handleTemplateSelect" />
-        </div>
-
-        <footer class="px-6 py-4 border-t border-line flex justify-end gap-2">
-          <button
-            type="button"
-            class="px-4 py-2 rounded-lg text-sm font-medium border border-line text-ink hover:bg-surface"
-            data-testid="workbench-new-cancel"
-            @click="closeNewPanel"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            class="px-4 py-2 rounded-lg text-sm font-medium text-white"
-            :class="(!newName.trim() || newNameError || !selectedTemplate)
-                ? 'bg-accent-500/20 cursor-not-allowed'
-                : 'bg-accent-500 hover:bg-accent-600'"
-            :disabled="!newName.trim() || !!newNameError || !selectedTemplate"
-            data-testid="workbench-new-create"
-            @click="confirmCreate"
-          >
-            Create
-          </button>
-        </footer>
-      </div>
-    </div>
+    <WorkbenchNewDefinitionModal
+      :open="showNewPanel"
+      :new-name="newName"
+      :selected-template="selectedTemplate"
+      :new-name-error="newNameError"
+      @update:new-name="(value: string) => (newName = value)"
+      @select-template="handleTemplateSelect"
+      @cancel="closeNewPanel"
+      @create="handleConfirmCreate"
+    />
   </div>
 </template>

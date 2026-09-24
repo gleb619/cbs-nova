@@ -12,6 +12,7 @@ import type {
   ConstructStatus,
   ConstructType,
   DslConstruct,
+  HelperSearchFilters,
   ValidationError,
 } from '~/types'
 import { createEmitter } from '../utils/createEmitter'
@@ -38,6 +39,26 @@ const constructTypeMap: Record<string, ConstructType> = {
 }
 
 const useWorkbenchLoader = createNamespacedLoaderState('cbs-nova:dsl-workbench')
+
+const DEFAULT_OBJECT_SEARCH_FILTERS: HelperSearchFilters = {
+  query: '',
+  mode: 'exact',
+  type: '',
+}
+
+const OBJECT_SEARCH_FILTERS_STORAGE_KEY = 'cbs-nova:dsl-workbench:object-search-filters'
+
+function readSavedObjectFilters(): HelperSearchFilters {
+  if (typeof window === 'undefined') return { ...DEFAULT_OBJECT_SEARCH_FILTERS }
+  try {
+    const raw = window.localStorage.getItem(OBJECT_SEARCH_FILTERS_STORAGE_KEY)
+    if (!raw) return { ...DEFAULT_OBJECT_SEARCH_FILTERS }
+    const parsed = JSON.parse(raw) as HelperSearchFilters
+    return { ...DEFAULT_OBJECT_SEARCH_FILTERS, ...parsed }
+  } catch {
+    return { ...DEFAULT_OBJECT_SEARCH_FILTERS }
+  }
+}
 
 function normalizeConstruct(raw: Partial<DslConstruct> & { name: string }): DslConstruct {
   const lowerType = (raw.type ?? '').toString().toLowerCase()
@@ -81,7 +102,6 @@ export function useDslWorkbench() {
   const constructsLoading = useWorkbenchLoader('constructs')
   const useWorkbenchStorage = createNamespacedLocalStorageState('cbs-nova:dsl-workbench')
   const lastSelectedName = useWorkbenchStorage<string | null>('selected-construct-name', null)
-
   const state = useState<WorkbenchState>('dsl-workbench', () => ({
     constructs: [],
     selectedName: null,
@@ -108,19 +128,25 @@ export function useDslWorkbench() {
   })
 
   async function loadConstructs() {
-    // Loads the DSL working set via /api/dsl/working-set.
-    // Pagination defaults to the backend working-set page; filters can be added later.
-    // Keep the normalization/sorting logic
-    // here; the response shape is identical (items, total, offset, limit).
+    // Loads the DSL working set via /api/dsl/working-set. Uses the saved
+    // object-search filters so the workbench opens with the same working set
+    // the user previously saved in the object-search drawer.
     constructsLoading.value = true
     try {
-      const result = await api.getDefinitions()
+      const filters = readSavedObjectFilters()
+      const result = await api.getDefinitions({ ...filters })
       const rawList = unwrapList(result)
       const list = rawList.map((c) => normalizeConstruct(c as { name: string }))
       state.value.constructs = list
-      if (list.length && !state.value.selectedName) {
+      if (list.length) {
         const restored = lastSelectedName.value
-        state.value.selectedName = list.some((c) => c.name === restored) ? restored : list[0].name
+        const preserved = state.value.selectedName
+        const next = list.some((c) => c.name === preserved)
+          ? preserved
+          : list.some((c) => c.name === restored)
+            ? restored
+            : list[0].name
+        state.value.selectedName = next
       }
       log.info('constructs loaded', { count: list.length, selected: state.value.selectedName })
     } catch (err) {

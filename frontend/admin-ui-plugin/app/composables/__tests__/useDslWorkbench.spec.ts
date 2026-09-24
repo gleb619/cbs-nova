@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ValidationError } from '~/types'
 import { compileDiagnosticsToValidationErrors, useDslWorkbench } from '../useDslWorkbench'
+import { useWorkbenchObjectSearch } from '../useWorkbenchObjectSearch'
 
 function setValidationErrors(wb: ReturnType<typeof useDslWorkbench>, errors: ValidationError[]) {
   ;(wb.state.value as unknown as { validationErrors: ValidationError[] }).validationErrors = errors
@@ -22,6 +23,8 @@ const { dslApi, useDslApiMock } = vi.hoisted(() => {
     validateConstruct: vi.fn(),
     readDslFile: vi.fn(),
     writeDslFile: vi.fn(),
+    searchObjects: vi.fn(),
+    listHelpers: vi.fn(),
   }
   return { dslApi: api, useDslApiMock: vi.fn(() => api) }
 })
@@ -42,6 +45,8 @@ type ApiMock = {
   validateConstruct: ReturnType<typeof vi.fn>
   readDslFile: ReturnType<typeof vi.fn>
   writeDslFile: ReturnType<typeof vi.fn>
+  searchObjects: ReturnType<typeof vi.fn>
+  listHelpers: ReturnType<typeof vi.fn>
 }
 
 const getApi = (): ApiMock => dslApi
@@ -58,6 +63,8 @@ describe('useDslWorkbench', () => {
     api.deleteDraft.mockReset()
     api.readDslFile.mockReset()
     api.writeDslFile.mockReset()
+    api.searchObjects.mockReset()
+    api.listHelpers.mockReset()
   })
 
   afterEach(() => {
@@ -65,6 +72,50 @@ describe('useDslWorkbench', () => {
   })
 
   describe('loadConstructs', () => {
+    it('passes saved object-search filters to getDefinitions', async () => {
+      localStorage.setItem(
+        'cbs-nova:dsl-workbench:object-search-filters',
+        JSON.stringify({ query: 'Order', mode: 'fuzzy', type: 'process' }),
+      )
+      const api = getApi()
+      api.getDefinitions.mockResolvedValueOnce([
+        { name: 'c1', type: 'Process' as const, status: 'Draft' as const },
+      ])
+
+      const wb = useDslWorkbench()
+      await wb.loadConstructs()
+
+      expect(api.getDefinitions).toHaveBeenCalledWith({
+        query: 'Order',
+        mode: 'fuzzy',
+        type: 'process',
+      })
+      expect(wb.state.value.constructs).toHaveLength(1)
+    })
+    it('reads the latest filters from localStorage on every load, even if another instance wrote them', async () => {
+      const api = getApi()
+      api.getDefinitions.mockResolvedValueOnce([
+        { name: 'BatchProcessing', type: 'Process' as const, status: 'Published' as const },
+      ])
+      api.searchObjects.mockResolvedValueOnce({ items: [] })
+
+      const wb = useDslWorkbench()
+      const objectSearch = useWorkbenchObjectSearch({
+        searchObjects: api.searchObjects,
+        listHelpers: vi.fn().mockResolvedValue({}),
+      })
+
+      objectSearch.filters.value = { query: 'BatchProcessing', mode: 'exact', type: 'process' }
+      await objectSearch.save()
+      await wb.loadConstructs()
+
+      expect(api.getDefinitions).toHaveBeenCalledWith({
+        query: 'BatchProcessing',
+        mode: 'exact',
+        type: 'process',
+      })
+      expect(wb.state.value.constructs).toHaveLength(1)
+    })
     it('handles {items:[]} paged response shape', async () => {
       const api = getApi()
       const list = [
@@ -88,7 +139,7 @@ describe('useDslWorkbench', () => {
       const wb = useDslWorkbench()
       await wb.loadConstructs()
 
-      expect(api.getDefinitions).toHaveBeenCalledWith()
+      expect(api.getDefinitions).toHaveBeenCalledWith({ query: '', mode: 'exact', type: '' })
       expect(wb.state.value.constructs).toEqual([construct])
       expect(wb.state.value.selectedName).toBe('c1')
       expect(wb.selectedConstruct.value).toEqual(construct)
@@ -206,7 +257,7 @@ describe('useDslWorkbench', () => {
       const loadOrder = api.getDefinitions.mock.invocationCallOrder[0]
       expect(reloadOrder).toBeLessThan(loadOrder)
       expect(api.reload).toHaveBeenCalledWith()
-      expect(api.getDefinitions).toHaveBeenCalledWith()
+      expect(api.getDefinitions).toHaveBeenCalledWith({ query: '', mode: 'exact', type: '' })
     })
   })
 

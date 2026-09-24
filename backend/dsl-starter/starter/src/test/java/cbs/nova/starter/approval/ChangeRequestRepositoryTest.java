@@ -20,7 +20,7 @@ import org.springframework.test.context.jdbc.Sql;
  * filtered listings newest first, and status transitions.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, classes = NotificationTestApplication.class)
-@Sql(scripts = {"classpath:db/migration/h2/V11__change_requests.sql",
+@Sql(scripts = {"classpath:db/migration/h2/V1__init.sql",
     "classpath:sql/truncate-change-requests.sql"})
 @TestPropertySource(properties = {
     "csb.dsl.worker.enabled=false"

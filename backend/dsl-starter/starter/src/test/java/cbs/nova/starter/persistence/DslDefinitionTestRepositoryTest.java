@@ -15,7 +15,7 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.jdbc.Sql;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, classes = WebhookTestApplication.class)
-@Sql(scripts = {"classpath:db/migration/h2/V5__dsl_definition_tests.sql",
+@Sql(scripts = {"classpath:db/migration/h2/V1__init.sql",
     "classpath:sql/truncate-dsl-definition-tests.sql"})
 @TestPropertySource(properties = {
     "csb.dsl.worker.enabled=false"

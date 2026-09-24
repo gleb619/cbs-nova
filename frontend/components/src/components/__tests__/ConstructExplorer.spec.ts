@@ -130,6 +130,22 @@ describe('ConstructExplorer', () => {
   })
 })
 
+describe('ConstructExplorer active filter marker', () => {
+  it('marks the Objects button when objectFiltersActive is true', () => {
+    const wrapper = mountContainer({ constructs, selectedName: null, objectFiltersActive: true })
+
+    const btn = wrapper.get('[data-testid="construct-explorer-objects-btn"]')
+    expect(btn.find('[data-testid="objects-filter-active-indicator"]').exists()).toBe(true)
+  })
+
+  it('does not mark the Objects button when objectFiltersActive is false', () => {
+    const wrapper = mountContainer({ constructs, selectedName: null, objectFiltersActive: false })
+
+    const btn = wrapper.get('[data-testid="construct-explorer-objects-btn"]')
+    expect(btn.find('[data-testid="objects-filter-active-indicator"]').exists()).toBe(false)
+  })
+})
+
 describe('ConstructExplorer footer', () => {
   it('emits openObjects when the Objects footer button is clicked', async () => {
     const wrapper = mountContainer({ constructs, selectedName: null })

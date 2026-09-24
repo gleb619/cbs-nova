@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { DslConstruct } from '../../types/dsl'
+import HotkeyTooltip from '../HotkeyTooltip.vue'
 import DslPlainConstructListSkeleton from './PlainConstructListSkeleton.vue'
 
 const props = defineProps<{
   constructs: DslConstruct[]
   selectedName: string | null
   loading?: boolean
+  objectFiltersActive?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -88,14 +90,23 @@ function openHelpers() {
       class="p-2 border-t border-gray-800 flex items-center gap-2"
       data-testid="construct-explorer-footer"
     >
-      <button
-        type="button"
-        class="flex-1 px-2 py-1.5 text-xs rounded bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-gray-100"
-        data-testid="construct-explorer-objects-btn"
-        @click="openObjects"
-      >
-        Objects
-      </button>
+      <HotkeyTooltip label="Open object search" location="top" class="flex-1">
+        <button
+          type="button"
+          class="w-full px-2 py-1.5 text-xs rounded bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-gray-100 flex items-center justify-center gap-1.5"
+          :class="objectFiltersActive ? 'ring-1 ring-blue-500 text-blue-200' : ''"
+          data-testid="construct-explorer-objects-btn"
+          @click="openObjects"
+        >
+          <span>Objects</span>
+          <span
+            v-if="objectFiltersActive"
+            class="w-2 h-2 rounded-full bg-blue-500"
+            data-testid="objects-filter-active-indicator"
+            aria-hidden="true"
+          />
+        </button>
+      </HotkeyTooltip>
       <button
         type="button"
         class="flex-1 px-2 py-1.5 text-xs rounded bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-gray-100"

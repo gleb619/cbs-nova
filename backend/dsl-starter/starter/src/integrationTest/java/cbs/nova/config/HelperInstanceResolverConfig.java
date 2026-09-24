@@ -2,6 +2,7 @@ package cbs.nova.config;
 
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Executable;
+import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.helper.HelperInstanceResolver;
 import cbs.nova.starter.config.properties.CbsNovaLoggingProperties;
@@ -67,14 +68,15 @@ public class HelperInstanceResolverConfig {
           @Override
           public @NonNull Result<FileLatchOut> execute(@NonNull Context<FileLatchIn> ctx) {
             LATCH_ENTERED.countDown();
-            try {
+            if(canRun()) {
               Workflow.sleep(Duration.ofSeconds(10));
-            } catch (Exception e) {
+            } else {
               try {
                 Thread.sleep(Duration.ofSeconds(10).toMillis());
               } catch (InterruptedException ex) {
                 Thread.currentThread().interrupt();
               }
+
             }
 
             return Result.success(new FileLatchOut(ctx.body().payload()));
@@ -159,6 +161,15 @@ public class HelperInstanceResolverConfig {
         throw new IllegalStateException("Cannot instantiate helper " + helperClass.getName());
       }
     };
+  }
+
+  private boolean canRun() {
+    try {
+      Workflow.getInfo();
+      return true;
+    } catch (Throwable t) {
+      return false;
+    }
   }
 
 }

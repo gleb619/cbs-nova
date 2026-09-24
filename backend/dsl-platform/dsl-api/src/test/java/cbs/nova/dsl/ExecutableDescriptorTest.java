@@ -58,10 +58,6 @@ class ExecutableDescriptorTest {
     var differentName = new ExecutableDescriptor(
             "other", "d", String.class, String.class, params);
     assertThat(left).isNotEqualTo(differentName);
-
-    var differentSideEffects = new ExecutableDescriptor(
-            "n", "d", String.class, String.class, params);
-    assertThat(left).isNotEqualTo(differentSideEffects);
   }
 
   @Test

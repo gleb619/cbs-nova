@@ -12,14 +12,26 @@ const props = defineProps<{
 const emit = defineEmits<{
   'update:query': [value: string]
   'update:mode': [value: string]
+  'update:type': [value: string]
   search: []
   clear: []
+  save: []
+  'clear-saved': []
   select: [result: ObjectSearchResult]
 }>()
 
 const open = defineModel<boolean>('open', { default: false })
 const query = defineModel<string>('query', { default: '' })
 const mode = defineModel<string>('mode', { default: 'exact' })
+const type = defineModel<string>('type', { default: '' })
+
+const TYPES = [
+  { value: '', label: 'All types' },
+  { value: 'process', label: 'Process' },
+  { value: 'transaction', label: 'Transaction' },
+  { value: 'function', label: 'Function' },
+  { value: 'helper', label: 'Helper' },
+]
 
 const MODES = [
   { value: 'exact', label: 'Exact' },
@@ -91,15 +103,28 @@ function closePanel() {
           class="w-full px-2 py-1.5 text-sm rounded bg-gray-800 text-gray-100 placeholder-gray-500 border border-gray-700 focus:outline-none focus:border-gray-500"
           data-testid="objects-search-query-input"
         >
-        <select
-          v-model="mode"
-          class="w-full px-2 py-1.5 text-sm rounded bg-gray-800 text-gray-100 border border-gray-700 focus:outline-none focus:border-gray-500"
-          data-testid="objects-search-mode-select"
-        >
-          <option v-for="m in MODES" :key="m.value" :value="m.value">
-            {{ m.label }}
-          </option>
-        </select>
+        <div class="grid grid-cols-2 gap-2">
+          <select
+            v-model="type"
+            class="w-full px-2 py-1.5 text-sm rounded bg-gray-800 text-gray-100 border border-gray-700 focus:outline-none focus:border-gray-500"
+            data-testid="objects-search-type-select"
+            aria-label="Object type"
+          >
+            <option v-for="t in TYPES" :key="t.value" :value="t.value">
+              {{ t.label }}
+            </option>
+          </select>
+          <select
+            v-model="mode"
+            class="w-full px-2 py-1.5 text-sm rounded bg-gray-800 text-gray-100 border border-gray-700 focus:outline-none focus:border-gray-500"
+            data-testid="objects-search-mode-select"
+            aria-label="Search mode"
+          >
+            <option v-for="m in MODES" :key="m.value" :value="m.value">
+              {{ m.label }}
+            </option>
+          </select>
+        </div>
         <div class="flex gap-2">
           <button
             type="button"
@@ -197,6 +222,33 @@ function closePanel() {
         <div class="text-xs text-gray-400 mt-1">
           {{ activeResult.description || 'No description' }}
         </div>
+      </div>
+    </div>
+
+    <div class="border-t border-gray-800 p-3 space-y-2" data-testid="objects-search-footer">
+      <p class="text-xs text-gray-500">
+        Save this search to keep the same query, type, and mode as your working set on the next
+        visit.
+      </p>
+      <div class="flex gap-2">
+        <button
+          type="button"
+          class="flex-1 px-3 py-1.5 text-sm rounded bg-gray-700 text-gray-100 hover:bg-gray-600 disabled:opacity-50"
+          :disabled="isLoading"
+          data-testid="objects-search-save-button"
+          @click="emit('save')"
+        >
+          Save search
+        </button>
+        <button
+          type="button"
+          class="px-3 py-1.5 text-sm rounded border border-gray-600 text-gray-300 hover:bg-gray-800 disabled:opacity-50"
+          :disabled="isLoading"
+          data-testid="objects-search-clear-saved-button"
+          @click="emit('clear-saved')"
+        >
+          Clear saved
+        </button>
       </div>
     </div>
   </CbsDrawer>

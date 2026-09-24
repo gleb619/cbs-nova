@@ -11,6 +11,7 @@ export interface ObjectSearchResult {
 export interface HelperSearchFilters {
   query: string
   mode: string
+  type: string
 }
 
 export interface UseHelperSearchOptions {
@@ -19,12 +20,13 @@ export interface UseHelperSearchOptions {
   initialFilters?: Partial<HelperSearchFilters>
 }
 
-const DEFAULT_FILTERS: HelperSearchFilters = { query: '', mode: 'exact' }
+const DEFAULT_FILTERS: HelperSearchFilters = { query: '', mode: 'exact', type: '' }
 
 function normalizeFilters(input?: Partial<HelperSearchFilters>): HelperSearchFilters {
   return {
     query: input?.query ?? DEFAULT_FILTERS.query,
     mode: input?.mode ?? DEFAULT_FILTERS.mode,
+    type: input?.type ?? DEFAULT_FILTERS.type,
   }
 }
 
@@ -35,7 +37,10 @@ export function useHelperSearch(options: UseHelperSearchOptions) {
   const error = ref<string | null>(null)
 
   const hasActiveFilters = computed(
-    () => filters.value.query.trim() !== '' || filters.value.mode.trim() !== 'exact',
+    () =>
+      filters.value.query.trim() !== '' ||
+      filters.value.mode.trim() !== 'exact' ||
+      filters.value.type.trim() !== '',
   )
 
   let debounceTimer: ReturnType<typeof setTimeout> | null = null

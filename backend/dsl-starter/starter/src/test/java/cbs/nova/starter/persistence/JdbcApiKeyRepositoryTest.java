@@ -36,7 +36,7 @@ class JdbcApiKeyRepositoryTest {
             + ";DB_CLOSE_DELAY=-1");
     dataSource.setUser("sa");
     ScriptUtils.executeSqlScript(dataSource.getConnection(),
-            new ClassPathResource("db/migration/h2/V6__dsl_api_keys.sql"));
+            new ClassPathResource("db/migration/h2/V1__init.sql"));
     jdbcTemplate = new NamedParameterJdbcTemplate(dataSource);
     repository = new JdbcApiKeyRepository(jdbcTemplate);
   }

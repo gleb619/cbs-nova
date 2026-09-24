@@ -134,7 +134,8 @@ const EXCLUDED_OPERATIONS: Record<string, { reason: string; handRoute: string }>
     handRoute: 'dsl/events.get.ts',
   },
   getConstructSchema: {
-    reason: 'validates the construct `type` segment and rewrites the `mode` query param into the backend path suffix',
+    reason:
+      'validates the construct `type` segment and rewrites the `mode` query param into the backend path suffix',
     handRoute: 'dsl/[type]/[name]/schema.get.ts',
   },
   listExecutions: {
@@ -221,7 +222,8 @@ const EXCLUDED_OPERATIONS: Record<string, { reason: string; handRoute: string }>
     handRoute: 'dsl/signals/[runId].post.ts',
   },
   getObjectStructure: {
-    reason: 'validates the construct `type` segment; kept hand-written alongside structures surface',
+    reason:
+      'validates the construct `type` segment; kept hand-written alongside structures surface',
     handRoute: 'dsl/[type]/[name]/structure.get.ts',
   },
 }

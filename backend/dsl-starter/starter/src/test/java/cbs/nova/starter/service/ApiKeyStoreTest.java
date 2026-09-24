@@ -33,7 +33,7 @@ class ApiKeyStoreTest {
             + ";DB_CLOSE_DELAY=-1");
     dataSource.setUser("sa");
     ScriptUtils.executeSqlScript(dataSource.getConnection(),
-            new ClassPathResource("db/migration/h2/V6__dsl_api_keys.sql"));
+            new ClassPathResource("db/migration/h2/V1__init.sql"));
     repository = new JdbcApiKeyRepository(new NamedParameterJdbcTemplate(dataSource));
     store = new ApiKeyStore(repository, new ObjectMapper(), new SelfProvider(storeOrNull()));
   }

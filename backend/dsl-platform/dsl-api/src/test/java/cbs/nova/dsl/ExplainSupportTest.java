@@ -54,8 +54,7 @@ class ExplainSupportTest {
     assertThat(report.name()).isEqualTo("lengthOf");
     assertThat(report.description())
             .contains("`String`")
-            .contains("`Integer`")
-            .contains("side-effect free");
+            .contains("`Integer`");
   }
 
   @Test
@@ -74,7 +73,7 @@ class ExplainSupportTest {
 
     var report = executable.explain(bounded);
 
-    assertThat(report.description().length()).isGreaterThan(50);
+    assertThat(report.description().length()).isGreaterThan(40);
     assertThat(report.description())
             .contains("Helper `null`")
             .contains("untyped")

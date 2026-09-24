@@ -29,7 +29,6 @@ import tools.jackson.databind.ObjectMapper;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, classes = WebhookTestApplication.class)
 @Sql(scripts = {"classpath:db/migration/h2/V1__init.sql",
-    "classpath:db/migration/h2/V3__dsl_webhook_deliveries.sql",
     "classpath:sql/truncate-dsl-webhook-deliveries.sql"})
 @TestPropertySource(properties = {
     "csb.dsl.worker.enabled=false"

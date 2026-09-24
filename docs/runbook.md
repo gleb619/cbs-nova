@@ -769,7 +769,7 @@ docker exec -i $(docker ps -qf name=postgres) psql -U nova -d nova \
 ```
 
 The approve path records `actor=approver` on the publish audit row (the original
-requester never lands on the publish row). Migration `V11__change_requests.sql`
+requester never lands on the publish row). Migration `V1__init.sql` (postgres)
 provides the `dsl_change_request` table and the supporting index; see the auth
 posture in [§ Security / production profile](architecture-backend.md#production-secure-default-profile-t413)
 for how RBAC interacts with the API-key and OIDC filters.

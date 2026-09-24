@@ -280,6 +280,7 @@ const makeStub = (testId: string) =>
       'update:code',
       'update:collapsed',
       'save',
+      'clear-saved',
       'update:open',
       'update:name',
       'update:type',
@@ -559,6 +560,51 @@ describe('dsl-workbench.vue saved drafts store', () => {
 
     expect(useSavedDrafts().select('alpha')).toBe(true)
     expect(harness.selectConstruct).toHaveBeenCalledWith('alpha')
+  })
+
+  it('honors the dirty confirm prompt when the navbar widget dispatches a pick', async () => {
+    dslApi.listDrafts.mockResolvedValueOnce([
+      { name: 'alpha', type: 'Process', status: 'Draft', updatedAt: 1 },
+    ])
+
+    const confirmSpy = vi.spyOn(window, 'confirm') as unknown as ReturnType<typeof vi.spyOn>
+
+    try {
+      mountPage()
+      await flushPromises()
+
+      harness.markDirty()
+      await nextTick()
+
+      // Decline: the lazy safeSelectConstruct callback must short-circuit,
+      // so plain selectConstruct never fires.
+      confirmSpy.mockReturnValueOnce(false)
+      expect(useSavedDrafts().select('alpha')).toBe(true)
+      await nextTick()
+      expect(confirmSpy).toHaveBeenCalledWith('Discard unsaved changes to this construct?')
+      expect(harness.selectConstruct).not.toHaveBeenCalled()
+
+      // Accept: selectConstruct fires once.
+      confirmSpy.mockReturnValueOnce(true)
+      expect(useSavedDrafts().select('alpha')).toBe(true)
+      await nextTick()
+      expect(harness.selectConstruct).toHaveBeenCalledTimes(1)
+      expect(harness.selectConstruct).toHaveBeenCalledWith('alpha')
+    } finally {
+      confirmSpy.mockRestore()
+    }
+  })
+
+  it('does not run syncSelectionEffects for an empty ?draft= value', async () => {
+    __setRouteQuery({ draft: '' })
+
+    mountPage()
+    await flushPromises()
+
+    // Empty draft must not dispatch a selectConstruct (would clobber the
+    // harness default of `c1`).
+    expect(harness.selectConstruct).not.toHaveBeenCalledWith('')
+    expect(harness.selectConstruct).toHaveBeenCalledTimes(0)
   })
 
   it('mirrors the workbench selection into the shared store as selection changes', async () => {
@@ -1764,5 +1810,61 @@ describe('dsl-workbench.vue header hotkeys (New / Actions / Misc)', () => {
 
     expect(event.defaultPrevented).toBe(false)
     expect(wrapper.find('#workbench-new-title').exists()).toBe(true)
+  })
+})
+
+describe('dsl-workbench.vue object search drawer', () => {
+  beforeEach(() => {
+    window.localStorage.clear()
+    harness.state.constructs = []
+    harness.state.selectedName = null
+    harness.state.validationErrors = []
+    harness.state.isDirty = false
+    harness.state.isSaving = false
+    harness.state.isLoading = false
+    harness.selectedConstruct.value = null
+    harness.loaders.constructs.value = false
+    harness.loadConstructs.mockClear()
+    useDslWorkbenchMock.mockClear()
+    dslApi.searchObjects.mockReset()
+    dslApi.searchObjects.mockResolvedValue({ items: [], total: 0, offset: 0, limit: 50 })
+    dslApi.listDrafts.mockReset()
+    dslApi.listDrafts.mockResolvedValue([])
+    dslApi.listHelpers.mockReset()
+    dslApi.listHelpers.mockResolvedValue({ items: [], total: 0, offset: 0, limit: 100 })
+  })
+
+  it('reloads constructs after saving search closes the drawer', async () => {
+    const wrapper = mountPage()
+    await flushPromises()
+
+    expect(harness.loadConstructs).toHaveBeenCalledTimes(1)
+
+    const panel = wrapper.findComponent({ name: 'ObjectsSearchPanel' })
+    await panel.vm.$emit('update:open', true)
+    await nextTick()
+    expect(panel.props('open')).toBe(true)
+
+    await panel.vm.$emit('save')
+    await flushPromises()
+
+    expect(panel.props('open')).toBe(false)
+    expect(harness.loadConstructs).toHaveBeenCalledTimes(2)
+  })
+
+  it('reloads constructs after clearing saved search closes the drawer', async () => {
+    const wrapper = mountPage()
+    await flushPromises()
+
+    const panel = wrapper.findComponent({ name: 'ObjectsSearchPanel' })
+    await panel.vm.$emit('update:open', true)
+    await nextTick()
+    expect(panel.props('open')).toBe(true)
+
+    await panel.vm.$emit('clear-saved')
+    await flushPromises()
+
+    expect(panel.props('open')).toBe(false)
+    expect(harness.loadConstructs).toHaveBeenCalledTimes(2)
   })
 })

@@ -45,7 +45,7 @@ class DslEventHandlerTest {
             .replace("-", "") + ";DB_CLOSE_DELAY=-1");
     dataSource.setUser("sa");
     ScriptUtils.executeSqlScript(dataSource.getConnection(),
-            new ClassPathResource("db/migration/h2/V7__dsl_events.sql"));
+            new ClassPathResource("db/migration/h2/V1__init.sql"));
     jdbcTemplate = new NamedParameterJdbcTemplate(dataSource);
     repository = new DslEventRepository(jdbcTemplate);
 

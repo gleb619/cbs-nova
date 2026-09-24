@@ -74,6 +74,6 @@ public interface Executable<IN, OUT>
     var output = descriptor.outputType() != null
             ? descriptor.outputType().getSimpleName()
             : "untyped";
-    return "Helper `" + descriptor.name() + "`: input `" + input + "`, output `" + output;
+    return "Helper `" + descriptor.name() + "`: input `" + input + "`, output `" + output + "`";
   }
 }

@@ -91,9 +91,8 @@ const historyDiffHandler = (
   await import('../generated/routes/dsl/drafts/[name]/history/[timestamp]/diff.get')
 ).default
 const searchObjectsHandler = (await import('../dsl/objects/search.get')).default
-const constructBodyHandler = (
-  await import('../generated/routes/dsl/[type]/[name]/construct.get')
-).default
+const constructBodyHandler = (await import('../generated/routes/dsl/[type]/[name]/construct.get'))
+  .default
 const constructSchemaHandler = (await import('../dsl/[type]/[name]/schema.get')).default
 const objectStructureHandler = (await import('../dsl/[type]/[name]/structure.get')).default
 const schedulesIndexHandler = (await import('../generated/routes/dsl/schedules.get')).default

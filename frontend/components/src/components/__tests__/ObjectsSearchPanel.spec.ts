@@ -91,9 +91,20 @@ describe('ObjectsSearchPanel', () => {
   it('emits update:mode when the mode select changes', async () => {
     wrapper = mountPanel({ results: [], open: true, isLoading: false })
 
-    await wrapper.find('select').setValue('fuzzy')
+    await wrapper.get('[data-testid="objects-search-mode-select"]').setValue('fuzzy')
 
     expect(wrapper.emitted('update:mode')!.at(-1)).toEqual(['fuzzy'])
+  })
+
+  it('emits update:type when the type select changes', async () => {
+    wrapper = mountPanel({ results: [], open: true, isLoading: false })
+
+    const typeSelect = wrapper.get('[data-testid="objects-search-type-select"]')
+    expect(typeSelect.find('option').text()).toBe('All types')
+
+    await typeSelect.setValue('process')
+
+    expect(wrapper.emitted('update:type')!.at(-1)).toEqual(['process'])
   })
 
   it('emits search when the Search button is clicked', async () => {
@@ -118,6 +129,37 @@ describe('ObjectsSearchPanel', () => {
     await clearButton.trigger('click')
 
     expect(wrapper.emitted('clear')).toBeTruthy()
+  })
+
+  it('renders a footer with help text and a Save search button', () => {
+    wrapper = mountPanel({ results: [], open: true, isLoading: false })
+
+    const footer = wrapper.get('[data-testid="objects-search-footer"]')
+    expect(footer.text()).toContain('working set')
+    expect(footer.find('[data-testid="objects-search-save-button"]').exists()).toBe(true)
+  })
+
+  it('disables the Save search button while loading', () => {
+    wrapper = mountPanel({ results: [], open: true, isLoading: true })
+
+    const saveButton = wrapper.get('[data-testid="objects-search-save-button"]')
+    expect(saveButton.attributes('disabled')).toBeDefined()
+  })
+
+  it('emits clear-saved when the Clear saved search button is clicked', async () => {
+    wrapper = mountPanel({ results: [], open: true, isLoading: false })
+
+    await wrapper.get('[data-testid="objects-search-clear-saved-button"]').trigger('click')
+
+    expect(wrapper.emitted('clear-saved')).toBeTruthy()
+  })
+
+  it('emits save when the Save search button is clicked', async () => {
+    wrapper = mountPanel({ results: [], open: true, isLoading: false })
+
+    await wrapper.get('[data-testid="objects-search-save-button"]').trigger('click')
+
+    expect(wrapper.emitted('save')).toBeTruthy()
   })
 
   it('renders the error message when one is provided', () => {

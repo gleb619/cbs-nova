@@ -22,7 +22,7 @@ public final class WebhookDeliveryTestSupport {
     dataSource.setUser("sa");
     try {
       ScriptUtils.executeSqlScript(dataSource.getConnection(),
-              new ClassPathResource("db/migration/h2/V3__dsl_webhook_deliveries.sql"));
+              new ClassPathResource("db/migration/h2/V1__init.sql"));
     } catch (Exception e) {
       throw new IllegalStateException("failed to set up in-memory dsl_webhook_deliveries table", e);
     }

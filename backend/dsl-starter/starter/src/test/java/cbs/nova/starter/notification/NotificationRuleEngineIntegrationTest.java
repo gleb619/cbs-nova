@@ -38,9 +38,6 @@ import org.springframework.test.context.jdbc.Sql;
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, classes = cbs.nova.starter.NotificationTestApplication.class)
 @Sql(scripts = {"classpath:db/migration/h2/V1__init.sql",
-    "classpath:db/migration/h2/V2__dsl_audit.sql",
-    "classpath:db/migration/h2/V7__dsl_events.sql",
-    "classpath:db/migration/h2/V9__notification_rules.sql",
     "classpath:sql/truncate-dsl-audit.sql",
     "classpath:sql/truncate-dsl-events.sql",
     "classpath:sql/truncate-notification-rules.sql"})
