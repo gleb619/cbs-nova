@@ -128,8 +128,8 @@ class GitChangeClassifierTest {
   }
 
   @Test
-  void repoStatusLegacyConstructorKeepsDirtySetAndEmptyChanges() {
-    RepoStatus status = new RepoStatus(Path.of("/repo"), Set.of("a.txt", "b.txt"));
+  void repoStatusFromDirtyPathsKeepsDirtySetAndEmptyChanges() {
+    RepoStatus status = RepoStatus.fromDirtyPaths(Path.of("/repo"), Set.of("a.txt", "b.txt"));
 
     assertThat(status.dirtyPaths()).containsExactlyInAnyOrder("a.txt", "b.txt");
     assertThat(status.changes()).isEmpty();

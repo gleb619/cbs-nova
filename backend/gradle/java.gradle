@@ -45,10 +45,10 @@ abstract class FindLombokCandidatesTask extends DefaultTask {
       String className = typeMatcher.group(2)
 
       if (isRecord) {
-        // Records with explicit constructors are candidates: compact canonical + legacy overloads
-        // can usually be collapsed or replaced by Lombok helpers/static factories.
-        def explicitCtor = Pattern.compile(/(?s)public\s+/.concat(className).concat(/\s*\([^)]*\)\s*\{/)).matcher(text)
-        if (explicitCtor.find()) {
+        // Records with a delegating overload this(...) are the junk constructors we can collapse
+        // to a static factory once the canonical compact constructor is kept.
+        def delegatingCtor = Pattern.compile(/(?s)public\s+/.concat(className).concat(/\s*\([^)]*\)\s*\{\s*this\s*\([^)]*\);\s*\}/)).matcher(text)
+        if (delegatingCtor.find()) {
           def relativePath = rootPath.relativize(srcFile.toPath()).toString()
           println "Candidate found: ${relativePath}"
           candidateCount++

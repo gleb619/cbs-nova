@@ -20,7 +20,7 @@ class DslGitStatusResolverTest {
 
   @Test
   void delegatesToBuilderClientWhenAvailable() {
-    var expected = Optional.of(new RepoStatus(tempDir, Set.of("builder.txt")));
+    var expected = Optional.of(RepoStatus.fromDirtyPaths(tempDir, Set.of("builder.txt")));
     var builder = mock(DslBuilderClient.class);
     when(builder.vcsStatus()).thenReturn(expected);
 

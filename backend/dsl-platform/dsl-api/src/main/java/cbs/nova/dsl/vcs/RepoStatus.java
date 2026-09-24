@@ -19,14 +19,14 @@ public record RepoStatus(Path workTree, Set<String> dirtyPaths,
     dirtyPaths = dirtyPaths == null ? changes.keySet() : Set.copyOf(dirtyPaths);
   }
 
-  /** Legacy constructor for callers/tests that only carry the dirty set. */
-  public RepoStatus(Path workTree, Set<String> dirtyPaths) {
-    this(workTree, dirtyPaths, null);
-  }
-
   /** Build a {@code RepoStatus} whose {@code dirtyPaths} is the key set of {@code changes}. */
   public static RepoStatus of(Path workTree, Map<String, ChangeType> changes) {
     return new RepoStatus(workTree, null, changes);
+  }
+
+  /** Build a {@code RepoStatus} from a known dirty set and no typed changes. */
+  public static RepoStatus fromDirtyPaths(Path workTree, Set<String> dirtyPaths) {
+    return new RepoStatus(workTree, dirtyPaths, null);
   }
 
   /** Return the change type for {@code path}, if any. */

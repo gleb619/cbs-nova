@@ -93,7 +93,8 @@ class BuilderCacheTest {
 
   @Test
   void invalidateVcsStatusDropsOnlyStatusEntry() {
-    cache.vcsStatus(() -> Optional.of(new RepoStatus(Path.of("/repo"), java.util.Set.of())));
+    cache.vcsStatus(
+            () -> Optional.of(RepoStatus.fromDirtyPaths(Path.of("/repo"), java.util.Set.of())));
     cache.pendingCount(() -> 7);
 
     cache.invalidateVcsStatus();
@@ -104,7 +105,8 @@ class BuilderCacheTest {
 
   @Test
   void invalidatePendingCountDropsOnlyCountEntry() {
-    cache.vcsStatus(() -> Optional.of(new RepoStatus(Path.of("/repo"), java.util.Set.of())));
+    cache.vcsStatus(
+            () -> Optional.of(RepoStatus.fromDirtyPaths(Path.of("/repo"), java.util.Set.of())));
     cache.pendingCount(() -> 7);
 
     cache.invalidatePendingCount();
@@ -117,7 +119,8 @@ class BuilderCacheTest {
   void clearDropsEverything() {
     cache.readDraft("foo", () -> placeholder("foo"));
     cache.pendingCount(() -> 3);
-    cache.vcsStatus(() -> Optional.of(new RepoStatus(Path.of("/repo"), java.util.Set.of())));
+    cache.vcsStatus(
+            () -> Optional.of(RepoStatus.fromDirtyPaths(Path.of("/repo"), java.util.Set.of())));
 
     cache.clear();
 
