@@ -77,13 +77,13 @@ public class JdbcDslRunRepository implements DslRunRepository, DslRunStatsReposi
       total = (int) delegate.count();
     } else {
       ExtendedSelectQuery countQuery = searchQuery(t, r, processName, status, mode, correlationId)
-              .select(Literal.unsafe("COUNT(*)"))
+              .selectCount()
               .build();
       total = dslQueries.queryForObject(countQuery, Integer.class);
     }
 
     ExtendedSelectQuery dataQuery = searchQuery(t, r, processName, status, mode, correlationId)
-            .select(DslRunQueryCriteria.fullSelection(t, r).toArray(Selectable[]::new))
+            .select(DslRunQueryCriteria.fullSelection(t, r))
             .orderByDesc(r.get(t.startedAt()))
             .limit(limit)
             .offset(offset)
@@ -267,7 +267,7 @@ public class JdbcDslRunRepository implements DslRunRepository, DslRunStatsReposi
   private long countWhere(DslRunTableColumns t, Criteria criteria) {
     TableReference r = t.refer();
     ExtendedSelectQuery query = dslQueries.select()
-            .select(Literal.unsafe("COUNT(*)"))
+            .selectCount()
             .where(criteria)
             .build();
     return dslQueries.queryForObject(query, Long.class);

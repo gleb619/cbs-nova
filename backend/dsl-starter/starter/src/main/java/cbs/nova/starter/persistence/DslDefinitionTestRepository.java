@@ -57,7 +57,7 @@ public class DslDefinitionTestRepository {
   public int countByDefinition(String definitionName) {
     var r = T.refer();
     ExtendedSelectQuery query = dslQueries.select()
-            .select(Literal.unsafe("COUNT(*)"))
+            .selectCount()
             .where(Criteria.equal(r.get(T.definitionName()), Literal.of(definitionName)))
             .build();
     Long count = dslQueries.queryForObject(query, Long.class);

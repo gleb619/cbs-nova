@@ -30,33 +30,55 @@ abstract class FindLombokCandidatesTask extends DefaultTask {
 
     getSourceFiles().each { File srcFile ->
       String text = srcFile.text
-      String className = srcFile.name.take(srcFile.name.lastIndexOf('.'))
 
-      // 1. Extract all 'private final' fields safely using Java/Groovy compatible Pattern API
-      Pattern fieldRegex = Pattern.compile(/private\s+final\s+([A-Za-z0-9_<>]+)\s+([A-Za-z0-9_]+)\s*;/)
+      // Skip files that already use Lombok constructor annotations.
+      if (text.contains('@RequiredArgsConstructor') || text.contains('@AllArgsConstructor')) {
+        return
+      }
+
+      // Determine top-level type name and kind from the public class/record declaration.
+      def typeMatcher = Pattern.compile(/public\s+(?:final\s+)?(class|record)\s+(\w+)/).matcher(text)
+      if (!typeMatcher.find()) {
+        return
+      }
+      boolean isRecord = typeMatcher.group(1) == 'record'
+      String className = typeMatcher.group(2)
+
+      if (isRecord) {
+        // Records with explicit constructors are candidates: compact canonical + legacy overloads
+        // can usually be collapsed or replaced by Lombok helpers/static factories.
+        def explicitCtor = Pattern.compile(/(?s)public\s+/.concat(className).concat(/\s*\([^)]*\)\s*\{/)).matcher(text)
+        if (explicitCtor.find()) {
+          def relativePath = rootPath.relativize(srcFile.toPath()).toString()
+          println "Candidate found: ${relativePath}"
+          candidateCount++
+        }
+        return
+      }
+
+      // Collect private final instance fields (exclude static by not matching it between).
       def finalFields = []
-
-      // CORRECTED: Pass the string 'text' into the pattern matcher
-      def fieldMatcher = fieldRegex.matcher(text)
+      def fieldMatcher = Pattern.compile(/(?m)^\s*private\s+final\s+([A-Za-z0-9_<>\[\].?, ]+)\s+([A-Za-z0-9_]+)\s*;/).matcher(text)
       while (fieldMatcher.find()) {
         finalFields << fieldMatcher.group(2)
       }
 
       if (finalFields.isEmpty()) return
 
-      // 2. Dynamically construct the match pattern for the target constructor
-      StringBuilder constructorPatternBuilder = new StringBuilder()
-      constructorPatternBuilder.append(/(?s)public\s+/).append(className).append(/\s*\([^)]*\)\s*\{/)
-
+      // 1. Canonical all-args constructor: assigns every collected final field, optional super(...) call first.
+      StringBuilder canonicalPatternBuilder = new StringBuilder()
+      canonicalPatternBuilder.append(/(?s)public\s+/).append(className).append(/\s*\([^)]*\)\s*\{/).append(/(?:\s*super\s*\([^)]*\)\s*;)?/)
       finalFields.each { fieldName ->
-        constructorPatternBuilder.append(/\s*(?:this\.)?/).append(fieldName).append(/\s*=\s*/).append(fieldName).append(/\s*;/)
+        canonicalPatternBuilder.append(/\s*(?:this\.)?/).append(fieldName).append(/\s*=\s*/).append(fieldName).append(/\s*;/)
       }
-      constructorPatternBuilder.append(/\s*\}/)
+      canonicalPatternBuilder.append(/\s*\}/)
+      boolean hasCanonicalCtor = Pattern.compile(canonicalPatternBuilder.toString()).matcher(text).find()
 
-      Pattern lombokConstructorRegex = Pattern.compile(constructorPatternBuilder.toString())
+      // 2. Other junk constructors: any public ctor that delegates via this(...) or calls super(...).
+      String junkCtorPattern = /(?s)public\s+/.concat(className).concat(/\s*\([^)]*\)\s*\{[^}]*\b(this|super)\s*\([^)]*\)[^}]*\}/)
+      boolean hasJunkCtor = Pattern.compile(junkCtorPattern).matcher(text).find()
 
-      // 3. Verify if the text matches the structural footprint
-      if (lombokConstructorRegex.matcher(text).find()) {
+      if (hasCanonicalCtor || hasJunkCtor) {
         def relativePath = rootPath.relativize(srcFile.toPath()).toString()
         println "Candidate found: ${relativePath}"
         candidateCount++

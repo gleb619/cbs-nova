@@ -117,7 +117,7 @@ public class CompileDiagnosticRecordRepository {
             .from(r)
             .whereIf(hasDefinition,
                     () -> Criteria.equal(r.get(T.definition()), Literal.of(definition)))
-            .select(Literal.unsafe("COUNT(*)"))
+            .selectCount()
             .build();
     long total = dslQueries.queryForObject(countQuery, Long.class);
 

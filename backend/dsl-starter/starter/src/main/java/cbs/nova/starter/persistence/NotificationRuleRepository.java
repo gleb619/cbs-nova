@@ -84,8 +84,7 @@ public class NotificationRuleRepository {
   public Optional<NotificationRuleEntity> findById(long id) {
     var r = T.refer();
     ExtendedSelectQuery query = dslQueries.select()
-            .select(NotificationRuleQueryCriteria.fullSelection(T, r)
-                    .toArray(new com.github.squigglesql.squigglesql.Selectable[0]))
+            .select(NotificationRuleQueryCriteria.fullSelection(T, r))
             .where(NotificationRuleQueryCriteria.matchesId(T, r, id))
             .build();
     List<NotificationRuleEntity> items = dslQueries.query(query, ROW_MAPPER);
@@ -96,13 +95,12 @@ public class NotificationRuleRepository {
     checkPagination(offset, limit);
     var r = T.refer();
     ExtendedSelectQuery countQuery = dslQueries.select()
-            .select(Literal.unsafe("COUNT(*)"))
+            .selectCount()
             .from(r)
             .build();
     long total = dslQueries.queryForObject(countQuery, Long.class);
     ExtendedSelectQuery dataQuery = dslQueries.select()
-            .select(NotificationRuleQueryCriteria.fullSelection(T, r)
-                    .toArray(new com.github.squigglesql.squigglesql.Selectable[0]))
+            .select(NotificationRuleQueryCriteria.fullSelection(T, r))
             .from(r)
             .orderByDesc(r.get(T.priority()))
             .orderByAsc(r.get(T.id()))
@@ -120,8 +118,7 @@ public class NotificationRuleRepository {
   public List<NotificationRuleEntity> findMatchingEnabled(String eventType) {
     var r = T.refer();
     ExtendedSelectQuery query = dslQueries.select()
-            .select(NotificationRuleQueryCriteria.fullSelection(T, r)
-                    .toArray(new com.github.squigglesql.squigglesql.Selectable[0]))
+            .select(NotificationRuleQueryCriteria.fullSelection(T, r))
             .from(r)
             .where(NotificationRuleQueryCriteria.isEnabled(T, r))
             .where(NotificationRuleQueryCriteria.matchesEventType(T, r, eventType))
@@ -134,7 +131,7 @@ public class NotificationRuleRepository {
   public long count() {
     var r = T.refer();
     ExtendedSelectQuery query = dslQueries.select()
-            .select(Literal.unsafe("COUNT(*)"))
+            .selectCount()
             .from(r)
             .build();
     return dslQueries.queryForObject(query, Long.class);

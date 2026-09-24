@@ -58,7 +58,7 @@ public class NotificationRuleFiringRepository {
 
     ExtendedSelectQuery countQuery = dslQueries.select()
             .from(r)
-            .select(Literal.unsafe("COUNT(*)"))
+            .selectCount()
             .whereIf(ruleId != null,
                     () -> NotificationRuleFiringQueryCriteria.matchesRuleId(t, r, ruleId))
             .build();
@@ -67,7 +67,7 @@ public class NotificationRuleFiringRepository {
     ExtendedSelectQuery dataQuery = dslQueries.select()
             .from(r)
             .select(NotificationRuleFiringQueryCriteria.fullSelection(t, r)
-                    .toArray(Selectable[]::new))
+                    )
             .whereIf(ruleId != null,
                     () -> NotificationRuleFiringQueryCriteria.matchesRuleId(t, r, ruleId))
             .orderByDesc(r.get(t.createdAt()))

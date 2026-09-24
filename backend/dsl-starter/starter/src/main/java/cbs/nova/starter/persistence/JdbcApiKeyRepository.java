@@ -51,7 +51,7 @@ public class JdbcApiKeyRepository {
     TableReference r = t.refer();
     ExtendedSelectQuery query = dslQueries.select()
             .from(r)
-            .select(ApiKeyQueryCriteria.fullSelection(t, r).toArray(Selectable[]::new))
+            .select(ApiKeyQueryCriteria.fullSelection(t, r))
             .where(ApiKeyQueryCriteria.matchesKeyHash(t, r, keyHash))
             .where(ApiKeyQueryCriteria.isActive(t, r))
             .build();
@@ -68,7 +68,7 @@ public class JdbcApiKeyRepository {
     TableReference r = t.refer();
     ExtendedSelectQuery query = dslQueries.select()
             .from(r)
-            .select(Literal.unsafe("COUNT(*)"))
+            .selectCount()
             .where(ApiKeyQueryCriteria.isActive(t, r))
             .build();
     return dslQueries.queryForObject(query, Long.class);
@@ -108,7 +108,7 @@ public class JdbcApiKeyRepository {
     TableReference r = t.refer();
     ExtendedSelectQuery query = dslQueries.select()
             .from(r)
-            .select(ApiKeyQueryCriteria.fullSelection(t, r).toArray(Selectable[]::new))
+            .select(ApiKeyQueryCriteria.fullSelection(t, r))
             .orderByDesc(r.get(t.createdAt()))
             .orderByDesc(r.get(t.id()))
             .build();
@@ -124,7 +124,7 @@ public class JdbcApiKeyRepository {
     TableReference r = t.refer();
     ExtendedSelectQuery query = dslQueries.select()
             .from(r)
-            .select(ApiKeyQueryCriteria.fullSelection(t, r).toArray(Selectable[]::new))
+            .select(ApiKeyQueryCriteria.fullSelection(t, r))
             .where(ApiKeyQueryCriteria.matchesId(t, r, id))
             .build();
     List<DslApiKeyEntity> rows = dslQueries.query(query, ROW_MAPPER);
@@ -141,7 +141,7 @@ public class JdbcApiKeyRepository {
     TableReference r = t.refer();
     ExtendedSelectQuery query = dslQueries.select()
             .from(r)
-            .select(ApiKeyQueryCriteria.fullSelection(t, r).toArray(Selectable[]::new))
+            .select(ApiKeyQueryCriteria.fullSelection(t, r))
             .where(ApiKeyQueryCriteria.matchesId(t, r, id))
             .where(ApiKeyQueryCriteria.isActive(t, r))
             .build();

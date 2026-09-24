@@ -1,6 +1,8 @@
 package cbs.nova.starter.persistence;
 
 import cbs.nova.starter.entity.DslEventEntity;
+import com.github.squigglesql.squigglesql.Selectable;
+import com.github.squigglesql.squigglesql.literal.Literal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
@@ -44,8 +46,7 @@ public class DslEventRepository {
     }
     var r = T.refer();
     ExtendedSelectQuery query = dslQueries.select()
-            .select(DslEventQueryCriteria.fullSelection(T, r)
-                    .toArray(new com.github.squigglesql.squigglesql.Selectable[0]))
+            .select(DslEventQueryCriteria.fullSelection(T, r))
             .from(r)
             .where(DslEventQueryCriteria.isUnpublished(T, r))
             .orderByAsc(r.get(T.id()))
@@ -98,20 +99,19 @@ public class DslEventRepository {
     if (eventType == null && aggregateType == null && aggregateId == null
             && (correlationId == null || correlationId.isBlank()) && since == null) {
       ExtendedSelectQuery countQuery = dslQueries.select()
-              .select(com.github.squigglesql.squigglesql.literal.Literal.unsafe("COUNT(*)"))
+              .selectCount()
               .from(r)
               .build();
       total = dslQueries.queryForObject(countQuery, Long.class);
     } else {
       ExtendedSelectQuery countQuery = builder
-              .select(com.github.squigglesql.squigglesql.literal.Literal.unsafe("COUNT(*)"))
+              .selectCount()
               .build();
       total = dslQueries.queryForObject(countQuery, Long.class);
     }
 
     ExtendedSelectQuery dataQuery = builder
-            .select(DslEventQueryCriteria.fullSelection(T, r)
-                    .toArray(new com.github.squigglesql.squigglesql.Selectable[0]))
+            .select(DslEventQueryCriteria.fullSelection(T, r))
             .from(r)
             .orderByDesc(r.get(T.createdAt()))
             .orderByDesc(r.get(T.id()))

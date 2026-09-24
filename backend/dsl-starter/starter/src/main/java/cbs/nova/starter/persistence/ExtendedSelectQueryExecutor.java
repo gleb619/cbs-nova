@@ -4,6 +4,7 @@ import com.github.squigglesql.squigglesql.FromItem;
 import com.github.squigglesql.squigglesql.Matchable;
 import com.github.squigglesql.squigglesql.Selectable;
 import com.github.squigglesql.squigglesql.criteria.Criteria;
+import com.github.squigglesql.squigglesql.literal.Literal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -72,6 +73,14 @@ public class ExtendedSelectQueryExecutor {
     public Builder select(Selectable... selection) {
       Arrays.stream(selection).forEach(query::addToSelection);
       return this;
+    }
+
+    public Builder select(List<Selectable> selections) {
+      return select(selections.toArray(Selectable[]::new));
+    }
+
+    public Builder selectCount() {
+      return select(Literal.unsafe("COUNT(*)"));
     }
 
     /**

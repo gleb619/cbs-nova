@@ -58,8 +58,7 @@ public class ChangeRequestRepository {
   public Optional<ChangeRequestEntity> findById(long id) {
     var r = T.refer();
     ExtendedSelectQuery query = dslQueries.select()
-            .select(ChangeRequestQueryCriteria.fullSelection(T, r)
-                    .toArray(new com.github.squigglesql.squigglesql.Selectable[0]))
+            .select(ChangeRequestQueryCriteria.fullSelection(T, r))
             .where(ChangeRequestQueryCriteria.matchesId(T, r, id))
             .build();
     List<ChangeRequestEntity> items = dslQueries.query(query, ROW_MAPPER);
@@ -69,8 +68,7 @@ public class ChangeRequestRepository {
   public List<ChangeRequestEntity> findByDefinitionName(String definitionName) {
     var r = T.refer();
     ExtendedSelectQuery query = dslQueries.select()
-            .select(ChangeRequestQueryCriteria.fullSelection(T, r)
-                    .toArray(new com.github.squigglesql.squigglesql.Selectable[0]))
+            .select(ChangeRequestQueryCriteria.fullSelection(T, r))
             .where(ChangeRequestQueryCriteria.matchesDefinitionName(T, r, definitionName))
             .orderByDesc(r.get(T.requestedAt()))
             .orderByDesc(r.get(T.id()))
@@ -81,8 +79,7 @@ public class ChangeRequestRepository {
   public Optional<ChangeRequestEntity> findPendingByDefinitionName(String definitionName) {
     var r = T.refer();
     ExtendedSelectQuery query = dslQueries.select()
-            .select(ChangeRequestQueryCriteria.fullSelection(T, r)
-                    .toArray(new com.github.squigglesql.squigglesql.Selectable[0]))
+            .select(ChangeRequestQueryCriteria.fullSelection(T, r))
             .where(ChangeRequestQueryCriteria.matchesDefinitionName(T, r, definitionName))
             .where(ChangeRequestQueryCriteria.matchesStatus(T, r, "PENDING"))
             .orderByDesc(r.get(T.id()))
@@ -104,8 +101,7 @@ public class ChangeRequestRepository {
                     () -> ChangeRequestQueryCriteria.matchesStatus(T, r, status.name()));
 
     ExtendedSelectQuery query = builder
-            .select(ChangeRequestQueryCriteria.fullSelection(T, r)
-                    .toArray(new com.github.squigglesql.squigglesql.Selectable[0]))
+            .select(ChangeRequestQueryCriteria.fullSelection(T, r))
             .orderByDesc(r.get(T.requestedAt()))
             .orderByDesc(r.get(T.id()))
             .build();

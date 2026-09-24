@@ -85,13 +85,13 @@ public class WebhookDeliveryRecordRepository {
     if (subscriptionId == null || subscriptionId.isBlank()) {
       ExtendedSelectQuery countQuery = dslQueries.select()
               .from(r)
-              .select(Literal.unsafe("COUNT(*)"))
+              .selectCount()
               .build();
       total = dslQueries.queryForObject(countQuery, Long.class);
     } else {
       ExtendedSelectQuery countQuery = dslQueries.select()
               .from(r)
-              .select(Literal.unsafe("COUNT(*)"))
+              .selectCount()
               .where(WebhookDeliveryQueryCriteria.matchesSubscriptionId(t, r, subscriptionId))
               .build();
       total = dslQueries.queryForObject(countQuery, Long.class);
@@ -99,7 +99,7 @@ public class WebhookDeliveryRecordRepository {
 
     ExtendedSelectQuery dataQuery = dslQueries.select()
             .from(r)
-            .select(WebhookDeliveryQueryCriteria.fullSelection(t, r).toArray(Selectable[]::new))
+            .select(WebhookDeliveryQueryCriteria.fullSelection(t, r))
             .whereIf(subscriptionId != null && !subscriptionId.isBlank(),
                     () -> WebhookDeliveryQueryCriteria.matchesSubscriptionId(t, r, subscriptionId))
             .orderByDesc(r.get(t.occurredAt()))
