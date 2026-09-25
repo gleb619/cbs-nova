@@ -18,8 +18,10 @@ import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.controller.DslDraftHandler;
 import cbs.nova.starter.controller.DslReloadHandler;
 import cbs.nova.starter.exception.BuilderApiException;
+import cbs.nova.starter.model.CompileModels.CompileResult;
 import cbs.nova.starter.model.VcsModels.CommitRequest;
 import cbs.nova.starter.model.VcsModels.CommitResult;
+import cbs.nova.starter.model.VcsModels.DefinitionHistoryEntry;
 import cbs.nova.starter.model.VcsModels.DiscardRequest;
 import cbs.nova.starter.model.VcsModels.DiscardResult;
 import cbs.nova.starter.model.VcsModels.DraftRequest;
@@ -43,8 +45,12 @@ import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentMatchers;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.converter.ByteArrayHttpMessageConverter;
+import org.springframework.http.converter.HttpMessageConverter;
+import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.web.servlet.function.EntityResponse;
 import org.springframework.web.servlet.function.RouterFunctions;
@@ -95,7 +101,7 @@ class DslDraftGitResourceTest {
   void publishCommitsWhenReloadSucceedsAndPathIsDirty() throws Exception {
     when(sourcePathResolver.relativePath("foo")).thenReturn(Optional.of("dsl/FooDsl.java"));
     when(client.compile(any())).thenReturn(
-            new cbs.nova.starter.model.CompileModels.CompileResult("s-1", true,
+            new CompileResult("s-1", true,
                     List.of(), List.of(), 1));
     when(client.downloadZip(anyString())).thenReturn(emptyZip());
     when(gitStatusResolver.status(sourceDir)).thenReturn(Optional.of(
@@ -117,7 +123,7 @@ class DslDraftGitResourceTest {
     Files.writeString(sourceDir.resolve("Broken.java"), "this is not valid Java");
     when(sourcePathResolver.relativePath("foo")).thenReturn(Optional.of("dsl/FooDsl.java"));
     when(client.compile(any())).thenReturn(
-            new cbs.nova.starter.model.CompileModels.CompileResult("s-1", false,
+            new CompileResult("s-1", false,
                     List.of(), List.of("bad syntax"), 1));
 
     ServerResponse response = handler.publish(postRequest("/api/dsl/drafts/foo/publish", "foo"));
@@ -133,7 +139,7 @@ class DslDraftGitResourceTest {
   void publishDoesNotCommitWhenPathIsClean() throws Exception {
     when(sourcePathResolver.relativePath("foo")).thenReturn(Optional.of("dsl/FooDsl.java"));
     when(client.compile(any())).thenReturn(
-            new cbs.nova.starter.model.CompileModels.CompileResult("s-1", true,
+            new CompileResult("s-1", true,
                     List.of(), List.of(), 1));
     when(client.downloadZip(anyString())).thenReturn(emptyZip());
     when(gitStatusResolver.status(sourceDir))
@@ -152,7 +158,7 @@ class DslDraftGitResourceTest {
   void publishReturns200WithNullCommitIdWhenCommitThrows() throws Exception {
     when(sourcePathResolver.relativePath("foo")).thenReturn(Optional.of("dsl/FooDsl.java"));
     when(client.compile(any())).thenReturn(
-            new cbs.nova.starter.model.CompileModels.CompileResult("s-1", true,
+            new CompileResult("s-1", true,
                     List.of(), List.of(), 1));
     when(client.downloadZip(anyString())).thenReturn(emptyZip());
     when(gitStatusResolver.status(sourceDir)).thenReturn(Optional.of(
@@ -233,7 +239,7 @@ class DslDraftGitResourceTest {
 
     assertThat(response.statusCode().value()).isEqualTo(200);
     @SuppressWarnings("unchecked")
-    List<cbs.nova.starter.model.VcsModels.DefinitionHistoryEntry> body = (List<cbs.nova.starter.model.VcsModels.DefinitionHistoryEntry>) ((EntityResponse<?>) response)
+    List<DefinitionHistoryEntry> body = (List<DefinitionHistoryEntry>) ((EntityResponse<?>) response)
             .entity();
     assertThat(body).hasSize(2);
     assertThat(body.get(0).timestamp()).isEqualTo("abc1234");
@@ -340,7 +346,7 @@ class DslDraftGitResourceTest {
   }
 
   private static CommitRequest argThatCommit(String path, String message) {
-    return org.mockito.ArgumentMatchers.argThat(r -> r.paths().equals(List.of(path))
+    return ArgumentMatchers.argThat(r -> r.paths().equals(List.of(path))
             && r.message().equals(message));
   }
 
@@ -390,9 +396,9 @@ class DslDraftGitResourceTest {
     return ServerRequest.create(req, CONVERTERS);
   }
 
-  private static final List<org.springframework.http.converter.HttpMessageConverter<?>> CONVERTERS = List
-          .of(new org.springframework.http.converter.ByteArrayHttpMessageConverter(),
-                  new org.springframework.http.converter.StringHttpMessageConverter());
+  private static final List<HttpMessageConverter<?>> CONVERTERS = List
+          .of(new ByteArrayHttpMessageConverter(),
+                  new StringHttpMessageConverter());
 
   @SuppressWarnings("unchecked")
   private static <T> ObjectProvider<T> providerOfBean(T bean) {

@@ -7,13 +7,13 @@ import com.intellij.openapi.externalSystem.model.task.ExternalSystemTaskId;
 import com.intellij.openapi.externalSystem.model.task.ExternalSystemTaskNotificationEvent;
 import com.intellij.openapi.externalSystem.model.task.ExternalSystemTaskNotificationListener;
 import com.intellij.openapi.externalSystem.model.task.ExternalSystemTaskType;
+import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.plugins.gradle.util.GradleConstants;
 
+@Slf4j
 public final class DslGradleSyncNotificationListener
         implements
           ExternalSystemTaskNotificationListener {
-
-  private static final Logger LOG = Logger.getInstance(DslGradleSyncNotificationListener.class);
 
   private final DslSourceRootSyncContributor contributor = new DslSourceRootSyncContributor();
 
@@ -75,6 +75,6 @@ public final class DslGradleSyncNotificationListener
   }
 
   private void log(String message) {
-    LOG.debug("DslGradleSyncNotificationListener: " + message);
+    log.debug("DslGradleSyncNotificationListener: " + message);
   }
 }

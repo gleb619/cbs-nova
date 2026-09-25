@@ -30,10 +30,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Optional;
+import java.util.function.Predicate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.ArgumentMatcher;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.web.servlet.function.ServerResponse;
 import tools.jackson.databind.ObjectMapper;
@@ -181,7 +183,7 @@ class ChangeRequestServiceTest {
     service.submit("LoanA", "bob", null);
 
     verify(repository).updateStatus(eq(3L), eq(Status.SUPERSEDED), isNull(), isNull(), isNull());
-    verify(repository, org.mockito.Mockito.times(2)).insert(any());
+    verify(repository, Mockito.times(2)).insert(any());
   }
 
   @Test
@@ -220,7 +222,7 @@ class ChangeRequestServiceTest {
   }
 
   private static ArgumentMatcher<DraftRequest> argThatDraft(
-          java.util.function.Predicate<DraftRequest> predicate) {
+          Predicate<DraftRequest> predicate) {
     return new ArgumentMatcher<>() {
       @Override
       public boolean matches(DraftRequest draft) {

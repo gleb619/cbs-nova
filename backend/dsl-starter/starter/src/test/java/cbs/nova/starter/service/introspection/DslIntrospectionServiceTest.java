@@ -13,6 +13,7 @@ import cbs.nova.dsl.ExecutableDescriptor;
 import cbs.nova.dsl.helper.HelperSource;
 import cbs.nova.starter.model.DslIntrospectionModels.ConstructPathType;
 import cbs.nova.starter.model.DslIntrospectionModels.ConstructSchemaDto;
+import cbs.nova.starter.model.DslIntrospectionModels.ObjectSearchMode;
 import cbs.nova.starter.model.DslIntrospectionModels.ObjectSearchResult;
 import cbs.nova.starter.model.DslIntrospectionModels.ConstructSchemaMode;
 import cbs.nova.dsl.GlobalManager;
@@ -74,7 +75,7 @@ class DslIntrospectionServiceTest {
     registerSampleHelper("H1", "helper desc", String.class, Integer.class);
 
     PageResponse<ObjectSearchResult> page = service.searchObjects(0, 50, null,
-            cbs.nova.starter.model.DslIntrospectionModels.ObjectSearchMode.ALL, null);
+            ObjectSearchMode.ALL, null);
 
     assertThat(page.items()).extracting("name", "type")
             .contains(tuple("P1", "process"), tuple("T1", "transaction"),
@@ -139,7 +140,7 @@ class DslIntrospectionServiceTest {
                     .execute(ctx -> Result.success("ok"))
                     .build());
 
-    var dto = (ConstructSchemaDto) service
+    var dto = service
             .constructSchema(ConstructPathType.PROCESSES, "PSchema", ConstructSchemaMode.PREVIEW)
             .orElseThrow();
 
@@ -159,7 +160,7 @@ class DslIntrospectionServiceTest {
                     .execute(ctx -> Result.success("ok"))
                     .build());
 
-    var dto = (ConstructSchemaDto) service
+    var dto = service
             .constructSchema(ConstructPathType.TRANSACTIONS, "TSchema", ConstructSchemaMode.PREVIEW)
             .orElseThrow();
 
@@ -189,7 +190,7 @@ class DslIntrospectionServiceTest {
       }
     });
 
-    var dto = (ConstructSchemaDto) service
+    var dto = service
             .constructSchema(ConstructPathType.HELPERS, "HSchema", ConstructSchemaMode.PREVIEW)
             .orElseThrow();
 
@@ -208,7 +209,7 @@ class DslIntrospectionServiceTest {
                     .execute(ctx -> Result.success("ok"))
                     .build());
 
-    var dto = (ConstructSchemaDto) service
+    var dto = service
             .constructSchema(ConstructPathType.FUNCTIONS, "FSchema", ConstructSchemaMode.PREVIEW)
             .orElseThrow();
 
@@ -509,7 +510,7 @@ class DslIntrospectionServiceTest {
     registerSampleHelper("CHelper", "third helper", Long.class, Boolean.class);
 
     PageResponse<ObjectSearchResult> page = service.searchObjects(0, 2, null,
-            cbs.nova.starter.model.DslIntrospectionModels.ObjectSearchMode.ALL, null);
+            ObjectSearchMode.ALL, null);
 
     assertThat(page.items()).hasSize(2);
     assertThat(page.total()).isEqualTo(3);
@@ -524,7 +525,7 @@ class DslIntrospectionServiceTest {
     registerSampleHelper("Gamma", "desc", Long.class, Boolean.class);
 
     PageResponse<ObjectSearchResult> page = service.searchObjects(1, 1, null,
-            cbs.nova.starter.model.DslIntrospectionModels.ObjectSearchMode.ALL, null);
+            ObjectSearchMode.ALL, null);
 
     assertThat(page.items()).hasSize(1);
     assertThat(page.items().get(0).name()).isEqualTo("Beta");
@@ -537,7 +538,7 @@ class DslIntrospectionServiceTest {
     registerSampleHelper("BarHelper", "bar desc", String.class, String.class);
 
     PageResponse<ObjectSearchResult> page = service.searchObjects(0, 10, "foo",
-            cbs.nova.starter.model.DslIntrospectionModels.ObjectSearchMode.EXACT, null);
+            ObjectSearchMode.EXACT, null);
 
     assertThat(page.total()).isEqualTo(1);
     assertThat(page.items().get(0).name()).isEqualTo("FooHelper");
@@ -549,12 +550,12 @@ class DslIntrospectionServiceTest {
     registerSampleHelper("BarHelper", "no match", String.class, String.class);
 
     PageResponse<ObjectSearchResult> descPage = service.searchObjects(0, 10, "matches",
-            cbs.nova.starter.model.DslIntrospectionModels.ObjectSearchMode.EXACT, null);
+            ObjectSearchMode.EXACT, null);
     assertThat(descPage.total()).isEqualTo(1);
     assertThat(descPage.items().get(0).name()).isEqualTo("FooHelper");
 
     PageResponse<ObjectSearchResult> typePage = service.searchObjects(0, 10, "Integer",
-            cbs.nova.starter.model.DslIntrospectionModels.ObjectSearchMode.EXACT, null);
+            ObjectSearchMode.EXACT, null);
     assertThat(typePage.total()).isEqualTo(1);
     assertThat(typePage.items().get(0).name()).isEqualTo("FooHelper");
   }
@@ -565,7 +566,7 @@ class DslIntrospectionServiceTest {
     registerSampleHelper("BarHelper", "other", String.class, String.class);
 
     PageResponse<ObjectSearchResult> page = service.searchObjects(0, 10, "bar",
-            cbs.nova.starter.model.DslIntrospectionModels.ObjectSearchMode.ALL, null);
+            ObjectSearchMode.ALL, null);
 
     assertThat(page.total()).isEqualTo(2);
   }
@@ -579,7 +580,7 @@ class DslIntrospectionServiceTest {
     registerSampleHelper("HType", "helper desc", String.class, Integer.class);
 
     PageResponse<ObjectSearchResult> page = service.searchObjects(0, 50, null,
-            cbs.nova.starter.model.DslIntrospectionModels.ObjectSearchMode.ALL, DslType.PROCESS);
+            ObjectSearchMode.ALL, DslType.PROCESS);
 
     assertThat(page.items()).extracting("name").containsExactly("PType");
     assertThat(page.total()).isEqualTo(1);
@@ -592,7 +593,7 @@ class DslIntrospectionServiceTest {
     registerSampleHelper("HOther", "helper desc", String.class, Integer.class);
 
     PageResponse<ObjectSearchResult> page = service.searchObjects(0, 50, null,
-            cbs.nova.starter.model.DslIntrospectionModels.ObjectSearchMode.ALL, DslType.OTHER);
+            ObjectSearchMode.ALL, DslType.OTHER);
 
     assertThat(page.items()).extracting("name").containsExactly("HOther");
     assertThat(page.total()).isEqualTo(1);
@@ -607,7 +608,7 @@ class DslIntrospectionServiceTest {
     registerSampleHelper("AlphaHelper", "helper desc", String.class, Integer.class);
 
     var response = service.workingSet(new ObjectSearchQuery(0, 50, "alpha",
-            cbs.nova.starter.model.DslIntrospectionModels.ObjectSearchMode.EXACT, DslType.PROCESS));
+            ObjectSearchMode.EXACT, DslType.PROCESS));
 
     assertThat(response.items()).extracting("name").containsExactly("AlphaProcess");
     assertThat(response.total()).isEqualTo(1);

@@ -89,6 +89,56 @@ jobs:
         working-directory: frontend
         run: pnpm build
 
+  # T609: the operator-portal host app (@cbs/operator-portal) consumes
+  # @cbs/admin-ui-plugin via pnpm pack:local — the closest thing to a
+  # consumer contract test for the plugin. Catches plugin API regressions
+  # the in-tree frontend job can't see. Own job: the pack step is slow.
+  operator-portal:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Same pnpm/node setup as build-frontend — action-setup reads
+      # packageManager (pnpm@9.0.0) from frontend/package.json.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: |
+            frontend/pnpm-lock.yaml
+            app/ui/pnpm-lock.yaml
+
+      - name: Install frontend workspace deps
+        working-directory: frontend
+        run: pnpm install
+
+      # gen:bff-routes writes server/api/v1/** routes which are gitignored;
+      # pack:local's build:server step transpiles them into the tarball.
+      - name: Generate BFF routes
+        working-directory: frontend
+        run: pnpm gen:bff-routes
+
+      - name: Pack plugin + components into local registry
+        working-directory: app/ui
+        run: pnpm pack:local
+
+      # pack:local rewrites app/ui/package.json file: refs; re-install to
+      # resolve the freshly packed tarballs. CI runners are ephemeral, so
+      # the mutated package.json never leaks into a cache.
+      - name: Install operator-portal dependencies
+        working-directory: app/ui
+        run: pnpm install
+
+      - name: Test operator-portal
+        working-directory: app/ui
+        run: pnpm test
+
+      - name: Build operator-portal
+        working-directory: app/ui
+        run: pnpm build
+
   lint:
     runs-on: ubuntu-latest
     steps:

@@ -1,5 +1,6 @@
 package cbs.nova.starter.config.router;
 
+import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.starter.config.DslManifestConfiguration;
 import cbs.nova.starter.controller.DslManifestHandler;
 import cbs.nova.starter.core.StarterConstants;
@@ -53,13 +54,13 @@ public class DslManifestRouterConfiguration {
           "DSL Admin"}, responses = {
               @ApiResponse(responseCode = "200", description = "Reload successful", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ManifestReloadResponse.class))),
               @ApiResponse(responseCode = "400", description = "Manifest validation failed", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ManifestReloadResponse.class))),
-              @ApiResponse(responseCode = "409", description = "Manifest reload is disabled or not configured", content = @Content(mediaType = "application/json", schema = @Schema(implementation = cbs.nova.dsl.model.ErrorResponse.class))),
-              @ApiResponse(responseCode = "500", description = "Unexpected reload failure", content = @Content(mediaType = "application/json", schema = @Schema(implementation = cbs.nova.dsl.model.ErrorResponse.class)))
+              @ApiResponse(responseCode = "409", description = "Manifest reload is disabled or not configured", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+              @ApiResponse(responseCode = "500", description = "Unexpected reload failure", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
           })),
       @RouterOperation(path = "/api/dsl/manifest/guard", beanClass = DslManifestHandler.class, beanMethod = "guard", method = RequestMethod.GET, operation = @Operation(operationId = "getManifestGuard", summary = "Button-target piece guard verdicts resolved for the current principal (no check internals)", tags = {
           "DSL Admin"}, responses = {
               @ApiResponse(responseCode = "200", description = "Per-piece allow/deny verdicts for button targets", content = @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = ManifestGuardEntry.class)))),
-              @ApiResponse(responseCode = "500", description = "Unexpected resolution failure", content = @Content(mediaType = "application/json", schema = @Schema(implementation = cbs.nova.dsl.model.ErrorResponse.class)))
+              @ApiResponse(responseCode = "500", description = "Unexpected resolution failure", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
           }))
   })
   RouterFunction<ServerResponse> dslManifestRouter(DslManifestHandler handler) {

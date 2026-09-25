@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import cbs.nova.starter.builder.DslBuilderClient;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.config.router.DslPromoteRouterConfiguration;
 import cbs.nova.starter.controller.DslExceptionHandler;
@@ -30,6 +31,8 @@ import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.http.HttpInputMessage;
 import org.springframework.http.HttpOutputMessage;
@@ -64,14 +67,14 @@ class DslPromoteResourceTest {
             .build();
     auditService = mock(DslAuditService.class);
     @SuppressWarnings("unchecked")
-    org.springframework.beans.factory.ObjectProvider<DslAuditService> auditProvider = mock(
-            org.springframework.beans.factory.ObjectProvider.class);
+    ObjectProvider<DslAuditService> auditProvider = mock(
+            ObjectProvider.class);
     when(auditProvider.getIfAvailable()).thenReturn(auditService);
     DslSourcePathResolver sourcePathResolver = new DslSourcePathResolver(props,
             name -> Optional.of("dsl/" + name + "Dsl.java"));
     @SuppressWarnings("unchecked")
-    org.springframework.beans.factory.ObjectProvider<cbs.nova.starter.builder.DslBuilderClient> emptyBuilder = mock(
-            org.springframework.beans.factory.ObjectProvider.class);
+    ObjectProvider<DslBuilderClient> emptyBuilder = mock(
+            ObjectProvider.class);
     when(emptyBuilder.getIfAvailable()).thenReturn(null);
     DslDefinitionBundleService bundleService = new DslDefinitionBundleService(mapper,
             Optional.empty(), props, sourcePathResolver, emptyBuilder);
@@ -201,8 +204,8 @@ class DslPromoteResourceTest {
             DslProperties.bundleServiceDefaults(),
             name -> Optional.of("dsl/" + name + "Dsl.java"));
     @SuppressWarnings("unchecked")
-    org.springframework.beans.factory.ObjectProvider<cbs.nova.starter.builder.DslBuilderClient> emptyBuilder = mock(
-            org.springframework.beans.factory.ObjectProvider.class);
+    ObjectProvider<DslBuilderClient> emptyBuilder = mock(
+            ObjectProvider.class);
     when(emptyBuilder.getIfAvailable()).thenReturn(null);
     DslDefinitionBundleService verifier = new DslDefinitionBundleService(mapper,
             Optional.empty(), DslProperties.bundleServiceDefaults(), sourcePathResolver,
@@ -237,7 +240,7 @@ class DslPromoteResourceTest {
             .content("{\"source\":\"dev\",\"target\":\"staging\"}"))
             .andExpect(status().isOk());
 
-    org.mockito.ArgumentCaptor<Object> details = org.mockito.ArgumentCaptor.forClass(Object.class);
+    ArgumentCaptor<Object> details = ArgumentCaptor.forClass(Object.class);
     verify(auditService).record(any(), eq("PROMOTION"), eq("staging"), any(),
             eq("SUCCESS"), details.capture());
     String detailsJson = mapper.writeValueAsString(details.getValue());
@@ -279,8 +282,8 @@ class DslPromoteResourceTest {
     DslSourcePathResolver sourcePathResolver = new DslSourcePathResolver(props,
             name -> Optional.of("dsl/" + name + "Dsl.java"));
     @SuppressWarnings("unchecked")
-    org.springframework.beans.factory.ObjectProvider<cbs.nova.starter.builder.DslBuilderClient> emptyBuilder = mock(
-            org.springframework.beans.factory.ObjectProvider.class);
+    ObjectProvider<DslBuilderClient> emptyBuilder = mock(
+            ObjectProvider.class);
     when(emptyBuilder.getIfAvailable()).thenReturn(null);
     DslDefinitionBundleService bundleService = new DslDefinitionBundleService(mapper,
             Optional.empty(), props, sourcePathResolver, emptyBuilder);
@@ -295,9 +298,9 @@ class DslPromoteResourceTest {
   }
 
   @SuppressWarnings("unchecked")
-  private org.springframework.beans.factory.ObjectProvider<DslAuditService> auditProvider() {
-    org.springframework.beans.factory.ObjectProvider<DslAuditService> provider = mock(
-            org.springframework.beans.factory.ObjectProvider.class);
+  private ObjectProvider<DslAuditService> auditProvider() {
+    ObjectProvider<DslAuditService> provider = mock(
+            ObjectProvider.class);
     when(provider.getIfAvailable()).thenReturn(auditService);
     return provider;
   }

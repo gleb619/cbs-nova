@@ -19,6 +19,7 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 
 /**
@@ -162,7 +163,7 @@ class DslDefinitionStatusResolverTest {
     Map<String, DefinitionStatus> result = resolver.resolveAll(List.of("Foo", "Foo"));
 
     assertThat(result).containsEntry("Foo", DefinitionStatus.ADDED);
-    org.mockito.Mockito.verify(sourcePathResolver, org.mockito.Mockito.times(2))
+    Mockito.verify(sourcePathResolver, Mockito.times(2))
             .relativePath("Foo");
   }
 

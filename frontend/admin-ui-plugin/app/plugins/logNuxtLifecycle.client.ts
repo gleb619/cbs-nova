@@ -1,4 +1,5 @@
 import { useClientLogger } from '@cbs/admin-ui-plugin/composables/useClientLogger'
+import { defineNuxtPlugin } from 'nuxt/app'
 
 const LIFECYCLE_NAMES = new Set([
   'app:created',

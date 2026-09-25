@@ -3,6 +3,7 @@ package cbs.nova.starter.helper;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.Arrays;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -201,7 +202,7 @@ class CsvSupportTest {
   @Test
   void formatNullFieldBecomesEmptyString() {
     String csv = CsvSupport.format(
-            List.of(java.util.Arrays.asList("a", null, "c")), COMMA, "\r\n");
+            List.of(Arrays.asList("a", null, "c")), COMMA, "\r\n");
     assertThat(csv).isEqualTo("a,,c\r\n");
   }
 

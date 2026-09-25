@@ -31,6 +31,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.http.MediaType;
@@ -169,7 +170,7 @@ class DslPromoteHandlerTest {
   void dryRunBundleValidationFailureReturnsBadRequestEnvelope() throws Exception {
     when(bundleService.exportSelected(any(Path.class), nullable(Boolean.class), any()))
             .thenReturn(bundle(entry("A", "process")));
-    org.mockito.Mockito.doThrow(new IllegalArgumentException("digest mismatch: abc"))
+    Mockito.doThrow(new IllegalArgumentException("digest mismatch: abc"))
             .when(bundleService).validateForImport(any(DefinitionBundle.class));
 
     mockMvc.perform(post("/api/dsl/promote?dryRun=true")

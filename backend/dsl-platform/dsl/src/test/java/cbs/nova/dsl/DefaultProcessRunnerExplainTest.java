@@ -1,4 +1,5 @@
 package cbs.nova.dsl;
+import cbs.nova.dsl.config.Constants;
 import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -46,8 +47,8 @@ class DefaultProcessRunnerExplainTest {
     assertThat(result.value()).isInstanceOf(ExplainReport.class);
     var report = (ExplainReport) result.value();
     assertThat(report.name()).isEqualTo("P");
-    assertThat(report.markdown()).isEqualTo(cbs.nova.dsl.config.Constants.EMPTY_MARKDOWN);
-    assertThat(report.description()).isEqualTo(cbs.nova.dsl.config.Constants.EMPTY_MARKDOWN);
+    assertThat(report.markdown()).isEqualTo(Constants.EMPTY_MARKDOWN);
+    assertThat(report.description()).isEqualTo(Constants.EMPTY_MARKDOWN);
   }
 
   @Test

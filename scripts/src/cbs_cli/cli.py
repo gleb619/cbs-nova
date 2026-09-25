@@ -1,8 +1,8 @@
 import argparse
 import sys
 
-from .commands.cve_gate import CveGateCommand
 from .commands.ci_local import CiLocalCommand
+from .commands.cve_gate import CveGateCommand
 from .commands.dev import DevCommand
 from .commands.doctor import DoctorCommand
 from .commands.format import FormatCommand

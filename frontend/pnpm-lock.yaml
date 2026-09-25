@@ -72,15 +72,18 @@ importers:
       '@vue/test-utils':
         specifier: ^2.4.0
         version: 2.4.11(@vue/compiler-dom@3.5.39)(@vue/server-renderer@3.5.39(vue@3.5.39(typescript@5.9.3)))(vue@3.5.39(typescript@5.9.3))
+      esbuild:
+        specifier: ^0.28.1
+        version: 0.28.1
       happy-dom:
-        specifier: ^17.0.0
-        version: 17.6.3
+        specifier: 17.6.2
+        version: 17.6.2
       typescript:
         specifier: ^5.4.0
         version: 5.9.3
       vitest:
         specifier: ^2.1.0
-        version: 2.1.9(@types/node@26.4.0)(@vitest/ui@2.1.9)(happy-dom@17.6.3)(terser@5.48.0)
+        version: 2.1.9(@types/node@26.4.0)(@vitest/ui@2.1.9)(happy-dom@17.6.2)(terser@5.48.0)
       vue-tsc:
         specifier: ^2.0.0
         version: 2.2.12(typescript@5.9.3)
@@ -108,7 +111,7 @@ importers:
         version: 5.2.4(vite@5.4.21(@types/node@26.4.0)(terser@5.48.0))(vue@3.5.39(typescript@5.9.3))
       '@vitest/coverage-v8':
         specifier: ^2.1.0
-        version: 2.1.9(vitest@2.1.9(@types/node@26.4.0)(@vitest/ui@2.1.9)(happy-dom@17.6.3)(terser@5.48.0))
+        version: 2.1.9(vitest@2.1.9(@types/node@26.4.0)(@vitest/ui@2.1.9)(happy-dom@17.6.2)(terser@5.48.0))
       '@vue/test-utils':
         specifier: ^2.4.0
         version: 2.4.11(@vue/compiler-dom@3.5.39)(@vue/server-renderer@3.5.39(vue@3.5.39(typescript@5.9.3)))(vue@3.5.39(typescript@5.9.3))
@@ -116,8 +119,8 @@ importers:
         specifier: ^10.4.0
         version: 10.5.2(postcss@8.5.16)
       happy-dom:
-        specifier: ^17.0.0
-        version: 17.6.3
+        specifier: 17.6.2
+        version: 17.6.2
       postcss:
         specifier: ^8.4.0
         version: 8.5.16
@@ -132,7 +135,7 @@ importers:
         version: 5.4.21(@types/node@26.4.0)(terser@5.48.0)
       vitest:
         specifier: ^2.1.0
-        version: 2.1.9(@types/node@26.4.0)(@vitest/ui@2.1.9)(happy-dom@17.6.3)(terser@5.48.0)
+        version: 2.1.9(@types/node@26.4.0)(@vitest/ui@2.1.9)(happy-dom@17.6.2)(terser@5.48.0)
       vue-tsc:
         specifier: ^2.0.0
         version: 2.2.12(typescript@5.9.3)
@@ -2947,8 +2950,8 @@ packages:
   hachure-fill@0.5.2:
     resolution: {integrity: sha512-3GKBOn+m2LX9iq+JC1064cSFprJY4jL1jCXTcpnfER5HYE2l/4EfWSGzkPa/ZDBmYI0ZOEj5VHV/eKnPGkHuOg==}
 
-  happy-dom@17.6.3:
-    resolution: {integrity: sha512-UVIHeVhxmxedbWPCfgS55Jg2rDfwf2BCKeylcPSqazLz5w3Kri7Q4xdBJubsr/+VUzFLh0VjIvh13RaDA2/Xug==}
+  happy-dom@17.6.2:
+    resolution: {integrity: sha512-b7+pugVePvHpY7w3G8b5pRqNK4st/fox/Y0/8sULUoHogKLiRvbWKPMqT1g2Y6PH0ut2Wr8g4Ln+/00qjMmUaw==}
     engines: {node: '>=20.0.0'}
 
   has-flag@4.0.0:
@@ -6575,7 +6578,7 @@ snapshots:
       vite: 7.3.6(@types/node@26.4.0)(jiti@1.21.7)(terser@5.48.0)(yaml@2.9.0)
       vue: 3.5.39(typescript@5.9.3)
 
-  '@vitest/coverage-v8@2.1.9(vitest@2.1.9(@types/node@26.4.0)(@vitest/ui@2.1.9)(happy-dom@17.6.3)(terser@5.48.0))':
+  '@vitest/coverage-v8@2.1.9(vitest@2.1.9(@types/node@26.4.0)(@vitest/ui@2.1.9)(happy-dom@17.6.2)(terser@5.48.0))':
     dependencies:
       '@ampproject/remapping': 2.3.0
       '@bcoe/v8-coverage': 0.2.3
@@ -6589,7 +6592,7 @@ snapshots:
       std-env: 3.10.0
       test-exclude: 7.0.2
       tinyrainbow: 1.2.0
-      vitest: 2.1.9(@types/node@26.4.0)(@vitest/ui@2.1.9)(happy-dom@17.6.3)(terser@5.48.0)
+      vitest: 2.1.9(@types/node@26.4.0)(@vitest/ui@2.1.9)(happy-dom@17.6.2)(terser@5.48.0)
     transitivePeerDependencies:
       - supports-color
 
@@ -6636,7 +6639,7 @@ snapshots:
       sirv: 3.0.2
       tinyglobby: 0.2.17
       tinyrainbow: 1.2.0
-      vitest: 2.1.9(@types/node@26.4.0)(@vitest/ui@2.1.9)(happy-dom@17.6.3)(terser@5.48.0)
+      vitest: 2.1.9(@types/node@26.4.0)(@vitest/ui@2.1.9)(happy-dom@17.6.2)(terser@5.48.0)
 
   '@vitest/utils@2.1.9':
     dependencies:
@@ -7908,7 +7911,7 @@ snapshots:
 
   hachure-fill@0.5.2: {}
 
-  happy-dom@17.6.3:
+  happy-dom@17.6.2:
     dependencies:
       webidl-conversions: 7.0.0
       whatwg-mimetype: 3.0.0
@@ -10124,7 +10127,7 @@ snapshots:
       terser: 5.48.0
       yaml: 2.9.0
 
-  vitest@2.1.9(@types/node@26.4.0)(@vitest/ui@2.1.9)(happy-dom@17.6.3)(terser@5.48.0):
+  vitest@2.1.9(@types/node@26.4.0)(@vitest/ui@2.1.9)(happy-dom@17.6.2)(terser@5.48.0):
     dependencies:
       '@vitest/expect': 2.1.9
       '@vitest/mocker': 2.1.9(vite@5.4.21(@types/node@26.4.0)(terser@5.48.0))
@@ -10149,7 +10152,7 @@ snapshots:
     optionalDependencies:
       '@types/node': 26.4.0
       '@vitest/ui': 2.1.9(vitest@2.1.9)
-      happy-dom: 17.6.3
+      happy-dom: 17.6.2
     transitivePeerDependencies:
       - less
       - lightningcss

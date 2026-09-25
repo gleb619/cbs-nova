@@ -1,8 +1,7 @@
 package cbs.nova.starter.security;
 
 import java.util.Arrays;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.stereotype.Component;
 import org.springframework.core.env.Environment;
@@ -29,6 +28,7 @@ import lombok.RequiredArgsConstructor;
  * Only fires under the {@code production} profile. Dev / default / explicit-test profiles are never
  * affected; the OIDC guard itself stays opt-in there (see {@code CbsSecurityOidcProperties}).
  */
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class ProductionSecurityPostureValidator implements SmartInitializingSingleton {
@@ -45,9 +45,6 @@ public class ProductionSecurityPostureValidator implements SmartInitializingSing
    * {@code application-production.yml} (and {@code app/compose/auth.yml}).
    */
   static final String OIDC_ISSUER_URI_PROPERTY = "spring.security.oauth2.resourceserver.jwt.issuer-uri";
-
-  private static final Logger LOG = LoggerFactory
-          .getLogger(ProductionSecurityPostureValidator.class);
 
   private final Environment environment;
 
@@ -66,11 +63,11 @@ public class ProductionSecurityPostureValidator implements SmartInitializingSing
               + OIDC_ISSUER_URI_PROPERTY + " (typically via the OIDC_ISSUER_URI env var) to your "
               + "Keycloak/OIDC realm issuer, e.g. https://idp.example/realms/cbs-nova. Refusing to "
               + "boot a misconfigured production deploy.";
-      LOG.error(message);
+      log.error(message);
       throw new IllegalStateException(message);
     }
 
-    LOG.info("production profile active — OIDC issuer URI configured ({})", maskIssuer(issuerUri));
+    log.info("production profile active — OIDC issuer URI configured ({})", maskIssuer(issuerUri));
   }
 
   /**

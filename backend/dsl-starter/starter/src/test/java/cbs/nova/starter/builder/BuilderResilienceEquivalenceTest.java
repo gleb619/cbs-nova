@@ -11,12 +11,15 @@ import cbs.nova.starter.config.properties.DslBuilderClientProperties;
 import cbs.nova.starter.controller.BuilderApiErrorHandler;
 import cbs.nova.starter.exception.BuilderClientBusyException;
 import cbs.nova.starter.exception.BuilderUnavailableException;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import io.github.resilience4j.bulkhead.Bulkhead;
 import io.github.resilience4j.bulkhead.BulkheadConfig;
 import io.github.resilience4j.bulkhead.ThreadPoolBulkhead;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import java.time.Duration;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -118,8 +121,8 @@ class BuilderResilienceEquivalenceTest {
     assertThat(entered.await(5, TimeUnit.SECONDS)).isTrue();
 
     assertThatThrownBy(() -> client.submit(() -> "second").toCompletableFuture().join())
-            .isInstanceOfAny(java.util.concurrent.CompletionException.class,
-                    java.util.concurrent.ExecutionException.class)
+            .isInstanceOfAny(CompletionException.class,
+                    ExecutionException.class)
             .rootCause()
             .isInstanceOf(IllegalStateException.class)
             .hasMessageContaining("bulkhead saturated");
@@ -192,7 +195,7 @@ class BuilderResilienceEquivalenceTest {
     server = MockRestServiceServer.bindTo(builder).build();
     this.queue = queue;
     return new DslBuilderClient(builder.build(), queue, bulkhead, breaker,
-            new BuilderCache(com.github.benmanes.caffeine.cache.Caffeine.newBuilder().build()));
+            new BuilderCache(Caffeine.newBuilder().build()));
   }
 
 }

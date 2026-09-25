@@ -9,12 +9,15 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.GlobalManager;
+import cbs.nova.dsl.Result;
 import cbs.nova.dsl.utils.DefinitionLoader;
 import cbs.nova.starter.builder.DslBuilderClient;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.controller.DslDraftHandler;
 import cbs.nova.starter.controller.DslReloadHandler;
+import cbs.nova.starter.model.CompileModels.CompileResult;
 import cbs.nova.starter.model.VcsModels.CommitResult;
 import cbs.nova.starter.model.VcsModels.DefinitionBundle;
 import cbs.nova.starter.model.VcsModels.DefinitionBundleEntry;
@@ -35,7 +38,11 @@ import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentMatchers;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.http.converter.ByteArrayHttpMessageConverter;
+import org.springframework.http.converter.HttpMessageConverter;
+import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.web.servlet.function.EntityResponse;
 import org.springframework.web.servlet.function.RouterFunctions;
@@ -89,7 +96,7 @@ class DslDefinitionBundleResourceTest {
   void exportReadsHeadByDefault() throws Exception {
     Files.writeString(sourceDir.resolve("A.java"), "class A { head }");
     GlobalManager.globalManager().registerProcess(
-            cbs.nova.dsl.Dsl.process("A").execute(ctx -> cbs.nova.dsl.Result.success("ok"))
+            Dsl.process("A").execute(ctx -> Result.success("ok"))
                     .build());
     when(sourcePathResolver.relativePath("A")).thenReturn(Optional.of("A.java"));
     when(client.vcsShow("A.java", "HEAD")).thenReturn("class A { head }");
@@ -109,7 +116,7 @@ class DslDefinitionBundleResourceTest {
   void exportReadsWorkingTreeWithIncludeDrafts() throws Exception {
     Files.writeString(sourceDir.resolve("A.java"), "class A { draft }");
     GlobalManager.globalManager().registerProcess(
-            cbs.nova.dsl.Dsl.process("A").execute(ctx -> cbs.nova.dsl.Result.success("ok"))
+            Dsl.process("A").execute(ctx -> Result.success("ok"))
                     .build());
     when(sourcePathResolver.relativePath("A")).thenReturn(Optional.of("A.java"));
     when(client.readFile("A.java")).thenReturn(
@@ -132,7 +139,7 @@ class DslDefinitionBundleResourceTest {
     when(client.commit(any())).thenReturn(
             new CommitResult("import123", List.of("dsl/ADsl.java"), 1L, null, null));
     when(client.compile(any())).thenReturn(
-            new cbs.nova.starter.model.CompileModels.CompileResult("s-1", true,
+            new CompileResult("s-1", true,
                     List.of(), List.of(), 1));
     when(client.downloadZip(anyString())).thenReturn(emptyZip());
 
@@ -154,7 +161,7 @@ class DslDefinitionBundleResourceTest {
             new CommitResult("import123", List.of("dsl/ADsl.java", "dsl/BDsl.java"), 1L, null,
                     null));
     when(client.compile(any())).thenReturn(
-            new cbs.nova.starter.model.CompileModels.CompileResult("s-1", true,
+            new CompileResult("s-1", true,
                     List.of(), List.of(), 1));
     when(client.downloadZip(anyString())).thenReturn(emptyZip());
 
@@ -169,7 +176,7 @@ class DslDefinitionBundleResourceTest {
 
     handler.importBundle(postBundle(bundle));
 
-    verify(client).commit(org.mockito.ArgumentMatchers.argThat(
+    verify(client).commit(ArgumentMatchers.argThat(
             r -> r.paths().containsAll(List.of("dsl/ADsl.java", "dsl/BDsl.java"))
                     && r.message().equals("Import bundle")));
   }
@@ -210,7 +217,7 @@ class DslDefinitionBundleResourceTest {
   void noWorkbenchDirCreatedDuringBundleOperations() throws Exception {
     Files.writeString(sourceDir.resolve("A.java"), "class A {}");
     GlobalManager.globalManager().registerProcess(
-            cbs.nova.dsl.Dsl.process("A").execute(ctx -> cbs.nova.dsl.Result.success("ok"))
+            Dsl.process("A").execute(ctx -> Result.success("ok"))
                     .build());
     when(sourcePathResolver.relativePath("A")).thenReturn(Optional.of("A.java"));
     when(client.vcsShow("A.java", "HEAD")).thenReturn("class A {}");
@@ -285,9 +292,9 @@ class DslDefinitionBundleResourceTest {
     return postBundle("/api/dsl/definitions/import?dryRun=true", mapper.writeValueAsString(bundle));
   }
 
-  private static final List<org.springframework.http.converter.HttpMessageConverter<?>> CONVERTERS = List
-          .of(new org.springframework.http.converter.ByteArrayHttpMessageConverter(),
-                  new org.springframework.http.converter.StringHttpMessageConverter());
+  private static final List<HttpMessageConverter<?>> CONVERTERS = List
+          .of(new ByteArrayHttpMessageConverter(),
+                  new StringHttpMessageConverter());
 
   @SuppressWarnings("unchecked")
   private static <T> ObjectProvider<T> providerOfBean(T bean) {

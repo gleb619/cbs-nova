@@ -1,5 +1,6 @@
 package cbs.nova.starter.controller;
 
+import java.util.Objects;
 import lombok.AllArgsConstructor;
 
 import cbs.nova.dsl.GlobalManager;
@@ -371,7 +372,7 @@ public class DslDraftHandler {
 
     List<DraftSummary> changed = allDefinitionNames().stream()
             .map(name -> draftSummaryIfChanged(name).orElse(null))
-            .filter(java.util.Objects::nonNull)
+            .filter(Objects::nonNull)
             .sorted(Comparator.comparing(DraftSummary::name))
             .toList();
 

@@ -5,6 +5,7 @@ import com.github.squigglesql.squigglesql.Selectable;
 import com.github.squigglesql.squigglesql.TableReference;
 import com.github.squigglesql.squigglesql.criteria.Criteria;
 import com.github.squigglesql.squigglesql.literal.Literal;
+import java.time.Instant;
 import java.util.List;
 
 public class DslEventQueryCriteria {
@@ -33,7 +34,7 @@ public class DslEventQueryCriteria {
   }
 
   public static Criteria occurredSince(DslEventTableColumns t, TableReference r,
-          java.time.Instant since) {
+          Instant since) {
     return Criteria.notLess(r.get(t.createdAt()), Literal.of(since));
   }
 

@@ -1,5 +1,5 @@
 import { useClientLogger } from '@cbs/admin-ui-plugin/composables/useClientLogger'
-import { useRouter } from 'nuxt/app'
+import { defineNuxtPlugin, useRouter } from 'nuxt/app'
 
 export default defineNuxtPlugin(() => {
   const log = useClientLogger('runtime')

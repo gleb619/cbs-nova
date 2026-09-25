@@ -31,6 +31,7 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -78,7 +79,7 @@ class DslDraftApprovalGateTest {
     SecurityContextHolder.clearContext();
     if (sourceDir != null && Files.exists(sourceDir)) {
       try (var stream = Files.walk(sourceDir)) {
-        var paths = stream.sorted(java.util.Comparator.reverseOrder()).toList();
+        var paths = stream.sorted(Comparator.reverseOrder()).toList();
         for (Path p : paths) {
           Files.deleteIfExists(p);
         }

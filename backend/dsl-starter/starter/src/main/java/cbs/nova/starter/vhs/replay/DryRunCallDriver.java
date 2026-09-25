@@ -1,6 +1,7 @@
 package cbs.nova.starter.vhs.replay;
 
 import cbs.nova.starter.vhs.TapeEvent;
+import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -24,6 +25,6 @@ public final class DryRunCallDriver implements VhsCallDriver {
             meta != null ? meta.target() : "?",
             meta != null ? meta.operation() : "?",
             callStartEvent.input());
-    return CallResult.success(java.util.Map.of("dryRun", true));
+    return CallResult.success(Map.of("dryRun", true));
   }
 }

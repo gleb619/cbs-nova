@@ -12,6 +12,8 @@
     },
     "./tailwind.config": {
       "import": "./src/tailwind.config.ts",
+      "require": "./src/tailwind.config.ts",
+      "default": "./src/tailwind.config.ts",
       "types": "./src/tailwind.config.ts"
     },
     "./types": {
@@ -71,7 +73,7 @@
     "@vitest/coverage-v8": "^2.1.0",
     "@vue/test-utils": "^2.4.0",
     "autoprefixer": "^10.4.0",
-    "happy-dom": "^17.0.0",
+    "happy-dom": "17.6.2",
     "postcss": "^8.4.0",
     "tailwindcss": "^3.4.0",
     "typescript": "^5.4.0",

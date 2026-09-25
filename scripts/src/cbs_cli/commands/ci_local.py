@@ -95,18 +95,20 @@ class CiLocalCommand:
     """Run the repository CI workflow locally through wrkflw."""
 
     def run(self, args: argparse.Namespace) -> int:
-        _require_wrkflw()
         _require_workflow()
+
+        if args.list:
+            for job_name in list_jobs(WORKFLOW):
+                print(job_name)
+            return 0
+
+        _require_wrkflw()
 
         if args.validate:
             return Runner.run(
                 ["wrkflw", "validate", str(WORKFLOW)],
                 check=False,
             ).returncode
-        if args.list:
-            for job_name in list_jobs(WORKFLOW):
-                print(job_name)
-            return 0
 
         Printer.warn(
             "Run CI jobs serially: concurrent wrkflw runs share /tmp/.tmp* and "

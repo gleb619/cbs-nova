@@ -2,6 +2,7 @@ package cbs.nova.starter.persistence;
 
 import cbs.nova.starter.entity.ChangeRequestEntity;
 import cbs.nova.starter.entity.ChangeRequestEntity.Status;
+import com.github.squigglesql.squigglesql.literal.Literal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
@@ -116,7 +117,7 @@ public class ChangeRequestRepository {
   public long count() {
     var r = T.refer();
     ExtendedSelectQuery query = dslQueries.select()
-            .select(com.github.squigglesql.squigglesql.literal.Literal.unsafe("COUNT(*)"))
+            .selectCount()
             .build();
     Long total = dslQueries.queryForObject(query, Long.class);
     return total != null ? total : 0;

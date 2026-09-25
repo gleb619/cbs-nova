@@ -8,6 +8,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import cbs.nova.dsl.utils.DefinitionLoader;
+import cbs.nova.dsl.vcs.ChangeType;
 import cbs.nova.dsl.vcs.RepoStatus;
 import cbs.nova.starter.builder.DslBuilderClient;
 import cbs.nova.starter.config.properties.DslProperties;
@@ -28,6 +29,9 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.http.converter.ByteArrayHttpMessageConverter;
+import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.web.servlet.function.EntityResponse;
 import org.springframework.web.servlet.function.RouterFunctions;
@@ -86,9 +90,9 @@ class DslDraftMetadataResourceTest {
             null, providerOf(client), null, null, null,
             null, providerOfBean(gitStatusResolver), null);
     RepoStatus status = RepoStatus.of(repoRoot, new LinkedHashMap<>(Map.of(
-            "dsl/LoanDsl.java", cbs.nova.dsl.vcs.ChangeType.MODIFIED,
-            "dsl/Other.java", cbs.nova.dsl.vcs.ChangeType.UNTRACKED,
-            "outside/x.java", cbs.nova.dsl.vcs.ChangeType.UNTRACKED)));
+            "dsl/LoanDsl.java", ChangeType.MODIFIED,
+            "dsl/Other.java", ChangeType.UNTRACKED,
+            "outside/x.java", ChangeType.UNTRACKED)));
     when(gitStatusResolver.status(any())).thenReturn(Optional.of(status));
     when(client.listFiles(isNull())).thenReturn(List.of(
             new FileEntry("dsl/LoanDsl.java", 2L * 1024 * 1024, 0),
@@ -187,9 +191,9 @@ class DslDraftMetadataResourceTest {
   }
 
   @SuppressWarnings("unchecked")
-  private static <T> org.springframework.beans.factory.ObjectProvider<T> providerOfBean(T bean) {
-    org.springframework.beans.factory.ObjectProvider<T> provider = mock(
-            org.springframework.beans.factory.ObjectProvider.class);
+  private static <T> ObjectProvider<T> providerOfBean(T bean) {
+    ObjectProvider<T> provider = mock(
+            ObjectProvider.class);
     when(provider.getIfAvailable()).thenReturn(bean);
     return provider;
   }
@@ -201,9 +205,9 @@ class DslDraftMetadataResourceTest {
 
   private static ServerRequest getRequest(String path) {
     var req = new MockHttpServletRequest("GET", path);
-    req.setAttribute(RouterFunctions.URI_TEMPLATE_VARIABLES_ATTRIBUTE, java.util.Map.of());
+    req.setAttribute(RouterFunctions.URI_TEMPLATE_VARIABLES_ATTRIBUTE, Map.of());
     return ServerRequest.create(req, List.of(
-            new org.springframework.http.converter.ByteArrayHttpMessageConverter(),
-            new org.springframework.http.converter.StringHttpMessageConverter()));
+            new ByteArrayHttpMessageConverter(),
+            new StringHttpMessageConverter()));
   }
 }

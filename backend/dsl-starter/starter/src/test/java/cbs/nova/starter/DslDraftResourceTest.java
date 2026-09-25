@@ -13,6 +13,7 @@ import static org.mockito.Mockito.when;
 
 import cbs.nova.dsl.Dsl;
 import cbs.nova.dsl.GlobalManager;
+import cbs.nova.dsl.Result;
 import cbs.nova.dsl.model.LoadResult;
 import cbs.nova.dsl.utils.DefinitionLoader;
 import cbs.nova.starter.builder.DslBuilderClient;
@@ -20,6 +21,8 @@ import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.controller.DslDraftHandler;
 import cbs.nova.starter.controller.DslReloadHandler;
 import cbs.nova.starter.exception.BuilderApiException;
+import cbs.nova.starter.model.CompileModels.CompileRequest;
+import cbs.nova.starter.model.CompileModels.CompileResult;
 import cbs.nova.starter.model.DslFileModels.FileContentResponse;
 import cbs.nova.starter.model.DslFileModels.FlushResult;
 import cbs.nova.starter.model.DslIntrospectionModels.DefinitionStatus;
@@ -28,6 +31,7 @@ import cbs.nova.starter.model.VcsModels.CommitRequest;
 import cbs.nova.starter.model.VcsModels.CommitResult;
 import cbs.nova.starter.model.VcsModels.DefinitionBundle;
 import cbs.nova.starter.model.VcsModels.DefinitionBundleEntry;
+import cbs.nova.starter.model.VcsModels.DefinitionHistoryEntry;
 import cbs.nova.starter.model.VcsModels.DiscardRequest;
 import cbs.nova.starter.model.VcsModels.DiscardResult;
 import cbs.nova.starter.model.VcsModels.DraftRequest;
@@ -35,6 +39,7 @@ import cbs.nova.starter.model.VcsModels.DraftResponse;
 import cbs.nova.starter.model.VcsModels.DraftSummary;
 import cbs.nova.starter.model.VcsModels.ImportBundleResult;
 import cbs.nova.starter.model.VcsModels.ImportEntryResult;
+import cbs.nova.starter.model.VcsModels.LogEntry;
 import cbs.nova.starter.service.DslDefinitionBundleService;
 import cbs.nova.starter.service.DslDefinitionStatusResolver;
 import cbs.nova.starter.service.DslGitStatusResolver;
@@ -53,6 +58,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.converter.ByteArrayHttpMessageConverter;
+import org.springframework.http.converter.HttpMessageConverter;
+import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.web.servlet.function.EntityResponse;
 import org.springframework.web.servlet.function.RouterFunctions;
@@ -212,14 +220,14 @@ class DslDraftResourceTest {
   void historyIsGitOnlyInBuilderMode() throws Exception {
     when(sourcePathResolver.relativePath("foo")).thenReturn(Optional.of("dsl/FooDsl.java"));
     when(client.vcsLog("dsl/FooDsl.java", 50)).thenReturn(List.of(
-            new cbs.nova.starter.model.VcsModels.LogEntry("abc123", 1L, "alice", "x")));
+            new LogEntry("abc123", 1L, "alice", "x")));
 
     ServerResponse response = handler.history(getRequest("/api/dsl/drafts/foo/history",
             Map.of("name", "foo")));
 
     assertThat(response.statusCode().value()).isEqualTo(200);
     @SuppressWarnings("unchecked")
-    List<cbs.nova.starter.model.VcsModels.DefinitionHistoryEntry> body = (List<cbs.nova.starter.model.VcsModels.DefinitionHistoryEntry>) ((EntityResponse<?>) response)
+    List<DefinitionHistoryEntry> body = (List<DefinitionHistoryEntry>) ((EntityResponse<?>) response)
             .entity();
     assertThat(body).hasSize(1);
     assertThat(body.get(0).timestamp()).isEqualTo("abc123");
@@ -272,8 +280,8 @@ class DslDraftResourceTest {
     Files.writeString(sourceDir.resolve("dsl/FooDsl.java"), "broken");
     registerProcess("foo");
     when(sourcePathResolver.relativePath("foo")).thenReturn(Optional.of("dsl/FooDsl.java"));
-    when(client.compile(any(cbs.nova.starter.model.CompileModels.CompileRequest.class))).thenReturn(
-            new cbs.nova.starter.model.CompileModels.CompileResult("s-1", false,
+    when(client.compile(any(CompileRequest.class))).thenReturn(
+            new CompileResult("s-1", false,
                     List.of(), List.of("bad"), 1));
 
     ServerResponse response = handler.publish(postRequestWithSource(
@@ -386,12 +394,12 @@ class DslDraftResourceTest {
 
   private void registerProcess(String name) {
     GlobalManager.globalManager().registerProcess(
-            Dsl.process(name).execute(ctx -> cbs.nova.dsl.Result.success("ok")).build());
+            Dsl.process(name).execute(ctx -> Result.success("ok")).build());
   }
 
   private void registerFunction(String name) {
     GlobalManager.globalManager().registerFunction(
-            Dsl.function(name).execute(ctx -> cbs.nova.dsl.Result.success("ok")).build());
+            Dsl.function(name).execute(ctx -> Result.success("ok")).build());
   }
 
   private static ServerRequest postRequestWithSource(String path, String name, String source) {
@@ -443,9 +451,9 @@ class DslDraftResourceTest {
     return postBundle("/api/dsl/definitions/import?dryRun=true", mapper.writeValueAsString(bundle));
   }
 
-  private static final List<org.springframework.http.converter.HttpMessageConverter<?>> CONVERTERS = List
-          .of(new org.springframework.http.converter.ByteArrayHttpMessageConverter(),
-                  new org.springframework.http.converter.StringHttpMessageConverter());
+  private static final List<HttpMessageConverter<?>> CONVERTERS = List
+          .of(new ByteArrayHttpMessageConverter(),
+                  new StringHttpMessageConverter());
 
   @SuppressWarnings("unchecked")
   private static <T> ObjectProvider<T> providerOfBean(T bean) {

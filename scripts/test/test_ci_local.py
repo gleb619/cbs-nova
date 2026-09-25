@@ -1,3 +1,5 @@
+import argparse
+import shutil
 import sys
 from pathlib import Path
 
@@ -5,7 +7,7 @@ import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from cbs_cli.commands.ci_local import patch_workflow  # noqa: E402
+from cbs_cli.commands.ci_local import CiLocalCommand, patch_workflow  # noqa: E402
 
 WORKFLOW = """\
 name: CI
@@ -94,4 +96,27 @@ def test_patch_workflow_copies_shared_steps_without_yaml_aliases(tmp_path):
     directory_step = generated["jobs"]["directory-step"]["steps"][2]
     assert root_step is not directory_step
     assert root_step == directory_step
+
+
+def test_list_does_not_require_wrkflw_on_path(tmp_path, monkeypatch, capsys):
+    workflow = write_workflow(tmp_path)
+    monkeypatch.setattr("cbs_cli.commands.ci_local.WORKFLOW", workflow)
+    monkeypatch.setattr(shutil, "which", lambda name: None)
+
+    exit_code = CiLocalCommand().run(argparse.Namespace(list=True, validate=False, jobs=[]))
+
+    assert exit_code == 0
+    output = capsys.readouterr().out.splitlines()
+    assert output == ["root-step", "directory-step", "default-step"]
+
+
+def test_validate_requires_wrkflw_on_path(tmp_path, monkeypatch):
+    workflow = write_workflow(tmp_path)
+    monkeypatch.setattr("cbs_cli.commands.ci_local.WORKFLOW", workflow)
+    monkeypatch.setattr(shutil, "which", lambda name: None)
+
+    with __import__("pytest").raises(SystemExit) as exc_info:
+        CiLocalCommand().run(argparse.Namespace(list=False, validate=True, jobs=[]))
+
+    assert exc_info.value.code == 127
 
