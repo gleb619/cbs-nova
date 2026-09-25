@@ -393,13 +393,6 @@ public final class SourceCompiler {
           String classpath,
           boolean useFileNameSubPackage) {
 
-    public CompileOptions(
-            String buildVersion,
-            String targetPackage,
-            Level logLevel,
-            String classpath) {
-      this(buildVersion, targetPackage, logLevel, classpath, true);
-    }
   }
 
   private record PreprocessedSource(@NonNull String className, @NonNull Path sourceFile,

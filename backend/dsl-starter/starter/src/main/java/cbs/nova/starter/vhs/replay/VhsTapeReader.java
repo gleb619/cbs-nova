@@ -43,7 +43,7 @@ public final class VhsTapeReader {
 
   private final @NonNull ObjectMapper objectMapper;
 
-  //TODO: replace ctor with lomboks one
+  // TODO: replace ctor with lomboks one
   @Deprecated(forRemoval = true)
   public VhsTapeReader() {
     this(JsonMapper.builder().build());

@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # -----------------------------------------------------------------------------
-# DSL Builder: single-stage image on `gradle:9-jdk25`.
+# DSL Builder: single-stage image on `gradle:9.4.1-jdk25`.
 #
 # Runtime must be a JDK + Gradle distribution because the service drives the
 # Gradle Tooling API (`GradleService`) to compile user DSL on demand. A bare
@@ -13,7 +13,7 @@
 # project that resolves `cbs.nova:*` artifacts and the plugin from
 # `mavenLocal()`, so the repository must be seeded at image build time.
 # -----------------------------------------------------------------------------
-FROM gradle:9-jdk25
+FROM gradle:9.4.1-jdk25
 
 WORKDIR /build
 
@@ -38,10 +38,10 @@ ENV GRADLE_OPTS="-Dorg.gradle.internal.http.connectionTimeout=120000 -Dorg.gradl
 # together with the platform and the starter (DSL sources may compile against
 # starter helper model classes), then the service fat jar is built.
 RUN sed -i "/include 'dsl-idea-plugin'/d" dsl-plugins/settings.gradle && \
-    gradle -p dsl-platform publishToMavenLocal -x test --no-daemon --console=plain && \
-    gradle -p dsl-plugins :dsl-gradle-plugin:publishToMavenLocal -x test --no-daemon --console=plain && \
-    gradle -p dsl-starter :starter:publishToMavenLocal -x test -x :starter:generateGitProperties --no-daemon --console=plain && \
-    gradle -p dsl-plugins :dsl-builder:bootJar --no-daemon --console=plain
+    gradle -p dsl-platform publishToMavenLocal -x test --no-daemon --console=plain --no-configuration-cache && \
+    gradle -p dsl-plugins :dsl-gradle-plugin:publishToMavenLocal -x test --no-daemon --console=plain --no-configuration-cache && \
+    gradle -p dsl-starter :starter:publishToMavenLocal -x test -x :starter:generateGitProperties --no-daemon --console=plain --no-configuration-cache && \
+    gradle -p dsl-plugins :dsl-builder:bootJar --no-daemon --console=plain --no-configuration-cache
 
 # Copy the fat jar to a stable path and clean Gradle caches to slim the image.
 # Spring Boot's bootJar emits `<artifact>-<version>.jar` (fat, runnable) plus a

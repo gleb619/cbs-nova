@@ -85,16 +85,18 @@ public record CbsDslManifestProperties(
     private final ObjectMode objectMode;
   }
 
-  //TODO: redo to only one ctor, that accept a ConstructorArgs only, remove others
+  // TODO: redo to only one ctor, that accept a ConstructorArgs only, remove others
   public CbsDslManifestProperties(boolean enabled, String path) {
     this(enabled, path, null, null, null, null, null);
   }
 
+  //TODO: replace ctor with lomboks one
   public CbsDslManifestProperties(boolean enabled, String path,
           Map<String, Boolean> flags, Map<String, RateClass> rateClasses) {
     this(enabled, path, flags, rateClasses, null, null, null);
   }
 
+  //TODO: replace ctor with lomboks one
   public CbsDslManifestProperties(boolean enabled, String path,
           Map<String, Boolean> flags, Map<String, RateClass> rateClasses,
           PostCheck postCheck) {

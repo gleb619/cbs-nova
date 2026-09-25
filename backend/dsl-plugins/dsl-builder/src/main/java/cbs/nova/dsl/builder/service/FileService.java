@@ -18,12 +18,14 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class FileService {
 
   private final DslBuilderProperties properties;
@@ -34,16 +36,6 @@ public class FileService {
 
   private final ReentrantLock flushLock = new ReentrantLock();
   private ScheduledExecutorService flushExecutor;
-
-  public FileService(DslBuilderProperties properties, FileRepository repository,
-          FileBuffer buffer, FileBulkhead bulkhead,
-          ObjectProvider<GitStatusService> gitStatusService) {
-    this.properties = properties;
-    this.repository = repository;
-    this.buffer = buffer;
-    this.bulkhead = bulkhead;
-    this.gitStatusService = gitStatusService;
-  }
 
   @PostConstruct
   public void start() {

@@ -1,6 +1,7 @@
 package cbs.nova.dsl.gradle;
 
 import cbs.nova.dsl.gradle.tooling.DslModelBuilderService;
+import lombok.RequiredArgsConstructor;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.plugins.JavaPlugin;
@@ -17,14 +18,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+@RequiredArgsConstructor(onConstructor_ = @__(@Inject))
 public class DslCompilerPlugin implements Plugin<Project> {
 
   private final ToolingModelBuilderRegistry registry;
-
-  @Inject
-  public DslCompilerPlugin(ToolingModelBuilderRegistry registry) {
-    this.registry = registry;
-  }
 
   @Override
   public void apply(Project project) {

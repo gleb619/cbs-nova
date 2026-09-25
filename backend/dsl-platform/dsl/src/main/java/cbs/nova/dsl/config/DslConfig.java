@@ -153,7 +153,8 @@ public class DslConfig implements SingletonSupport {
             new TransactionManager(new DefaultTransactionRegistry(),
                     transactionRunner(compensationRegistry)),
             new HelperManager(new DefaultHelperRegistry(),
-                    helperRunner()),
+                    helperRunner(),
+                objectGuard().get()),
             generatedClassRegistry(),
             compensationRegistry,
             explainResourceRegistry());

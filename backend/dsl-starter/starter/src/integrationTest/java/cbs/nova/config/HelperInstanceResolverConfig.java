@@ -37,7 +37,6 @@ import cbs.nova.starter.helper.UuidV7Helper;
 import cbs.nova.starter.helper.model.FileLatchIn;
 import cbs.nova.starter.helper.model.FileLatchOut;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import io.temporal.workflow.Workflow;
 import java.lang.reflect.InvocationTargetException;
 import java.net.http.HttpClient;
 import java.time.Duration;
@@ -68,15 +67,13 @@ public class HelperInstanceResolverConfig {
           @Override
           public @NonNull Result<FileLatchOut> execute(@NonNull Context<FileLatchIn> ctx) {
             LATCH_ENTERED.countDown();
-            if (canRun()) {
-              Workflow.sleep(Duration.ofSeconds(10));
-            } else {
-              try {
-                Thread.sleep(Duration.ofSeconds(10).toMillis());
-              } catch (InterruptedException ex) {
-                Thread.currentThread().interrupt();
-              }
-
+            // The helper runs on a non-workflow thread in these integration tests, so do not
+            // call Workflow.sleep; a plain Thread.sleep keeps the first execution open long
+            // enough for the reload/assertions.
+            try {
+              Thread.sleep(Duration.ofSeconds(10).toMillis());
+            } catch (InterruptedException ex) {
+              Thread.currentThread().interrupt();
             }
 
             return Result.success(new FileLatchOut(ctx.body().payload()));
@@ -161,15 +158,6 @@ public class HelperInstanceResolverConfig {
         throw new IllegalStateException("Cannot instantiate helper " + helperClass.getName());
       }
     };
-  }
-
-  private boolean canRun() {
-    try {
-      Workflow.getInfo();
-      return true;
-    } catch (Throwable t) {
-      return false;
-    }
   }
 
 }

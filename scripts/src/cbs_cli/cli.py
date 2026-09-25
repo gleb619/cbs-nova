@@ -2,6 +2,7 @@ import argparse
 import sys
 
 from .commands.cve_gate import CveGateCommand
+from .commands.ci_local import CiLocalCommand
 from .commands.dev import DevCommand
 from .commands.doctor import DoctorCommand
 from .commands.format import FormatCommand
@@ -110,6 +111,14 @@ class CLI:
                        help="backend base URL (fetches /api/dsl/helpers, falls back to objects/search)")
         p.add_argument("--out", default="docs/helpers.md", help="output markdown path")
         p.set_defaults(handler=HelpersDocCommand)
+
+        # Run CI workflow locally via wrkflw (works around the empty-tmp-dir bug).
+        p = subparsers.add_parser(
+            "ci-local",
+            help="Run .github/workflows/ci.yml locally via `wrkflw` (works around its empty-tmp-dir bug)",
+        )
+        CiLocalCommand.register(p)
+        p.set_defaults(handler=CiLocalCommand)
 
     def run(self) -> int:
         args = self.parser.parse_args()

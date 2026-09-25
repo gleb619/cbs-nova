@@ -46,7 +46,7 @@ public class HttpCallHelper implements Executable<HttpCallIn, HttpCallOut> {
    * {@code cbs.dsl.helper.http-call} bound properties instead. The per-policy client snapshot is
    * built eagerly here (post-delegation) so legacy call sites keep their eager-snapshot semantics.
    */
-  //TODO: replace ctor with lomboks one
+  // TODO: replace ctor with lomboks one
   @Deprecated(forRemoval = true)
   public HttpCallHelper(HttpClient client, CbsNovaLoggingProperties loggingProperties) {
     this(client, loggingProperties, HttpCallProperties.permissive());
@@ -293,9 +293,9 @@ public class HttpCallHelper implements Executable<HttpCallIn, HttpCallOut> {
   }
 
   /**
-   * JDK HttpClient is configured once at build time and exposes no public config getters
-   * (connect timeout, executor, SSL context, etc.), so we cannot derive per-policy variants from
-   * the injected client. Instead we build one client per RedirectPolicy up front and cache the
+   * JDK HttpClient is configured once at build time and exposes no public config getters (connect
+   * timeout, executor, SSL context, etc.), so we cannot derive per-policy variants from the
+   * injected client. Instead we build one client per RedirectPolicy up front and cache the
    * immutable snapshot in {@code clientsByPolicy}. The injected {@code client} is reused for
    * {@code NEVER} since the JDK default redirect policy is NEVER — building a second identical
    * client would just waste resources.
@@ -303,8 +303,8 @@ public class HttpCallHelper implements Executable<HttpCallIn, HttpCallOut> {
    * <p>
    * For the two-argument convenience ctor the snapshot is built eagerly post-delegation; for the
    * Lombok-generated three-argument ctor (the Spring path) it is built lazily on first access via
-   * {@link #clientsByPolicy()}. Both paths share the same immutable result, so HTTP client
-   * policy behaviour is unchanged.
+   * {@link #clientsByPolicy()}. Both paths share the same immutable result, so HTTP client policy
+   * behaviour is unchanged.
    */
   private static Map<RedirectPolicy, HttpClient> buildClientsByPolicy(HttpClient client) {
     Map<RedirectPolicy, HttpClient> map = new EnumMap<>(RedirectPolicy.class);

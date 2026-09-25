@@ -49,7 +49,7 @@ public class RecordingPreparedStatement extends RecordingStatement implements Pr
     private final ExternalCallRecorder externalCallRecorder;
   }
 
-  //TODO: redo to only one ctor, that accept a ConstructorArgs only
+  // TODO: redo to only one ctor, that accept a ConstructorArgs only
   public RecordingPreparedStatement(@NonNull PreparedStatement delegate, @Nullable String sql,
           @NonNull String target, @NonNull ExternalCallRecorder externalCallRecorder) {
     this(new ConstructorArgs(delegate, sql, target, externalCallRecorder));

@@ -31,12 +31,10 @@ abstract class FindLombokCandidatesTask extends DefaultTask {
     getSourceFiles().each { File srcFile ->
       String text = srcFile.text
 
-      // Skip files that already use Lombok constructor annotations.
       if (text.contains('@RequiredArgsConstructor') || text.contains('@AllArgsConstructor')) {
         return
       }
 
-      // Determine top-level type name and kind from the public class/record declaration.
       def typeMatcher = Pattern.compile(/public\s+(?:final\s+)?(class|record)\s+(\w+)/).matcher(text)
       if (!typeMatcher.find()) {
         return
@@ -45,8 +43,6 @@ abstract class FindLombokCandidatesTask extends DefaultTask {
       String className = typeMatcher.group(2)
 
       if (isRecord) {
-        // Records with a delegating overload this(...) are the junk constructors we can collapse
-        // to a static factory once the canonical compact constructor is kept.
         def delegatingCtor = Pattern.compile(/(?s)public\s+/.concat(className).concat(/\s*\([^)]*\)\s*\{\s*this\s*\([^)]*\);\s*\}/)).matcher(text)
         if (delegatingCtor.find()) {
           def relativePath = rootPath.relativize(srcFile.toPath()).toString()
@@ -56,7 +52,6 @@ abstract class FindLombokCandidatesTask extends DefaultTask {
         return
       }
 
-      // Collect private final instance fields (exclude static by not matching it between).
       def finalFields = []
       def fieldMatcher = Pattern.compile(/(?m)^\s*private\s+final\s+([A-Za-z0-9_<>\[\].?, ]+)\s+([A-Za-z0-9_]+)\s*;/).matcher(text)
       while (fieldMatcher.find()) {
@@ -65,7 +60,6 @@ abstract class FindLombokCandidatesTask extends DefaultTask {
 
       if (finalFields.isEmpty()) return
 
-      // 1. Canonical all-args constructor: assigns every collected final field, optional super(...) call first.
       StringBuilder canonicalPatternBuilder = new StringBuilder()
       canonicalPatternBuilder.append(/(?s)public\s+/).append(className).append(/\s*\([^)]*\)\s*\{/).append(/(?:\s*super\s*\([^)]*\)\s*;)?/)
       finalFields.each { fieldName ->
@@ -74,11 +68,24 @@ abstract class FindLombokCandidatesTask extends DefaultTask {
       canonicalPatternBuilder.append(/\s*\}/)
       boolean hasCanonicalCtor = Pattern.compile(canonicalPatternBuilder.toString()).matcher(text).find()
 
-      // 2. Other junk constructors: any public ctor that delegates via this(...) or calls super(...).
       String junkCtorPattern = /(?s)public\s+/.concat(className).concat(/\s*\([^)]*\)\s*\{[^}]*\b(this|super)\s*\([^)]*\)[^}]*\}/)
       boolean hasJunkCtor = Pattern.compile(junkCtorPattern).matcher(text).find()
 
-      if (hasCanonicalCtor || hasJunkCtor) {
+      boolean hasSuperCall = Pattern.compile(/(?s)public\s+/.concat(className).concat(/\s*\([^)]*\)\s*\{[^}]*\bsuper\s*\(/)).matcher(text).find()
+
+      String ctorBodyPattern = /(?s)public\s+/.concat(className).concat(/\s*\([^)]*\)\s*\{([^}]*)\}/)
+      def ctorMatcher = Pattern.compile(ctorBodyPattern.toString()).matcher(text)
+      boolean hasDerivedAssignment = false
+      while (ctorMatcher.find() && !hasDerivedAssignment) {
+        String body = ctorMatcher.group(1)
+        String stripped = body.replaceAll(/\bsuper\s*\([^)]*\)/, '')
+                .replaceAll(/\s*(?:this\.)?\w+\s*=\s*\w+\s*;/, '')
+        if (stripped.find(/[^\s;{}]/)) {
+          hasDerivedAssignment = true
+        }
+      }
+
+      if ((hasCanonicalCtor || hasJunkCtor) && !hasSuperCall && !hasDerivedAssignment) {
         def relativePath = rootPath.relativize(srcFile.toPath()).toString()
         println "Candidate found: ${relativePath}"
         candidateCount++

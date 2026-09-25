@@ -10,27 +10,21 @@ import cbs.nova.dsl.registry.HelperRegistry;
 import cbs.nova.dsl.runner.HelperRunner;
 import cbs.nova.dsl.security.ObjectGuard;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Supplier;
+import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 
+@RequiredArgsConstructor
 public final class HelperManager implements HelperRegistrar {
 
+  @NonNull
   private final HelperRegistry registry;
+  @NonNull
   private final HelperRunner runner;
+  @NonNull
   private final ObjectGuard objectGuard;
 
-  public HelperManager(@NonNull HelperRegistry registry, @NonNull HelperRunner runner) {
-    this(registry, runner, DslConfig.dslConfig().objectGuard().get());
-  }
-
-  public HelperManager(@NonNull HelperRegistry registry, @NonNull HelperRunner runner,
-          @NonNull ObjectGuard objectGuard) {
-    this.registry = Objects.requireNonNull(registry, "registry required");
-    this.runner = Objects.requireNonNull(runner, "runner required");
-    this.objectGuard = Objects.requireNonNull(objectGuard, "objectGuard required");
-  }
 
   @Override
   public void register(@NonNull String name, @NonNull Executable<?, ?> helper) {

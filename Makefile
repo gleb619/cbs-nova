@@ -169,6 +169,12 @@ lint-frontend: ## Frontend lint (Biome)
 lint-kanban: ## Check docs/kanban.md (unique IDs, valid Status, resolvable Plan File, column count); --base <ref> = append-only guard
 	@python3 $(SCRIPT) lint-kanban
 
+JOB ?=
+
+.PHONY: ci-local
+ci-local: ## Run .github/workflows/ci.yml locally via wrkflw; JOB="lint scripts-tests" selects jobs
+	@python3 $(SCRIPT) ci-local $(JOB)
+
 .PHONY: fmt
 fmt: ## Apply formatting everywhere (spotlessApply + pnpm format); fixes files, always exits 0
 	@python3 $(SCRIPT) fmt

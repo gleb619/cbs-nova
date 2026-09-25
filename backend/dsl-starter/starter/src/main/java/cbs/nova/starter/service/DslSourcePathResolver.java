@@ -43,7 +43,7 @@ public class DslSourcePathResolver {
   private final DslProperties dslProperties;
   private final Function<String, Optional<String>> filenameLookup;
 
-  //TODO: replace ctor with lomboks one
+  // TODO: replace ctor with lomboks one
   @Deprecated(forRemoval = true)
   @Autowired
   public DslSourcePathResolver(DslProperties dslProperties) {
@@ -86,8 +86,8 @@ public class DslSourcePathResolver {
 
   /**
    * Returns the stored filename lookup, defaulting to {@link GlobalManager#findFilename(String)}
-   * when the lookup is {@code null}. Preserves the null-tolerance the original explicit
-   * constructor applied at construction time.
+   * when the lookup is {@code null}. Preserves the null-tolerance the original explicit constructor
+   * applied at construction time.
    */
   private Function<String, Optional<String>> effectiveLookup() {
     return filenameLookup == null

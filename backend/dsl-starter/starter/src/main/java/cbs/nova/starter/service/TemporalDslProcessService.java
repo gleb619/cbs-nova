@@ -81,7 +81,7 @@ public class TemporalDslProcessService {
   private final ObjectProvider<TransactionTemplate> transactionTemplateProvider;
   private @Nullable ExecutionStatusEventPublisher statusPublisher;
 
-  //TODO: replace ctor with lomboks one
+  // TODO: replace ctor with lomboks one
   @Deprecated(forRemoval = true)
   public static TemporalDslProcessService withDefaults(
           DslRunRepository runRepository, ObjectMapper objectMapper,

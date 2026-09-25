@@ -49,6 +49,8 @@ node_modules
 /docs/plans/*
 /.kimi/plans/*
 /plans/*
+# Generated workflow copy used by scripts/ci-local.sh (wrkflw local CI runner).
+/.wrkflw-local/
 .blackboxcli/
 # /backend/.codegraph/ and /frontend/.codegraph/ are ignored below
 /backend/.codegraph/

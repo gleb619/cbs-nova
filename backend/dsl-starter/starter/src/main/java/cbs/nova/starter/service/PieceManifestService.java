@@ -85,7 +85,7 @@ public class PieceManifestService {
   private final AntPathMatcher pathMatcher = new AntPathMatcher();
   private volatile Snapshot snapshot;
 
-  //TODO: replace ctor with lomboks one
+  // TODO: replace ctor with lomboks one
   @Deprecated(forRemoval = true)
   public PieceManifestService(CbsDslManifestProperties properties,
           ResourceLoader resourceLoader,
