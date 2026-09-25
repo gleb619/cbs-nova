@@ -185,7 +185,7 @@ packages:
     resolution: {integrity: sha512-jigsZK+sMF/cuiB7sERuo9V7N9jx+dhmHHnQyDSVdpZwVutaBu7WvNYqMDLSgFgfB30n452TP3vjDAvFC973mA==}
 
   '@cbs/admin-ui-plugin@file:local-registry/cbs-admin-ui-plugin-0.0.0.tgz':
-    resolution: {integrity: sha512-hO8dctno4qpe5bbDk6/I4xCM+ftSySWCQIzIPFmJoDFypL3RrheML4ofLQCV2T3+ExWI85C8Hc7hguNtvFqjIA==, tarball: file:local-registry/cbs-admin-ui-plugin-0.0.0.tgz}
+    resolution: {integrity: sha512-XZsJwNX8JAadBwNq/icSS5PcyCTe+eX/9zhCEEse7JkmxroWT5YpKAHlZnbg1yeTPNgxCLQMv9kDG/PzxKEUqA==, tarball: file:local-registry/cbs-admin-ui-plugin-0.0.0.tgz}
     version: 0.0.0
 
   '@cbs/components@file:local-registry/cbs-components-0.0.0.tgz':

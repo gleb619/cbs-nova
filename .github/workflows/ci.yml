@@ -125,11 +125,13 @@ jobs:
         run: pnpm pack:local
 
       # pack:local rewrites app/ui/package.json file: refs; re-install to
-      # resolve the freshly packed tarballs. CI runners are ephemeral, so
+      # resolve the freshly packed tarballs. --force re-extracts them: pnpm
+      # otherwise keeps the previous same-version file: extraction, even
+      # though the tarball contents changed. CI runners are ephemeral, so
       # the mutated package.json never leaks into a cache.
       - name: Install operator-portal dependencies
         working-directory: app/ui
-        run: pnpm install
+        run: pnpm install --force
 
       - name: Test operator-portal
         working-directory: app/ui
