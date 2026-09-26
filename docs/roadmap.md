@@ -11,10 +11,22 @@ Status vocabulary matches the kanban board (`Backlog` / `Ready` / `In Progress` 
 
 ## Epic 1 — BFF ↔ API contract & communication
 
+**Status: Done.**
+
+**Shipped summary.** The OpenAPI document (`docs/openapi.json`) is the single HTTP surface
+source of truth. `frontend/admin-ui-plugin/scripts/generateBffRoutes.ts` (T561) generates typed
+BFF proxy stubs and `useBffApi` from the spec; `module.ts` mounts them via the generated
+manifest, leaving only non-trivial routes (auth, export/import, SSE, catch-all file paths) as
+hand-written exclusions; generated-route drift is caught by `pnpm check:bff-routes`. The BFF header allowlist is built
+once in `server/utils/backendHeaders.ts` (T430) and configurable via `runtimeConfig.backendForwardedHeaders`
+(T562). A unified `ErrorResponse` envelope is used across run/preview/explain/executions/drafts.
+Execution status and dry-run logs stream through SSE endpoints (`ExecutionSseController`,
+`DryRunLogSseController`) consumed by `useExecutionEvents` / `useDryRunLogStream`. List endpoints
+return a `PageResponse<>{items,total,offset,limit}` envelope.
+
 **Problem.** The BFF proxies Spring Boot through hand-written, per-path Nitro files with a manual
 header allowlist. Every new backend DSL route needs a matching proxy route added by hand
-(CLAUDE.md caveat). There is no shared schema, no generated client, and drift is caught only by
-the T335 contract tests after the fact.
+(CLAUDE.md caveat). There is no shared schema, no generated client, and drift is caught by generated-type and generated-route checks after the fact.
 
 **Target state.** One source of truth for the HTTP surface; the BFF layer is mostly generated or
 schema-driven; contract drift fails the build.
@@ -34,6 +46,20 @@ schema-driven; contract drift fails the build.
 ---
 
 ## Epic 2 — Security & access management
+
+**Status: Done (supply-chain CI wiring deferred).**
+
+**Shipped summary.** Role model (`Role`, `RoleResolver`) and `RbacAuthorizationFilter` enforce
+per-route RBAC (T408). A `production` Spring profile sets secure defaults for API key, rate
+limiting and OIDC, with a fail-fast posture validator (T413). Rotatable API keys are managed via
+`ApiKeyAdminHandler` / `JdbcApiKeyRepository` (T410). Audit logging persists to `dsl_audit` through
+`DslAuditService`. Rate limiting moved from in-memory to a shared store with `RedisRateLimitStore`,
+keeping `InMemoryRateLimitStore` as the dev fallback. BFF OIDC session hardening (T416) adds
+idle/absolute timeouts, rotate-on-refresh, and reuse detection. DSL execution sandboxing is built
+once as the object-level piece guard (`ManifestObjectGuard`, T552).
+
+**Deferred.** SBOM artifacts (`:cyclonedxBom`) and the CVE gate (`make cve-scan` / T414) exist as
+local `Makefile` targets but are **not yet wired into the default CI workflow** (`.github/workflows/ci.yml`).
 
 **Problem.** Three independent opt-in guards (API-key filter, in-memory rate limiter, OIDC
 resource-server), all off by default. No authorization model beyond "authenticated": any valid JWT
@@ -60,6 +86,16 @@ tamper-evident audit log; horizontally-safe rate limiting.
 
 ## Epic 3 — Events, notifications & webhooks
 
+**Status: Done.**
+
+**Shipped summary.** `DomainEvent` model, `DomainEventPublisher` outbox on `dsl_events`, and listener
+plumbing ship the core event store. The notification rules engine (T565) matches events to actions
+and dispatches webhook (HMAC-signed), Slack, PagerDuty and email sinks, recording outcomes in
+`dsl_notification_rule_firing`. Webhook delivery outcomes are queryable. MQ events are supported via
+`MqDomainEventSink`. The Activity page and Notifications page consume the event surface. The Temporal
+signal/query bridge (T567) is exposed through `DslSignalsHandler` / `DslSignalService` and wired in the
+execution detail UI.
+
 **Problem.** The engine is request/response only. Nothing can subscribe to "run finished",
 "run failed", "draft published", "schedule fired". `useStalePolling` exists precisely because there
 is no push channel. Operators learn about failures by looking.
@@ -81,6 +117,21 @@ subscribe to; pluggable notification sinks.
 ---
 
 ## Epic 4 — Observability, diagnostics & operability
+
+**Status: Done (latency SLO histograms / burn-rate alerts deferred).**
+
+**Shipped summary.** Grafana dashboard `dsl-overview.json` is provisioned through
+`app/compose/grafana` (T481). End-to-end tracing is default-on in the compose stack and propagated
+via `traceparent` / `OpenTelemetryContextPropagator`; `DistributedTracingDsl` exercises it. Compile
+diagnostics are persisted (not just inline) via `CompileDiagnosticRecordRepository` and surfaced in
+the Workbench. SLO definitions and run-success error budgets live in `docs/slo.md`, with burn-rate
+alerts in `app/compose/alerts.yml` (T490). A unified `DslMaintenanceService` runs retention,
+reconciliation and audit-log maintenance tasks. `rid` / `correlation_id` flows through backend and
+BFF logs (T384).
+
+**Deferred.** Percentile histograms on `dsl.run.duration` and `dsl.preview.duration` timers (T403) are
+not enabled, so p95 latency burn-rate alerts for SLO 2 and SLO 3 remain deferred; the current alerts
+use mean/threshold approximations.
 
 **Problem.** Metrics (Micrometer), tracing (OTel, opt-in), and health checks exist but are
 disconnected. No dashboards ship. Tracing is no-op unless an OTLP endpoint is set. Compile
@@ -104,6 +155,23 @@ failures self-describing.
 ---
 
 ## Epic 5 — Authoring experience & DSL lifecycle
+
+**Status: Done (true version history, cookbook, content hash deferred).**
+
+**Shipped summary.** Drafts are persisted server-side with git-backed metadata (`DslDraftHandler`,
+`DslDraftGitResourceTest`). The two-person publish approval gate (T568) is implemented via
+`ChangeRequestHandler` / `ChangeRequestService` and surfaced on the Approvals page. Environment
+promotion (T569) reuses the bundle export/import machinery and is exposed on the Promote page.
+Author-defined test cases are stored and run through `DslDefinitionTestService` / `DslDefinitionTestHandler`.
+Workbench editor depth includes schema-aware helper completion (`useMonacoHelperCompletion`, T362),
+construct scaffold completion (`useMonacoConstructCompletion`, T510), helper insert-at-cursor (T400),
+and inline compile diagnostics (T396).
+
+**Deferred.**
+- First-class construct version history with diff/rollback beyond descriptor-identity attribution (T492
+  phase 1 shipped the identity hash; full version history is open).
+- In-editor DSL helpers cookbook (T334) is not implemented.
+- True content hash at publish/reload (T648) remains in Backlog.
 
 **Problem.** DSL edits go through drafts → publish → `reload`, but versioning is coarse ("every
 instance runs on the version it started with" is a runtime guarantee, not an authoring feature).
@@ -129,8 +197,20 @@ change-management workflow.
 
 ## Epic 6 — Execution authorization manifest ("piece guard")
 
+**Status: Done.**
+
+**Shipped summary.** The piece manifest is the single declarative contract for guarded "pieces"
+(`docs/vhs-manifest.md`, `docs/schema/piece-manifest.schema.json`, sample
+`app/dsl/src/main/resources/piece-manifest.yaml`). `PieceManifestService` (T548) loads and validates
+the YAML at startup and supports hot reload. `PieceGuardFilter` (T549) enforces `preCheck` roles,
+feature flags and rate classes on API pieces. `PieceCheckPipeline` (T550) runs async `postCheck`
+audit/notify/invariant hooks. The frontend reads the read-only guard verdicts through
+`useManifestGuard` and the BFF `GET /api/v1/dsl/manifest/guard` endpoint (T551). Object-level guard
+binding (T552) subsumes Epic 2's DSL sandboxing, and a coverage test (`PieceManifestCoverageTest`,
+T553) guards against silently unguarded mutating routes.
+
 **Problem.** Authorization and safety checks around what can be executed — a UI button, an API
-route, a DSL object/helper — are hardcoded per call site (route annotations, ad-hoc `if` guards).
+call, a DSL object/helper — are hardcoded per call site (route annotations, ad-hoc `if` guards).
 There is no single declarative source of truth for "what is this piece, who may trigger it, what
 must hold before/after it runs." Epic 2's capability allowlist for DSL execution sandboxing has
 the same shape and would otherwise be built a third, divergent way.
@@ -155,6 +235,20 @@ subset to disable/hide affected controls as defense-in-depth (never the sole gat
 
 ## Epic 7 — VHS: execution recording & replay
 
+**Status: Done (CI perf gate deferred).**
+
+**Shipped summary.** Versioned jsonl tape format is documented in `docs/vhs-tape-format.md`. The
+recorder (`VhsRecorder`, `VhsTapeWriter`, T555) captures execution events into a tape sink.
+Record-time scrubbing is implemented via `VhsScrubber` with JSON-path redaction. The replay engine
+(`VhsReplayEngine`, `VhsTapeReader`, T557) supports exact and load modes with a safe-default target
+policy. Replay-time faking swaps real IDs/secrets via `VhsReplayFaker` / `SyntheticIdReplayFaker`.
+Tape management endpoints and the `vhs.py` CLI support list/download/delete/replay. Load-test API and
+CLI (`VhsLoadTest`, `scripts/src/cbs_cli/commands/vhs.py`) report latency percentiles and error
+rates, publishing Micrometer metrics.
+
+**Deferred.** CI perf gate with enforced p99 / error-rate thresholds is intentionally left open per
+`docs/vhs-load-test.md`.
+
 **Problem.** There is no way to capture a real execution (a run, an API call sequence) and play it
 back later — for exact bug reproduction, for load testing, or for regression coverage — without
 depending on the original production data still existing.
@@ -177,15 +271,43 @@ fields swapped for synthetic equivalents (repro/load-test without real data).
 
 ---
 
-## Sequencing notes
+## Next horizon
 
-- **Epic 1** unblocks 3, 4, and 5 (shared schema + error envelope + correlation plumbing), do it first.
-- **Epic 2** authorization roles are a prerequisite for the Epic 5 approval gate and the Epic 3
-  notification-rule admin surface — land the role model early even if enforcement rolls out per-route.
-- **Epic 3** and **Epic 4** share the correlation-id / outbox plumbing; build the event store once.
-- **Epic 5** is the largest surface area but the least blocking for other teams — it can run in
-  parallel once Epic 1 lands.
+Candidate post-Epic-7 directions. Each is sketched only at a high level; no fake detail.
+
+1. **CI production pipeline.** Wire integration tests with service containers (T646), Gradle SBOM / CVE
+   artifacts, and the VHS load-test perf gate into the default CI workflow so every merge is validated
+   against a realistic stack.
+
+2. **Runtime control-plane UX.** Polish signal/query interactions, run cancellation flows, and
+   execution-timeline deep-linking so operators can drive live workflows without leaving the admin UI.
+
+3. **Authoring fidelity.** Land the helpers cookbook (T334), true DSL content hash at publish/reload
+   (T648), and first-class construct version history with diff/rollback to close the remaining Epic 5
+   gaps.
+
+4. **Operator runbooks as code.** Expand runbook coverage for webhook delivery triage, VHS tape
+   lifecycle, and diagnostics recipes, backed by verified curl examples and pinned to the live API
+   shapes.
+
+5. **Manifest-driven everything.** Finish migrating the remaining hardcoded RBAC route rules and
+   ad-hoc audit calls into manifest pieces, then enable object-level enforcement by default.
+
+---
+
+## Sequencing notes (historical)
+
+These notes record the original dependency order that shaped delivery. With all seven epics now
+shipped (most workstreams complete), they are retained as rationale rather than an active plan.
+
+- **Epic 1** unblocked 3, 4, and 5 (shared schema + error envelope + correlation plumbing); it landed first.
+- **Epic 2** authorization roles were a prerequisite for the Epic 5 approval gate and the Epic 3
+  notification-rule admin surface — the role model landed early, with enforcement rolling out per-route.
+- **Epic 3** and **Epic 4** share the correlation-id / outbox plumbing; the event store and maintenance
+  service were built once.
+- **Epic 5** was the largest surface area but the least blocking for other teams — it ran in parallel
+  once Epic 1 landed.
 - **Epic 6** depends on Epic 2's role model for `preCheck` role evaluation, and subsumes Epic 2's
-  DSL execution sandboxing workstream — build the allowlist once, inside the manifest engine.
-- **Epic 7** depends on Epic 3's event/outbox plumbing for the recorder hook point; independent of
-  Epic 6 otherwise, can run in parallel.
+  DSL execution sandboxing workstream — the allowlist was built once, inside the manifest engine.
+- **Epic 7** depends on Epic 3's event/outbox plumbing for the recorder hook point; it ran in parallel
+  with Epic 6 and is independent otherwise.
