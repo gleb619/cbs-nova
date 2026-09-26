@@ -96,18 +96,62 @@ describe('PlainConstructList', () => {
     expect(unselected.classes()).not.toContain('bg-gray-800')
   })
 
-  it('applies status chip styles for each status', () => {
+  it('renders a status icon for each construct', () => {
     const wrapper = mount(PlainConstructList, { props: { constructs, selectedName: null } })
 
-    const badges = wrapper.findAll('span.rounded-full')
-    expect(badges.some((b) => b.classes().includes('bg-green-100'))).toBe(true)
-    expect(badges.some((b) => b.classes().includes('bg-red-100'))).toBe(true)
-    expect(badges.some((b) => b.classes().includes('bg-blue-100'))).toBe(true)
-    expect(badges.some((b) => b.classes().includes('bg-gray-200'))).toBe(true)
-    expect(badges.some((b) => b.classes().includes('bg-yellow-100'))).toBe(true)
-    expect(badges.some((b) => b.classes().includes('bg-emerald-100'))).toBe(true)
-    expect(badges.some((b) => b.classes().includes('bg-orange-100'))).toBe(true)
-    expect(badges.some((b) => b.classes().includes('bg-red-200'))).toBe(true)
+    for (const c of constructs) {
+      const icon = wrapper.find(`[data-testid="construct-status-icon-${c.status}"]`)
+      expect(icon.exists(), `icon for ${c.status}`).toBe(true)
+      expect(icon.attributes('aria-label')).toBe(`Status: ${c.status}`)
+    }
+  })
+
+  it('colors the construct name by its status', () => {
+    const wrapper = mount(PlainConstructList, { props: { constructs, selectedName: null } })
+
+    const nameOf = (name: string) =>
+      wrapper.findAll('span.truncate').find((s) => s.text() === name)!
+
+    expect(nameOf('CreateOrder').classes()).toContain('text-green-300')
+    expect(nameOf('CreditWallet').classes()).toContain('text-red-300')
+    expect(nameOf('GetOrder').classes()).toContain('text-sky-300')
+    expect(nameOf('SendEmail').classes()).toContain('text-gray-300')
+    expect(nameOf('AddFunds').classes()).toContain('text-emerald-300')
+    expect(nameOf('RetireFlow').classes()).toContain('text-orange-300')
+    expect(nameOf('ConflictFlow').classes()).toContain('text-red-400')
+    expect(nameOf('MutateFlow').classes()).toContain('text-yellow-300')
+  })
+
+  it('does not strike or bold build-problem names by default', () => {
+    const wrapper = mount(PlainConstructList, { props: { constructs, selectedName: null } })
+
+    const name = wrapper.findAll('span.truncate').find((s) => s.text() === 'CreditWallet')!
+    expect(name.classes()).not.toContain('line-through')
+    expect(name.classes()).not.toContain('font-bold')
+  })
+
+  it('applies strikethrough to build-problem names when enabled', () => {
+    const wrapper = mount(PlainConstructList, {
+      props: { constructs, selectedName: null, strikethroughOnBuildError: true },
+    })
+
+    const invalid = wrapper.findAll('span.truncate').find((s) => s.text() === 'CreditWallet')!
+    expect(invalid.classes()).toContain('line-through')
+
+    const valid = wrapper.findAll('span.truncate').find((s) => s.text() === 'CreateOrder')!
+    expect(valid.classes()).not.toContain('line-through')
+  })
+
+  it('applies bold to build-problem names when enabled', () => {
+    const wrapper = mount(PlainConstructList, {
+      props: { constructs, selectedName: null, boldOnBuildError: true },
+    })
+
+    const invalid = wrapper.findAll('span.truncate').find((s) => s.text() === 'CreditWallet')!
+    expect(invalid.classes()).toContain('font-bold')
+
+    const valid = wrapper.findAll('span.truncate').find((s) => s.text() === 'CreateOrder')!
+    expect(valid.classes()).not.toContain('font-bold')
   })
 
   it('renders a delete button for Draft items when deletable is true', () => {

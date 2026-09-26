@@ -215,6 +215,60 @@ describe('BodyEditor', () => {
     )
   })
 
+  it('renders the Docs tab after Code and shows the doc form when clicked', async () => {
+    const wrapper = mountBodyEditor({
+      construct,
+      doc: '---\nname: CreateOrder\ndescription: Creates orders\n---\n\n# Docs\n',
+    })
+
+    const buttons = wrapper.findAll('[data-testid="body-editor-tabs"] button').map((b) => b.text())
+    expect(buttons.indexOf('Docs')).toBe(buttons.indexOf('Code') + 1)
+
+    await wrapper.find('[data-testid="body-editor-tab-docs"]').trigger('click')
+
+    expect(wrapper.find('[data-testid="doc-tab-form"]').exists()).toBe(true)
+    expect(
+      (wrapper.find('[data-testid="schema-field-name"]').element as HTMLInputElement).value,
+    ).toBe('CreateOrder')
+  })
+
+  it('emits update:doc and save-doc from the Docs tab', async () => {
+    const wrapper = mountBodyEditor({ construct, doc: '---\nname: CreateOrder\n---\n\n# Docs\n' })
+
+    await wrapper.find('[data-testid="body-editor-tab-docs"]').trigger('click')
+    await wrapper.find('[data-testid="doc-tab-body"]').setValue('# changed\n')
+
+    expect(wrapper.emitted('update:doc')?.at(-1)?.[0]).toBe(
+      '---\nname: CreateOrder\n---\n\n# changed\n',
+    )
+
+    await wrapper.find('[data-testid="doc-tab-save"]').trigger('click')
+    expect(wrapper.emitted('save-doc')?.at(-1)?.[0]).toBe(
+      '---\nname: CreateOrder\n---\n\n# changed\n',
+    )
+  })
+
+  it('keeps the Docs tab functional without controlled doc input', async () => {
+    const wrapper = mountBodyEditor({ construct })
+
+    await wrapper.find('[data-testid="body-editor-tab-docs"]').trigger('click')
+    await wrapper.find('[data-testid="doc-tab-body"]').setValue('# internal draft\n')
+
+    expect(wrapper.emitted('update:doc')).toBeUndefined()
+    expect(
+      (wrapper.find('[data-testid="doc-tab-body"]').element as HTMLTextAreaElement).value,
+    ).toBe('# internal draft\n')
+  })
+
+  it('marks the Docs tab read-only when no construct is selected', async () => {
+    const wrapper = mountBodyEditor({ construct: null, doc: '# docs\n' })
+
+    await wrapper.find('[data-testid="body-editor-tab-docs"]').trigger('click')
+
+    expect(wrapper.find('[data-testid="doc-tab-toolbar"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="doc-tab-body"]').attributes('readonly')).toBeDefined()
+  })
+
   it('pulls in externally changed controlled code via keyed remount when the construct changes', async () => {
     const wrapper = mountBodyEditor({
       construct: { name: 'ConstructA', type: 'Process', status: 'Valid' },

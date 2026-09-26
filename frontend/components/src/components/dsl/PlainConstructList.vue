@@ -2,13 +2,16 @@
 import { computed } from 'vue'
 
 import { useLocalStorageState } from '../../composables/useLocalStorageState'
-import type { ConstructType, DslConstruct } from '../../types/dsl'
+import type { ConstructStatus, ConstructType, DslConstruct } from '../../types/dsl'
+import ConstructStatusIcon from './ConstructStatusIcon.vue'
 
 const props = defineProps<{
   constructs: DslConstruct[]
   selectedName: string | null
   onSelect?: (name: string) => void
   deletable?: boolean
+  strikethroughOnBuildError?: boolean
+  boldOnBuildError?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -32,15 +35,32 @@ const grouped = computed(() => {
   }))
 })
 
-const statusClass: Record<string, string> = {
-  Draft: 'bg-gray-200 text-gray-700',
-  Valid: 'bg-green-100 text-green-700',
-  Invalid: 'bg-red-100 text-red-700',
-  Published: 'bg-blue-100 text-blue-700',
-  Modified: 'bg-yellow-100 text-yellow-700',
-  Added: 'bg-emerald-100 text-emerald-700',
-  Deleted: 'bg-orange-100 text-orange-700',
-  Conflicting: 'bg-red-200 text-red-800',
+const BUILD_PROBLEM_STATUSES: ConstructStatus[] = ['Invalid']
+
+const nameClass: Record<ConstructStatus, string> = {
+  Draft: 'text-gray-300',
+  Valid: 'text-green-300',
+  Invalid: 'text-red-300',
+  Published: 'text-sky-300',
+  Modified: 'text-yellow-300',
+  Added: 'text-emerald-300',
+  Deleted: 'text-orange-300',
+  Conflicting: 'text-red-400',
+}
+
+function isBuildProblem(status: ConstructStatus): boolean {
+  return BUILD_PROBLEM_STATUSES.includes(status)
+}
+
+function nameClasses(status: ConstructStatus): string {
+  const classes = [nameClass[status] ?? 'text-gray-300']
+  if (isBuildProblem(status) && props.strikethroughOnBuildError) {
+    classes.push('line-through')
+  }
+  if (isBuildProblem(status) && props.boldOnBuildError) {
+    classes.push('font-bold')
+  }
+  return classes.join(' ')
 }
 
 function isCollapsed(type: string): boolean {
@@ -84,17 +104,12 @@ function handleDelete(name: string) {
           <button
             type="button"
             class="flex-1 min-w-0 text-left px-2 py-1.5 rounded text-sm flex items-center justify-between gap-2 hover:bg-gray-800 transition-colors"
-            :class="selectedName === item.name ? 'bg-gray-800 text-white' : 'text-gray-300'"
+            :class="selectedName === item.name ? 'bg-gray-800' : ''"
             :data-testid="`plain-construct-list-item-${item.name}`"
             @click="handleClick(item.name)"
           >
-            <span class="truncate">{{ item.name }}</span>
-            <span
-              class="shrink-0 text-[10px] px-1.5 py-0.5 rounded-full whitespace-nowrap"
-              :class="statusClass[item.status] ?? 'bg-gray-200 text-gray-700'"
-            >
-              {{ item.status }}
-            </span>
+            <span class="truncate" :class="nameClasses(item.status)">{{ item.name }}</span>
+            <ConstructStatusIcon :status="item.status" />
           </button>
           <button
             v-if="deletable && item.status === 'Draft'"

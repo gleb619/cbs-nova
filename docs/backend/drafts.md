@@ -137,8 +137,10 @@ set and other introspection endpoints:
    `CONFLICTING → CONFLICTING`.
 3. A file with no git change is `PUBLISHED`.
 
-The admin UI renders these values as chips (`ConstructStatus` in
-`frontend/components/src/types/dsl.ts`, `PlainConstructList.vue`).
+The admin UI renders these values as status icons (`ConstructStatusIcon.vue`) next to a
+status-colored name (`ConstructStatus` in `frontend/components/src/types/dsl.ts`,
+`PlainConstructList.vue`). Build/compile statuses (`Draft`, `Valid`, `Invalid`) support optional
+strikethrough and bold emphasis on the name when the status signals a build problem.
 
 ---
 

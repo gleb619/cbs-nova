@@ -14,6 +14,7 @@ import type {
 } from '../../types/dsl'
 import type { RunnerOutput } from '../../types/runner'
 import CodeTab from './CodeTab.vue'
+import DocTab from './DocTab.vue'
 import ExplainTab from './ExplainTab.vue'
 import HierarchyTab from './HierarchyTab.vue'
 import type { EditorMarker } from './MonacoEditor.vue'
@@ -30,6 +31,8 @@ const props = withDefaults(
      * existing callers keep working unchanged.
      */
     code?: string
+    /** Optional controlled documentation markdown (frontmatter + body). */
+    doc?: string
     saveStatus?: string
     lastSavedAt?: Date | null
     savedHash?: number | null
@@ -78,15 +81,18 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   'update:code': [value: string]
+  'update:doc': [value: string]
   save: [value: string]
+  'save-doc': [value: string]
   select: [payload: { index: number; error: ValidationError }]
   'retry-structure': []
 }>()
 
-type BodyEditorTab = 'structure' | 'code' | 'preview' | 'explain' | 'hierarchy' | 'problems'
+type BodyEditorTab = 'structure' | 'code' | 'docs' | 'preview' | 'explain' | 'hierarchy' | 'problems'
 const BODY_EDITOR_TABS: readonly BodyEditorTab[] = [
   'structure',
   'code',
+  'docs',
   'preview',
   'explain',
   'hierarchy',
@@ -134,6 +140,26 @@ const bodyCode = computed<string>({
       emit('update:code', value)
     } else {
       internalCode.value = value
+    }
+  },
+})
+
+const isDocControlled = computed(() => props.doc !== undefined)
+const internalDocsByName = ref<Record<string, string>>({})
+const internalDoc = computed<string>({
+  get: () => internalDocsByName.value[draftName.value] ?? '',
+  set: (value: string) => {
+    internalDocsByName.value[draftName.value] = value
+  },
+})
+
+const bodyDoc = computed<string>({
+  get: () => (isDocControlled.value ? (props.doc ?? '') : internalDoc.value),
+  set: (value: string) => {
+    if (isDocControlled.value) {
+      emit('update:doc', value)
+    } else {
+      internalDoc.value = value
     }
   },
 })
@@ -232,6 +258,15 @@ defineExpose({ revealPosition, insertAtCursor, selectProblem })
       <button
         type="button"
         class="px-3 py-2 text-sm font-medium border-b-2 transition-colors"
+        :class="tab === 'docs' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'"
+        data-testid="body-editor-tab-docs"
+        @click="tab = 'docs'"
+      >
+        Docs
+      </button>
+      <button
+        type="button"
+        class="px-3 py-2 text-sm font-medium border-b-2 transition-colors"
         :class="tab === 'preview' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'"
         data-testid="body-editor-tab-preview"
         @click="tab = 'preview'"
@@ -299,6 +334,15 @@ defineExpose({ revealPosition, insertAtCursor, selectProblem })
         :validate="validate"
         :busy="busy"
         @save="emit('save', $event)"
+      />
+      <DocTab
+        v-if="tab === 'docs'"
+        :key="`${construct?.name ?? 'none'}:${codeEpoch}`"
+        v-model:doc="bodyDoc"
+        :read-only="!construct"
+        :save-status="saveStatus"
+        :last-saved-at="lastSavedAt"
+        @save="emit('save-doc', $event)"
       />
       <PreviewTab
         v-if="tab === 'preview'"
