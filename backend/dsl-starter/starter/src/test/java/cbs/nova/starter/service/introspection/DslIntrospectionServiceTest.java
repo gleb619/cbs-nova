@@ -10,13 +10,16 @@ import cbs.nova.dsl.Context;
 import cbs.nova.dsl.DslObject.DslType;
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.ExecutableDescriptor;
-import cbs.nova.dsl.helper.HelperSource;
 import cbs.nova.starter.model.DslIntrospectionModels.ConstructPathType;
 import cbs.nova.starter.model.DslIntrospectionModels.ConstructSchemaDto;
 import cbs.nova.starter.model.DslIntrospectionModels.ObjectSearchMode;
 import cbs.nova.starter.model.DslIntrospectionModels.ObjectSearchResult;
 import cbs.nova.starter.model.DslIntrospectionModels.ConstructSchemaMode;
 import cbs.nova.dsl.GlobalManager;
+import cbs.nova.dsl.helper.HelperInstanceResolver;
+import cbs.nova.dsl.helper.HelperRegistrar;
+import cbs.nova.dsl.helper.HelperResolver;
+import java.util.Optional;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.jsonschema.JacksonJsonSchemaGenerator;
@@ -463,7 +466,7 @@ class DslIntrospectionServiceTest {
   }
 
   @Test
-  void workingSetPropagateHelperFilenameFromHelperSource() {
+  void workingSetPropagateHelperFilenameFromHelperResolver() {
     GlobalManager.globalManager().registerHelper("helperWithFile",
             new Executable<String, Integer>() {
               @Override
@@ -483,9 +486,22 @@ class DslIntrospectionServiceTest {
                     .parameters(p -> p.string("greeting"))
                     .execute(ctx -> Result.success("ok"))
                     .build());
-    DslConfig.dslConfig().generatedClassRegistry().registerHelperSource(() -> List.of(
-            new HelperSource.Entry("helperWithFile", "HelperWithFile.java"),
-            new HelperSource.Entry("functionWithFile", "FunctionWithFile.java")));
+    DslConfig.dslConfig().generatedClassRegistry().register(new HelperResolver() {
+      @Override
+      public void registerHelpers(HelperRegistrar registrar,
+              HelperInstanceResolver instanceResolver) {
+        // no-op; resolver only supplies filenames
+      }
+
+      @Override
+      public Optional<String> filename(String name) {
+        return Optional.ofNullable(switch (name) {
+          case "helperWithFile" -> "HelperWithFile.java";
+          case "functionWithFile" -> "FunctionWithFile.java";
+          default -> null;
+        });
+      }
+    });
 
     List<DefinitionMetaDto> definitions = service
             .workingSet(new ObjectSearchQuery(0, 500, null, null, null)).items();

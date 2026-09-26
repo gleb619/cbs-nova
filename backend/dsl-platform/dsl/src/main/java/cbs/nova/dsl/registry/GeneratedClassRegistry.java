@@ -2,13 +2,14 @@ package cbs.nova.dsl.registry;
 
 import cbs.nova.dsl.GeneratedClassDescriptor;
 import cbs.nova.dsl.GeneratedClassProvider;
-import cbs.nova.dsl.helper.HelperSource;
+import cbs.nova.dsl.helper.HelperResolver;
 import org.jspecify.annotations.NonNull;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.ServiceLoader;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class GeneratedClassRegistry {
@@ -16,12 +17,11 @@ public final class GeneratedClassRegistry {
   private final Map<String, GeneratedClassDescriptor> processes = new ConcurrentHashMap<>();
   private final Map<String, GeneratedClassDescriptor> transactions = new ConcurrentHashMap<>();
   private final Map<String, GeneratedClassProvider> providers = new ConcurrentHashMap<>();
-  // TODO: modify GeneratedClassProvider, remove a helperFilenames, make a refatoring
-  private final Map<String, String> helperFilenames = new ConcurrentHashMap<>();
+  private final List<HelperResolver> helperResolvers = new CopyOnWriteArrayList<>();
 
   public GeneratedClassRegistry init(ClassLoader classLoader) {
     ServiceLoader.load(GeneratedClassProvider.class, classLoader).forEach(this::register);
-    ServiceLoader.load(HelperSource.class, classLoader).forEach(this::registerHelperSource);
+    ServiceLoader.load(HelperResolver.class, classLoader).forEach(this::register);
     return this;
   }
 
@@ -40,10 +40,8 @@ public final class GeneratedClassRegistry {
     }
   }
 
-  public void registerHelperSource(@NonNull HelperSource source) {
-    for (HelperSource.Entry entry : source.entries()) {
-      helperFilenames.put(entry.name(), entry.filename());
-    }
+  public void register(@NonNull HelperResolver resolver) {
+    helperResolvers.add(resolver);
   }
 
   /**
@@ -54,7 +52,7 @@ public final class GeneratedClassRegistry {
     processes.clear();
     transactions.clear();
     providers.clear();
-    helperFilenames.clear();
+    helperResolvers.clear();
   }
 
   public @NonNull Optional<GeneratedClassDescriptor> findProcess(@NonNull String name) {
@@ -72,7 +70,10 @@ public final class GeneratedClassRegistry {
   public @NonNull Optional<String> findFilename(@NonNull String name) {
     return findProvider(name)
             .map(GeneratedClassProvider::filename)
-            .or(() -> Optional.ofNullable(helperFilenames.get(name)));
+            .or(() -> helperResolvers.stream()
+                    .map(r -> r.filename(name))
+                    .flatMap(Optional::stream)
+                    .findFirst());
   }
 
   public @NonNull List<GeneratedClassDescriptor> processes() {

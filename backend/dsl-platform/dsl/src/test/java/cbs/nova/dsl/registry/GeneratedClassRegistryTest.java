@@ -7,8 +7,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import cbs.nova.dsl.DslObject.DslType;
 import cbs.nova.dsl.GeneratedClassDescriptor;
 import cbs.nova.dsl.GeneratedClassProvider;
-import cbs.nova.dsl.helper.HelperSource;
-import java.util.List;
+import cbs.nova.dsl.helper.HelperInstanceResolver;
+import cbs.nova.dsl.helper.HelperRegistrar;
+import cbs.nova.dsl.helper.HelperResolver;
+import java.util.Map;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -44,6 +47,21 @@ class GeneratedClassRegistryTest {
 
   private static GeneratedClassDescriptor function(String name) {
     return descriptor(name, DslType.FUNCTION);
+  }
+
+  private static HelperResolver resolverWithFilenames(Map<String, String> filenames) {
+    return new HelperResolver() {
+      @Override
+      public void registerHelpers(HelperRegistrar registrar,
+              HelperInstanceResolver instanceResolver) {
+        // no-op for filename-only tests
+      }
+
+      @Override
+      public Optional<String> filename(String name) {
+        return Optional.ofNullable(filenames.get(name));
+      }
+    };
   }
 
   @Test
@@ -203,12 +221,10 @@ class GeneratedClassRegistryTest {
   }
 
   @Test
-  void registerHelperSourceExposesFilenamesForHelpers() {
-    HelperSource source = () -> List.of(
-            new HelperSource.Entry("greetHelper", "GreetHelper.java"),
-            new HelperSource.Entry("sumHelper", "math/SumHelper.java"));
-
-    registry.registerHelperSource(source);
+  void registerHelperResolverExposesFilenamesForHelpers() {
+    registry.register(resolverWithFilenames(Map.of(
+            "greetHelper", "GreetHelper.java",
+            "sumHelper", "math/SumHelper.java")));
 
     assertThat(registry.findFilename("greetHelper")).contains("GreetHelper.java");
     assertThat(registry.findFilename("sumHelper")).contains("math/SumHelper.java");
@@ -216,9 +232,8 @@ class GeneratedClassRegistryTest {
   }
 
   @Test
-  void findFilenamePrefersProviderOverHelperSource() {
-    registry.registerHelperSource(() -> List.of(
-            new HelperSource.Entry("shared", "Helper.java")));
+  void findFilenamePrefersProviderOverHelperResolver() {
+    registry.register(resolverWithFilenames(Map.of("shared", "Helper.java")));
     GeneratedClassProvider provider = new GeneratedClassProvider() {
       @Override
       public GeneratedClassDescriptor descriptor() {
