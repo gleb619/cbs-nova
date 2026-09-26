@@ -10,6 +10,7 @@ import cbs.nova.dsl.helper.NoopHelperInterceptor;
 import cbs.nova.dsl.helper.HelperManager;
 import cbs.nova.dsl.registry.HelperRegistry;
 import cbs.nova.dsl.runner.HelperRunner;
+import cbs.nova.dsl.security.ObjectGuard;
 import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.Test;
 
@@ -29,7 +30,7 @@ class HelperManagerTest {
   void registerDelegatesToRegistry() {
     var registry = new StubHelperRegistry();
     var runner = new RecordingHelperRunner();
-    var manager = new HelperManager(registry, runner);
+    var manager = new HelperManager(registry, runner, ObjectGuard.NO_OP);
     Executable<String, String> helper = ctx -> Result.success("ignored");
 
     manager.register("greet", helper);
@@ -41,7 +42,7 @@ class HelperManagerTest {
   void registerFunctionDelegatesToRegistry() {
     var registry = new StubHelperRegistry();
     var runner = new RecordingHelperRunner();
-    var manager = new HelperManager(registry, runner);
+    var manager = new HelperManager(registry, runner, ObjectGuard.NO_OP);
     var fn = Dsl.function("greetFn").execute(ctx -> Result.success("ignored")).build();
 
     manager.registerFunction(fn);
@@ -54,7 +55,7 @@ class HelperManagerTest {
     var registry = new StubHelperRegistry();
     var expected = Result.success("runner-helper-result");
     var runner = new RecordingHelperRunner(expected, Result.success("unused-fn"));
-    var manager = new HelperManager(registry, runner);
+    var manager = new HelperManager(registry, runner, ObjectGuard.NO_OP);
     var ctx = SimpleContext.builder().body("input").mode(ExecutionMode.RUN).runId("run-1").build();
 
     var result = manager.executeHelper("greet", ctx);
@@ -71,7 +72,7 @@ class HelperManagerTest {
     var registry = new StubHelperRegistry();
     var expected = Result.success("runner-function-result");
     var runner = new RecordingHelperRunner(Result.success("unused-helper"), expected);
-    var manager = new HelperManager(registry, runner);
+    var manager = new HelperManager(registry, runner, ObjectGuard.NO_OP);
     var ctx = SimpleContext.builder().body("input").mode(ExecutionMode.RUN).runId("run-2").build();
 
     var result = manager.executeFunction("greetFn", ctx);
@@ -87,7 +88,7 @@ class HelperManagerTest {
   void executeHelperShortCircuitsWhenContextCarriesInterceptor() {
     var registry = new StubHelperRegistry();
     var runner = new RecordingHelperRunner();
-    var manager = new HelperManager(registry, runner);
+    var manager = new HelperManager(registry, runner, ObjectGuard.NO_OP);
     AtomicReference<String> seen = new AtomicReference<>();
     HelperInterceptor interceptor = (name, ctx) -> {
       seen.set(name);
@@ -109,7 +110,7 @@ class HelperManagerTest {
     var registry = new StubHelperRegistry();
     var expected = Result.success("real");
     var runner = new RecordingHelperRunner(expected, Result.success("unused-fn"));
-    var manager = new HelperManager(registry, runner);
+    var manager = new HelperManager(registry, runner, ObjectGuard.NO_OP);
     HelperInterceptor interceptor = (name, ctx) -> Optional.empty();
     var ctx = SimpleContext.builder().body("input").mode(ExecutionMode.RUN)
             .runId("run-intercept-h-fall").build()
@@ -125,7 +126,7 @@ class HelperManagerTest {
   void executeFunctionShortCircuitsWhenContextCarriesInterceptor() {
     var registry = new StubHelperRegistry();
     var runner = new RecordingHelperRunner();
-    var manager = new HelperManager(registry, runner);
+    var manager = new HelperManager(registry, runner, ObjectGuard.NO_OP);
     AtomicReference<String> seen = new AtomicReference<>();
     HelperInterceptor interceptor = (name, ctx) -> {
       seen.set(name);
@@ -150,7 +151,7 @@ class HelperManagerTest {
     var registry = new StubHelperRegistry();
     var expected = Result.success("plain");
     var runner = new RecordingHelperRunner(expected, expected);
-    var manager = new HelperManager(registry, runner);
+    var manager = new HelperManager(registry, runner, ObjectGuard.NO_OP);
     var ctx = SimpleContext.builder().body("input").mode(ExecutionMode.RUN).runId("run-plain")
             .build();
 
@@ -166,7 +167,7 @@ class HelperManagerTest {
     var registry = new StubHelperRegistry();
     registry.registerHelper("greet", helper);
     registry.registerFunction(fn);
-    var manager = new HelperManager(registry, new RecordingHelperRunner());
+    var manager = new HelperManager(registry, new RecordingHelperRunner(), ObjectGuard.NO_OP);
 
     assertThat(manager.contains("greet")).isTrue();
     assertThat(manager.contains("fn")).isTrue();
@@ -182,7 +183,7 @@ class HelperManagerTest {
     var registry = new StubHelperRegistry();
     registry.registerHelper("greet", helper);
     registry.registerFunction(fn);
-    var manager = new HelperManager(registry, new RecordingHelperRunner());
+    var manager = new HelperManager(registry, new RecordingHelperRunner(), ObjectGuard.NO_OP);
 
     assertThat(manager.findHelper("greet")).contains(helper);
     assertThat(manager.findHelper("missing")).isEmpty();
@@ -203,7 +204,7 @@ class HelperManagerTest {
     registry.registerHelper("mHelper", helper);
     registry.registerFunction(fnZ);
     registry.registerFunction(fnA);
-    var manager = new HelperManager(registry, new RecordingHelperRunner());
+    var manager = new HelperManager(registry, new RecordingHelperRunner(), ObjectGuard.NO_OP);
 
     var firstCall = manager.names();
     var secondCall = manager.names();
@@ -216,7 +217,7 @@ class HelperManagerTest {
   @Test
   void lazyHelperSupplierNotInvokedAtRegistration() {
     var registry = new StubHelperRegistry();
-    var manager = new HelperManager(registry, new RecordingHelperRunner());
+    var manager = new HelperManager(registry, new RecordingHelperRunner(), ObjectGuard.NO_OP);
     var calls = new AtomicInteger();
     Executable<String, String> helper = ctx -> Result.success("ignored");
     Supplier<Executable<?, ?>> supplier = () -> {
@@ -234,7 +235,7 @@ class HelperManagerTest {
     // Mirrors DefaultHelperRegistry: the supplier is re-invoked on every findHelper,
     // it is deliberately NOT memoized.
     var registry = new StubHelperRegistry();
-    var manager = new HelperManager(registry, new RecordingHelperRunner());
+    var manager = new HelperManager(registry, new RecordingHelperRunner(), ObjectGuard.NO_OP);
     var calls = new AtomicInteger();
     Executable<String, String> helper = ctx -> Result.success("ignored");
     Supplier<Executable<?, ?>> supplier = () -> {
@@ -252,7 +253,7 @@ class HelperManagerTest {
   @Test
   void eagerAndLazyHelpersCoexist() {
     var registry = new StubHelperRegistry();
-    var manager = new HelperManager(registry, new RecordingHelperRunner());
+    var manager = new HelperManager(registry, new RecordingHelperRunner(), ObjectGuard.NO_OP);
     Executable<String, String> eager = ctx -> Result.success("eager");
     Executable<String, String> lazy = ctx -> Result.success("lazy");
 
@@ -267,7 +268,7 @@ class HelperManagerTest {
   @Test
   void lazyHelperSupplierReturningNullYieldsEmptyOptional() {
     var registry = new StubHelperRegistry();
-    var manager = new HelperManager(registry, new RecordingHelperRunner());
+    var manager = new HelperManager(registry, new RecordingHelperRunner(), ObjectGuard.NO_OP);
 
     manager.register("lazy", (Supplier<Executable<?, ?>>) () -> null);
 
@@ -277,7 +278,7 @@ class HelperManagerTest {
   @Test
   void lazyHelperSupplierThrowingPropagates() {
     var registry = new StubHelperRegistry();
-    var manager = new HelperManager(registry, new RecordingHelperRunner());
+    var manager = new HelperManager(registry, new RecordingHelperRunner(), ObjectGuard.NO_OP);
     manager.register("lazy", (Supplier<Executable<?, ?>>) () -> {
       throw new IllegalStateException("boom");
     });
