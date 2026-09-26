@@ -1119,6 +1119,104 @@ workflow unblocks on the next task turn, which can be hundreds of milliseconds l
 under load. For long-lived awaits prefer polling the query rather than relying on the
 send response alone.
 
+## Inspect compile diagnostics
+
+The append-only `dsl_compile_diagnostics` table records every compiler/validation
+diagnostic that is persisted during DSL reload and draft publish. When a publish or
+reload fails with compilation errors, the response includes the first 20 diagnostics,
+but the full log stays in Postgres and is queryable via the read-side endpoint.
+
+Source: `DslDiagnosticsHandler` + `CompileDiagnosticRecordRepository` (routes registered
+by `DslDiagnosticsRouterConfiguration`); BFF proxy at
+[`frontend/admin-ui-plugin/server/api/v1/dsl/diagnostics.get.ts`](../frontend/admin-ui-plugin/server/api/v1/dsl/diagnostics.get.ts).
+
+Use the BFF path (`/api/v1/dsl/diagnostics`) so the browser's `X-Api-Key` / JWT / RBAC
+posture is applied consistently. The backend at `:8090` exposes the same route at
+`/api/dsl/diagnostics` and behaves identically.
+
+### Query the log
+
+```bash
+curl -sS 'http://localhost:3000/api/v1/dsl/diagnostics?definition=LoanDsl&limit=20&offset=0' | jq
+```
+
+Returns `PageResponse<CompileDiagnosticDto>`: `{items: [...], total, offset, limit}`.
+Items are newest first. Each item carries:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `id` | long | Row identity. |
+| `occurredAt` | string | ISO-8601 UTC instant when the row was appended. |
+| `source` | string | Event that produced the diagnostic — `RELOAD` or `PUBLISH`. |
+| `definition` | string | Context the writer attached (`PUBLISH` = definition name; `RELOAD` = source directory path). |
+| `file` | string? | Source file path, when available. |
+| `line` | long? | 1-based line, when available. |
+| `column` | long? | Column number, when available. |
+| `severity` | string | Currently `error`; future severities may be added. |
+| `code` | string? | Diagnostic code; omitted when the backend has no code. |
+| `message` | string | Full diagnostic message. |
+
+Example envelope:
+
+```json
+{
+  "items": [
+    {
+      "id": 42,
+      "occurredAt": "2026-09-26T12:34:56.789Z",
+      "source": "PUBLISH",
+      "definition": "LoanDsl",
+      "file": "dsl/LoanDsl.java",
+      "line": 17,
+      "column": 23,
+      "severity": "error",
+      "code": "compiler.err.expected",
+      "message": "';' expected"
+    }
+  ],
+  "total": 1,
+  "offset": 0,
+  "limit": 20
+}
+```
+
+### Filter and paginate
+
+- `definition` (optional) — exact-match filter on the `definition` column.
+- `limit` (optional) — page size, default `50`, clamped to `1..500`.
+- `offset` (optional) — rows to skip, default `0`, must be non-negative.
+
+`total` is the full matching count; advance pages by raising `offset` in `limit`
+increments.
+
+### Where rows come from
+
+The `source` field is the `CompileDiagnosticSource` enum value the writer stamped:
+
+- `RELOAD` — `DslReloadHandler` appends rows when `POST /api/dsl/reload` fails with
+  `DslCompilationException`; the `definition` column is the configured source directory
+  (`cbs.dsl.source-dir`).
+- `PUBLISH` — `DslDraftHandler` appends rows when `POST /api/dsl/drafts/{name}/publish`
+  (or the T568 approval-gate approve path) fails to reload after writing the source;
+  the `definition` column is the definition name or bundle target.
+
+There is no update or delete API: the log is append-only by convention.
+
+### UI equivalent
+
+Open the DSL Workbench and select a definition. The **Diagnostics** drawer on the right
+calls the same BFF endpoint and lists rows newest first; the panel is wired from
+`frontend/admin-ui-plugin/app/pages/dsl-workbench.vue` through `WorkbenchDrawers`.
+
+### Common failure cases
+
+| Symptom | HTTP | Cause | Fix |
+|---|---|---|---|
+| `401 UNAUTHORIZED` (going direct to backend) | 401 | `cbs.dsl.auth.enabled=true` and the `X-Api-Key` is missing/invalid. The BFF forwards it via `proxyToBackend`. | Supply the configured `X-Api-Key`. |
+| `400 INVALID_REQUEST "Invalid value for query parameter 'limit': …"` | 400 | `limit` is not a valid integer. | Pass an integer. |
+| `400 INVALID_REQUEST "Invalid value for query parameter 'offset': …"` | 400 | `offset` is not a valid integer. | Pass an integer. |
+| Filter returns no rows for a known failing definition | 200 (empty list) | The failing event wrote rows under `RELOAD` (source directory) or a different definition context than expected. | Query without `definition` and scan `source`/`definition` values, or query the exact directory string for reload failures. |
+
 ## Maintaining this runbook
 
 Every new ops-relevant change (a scheduled job, a new failure mode, a new external dependency)
