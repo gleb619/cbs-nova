@@ -156,6 +156,11 @@ public class StarterConstants {
 
   // Default numeric / sizing caps
 
+  // Startup application startup buffering (T613)
+  public static final int DEFAULT_STARTUP_BUFFER_CAPACITY = 10_000;
+  public static final String STARTUP_BUFFER_CAPACITY_PROPERTY = "cbs.startup.buffer.capacity";
+  public static final String STARTUP_BUFFER_CAPACITY_ENV_KEY = "CBS_STARTUP_BUFFER_CAPACITY";
+
   public static final int BUNDLE_FORMAT_VERSION = 1;
   public static final int DEFAULT_LIMIT = 50;
   public static final int HELPERS_DEFAULT_LIMIT = 100;

@@ -1,5 +1,6 @@
 package cbs.nova.starter;
 
+import cbs.nova.starter.core.StarterConstants;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -8,8 +9,6 @@ import org.springframework.boot.context.metrics.buffering.BufferingApplicationSt
 @Slf4j
 @SpringBootApplication
 public class StarterApplication {
-
-  private static final int DEFAULT_STARTUP_BUFFER_CAPACITY = 10_000;
 
   public static void main(String[] args) {
     try {
@@ -36,7 +35,23 @@ public class StarterApplication {
   }
 
   private static int bufferCapacity() {
-    // TODO: add ENV support, move magic code to a `cbs.nova.starter.core.StarterConstants`
-    return Integer.getInteger("cbs.startup.buffer.capacity", DEFAULT_STARTUP_BUFFER_CAPACITY);
+    return bufferCapacity(System.getenv(StarterConstants.STARTUP_BUFFER_CAPACITY_ENV_KEY));
+  }
+
+  static int bufferCapacity(String envValue) {
+    Integer propertyValue = Integer.getInteger(StarterConstants.STARTUP_BUFFER_CAPACITY_PROPERTY,
+            null);
+    if (propertyValue != null) {
+      return propertyValue;
+    }
+    if (envValue != null && !envValue.isBlank()) {
+      try {
+        return Integer.parseInt(envValue.trim());
+      } catch (NumberFormatException e) {
+        log.warn("Malformed startup buffer capacity env value '{}': {}", envValue,
+                StarterConstants.DEFAULT_STARTUP_BUFFER_CAPACITY);
+      }
+    }
+    return StarterConstants.DEFAULT_STARTUP_BUFFER_CAPACITY;
   }
 }
