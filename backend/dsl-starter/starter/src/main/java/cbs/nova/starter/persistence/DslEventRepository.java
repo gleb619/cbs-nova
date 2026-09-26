@@ -6,6 +6,7 @@ import com.github.squigglesql.squigglesql.literal.Literal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Supplier;
 
 import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.RowMapper;
@@ -82,7 +83,8 @@ public class DslEventRepository {
     }
 
     var r = T.refer();
-    var builder = dslQueries.select()
+    // fresh builder per query: reusing one across count + data leaks COUNT(*) into the data SELECT
+    Supplier<ExtendedSelectQueryExecutor.Builder> filtered = () -> dslQueries.select()
             .from(r)
             .whereIf(eventType != null && !eventType.isBlank(),
                     () -> DslEventQueryCriteria.matchesEventType(T, r, eventType))
@@ -104,13 +106,13 @@ public class DslEventRepository {
               .build();
       total = dslQueries.queryForObject(countQuery, Long.class);
     } else {
-      ExtendedSelectQuery countQuery = builder
+      ExtendedSelectQuery countQuery = filtered.get()
               .selectCount()
               .build();
       total = dslQueries.queryForObject(countQuery, Long.class);
     }
 
-    ExtendedSelectQuery dataQuery = builder
+    ExtendedSelectQuery dataQuery = filtered.get()
             .select(DslEventQueryCriteria.fullSelection(T, r))
             .from(r)
             .orderByDesc(r.get(T.createdAt()))
