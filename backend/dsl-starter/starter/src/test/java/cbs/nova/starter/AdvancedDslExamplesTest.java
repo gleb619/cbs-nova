@@ -39,11 +39,22 @@ import java.lang.reflect.InvocationTargetException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import tools.jackson.databind.ObjectMapper;
 
 import java.net.http.HttpClient;
+import cbs.nova.dslexamples.v1.DistributedTracingModels.DistributedTracingIn;
+import cbs.nova.dslexamples.v1.DistributedTracingModels.DistributedTracingOut;
+import cbs.nova.starter.helper.OpenTelemetryHelper;
+import io.opentelemetry.sdk.testing.junit5.OpenTelemetryExtension;
 
 class AdvancedDslExamplesTest {
+
+  @RegisterExtension
+  static final OpenTelemetryExtension OTEL = OpenTelemetryExtension.create();
+
+  private static final OpenTelemetryHelper OTEL_HELPER = new OpenTelemetryHelper(
+          OTEL.getOpenTelemetry());
 
   @BeforeEach
   void loadCompactDsls() {
@@ -270,6 +281,22 @@ class AdvancedDslExamplesTest {
     assertThat(out.zone()).isEqualTo("Asia/Kolkata");
   }
 
+  @Test
+  void distributedTracingPreviewRunsAndReturnsTraceparent() {
+    var input = new DistributedTracingIn("ORDER-42");
+    Context<DistributedTracingIn> ctx = SimpleContext.builder(input)
+            .mode(ExecutionMode.PREVIEW)
+            .build();
+
+    Result<?> result = GlobalManager.globalManager().runProcess("DistributedTracing", ctx);
+
+    assertThat(result.isSuccess()).as("cause: %s", result.cause()).isTrue();
+    DistributedTracingOut out = (DistributedTracingOut) result.value();
+    assertThat(out.traceparent())
+            .matches("00-[0-9a-f]{32}-[0-9a-f]{16}-01");
+    assertThat(out.extractedSpanId()).matches("[0-9a-f]{16}");
+    assertThat(out.baggageValue()).isEqualTo("ORDER-42");
+  }
   private static HelperInstanceResolver typedHelperResolver() {
     return helperClass -> {
       if (helperClass == ConditionalFailingHelper.class) {
@@ -411,6 +438,9 @@ class AdvancedDslExamplesTest {
       }
       if (helperClass == MaskHelper.class) {
         return new MaskHelper();
+      }
+      if (helperClass == OpenTelemetryHelper.class) {
+        return OTEL_HELPER;
       }
       if (helperClass == InterpolateHelper.class) {
         return new InterpolateHelper();
