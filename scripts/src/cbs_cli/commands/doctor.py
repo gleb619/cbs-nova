@@ -1,6 +1,7 @@
 import argparse
 import json
 import sys
+from typing import List
 
 from ..config import Config
 from ..curl import Curl
@@ -80,8 +81,57 @@ class DoctorCommand:
             Printer.fail(f"DSL definitions list ({Config.BFF_BASE_URL}/api/v1/dsl/definitions)")
             fails += 1
 
+        # Shipped BFF surfaces coverage (T607)
+        surfaces = [
+            ("Executions list", f"{Config.BFF_BASE_URL}/api/v1/executions"),
+            ("Diagnostics log", f"{Config.BFF_BASE_URL}/api/v1/dsl/diagnostics"),
+            ("Domain events", f"{Config.BFF_BASE_URL}/api/v1/dsl/events"),
+            ("Audit log", f"{Config.BFF_BASE_URL}/api/v1/dsl/audit"),
+            ("Webhook deliveries", f"{Config.BFF_BASE_URL}/api/v1/dsl/webhooks/deliveries"),
+            ("Schedules", f"{Config.BFF_BASE_URL}/api/v1/dsl/schedules"),
+        ]
+        for label, url in surfaces:
+            fails += self._check_bff_surface(url, label)
+
+        fails += self._check_bff_surface_group(
+            [
+                f"{Config.BFF_BASE_URL}/api/v1/health",
+                f"{Config.BFF_BASE_URL}/api/v1/info",
+            ],
+            "Health / info",
+        )
+
         if fails:
             print(f"\n{fails} check(s) failed.")
             return 1
         print("\nAll required checks passed.")
         return 0
+
+    @staticmethod
+    def _check_bff_surface(url: str, label: str) -> int:
+        code = Curl.status_code(url, timeout=5)
+        if code == "200":
+            Printer.ok(f"{label} ({url})")
+            return 0
+        if code == "404":
+            Printer.warn(f"{label} ({url}) not exposed (404)")
+            return 0
+        if code is None:
+            Printer.fail(f"{label} ({url}) unreachable")
+            return 1
+        Printer.fail(f"{label} ({url}) status {code}")
+        return 1
+
+    @staticmethod
+    def _check_bff_surface_group(urls: List[str], label: str) -> int:
+        codes = [Curl.status_code(url, timeout=5) for url in urls]
+        if all(c == "200" for c in codes):
+            Printer.ok(f"{label} ({', '.join(urls)})")
+            return 0
+        non200 = [c for c in codes if c != "200"]
+        if non200 and all(c == "404" for c in non200):
+            Printer.warn(f"{label} ({', '.join(urls)}) not exposed (404)")
+            return 0
+        bad = [c if c is not None else "connrefused" for c in non200]
+        Printer.fail(f"{label} ({', '.join(urls)}) status {', '.join(bad)}")
+        return 1
