@@ -392,6 +392,47 @@ const expectedProxies: readonly ExpectedProxy[] = [
     backendPath: '/api/dsl/files/{*path}',
     bffPath: '/api/v1/dsl/files/{...path}',
   },
+  // DslDocsRouterConfiguration
+  {
+    method: 'GET',
+    backendPath: '/api/dsl/docs',
+    bffPath: '/api/v1/dsl/docs',
+  },
+  {
+    method: 'GET',
+    backendPath: '/api/dsl/docs/by-name/{name}',
+    bffPath: '/api/v1/dsl/docs/by-name/{name}',
+  },
+  {
+    method: 'POST',
+    backendPath: '/api/dsl/docs/by-name/{name}',
+    bffPath: '/api/v1/dsl/docs/by-name/{name}',
+  },
+  {
+    method: 'GET',
+    backendPath: '/api/dsl/docs/{*path}',
+    bffPath: '/api/v1/dsl/docs/{...path}',
+  },
+  {
+    method: 'POST',
+    backendPath: '/api/dsl/docs/bulk',
+    bffPath: '/api/v1/dsl/docs/bulk',
+  },
+  {
+    method: 'POST',
+    backendPath: '/api/dsl/docs/flush',
+    bffPath: '/api/v1/dsl/docs/flush',
+  },
+  {
+    method: 'GET',
+    backendPath: '/api/dsl/docs/status',
+    bffPath: '/api/v1/dsl/docs/status',
+  },
+  {
+    method: 'POST',
+    backendPath: '/api/dsl/docs/{*path}',
+    bffPath: '/api/v1/dsl/docs/{...path}',
+  },
   // ApiKeyAdminRouterConfiguration (T503)
   {
     method: 'GET',

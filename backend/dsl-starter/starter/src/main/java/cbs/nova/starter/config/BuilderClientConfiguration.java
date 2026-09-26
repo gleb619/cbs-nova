@@ -1,7 +1,9 @@
 package cbs.nova.starter.config;
 
 import cbs.nova.starter.builder.BuilderCache;
+import cbs.nova.starter.builder.BuilderRequestExecutor;
 import cbs.nova.starter.builder.DslBuilderClient;
+import cbs.nova.starter.builder.DslBuilderDocsClient;
 import cbs.nova.starter.config.properties.CbsNovaCacheProperties;
 import cbs.nova.starter.config.properties.DslBuilderClientProperties;
 import cbs.nova.starter.controller.BuilderApiErrorHandler;
@@ -115,11 +117,24 @@ public class BuilderClientConfiguration {
   }
 
   @Bean
+  public BuilderRequestExecutor builderRequestExecutor(ThreadPoolBulkhead dslBuilderQueue,
+          Bulkhead dslBuilderBulkhead, CircuitBreaker dslBuilderCircuitBreaker) {
+    return new BuilderRequestExecutor(dslBuilderQueue, dslBuilderBulkhead,
+            dslBuilderCircuitBreaker);
+  }
+
+  @Bean
   public DslBuilderClient dslBuilderClient(RestClient dslBuilderRestClient,
           ThreadPoolBulkhead dslBuilderQueue, Bulkhead dslBuilderBulkhead,
           CircuitBreaker dslBuilderCircuitBreaker, BuilderCache builderCache) {
     return new DslBuilderClient(dslBuilderRestClient, dslBuilderQueue, dslBuilderBulkhead,
             dslBuilderCircuitBreaker, builderCache);
+  }
+
+  @Bean
+  public DslBuilderDocsClient dslBuilderDocsClient(RestClient dslBuilderRestClient,
+          BuilderRequestExecutor builderRequestExecutor, BuilderCache builderCache) {
+    return new DslBuilderDocsClient(dslBuilderRestClient, builderRequestExecutor, builderCache);
   }
 
 }

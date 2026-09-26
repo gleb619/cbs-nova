@@ -49,7 +49,8 @@ class RepoUrlValidatorTest {
             null,
             allowedRepoSchemes,
             allowPlainHttpRepo,
-            allowedRepoHosts);
+            allowedRepoHosts,
+            null);
   }
 
   private DslBuilderProperties defaultProperties() {

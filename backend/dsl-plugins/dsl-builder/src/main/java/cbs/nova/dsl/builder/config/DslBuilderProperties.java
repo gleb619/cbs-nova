@@ -32,7 +32,8 @@ public record DslBuilderProperties(
         String jdkHomeEnvVar,
         List<String> allowedRepoSchemes,
         @DefaultValue("false") boolean allowPlainHttpRepo,
-        List<String> allowedRepoHosts) {
+        List<String> allowedRepoHosts,
+        @DefaultValue Docs docs) {
 
   public DslBuilderProperties {
     queue = queue == null ? new Queue(100, 4) : queue;
@@ -55,6 +56,7 @@ public record DslBuilderProperties(
             ? List.of("https")
             : List.copyOf(allowedRepoSchemes);
     allowedRepoHosts = allowedRepoHosts == null ? List.of() : List.copyOf(allowedRepoHosts);
+    docs = docs == null ? new Docs("docs") : docs;
   }
 
   /**
@@ -65,7 +67,7 @@ public record DslBuilderProperties(
     return new DslBuilderProperties(workspaceDir, Duration.ofMinutes(10), Duration.ofHours(1),
             null, "0.0.1-SNAPSHOT", "1.27.0", "4.0.4", "v1", List.of("clean", "build"),
             List.of("dsl", "models"), "project/templates", null, null, null, null, null,
-            new Bundles(1, 200), 8, 25, 200, null, null, null, false, null);
+            new Bundles(1, 200), 8, 25, 200, null, null, null, false, null, null);
   }
 
   public DslBuilderProperties withQueue(Queue queue) {
@@ -73,7 +75,7 @@ public record DslBuilderProperties(
             dslVersion, temporalVersion, springBootVersion, defaultBuildVersion, buildTasks,
             sourceFolders, templatesDir, sourceDir, queue, files, git, fileBuffer, bundles,
             gradleJavaMin, gradleJavaMax, buildLogMaxLines, jdkSearchPaths, jdkHomeEnvVar,
-            allowedRepoSchemes, allowPlainHttpRepo, allowedRepoHosts);
+            allowedRepoSchemes, allowPlainHttpRepo, allowedRepoHosts, docs);
   }
 
   public DslBuilderProperties withFiles(Files files) {
@@ -81,7 +83,7 @@ public record DslBuilderProperties(
             dslVersion, temporalVersion, springBootVersion, defaultBuildVersion, buildTasks,
             sourceFolders, templatesDir, sourceDir, queue, files, git, fileBuffer, bundles,
             gradleJavaMin, gradleJavaMax, buildLogMaxLines, jdkSearchPaths, jdkHomeEnvVar,
-            allowedRepoSchemes, allowPlainHttpRepo, allowedRepoHosts);
+            allowedRepoSchemes, allowPlainHttpRepo, allowedRepoHosts, docs);
   }
 
   public DslBuilderProperties withGit(Git git) {
@@ -89,7 +91,7 @@ public record DslBuilderProperties(
             dslVersion, temporalVersion, springBootVersion, defaultBuildVersion, buildTasks,
             sourceFolders, templatesDir, sourceDir, queue, files, git, fileBuffer, bundles,
             gradleJavaMin, gradleJavaMax, buildLogMaxLines, jdkSearchPaths, jdkHomeEnvVar,
-            allowedRepoSchemes, allowPlainHttpRepo, allowedRepoHosts);
+            allowedRepoSchemes, allowPlainHttpRepo, allowedRepoHosts, docs);
   }
 
   public DslBuilderProperties withFileBuffer(FileBuffer fileBuffer) {
@@ -97,7 +99,7 @@ public record DslBuilderProperties(
             dslVersion, temporalVersion, springBootVersion, defaultBuildVersion, buildTasks,
             sourceFolders, templatesDir, sourceDir, queue, files, git, fileBuffer, bundles,
             gradleJavaMin, gradleJavaMax, buildLogMaxLines, jdkSearchPaths, jdkHomeEnvVar,
-            allowedRepoSchemes, allowPlainHttpRepo, allowedRepoHosts);
+            allowedRepoSchemes, allowPlainHttpRepo, allowedRepoHosts, docs);
   }
 
   public record Queue(
@@ -133,5 +135,13 @@ public record DslBuilderProperties(
   public record Bundles(
           @DefaultValue("1") int bundleFormatVersion,
           @DefaultValue("200") int bundleMaxDefinitions) {
+  }
+
+  public record Docs(
+          @DefaultValue("docs") String subDir) {
+
+    public Docs {
+      subDir = (subDir == null || subDir.isBlank()) ? "docs" : subDir;
+    }
   }
 }

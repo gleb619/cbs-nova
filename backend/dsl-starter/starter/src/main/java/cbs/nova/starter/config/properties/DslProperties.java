@@ -34,6 +34,7 @@ public record DslProperties(
         @Valid @DefaultValue Reload reload,
         @Valid @DefaultValue Auth auth,
         @Valid @DefaultValue Files files,
+        @Valid @DefaultValue Docs docs,
         @Valid @DefaultValue Git git,
         @Valid @DefaultValue FileBuffer fileBuffer,
         @Valid @DefaultValue Bundles bundles,
@@ -49,6 +50,7 @@ public record DslProperties(
     reload = reload == null ? new Reload(false) : reload;
     auth = auth == null ? new Auth(false, null, new Rbac(false, "roles")) : auth;
     files = files == null ? new Files(true, 5, 100, 32, 8, 5L) : files;
+    docs = docs == null ? new Docs(true, "docs") : docs;
     git = git == null ? new Git(true, null, 5) : git;
     fileBuffer = fileBuffer == null ? new FileBuffer(1000, 3600L) : fileBuffer;
     bundles = bundles == null ? new Bundles(false) : bundles;
@@ -153,6 +155,26 @@ public record DslProperties(
       readBulkheadPermits = readBulkheadPermits == null ? 32 : readBulkheadPermits;
       writeBulkheadPermits = writeBulkheadPermits == null ? 8 : writeBulkheadPermits;
       acquireTimeoutSeconds = acquireTimeoutSeconds == null ? 5L : acquireTimeoutSeconds;
+    }
+  }
+
+  @Builder
+  public record Docs(
+          /**
+           * Whether the DSL doc endpoints ({@code /api/dsl/docs/**}) are registered. Mirrors the
+           * files router: enabled unless explicitly turned off.
+           */
+          @DefaultValue("true") Boolean enabled,
+
+          /**
+           * Workspace sub-directory (managed by the builder) that holds the markdown docs for DSL
+           * constructs. Must match the builder-side {@code cbs.dsl.builder.docs.sub-dir}.
+           */
+          @DefaultValue("docs") String subDir) {
+
+    public Docs {
+      enabled = enabled == null ? true : enabled;
+      subDir = (subDir == null || subDir.isBlank()) ? "docs" : subDir;
     }
   }
 

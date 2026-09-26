@@ -320,6 +320,10 @@ public class StarterConstants {
   public static final String CACHE_FILES_PREFIX = "files:";
   public static final String CACHE_FILE_PREFIX = "file:";
   public static final String CACHE_FILE_EXISTS_PREFIX = "fileExists:";
+  public static final String CACHE_DOCS_PREFIX = "docs:";
+  public static final String CACHE_DOC_PREFIX = "doc:";
+  public static final String CACHE_DOC_EXISTS_PREFIX = "docExists:";
+  public static final String CACHE_DOCS_PENDING_COUNT_KEY = "docsPendingCount";
   public static final String CACHE_PENDING_COUNT_KEY = "pendingCount";
   public static final String CACHE_VCS_STATUS_KEY = "vcsStatus";
   public static final String CACHE_VCS_LOG_PREFIX = "vcsLog:";

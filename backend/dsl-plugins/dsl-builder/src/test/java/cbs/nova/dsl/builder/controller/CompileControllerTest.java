@@ -88,6 +88,7 @@ class CompileControllerTest {
               null,
               null,
               false,
+              null,
               null);
     }
   }

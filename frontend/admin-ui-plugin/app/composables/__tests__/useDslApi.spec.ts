@@ -599,6 +599,43 @@ describe('useDslApi', () => {
     expect(result).toEqual({ ok: true })
   })
 
+  it('readDslDoc GETs /api/v1/dsl/docs/by-name/{name} and returns content', async () => {
+    fetchMock.mockResolvedValueOnce({ path: 'batch-processing.md', content: '# Batch' })
+    const api = useDslApi()
+
+    const result = await api.readDslDoc('BatchProcessing')
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/docs/by-name/BatchProcessing')
+    expect(result).toBe('# Batch')
+  })
+
+  it('readDslDoc returns null on 404', async () => {
+    fetchMock.mockRejectedValueOnce({ data: { message: 'no doc' }, statusCode: 404 })
+    const api = useDslApi()
+
+    await expect(api.readDslDoc('Missing')).resolves.toBeNull()
+  })
+
+  it('readDslDoc maps non-404 BFF errors to a normalized message', async () => {
+    fetchMock.mockRejectedValueOnce({ data: { message: 'doc store unavailable' }, statusCode: 500 })
+    const api = useDslApi()
+
+    await expect(api.readDslDoc('LoanDsl')).rejects.toThrow('doc store unavailable')
+  })
+
+  it('writeDslDoc POSTs content to /api/v1/dsl/docs/by-name/{name}', async () => {
+    fetchMock.mockResolvedValueOnce({ ok: true })
+    const api = useDslApi()
+
+    const result = await api.writeDslDoc('BatchProcessing', '# Batch')
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/docs/by-name/BatchProcessing', {
+      method: 'POST',
+      body: { content: '# Batch' },
+    })
+    expect(result).toEqual({ ok: true })
+  })
+
   it('fetchChangeRequests GETs /api/v1/dsl/change-requests without filters by default', async () => {
     fetchMock.mockResolvedValueOnce([])
     const api = useDslApi()

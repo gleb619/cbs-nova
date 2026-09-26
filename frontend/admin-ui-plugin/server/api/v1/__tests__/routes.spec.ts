@@ -129,6 +129,14 @@ const writeDslFilePathHandler = (await import('../dsl/files/[...path].post')).de
 const bulkWriteDslFilesHandler = (await import('../generated/routes/dsl/files/bulk.post')).default
 const flushDslFilesHandler = (await import('../generated/routes/dsl/files/flush.post')).default
 const dslFileStatusHandler = (await import('../generated/routes/dsl/files/status.get')).default
+const listDslDocsHandler = (await import('../dsl/docs/index.get')).default
+const readDslDocByNameHandler = (await import('../dsl/docs/by-name/[name].get')).default
+const writeDslDocByNameHandler = (await import('../dsl/docs/by-name/[name].post')).default
+const readDslDocPathHandler = (await import('../dsl/docs/[...path].get')).default
+const writeDslDocPathHandler = (await import('../dsl/docs/[...path].post')).default
+const bulkWriteDslDocsHandler = (await import('../dsl/docs/bulk.post')).default
+const flushDslDocsHandler = (await import('../dsl/docs/flush.post')).default
+const dslDocsStatusHandler = (await import('../dsl/docs/status.get')).default
 
 // Minimal H3Event stub. The route handlers only pass this through to
 // proxyToBackend, which is mocked, so a plain object is sufficient.
@@ -1181,6 +1189,127 @@ describe('dsl/files/status.get', () => {
 
     expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
     expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/files/status')
+    expect(proxyToBackendMock.mock.calls[0][2]).toBeUndefined()
+  })
+})
+
+describe('dsl/docs/index.get', () => {
+  it('GETs the backend docs list path without query by default', async () => {
+    await listDslDocsHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/docs', undefined)
+  })
+
+  it('forwards the prefix query param', async () => {
+    queryValue = { prefix: 'guides' }
+
+    await listDslDocsHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/docs', {
+      query: { prefix: 'guides' },
+    })
+  })
+})
+
+describe('dsl/docs/by-name/[name].get', () => {
+  it('interpolates the :name router param and GETs the backend by-name path', async () => {
+    routerParams = { name: 'BatchProcessing' }
+
+    await readDslDocByNameHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(
+      fakeEvent,
+      '/api/dsl/docs/by-name/BatchProcessing',
+    )
+    expect(proxyToBackendMock.mock.calls[0][2]).toBeUndefined()
+  })
+})
+
+describe('dsl/docs/by-name/[name].post', () => {
+  it('interpolates the :name router param and POSTs the body to the by-name path', async () => {
+    routerParams = { name: 'BatchProcessing' }
+    bodyValue = { content: '# Batch' }
+
+    await writeDslDocByNameHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(
+      fakeEvent,
+      '/api/dsl/docs/by-name/BatchProcessing',
+      {
+        method: 'POST',
+        body: { content: '# Batch' },
+      },
+    )
+  })
+})
+
+describe('dsl/docs/[...path].get', () => {
+  it('interpolates the :path catch-all param and GETs the backend docs path', async () => {
+    routerParams = { path: ['guides', 'batch-processing.md'] }
+
+    await readDslDocPathHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(
+      fakeEvent,
+      '/api/dsl/docs/guides/batch-processing.md',
+    )
+    expect(proxyToBackendMock.mock.calls[0][2]).toBeUndefined()
+  })
+})
+
+describe('dsl/docs/[...path].post', () => {
+  it('interpolates the :path catch-all param and POSTs the body to the backend docs path', async () => {
+    routerParams = { path: ['guides', 'batch-processing.md'] }
+    bodyValue = { content: '# Batch' }
+
+    await writeDslDocPathHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledWith(
+      fakeEvent,
+      '/api/dsl/docs/guides/batch-processing.md',
+      {
+        method: 'POST',
+        body: { content: '# Batch' },
+      },
+    )
+  })
+})
+
+describe('dsl/docs/bulk.post', () => {
+  it('POSTs the body to the backend docs bulk path', async () => {
+    bodyValue = { files: [{ path: 'a.md', content: '# A' }] }
+
+    await bulkWriteDslDocsHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/docs/bulk', {
+      method: 'POST',
+      body: { files: [{ path: 'a.md', content: '# A' }] },
+    })
+  })
+})
+
+describe('dsl/docs/flush.post', () => {
+  it('POSTs to the backend docs flush path', async () => {
+    await flushDslDocsHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/docs/flush', {
+      method: 'POST',
+    })
+  })
+})
+
+describe('dsl/docs/status.get', () => {
+  it('GETs the backend docs status path', async () => {
+    await dslDocsStatusHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/docs/status')
     expect(proxyToBackendMock.mock.calls[0][2]).toBeUndefined()
   })
 })

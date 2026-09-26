@@ -1,8 +1,6 @@
 package cbs.nova.starter.builder;
 
 import cbs.nova.starter.exception.BuilderApiException;
-import cbs.nova.starter.exception.BuilderClientBusyException;
-import cbs.nova.starter.exception.BuilderUnavailableException;
 import cbs.nova.starter.model.CompileModels.CompileRequest;
 import cbs.nova.starter.model.CompileModels.CompileResult;
 import cbs.nova.starter.model.DslFileModels.BulkWriteRequest;
@@ -19,26 +17,18 @@ import cbs.nova.starter.model.VcsModels.DiscardResult;
 import cbs.nova.starter.model.VcsModels.LogEntry;
 import cbs.nova.dsl.vcs.RepoStatus;
 import io.github.resilience4j.bulkhead.Bulkhead;
-import io.github.resilience4j.bulkhead.BulkheadFullException;
 import io.github.resilience4j.bulkhead.ThreadPoolBulkhead;
-import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Callable;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.RejectedExecutionException;
-import lombok.RequiredArgsConstructor;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.web.client.RestClient;
-import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.util.UriBuilder;
 
-@RequiredArgsConstructor
 public class DslBuilderClient {
 
   private static final ParameterizedTypeReference<List<FileEntry>> FILE_ENTRIES_TYPE = new ParameterizedTypeReference<>() {
@@ -47,10 +37,16 @@ public class DslBuilderClient {
   };
 
   private final RestClient restClient;
-  private final ThreadPoolBulkhead queue;
-  private final Bulkhead bulkhead;
-  private final CircuitBreaker breaker;
+  private final BuilderRequestExecutor executor;
   private final BuilderCache cache;
+
+  //TODO: replace ctor with lombok's one
+  public DslBuilderClient(RestClient restClient, ThreadPoolBulkhead queue, Bulkhead bulkhead,
+          CircuitBreaker breaker, BuilderCache cache) {
+    this.restClient = restClient;
+    this.executor = new BuilderRequestExecutor(queue, bulkhead, breaker);
+    this.cache = cache;
+  }
 
   public CompileResult compile(CompileRequest request) {
     return execute(() -> doCompile(request));
@@ -242,58 +238,11 @@ public class DslBuilderClient {
   }
 
   private <T> T execute(Callable<T> call) {
-    try {
-      return submit(call).toCompletableFuture().get();
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      throw new IllegalStateException("interrupted while waiting for builder response", e);
-    } catch (ExecutionException e) {
-      throw propagate(e.getCause());
-    }
+    return executor.execute(call);
   }
 
   <T> CompletionStage<T> submit(Callable<T> call) {
-    try {
-      return queue.submit(() -> runWithBulkhead(() -> runWithBreaker(() -> invoke(call))));
-    } catch (BulkheadFullException e) {
-      throw new BuilderClientBusyException("builder request queue is full");
-    } catch (RejectedExecutionException e) {
-      throw new BuilderClientBusyException("builder request queue is full");
-    }
-  }
-
-  private <T> T runWithBulkhead(Callable<T> call) throws Exception {
-    try {
-      return bulkhead.executeCallable(call);
-    } catch (BulkheadFullException e) {
-      throw new IllegalStateException("builder client bulkhead saturated");
-    }
-  }
-
-  private <T> T runWithBreaker(Callable<T> call) throws Exception {
-    try {
-      return breaker.executeCallable(call);
-    } catch (CallNotPermittedException e) {
-      throw new BuilderUnavailableException("DSL builder circuit breaker is open");
-    }
-  }
-
-  private <T> T invoke(Callable<T> call) throws Exception {
-    try {
-      return call.call();
-    } catch (ResourceAccessException e) {
-      throw new BuilderUnavailableException("DSL builder unreachable: " + e.getMessage(), e);
-    }
-  }
-
-  private RuntimeException propagate(Throwable throwable) {
-    if (throwable instanceof RuntimeException runtimeException) {
-      return runtimeException;
-    }
-    if (throwable instanceof Error error) {
-      throw error;
-    }
-    return new IllegalStateException("builder call failed: " + throwable.getMessage(), throwable);
+    return executor.submit(call);
   }
 
 }

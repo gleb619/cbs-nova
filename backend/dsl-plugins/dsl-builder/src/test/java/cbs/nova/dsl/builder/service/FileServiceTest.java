@@ -56,6 +56,7 @@ class FileServiceTest {
             null,
             null,
             false,
+            null,
             null);
     var gitStatusProvider = new NoOpGitStatusProvider();
     service = new FileService(properties, new FileRepository(),
@@ -142,6 +143,7 @@ class FileServiceTest {
               null,
               null,
               false,
+              null,
               null));
     }
 
@@ -294,6 +296,7 @@ class FileServiceTest {
             null,
             null,
             false,
+            null,
             null);
     var recording = new RecordingGitStatusService();
     @SuppressWarnings("unchecked")
@@ -340,6 +343,7 @@ class FileServiceTest {
             null,
             null,
             false,
+            null,
             null);
     service = new FileService(noopProperties,
             new FileRepository(),

@@ -103,6 +103,12 @@ class PieceManifestCoverageTest {
           "POST /api/dsl/files/bulk",
           "POST /api/dsl/files/flush",
           "POST /api/dsl/files/{*path}",
+          // Doc staging — workbench-only companion of the file staging surface; same T624
+          // manifest piece pending
+          "POST /api/dsl/docs/by-name/{name}",
+          "POST /api/dsl/docs/bulk",
+          "POST /api/dsl/docs/flush",
+          "POST /api/dsl/docs/{*path}",
           // API key admin — separate admin path; T625 manifest piece pending
           "POST /api/dsl/auth/keys",
           "DELETE /api/dsl/auth/keys/{id}",

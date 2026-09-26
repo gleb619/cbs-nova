@@ -204,6 +204,31 @@ export function useDslApi() {
     return bffWriteDslFileByName(name, { body: { content } })
   }
 
+  async function readDslDoc(name: string): Promise<string | null> {
+    log.info('readDslDoc request', { name })
+    try {
+      const result = (await $fetch(`/api/v1/dsl/docs/by-name/${encodeURIComponent(name)}`)) as {
+        content?: string
+      }
+      return typeof result?.content === 'string' && result.content.length > 0
+        ? result.content
+        : null
+    } catch (err) {
+      if (extractApiError(err).status === 404) return null
+      const message = extractApiError(err).message
+      log.error('failed to load doc', { error: message })
+      throw new Error(message)
+    }
+  }
+
+  async function writeDslDoc(name: string, content: string) {
+    log.info('writeDslDoc request', { name })
+    return (await $fetch(`/api/v1/dsl/docs/by-name/${encodeURIComponent(name)}`, {
+      method: 'POST',
+      body: { content },
+    })) as unknown
+  }
+
   async function listHelpers(
     params: { search?: string; mode?: string; limit?: number; offset?: number } = {},
   ) {
@@ -615,6 +640,8 @@ export function useDslApi() {
     deleteDraft,
     readDslFile,
     writeDslFile,
+    readDslDoc,
+    writeDslDoc,
     listDrafts,
     getDraftsMetadata,
     readDraft,

@@ -9,6 +9,7 @@ import { useManifestGuard } from '@cbs/admin-ui-plugin/composables/useManifestGu
 import { useWorkbenchBeforeUnload } from '@cbs/admin-ui-plugin/composables/useWorkbenchBeforeUnload'
 import { useWorkbenchDeepLink } from '@cbs/admin-ui-plugin/composables/useWorkbenchDeepLink'
 import { useWorkbenchDelete } from '@cbs/admin-ui-plugin/composables/useWorkbenchDelete'
+import { useWorkbenchDoc } from '@cbs/admin-ui-plugin/composables/useWorkbenchDoc'
 import { useWorkbenchDraft } from '@cbs/admin-ui-plugin/composables/useWorkbenchDraft'
 import { useWorkbenchMenus } from '@cbs/admin-ui-plugin/composables/useWorkbenchMenus'
 import { useWorkbenchNewDefinition } from '@cbs/admin-ui-plugin/composables/useWorkbenchNewDefinition'
@@ -190,6 +191,16 @@ safeSelectConstructRef = safeSelectConstruct
 const draftSave = useDraftSave({ getContent: () => editorCode.value })
 
 // ---------------------------------------------------------------------------
+// Docs tab: markdown doc per selected construct (load by name, save by name).
+// ---------------------------------------------------------------------------
+
+const workbenchDoc = useWorkbenchDoc({
+  readDoc: (name) => dslApi.readDslDoc(name),
+  writeDoc: (name, content) => dslApi.writeDslDoc(name, content),
+  logError: (message, fields) => log.error(message, fields),
+})
+
+// ---------------------------------------------------------------------------
 // Structure tab: fetch-on-select with retry.
 // ---------------------------------------------------------------------------
 
@@ -209,6 +220,7 @@ function syncSelectionEffects() {
   workbenchDraft.setName(state.value.selectedName ?? '')
   void loadSourceFile(selectedConstruct.value)
   void structureApi.loadStructure(state.value.selectedName ?? '')
+  void workbenchDoc.loadDoc(state.value.selectedName ?? '')
 }
 
 // ---------------------------------------------------------------------------
@@ -402,6 +414,11 @@ function handleEditorSave() {
   draftSave.save().then(() => refreshDrafts())
 }
 
+function handleSaveDoc(value: string) {
+  workbenchDoc.updateDoc(value)
+  void workbenchDoc.saveDoc()
+}
+
 // ---------------------------------------------------------------------------
 // Deep-link wiring (mounted hook).
 // ---------------------------------------------------------------------------
@@ -504,6 +521,7 @@ onMounted(async () => {
           <DslBodyEditor
             ref="bodyEditorRef"
             :code="editorCode"
+            :doc="workbenchDoc.doc.value"
             :construct="selectedConstruct"
             :save-status="draftSave.status.value"
             :last-saved-at="draftSave.lastSavedAt.value"
@@ -524,6 +542,8 @@ onMounted(async () => {
             :structure-error="structureApi.structureError.value"
             @update:code="onCodeChange"
             @save="handleEditorSave"
+            @update:doc="workbenchDoc.updateDoc"
+            @save-doc="handleSaveDoc"
             @retry-structure="structureApi.retryStructure"
           />
         </div>

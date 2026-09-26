@@ -143,6 +143,7 @@ class GradleServiceTest {
             envVar,
             null,
             false,
+            null,
             null);
   }
 

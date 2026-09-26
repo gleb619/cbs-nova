@@ -1,5 +1,9 @@
 package cbs.nova.starter.builder;
 
+import static cbs.nova.starter.core.StarterConstants.CACHE_DOC_EXISTS_PREFIX;
+import static cbs.nova.starter.core.StarterConstants.CACHE_DOC_PREFIX;
+import static cbs.nova.starter.core.StarterConstants.CACHE_DOCS_PENDING_COUNT_KEY;
+import static cbs.nova.starter.core.StarterConstants.CACHE_DOCS_PREFIX;
 import static cbs.nova.starter.core.StarterConstants.CACHE_FILE_EXISTS_PREFIX;
 import static cbs.nova.starter.core.StarterConstants.CACHE_FILE_PREFIX;
 import static cbs.nova.starter.core.StarterConstants.CACHE_FILES_PREFIX;
@@ -35,6 +39,34 @@ public class BuilderCache {
 
   public boolean fileExists(String path, Supplier<Boolean> loader) {
     return get(CACHE_FILE_EXISTS_PREFIX + path, loader);
+  }
+
+  public List<FileEntry> listDocs(String prefix, Supplier<List<FileEntry>> loader) {
+    return get(CACHE_DOCS_PREFIX + (prefix == null ? "" : prefix), loader);
+  }
+
+  public FileContentResponse readDoc(String path, Supplier<FileContentResponse> loader) {
+    return get(CACHE_DOC_PREFIX + path, loader);
+  }
+
+  public boolean docExists(String path, Supplier<Boolean> loader) {
+    return get(CACHE_DOC_EXISTS_PREFIX + path, loader);
+  }
+
+  public int docsPendingCount(Supplier<Integer> loader) {
+    return get(CACHE_DOCS_PENDING_COUNT_KEY, loader);
+  }
+
+  public void invalidateDoc(String path) {
+    cache.asMap().keySet().removeIf(key -> key.startsWith(CACHE_DOC_PREFIX + path)
+            || key.startsWith(CACHE_DOC_EXISTS_PREFIX + path));
+  }
+
+  public void invalidateDocs() {
+    invalidatePrefix(CACHE_DOCS_PREFIX);
+    invalidatePrefix(CACHE_DOC_PREFIX);
+    invalidatePrefix(CACHE_DOC_EXISTS_PREFIX);
+    cache.invalidate(CACHE_DOCS_PENDING_COUNT_KEY);
   }
 
   public int pendingCount(Supplier<Integer> loader) {

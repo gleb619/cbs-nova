@@ -52,6 +52,10 @@ public class FileRepository {
   }
 
   public List<FileEntry> list(Path root, String prefix) {
+    return list(root, prefix, JAVA_SUFFIX);
+  }
+
+  public List<FileEntry> list(Path root, String prefix, String suffix) {
     if (!Files.isDirectory(root)) {
       return List.of();
     }
@@ -59,7 +63,7 @@ public class FileRepository {
     try (Stream<Path> stream = Files.walk(root)) {
       stream
               .filter(Files::isRegularFile)
-              .filter(p -> p.getFileName().toString().endsWith(JAVA_SUFFIX))
+              .filter(p -> p.getFileName().toString().endsWith(suffix))
               .filter(p -> prefix == null || prefix.isBlank()
                       || toRelative(root, p).startsWith(prefix))
               .forEach(p -> entries.add(toEntry(root, p)));
