@@ -1217,6 +1217,218 @@ calls the same BFF endpoint and lists rows newest first; the panel is wired from
 | `400 INVALID_REQUEST "Invalid value for query parameter 'offset': …"` | 400 | `offset` is not a valid integer. | Pass an integer. |
 | Filter returns no rows for a known failing definition | 200 (empty list) | The failing event wrote rows under `RELOAD` (source directory) or a different definition context than expected. | Query without `definition` and scan `source`/`definition` values, or query the exact directory string for reload failures. |
 
+## Manage VHS tape lifecycle
+
+Record DSL executions to versioned JSON Lines tapes, list them, inspect their raw contents,
+apply record-time scrub rules, and replay a tape against `dry-run` or a local backend.
+Source: `VhsRecorder` + `LocalFileTapeSink` (recording), `VhsManagementHandler` +
+`VhsManagementService` + `LocalFileTapeStore` (management), `VhsReplayJob` + `VhsReplayEngine`
+(replay), and `VhsScrubber` (record-time redaction). Routes are registered by
+`VhsManagementRouterConfiguration` and vanish when `cbs.vhs.enabled` is not `true`.
+
+BFF proxies:
+
+- `GET /api/v1/vhs/tapes` → [`frontend/admin-ui-plugin/server/api/v1/vhs/tapes/index.get.ts`](../frontend/admin-ui-plugin/server/api/v1/vhs/tapes/index.get.ts)
+- `GET /api/v1/vhs/tapes/{runId}` → [`frontend/admin-ui-plugin/server/api/v1/vhs/tapes/[runId].get.ts`](../frontend/admin-ui-plugin/server/api/v1/vhs/tapes/[runId].get.ts)
+- `DELETE /api/v1/vhs/tapes/{runId}` → [`frontend/admin-ui-plugin/server/api/v1/vhs/tapes/[runId].delete.ts`](../frontend/admin-ui-plugin/server/api/v1/vhs/tapes/[runId].delete.ts)
+- `POST /api/v1/vhs/tapes/{runId}/replay` → [`frontend/admin-ui-plugin/server/api/v1/vhs/tapes/[runId]/replay.post.ts`](../frontend/admin-ui-plugin/server/api/v1/vhs/tapes/[runId]/replay.post.ts)
+
+Use the BFF paths so the browser's `X-Api-Key` / JWT / RBAC posture is applied consistently.
+The backend at `:8090` exposes the same routes at `/api/v1/vhs/tapes*` and behaves identically.
+
+> Request and response envelopes in this section are taken from handler code and tests,
+> not a live capture.
+
+### Enable recording
+
+VHS recording is opt-in and off by default. Activate it in application configuration and
+restart:
+
+```yaml
+cbs:
+  vhs:
+    enabled: true
+    recordable-routes:
+      - "*"            # or named DSL constructs, e.g. "Ping", "LoanDsl"
+    sink:
+      type: local
+      local:
+        path: /var/cbs-nova/vhs
+        max-tapes: 0    # 0 = unlimited
+        max-bytes: 0
+    scrub:
+      enabled: true
+      mask-value: "***REDACTED***"
+      seed: "prod-vhs-2026"
+      rules:
+        - path: "$.cardNumber"
+          action: mask
+        - path: "$.accounts[*].iban"
+          action: fake
+```
+
+`recordable-routes` matches the DSL construct name (`event.name()`) that the recorder stores
+in the tape header `route` field. The wildcard `*` records every routed run. Tapes are written as
+one `.vhs.jsonl` file per run under `cbs.vhs.sink.local.path` with the naming convention
+`<yyyyMMdd-HHmmss>_<runId>_<correlationId>.vhs.jsonl`. For the exact line-oriented format, see
+[`docs/vhs-tape-format.md`](vhs-tape-format.md). For how the optional `pieceId` on each scrub
+rule relates to the broader control-plane manifest, see [`docs/vhs-manifest.md`](vhs-manifest.md).
+
+To produce a tape, run a DSL process whose construct name is listed in `recordable-routes`.
+When the run completes, the tape appears in the listing below.
+
+### List tapes
+
+```bash
+curl -sS 'http://localhost:3000/api/v1/vhs/tapes?limit=50&offset=0' | jq
+```
+
+Returns `200 OK` with `PageResponse<TapeSummary>`: `{items: [...], total, offset, limit}`.
+Default `limit=50`, clamped to `1..500`; `offset` defaults to `0`. Items are newest first by
+`recorded_at`. Each item carries:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `filename` | string | Tape file name, e.g. `20260926-120000_run-abc_corr-xyz.vhs.jsonl`. |
+| `recorded_at` | ISO-8601 | Wall-clock time from the tape header. |
+| `run_id` | string | `source_run_id` of the recorded run. |
+| `correlation_id` | string? | Correlation id propagated from the run. |
+| `route` | string | DSL construct name that produced the run. |
+| `size_bytes` | long | File size in bytes. |
+| `event_count` | long | Number of validated event lines (excluding the `tape_closed` trailer). |
+
+### Download a tape
+
+```bash
+curl -sS http://localhost:3000/api/v1/vhs/tapes/run-2v7k9x -o run-2v7k9x.vhs.jsonl
+```
+
+Returns `200 OK` with `Content-Type: application/x-jsonl` and the raw tape bytes. For the
+schema of each line, see [`docs/vhs-tape-format.md`](vhs-tape-format.md).
+
+### Delete a tape
+
+```bash
+curl -sS -X DELETE http://localhost:3000/api/v1/vhs/tapes/run-2v7k9x | jq
+```
+
+Returns `200 OK` with `{"deleted": true}` when the file existed, or `{"deleted": false}` when
+there was no tape for that `runId`.
+
+### Scrub rules at record time
+
+`VhsScrubber` runs after event translation and before the sink. It is a no-op pass-through when
+disabled or when `rules` is empty; otherwise it clones only the maps and lists on the path that
+actually change. Each rule selects a JSON path inside the `input`, `output`, or `metadata` tree
+and applies one action:
+
+- `remove` — drop the matched field.
+- `mask` — replace it with `cbs.vhs.scrub.mask-value` (default `***REDACTED***`).
+- `fake` — replace it with a deterministic synthetic value seeded by `cbs.vhs.scrub.seed`.
+
+Paths use dot notation for map keys and `[*]` for array elements, for example `$.token` or
+`$.accounts[*].iban`. A missing path is skipped silently (one WARN per `section:path` per
+scrubber instance). The optional `pieceId` field on each rule is a doc-only reference to a
+piece id from [`docs/vhs-manifest.md`](vhs-manifest.md); scrubbing itself matches by path alone.
+
+### Replay a tape
+
+Enable replay first:
+
+```yaml
+cbs:
+  vhs:
+    replay:
+      enabled: true
+      target: dry-run        # default, no side effects
+      mode: exact            # exact | load
+      speed: 1.0
+      concurrency: 4
+      copies: 1
+      compare-output: false
+      local-base-url: http://localhost:8090
+```
+
+Then start a replay:
+
+```bash
+curl -sS -X POST http://localhost:3000/api/v1/vhs/tapes/run-2v7k9x/replay \
+  -H 'Content-Type: application/json' \
+  -d '{"target": "dry-run", "mode": "exact", "speed": 1.0}' | jq
+```
+
+Body (`ReplayRunRequest`) — all fields optional:
+
+- `target` — `dry-run` (default, no network I/O), `local` (re-invoke the configured
+  `cbs.vhs.replay.local-base-url`), or a URL only when **both** production opt-in keys are set.
+- `mode` — `exact` (default, one copy in tape order) or `load` (concurrent copies).
+- `speed` — timing multiplier applied to the recorded `relative_ms` deltas; must be `> 0`.
+- `concurrency` — load-mode cap on concurrent copies.
+- `copies` — number of load-mode copies.
+
+Production-like targets require both `cbs.vhs.replay.allow-production=true` **and** the
+environment variable `CBS_VHS_REPLAY_ALLOW_PRODUCTION=1`; a single configuration slip cannot
+enable them.
+
+Response (`ReplayRunResponse`):
+
+| Field | Type | Meaning |
+|---|---|---|
+| `replay_run_id` | string | `replay-<8-char uuid>`. |
+| `status` | string | `completed` for inline dry-run/exact replays; `accepted` for async load or non-dry-run jobs. |
+| `target` | string | Resolved target actually used. |
+| `mode` | string | Resolved mode (`exact` or `load`). |
+| `status_url` | string? | `/api/v1/vhs/tapes/<runId>/replay/<replay_run_id>` — reserved for job status; no GET route is wired today. |
+| `report` | VhsReplayReport? | Inline report when `status=completed`; omitted when the job is `accepted`. |
+
+Report fields:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `mode` | string | `exact` or `load`. |
+| `tapeCount` | int | Number of tape copies executed. |
+| `totalCalls` | long | Recorded calls attempted. |
+| `successfulCalls` | long | Calls that returned success. |
+| `failedCalls` | long | Calls that failed; a failing call aborts that tape copy. |
+| `skippedCopies` | int | Load-mode copies not started because `max-duration-ms` was reached. |
+| `wallClockMs` | long | Total replay wall-clock time. |
+| `observations` | CallObservation[] | Per-call latency, success flag, error, `outputCompared`, and `outputMismatch`. |
+| `tapes` | TapeSummary[] | Per-copy aggregate `{tapeId, totalCalls, successfulCalls, failedCalls, durationMs, success?}`. |
+
+Inline dry-run/exact replays return the full report synchronously; load and non-dry-run jobs are
+submitted to the `vhs-replay-` thread pool and reported as `accepted`.
+
+### Common failure cases
+
+| Symptom | HTTP | Cause | Fix |
+|---|---|---|---|
+| `GET /api/v1/vhs/tapes/{runId}` returns `404 NOT_FOUND "Tape not found: <runId>"` | 404 | The `runId` does not match any tape header `source_run_id`. | Record a run first; list tapes to see available `run_id`s. |
+| `DELETE /api/v1/vhs/tapes/{runId}` returns `{"deleted": false}` | 200 | Same as above; deletes are idempotent. | No action needed. |
+| `POST /api/v1/vhs/tapes/{runId}/replay` returns `503` with `{"error": "VHS replay is not enabled"}` | 503 | Either `cbs.vhs.replay.enabled` is `false` (no `VhsReplayJob` bean) or the `runId` is missing; `VhsManagementHandler` does not distinguish the two cases. | Verify replay is enabled and restarted, or confirm the `runId` exists in the listing. |
+| `POST /api/v1/vhs/tapes/{runId}/replay` returns `403 FORBIDDEN` mentioning `OPERATOR` | 403 | `cbs.dsl.auth.rbac.enabled=true` and VHS mutating routes are not in `RbacAuthorizationFilter.RULES`, so the filter fail-closes unmatched mutating requests to `Role.OPERATOR`. | Use an API key (mapped to `ADMIN`) or a principal at `OPERATOR`+. |
+| Replay report shows `success=false` with error `target returned HTTP 403 for /api/dsl/run/...` | 200 (report body) | The piece manifest has drifted since the tape was recorded; the replayed process/helper is no longer allow-listed for the definition, so `ManifestObjectGuard` rejects the real invocation. See [`docs/vhs-manifest.md`](vhs-manifest.md). | Update the manifest allow/deny piece for the tape's `route` and `call_metadata`, or replay with `target: dry-run` to avoid real calls. |
+| Replay fails before any call executes with `VhsReplayException` | n/a | The tape is malformed or truncated: unsupported format/schema version, missing `tape_closed` trailer, gapped `event_index`, or mismatched trailer `event_count`. | Re-record the run; inspect the tape against [`docs/vhs-tape-format.md`](vhs-tape-format.md). |
+| `Refusing to replay against production-like target '<url>'` | n/a | Only one of the two production opt-in keys is set. | Set both `cbs.vhs.replay.allow-production=true` and `CBS_VHS_REPLAY_ALLOW_PRODUCTION=1`. |
+
+### Verify a replay round-trip
+
+```bash
+# 1. Confirm a tape exists for the run
+curl -sS 'http://localhost:3000/api/v1/vhs/tapes?limit=5' | \
+  jq '.items[] | {run_id, route, event_count}'
+
+# 2. Replay in dry-run/exact mode and read the inline report
+#    (output comparison is driven by cbs.vhs.replay.compare-output, not the request body)
+curl -sS -X POST http://localhost:3000/api/v1/vhs/tapes/run-2v7k9x/replay \
+  -H 'Content-Type: application/json' \
+  -d '{"target": "dry-run", "mode": "exact"}' | \
+  jq '{status, totalCalls: .report.totalCalls, successfulCalls: .report.successfulCalls, failedCalls: .report.failedCalls, outputMismatches: ([.report.observations[] | select(.outputMismatch)] | length)}'
+
+# 3. For async load/non-dry-run jobs, the response is `accepted`. Watch logs for completion or failure:
+docker compose -f app/docker-compose.yml logs app | \
+  grep -E 'VHS replay job|VHS replay.*failed'
+```
+
 ## Maintaining this runbook
 
 Every new ops-relevant change (a scheduled job, a new failure mode, a new external dependency)
