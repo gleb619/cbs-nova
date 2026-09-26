@@ -14,7 +14,6 @@ import org.jspecify.annotations.Nullable;
 import java.time.Duration;
 import java.util.List;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 @Builder
 public record TransactionDslObject(
@@ -31,7 +30,7 @@ public record TransactionDslObject(
         @Nullable Duration heartbeatTimeout,
         @NonNull Function<TransactionContext<?>, Result<?>> previewLogic,
         @NonNull Function<TransactionContext<?>, Result<ExplainReport>> explainLogic,
-        @NonNull Supplier<DslDescriptor> descriptor,
+        @NonNull DslDescriptor descriptor,
         @Nullable String description) implements DslObject {
 
   @Override
@@ -48,7 +47,7 @@ public record TransactionDslObject(
   }
 
   public @NonNull DslDescriptor describe() {
-    return descriptor.get();
+    return descriptor;
   }
 
 }

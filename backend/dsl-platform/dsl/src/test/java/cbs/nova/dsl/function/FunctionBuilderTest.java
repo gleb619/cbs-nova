@@ -264,7 +264,7 @@ class FunctionBuilderTest {
             .build();
     var fn = Dsl.function("CustomDescFn")
             .execute(ctx -> Result.success(null))
-            .describe(() -> custom)
+            .describe(custom)
             .build();
     assertThat(fn.descriptor()).isSameAs(custom);
   }

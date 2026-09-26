@@ -18,7 +18,6 @@ import java.time.Duration;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Supplier;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
@@ -45,7 +44,7 @@ public final class TransactionBuilder<I, O> implements ObjectBuilder<Transaction
   @Nullable
   private Function<TransactionContext<I>, Result<ExplainReport>> explainLogic;
   @Nullable
-  private Supplier<DslDescriptor> descriptor;
+  private DslDescriptor descriptor;
 
   public TransactionBuilder(@NonNull String name) {
     this.name = name;
@@ -132,7 +131,7 @@ public final class TransactionBuilder<I, O> implements ObjectBuilder<Transaction
     return this;
   }
 
-  public TransactionBuilder<I, O> describe(@NonNull Supplier<DslDescriptor> desc) {
+  public TransactionBuilder<I, O> describe(@NonNull DslDescriptor desc) {
     this.descriptor = desc;
     return this;
   }
@@ -173,10 +172,10 @@ public final class TransactionBuilder<I, O> implements ObjectBuilder<Transaction
     return List.of(build());
   }
 
-  private @NonNull Supplier<DslDescriptor> effectiveDescriptor() {
+  private @NonNull DslDescriptor effectiveDescriptor() {
     return descriptor != null
             ? descriptor
-            : () -> defaultDescriptor(
+            : defaultDescriptor(
                     name, taskQueue, version, inputType, outputType, parameters,
                     compensationLogic != null, startToCloseTimeout, retryPolicy,
                     heartbeatTimeout, description);

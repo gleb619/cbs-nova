@@ -48,7 +48,7 @@ class HierarchyReportDiagramTest {
             .output(String.class)
             .execute(ctx -> Result.success("ok"))
             .build();
-    var report = reportOf(tx.name(), tx.descriptor().get().type(), false);
+    var report = reportOf(tx.name(), tx.descriptor().type(), false);
 
     assertThat(report.toMermaid()).isEqualTo(mermaid.forTransaction(tx, CALLS, COUNTS));
     assertThat(report.toPlantUml()).isEqualTo(plantUml.forTransaction(tx, CALLS, COUNTS));

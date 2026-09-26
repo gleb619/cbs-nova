@@ -232,7 +232,7 @@ class TransactionBuilderTest {
             .build();
     var tx = Dsl.transaction("PayTx")
             .execute(ctx -> Result.success(null))
-            .describe(() -> custom)
+            .describe(custom)
             .build();
     assertThat(tx.describe()).isSameAs(custom);
   }

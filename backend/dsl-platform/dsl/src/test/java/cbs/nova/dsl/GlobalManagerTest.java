@@ -519,26 +519,23 @@ class GlobalManagerTest {
     var gm = GlobalManager.globalManager();
     gm.registerTransaction(
             Dsl.transaction("DescribedT")
-                    .describe(() -> {
-                      var od = TransactionDescriptor.builder()
-                              .name("DescribedT")
-                              .description("A transaction that pays")
-                              .version("v1")
-                              .taskQueue("DescribedT-queue")
-                              .inputType(String.class)
-                              .outputType(String.class)
-                              .helperRefs(List.of())
-                              .startToCloseTimeout(Duration.ofSeconds(30))
-                              .build();
-                      return DslDescriptor.builder()
-                              .objectDescriptor(od)
-                              .parameters(List.of())
-                              .taskQueue(null)
-                              .version(null)
-                              .startToCloseTimeout(null)
-                              .heartbeatTimeout(null)
-                              .build();
-                    })
+                    .describe(DslDescriptor.builder()
+                            .objectDescriptor(TransactionDescriptor.builder()
+                                    .name("DescribedT")
+                                    .description("A transaction that pays")
+                                    .version("v1")
+                                    .taskQueue("DescribedT-queue")
+                                    .inputType(String.class)
+                                    .outputType(String.class)
+                                    .helperRefs(List.of())
+                                    .startToCloseTimeout(Duration.ofSeconds(30))
+                                    .build())
+                            .parameters(List.of())
+                            .taskQueue(null)
+                            .version(null)
+                            .startToCloseTimeout(null)
+                            .heartbeatTimeout(null)
+                            .build())
                     .execute(ctx -> Result.success("ok"))
                     .build());
 

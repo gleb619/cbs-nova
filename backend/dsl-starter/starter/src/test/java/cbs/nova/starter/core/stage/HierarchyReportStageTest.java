@@ -65,7 +65,7 @@ class HierarchyReportStageTest {
     GlobalManager.globalManager().registerFunction(
             Dsl.function(fnName)
                     .execute(c -> Result.success("ok"))
-                    .describe(() -> Descriptors.from(fnName,
+                    .describe(Descriptors.from(fnName,
                             new ExecutableDescriptor(
                                     fnName, null, null, null, List.of())))
                     .build());

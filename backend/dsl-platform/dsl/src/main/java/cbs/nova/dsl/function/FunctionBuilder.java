@@ -27,7 +27,6 @@ import org.jspecify.annotations.Nullable;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 @RequiredArgsConstructor
 public final class FunctionBuilder<I, O> implements ObjectBuilder<FunctionDslObject> {
@@ -42,7 +41,7 @@ public final class FunctionBuilder<I, O> implements ObjectBuilder<FunctionDslObj
   @Nullable
   private Function<FunctionContext<I>, Result<ExplainReport>> explainLogic;
   @Nullable
-  private Supplier<DslDescriptor> descriptor;
+  private DslDescriptor descriptor;
 
   @SuppressWarnings("unchecked")
   public <T> FunctionBuilder<T, O> input(@NonNull Class<T> type) {
@@ -86,7 +85,7 @@ public final class FunctionBuilder<I, O> implements ObjectBuilder<FunctionDslObj
     return this;
   }
 
-  public FunctionBuilder<I, O> describe(@NonNull Supplier<DslDescriptor> desc) {
+  public FunctionBuilder<I, O> describe(@NonNull DslDescriptor desc) {
     this.descriptor = desc;
     return this;
   }
@@ -102,7 +101,6 @@ public final class FunctionBuilder<I, O> implements ObjectBuilder<FunctionDslObj
     var effectiveParameters = parameters != null
             ? parameters
             : List.<ParameterDescriptor>of();
-    // TODO: redo from supplier to just simple descriptor
     var effectiveDescriptor = effectiveDescriptor(effectiveParameters);
     var resolvedExecute = rawExecute();
     var explain = rawExplain() != null ? rawExplain() : defaultExplain();
@@ -115,7 +113,7 @@ public final class FunctionBuilder<I, O> implements ObjectBuilder<FunctionDslObj
             .executeLogic(resolvedExecute)
             .previewLogic(resolvedPreview)
             .explainLogic(explain)
-            .descriptor(effectiveDescriptor.get())
+            .descriptor(effectiveDescriptor)
             .build();
   }
 
@@ -124,12 +122,11 @@ public final class FunctionBuilder<I, O> implements ObjectBuilder<FunctionDslObj
     return List.of(build());
   }
 
-  private @NonNull Supplier<DslDescriptor> effectiveDescriptor(
+  private @NonNull DslDescriptor effectiveDescriptor(
           @NonNull List<ParameterDescriptor> parameters) {
     return descriptor != null
             ? descriptor
-            : () -> defaultDescriptor(
-                    name, parameters, inputType, outputType, null);
+            : defaultDescriptor(name, parameters, inputType, outputType, null);
   }
 
   private @NonNull Function<FunctionContext<?>, Result<ExplainReport>> defaultExplain() {
