@@ -68,7 +68,7 @@ Bugsink Postgres and Temporal Postgres run inside the Compose network only and a
 ## DSL in 60 seconds
 
 - Authoring guide: [`docs/dsl/authoring.md`](docs/dsl/authoring.md)
-- Working examples: [`backend/dsl-starter/dsl-examples/`](backend/dsl-starter/dsl-examples/)
+- Example catalog and working examples: [`backend/dsl-starter/dsl-examples/README.md`](backend/dsl-starter/dsl-examples/README.md)
 
 ## Testing
 

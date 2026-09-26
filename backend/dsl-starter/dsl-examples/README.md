@@ -1,0 +1,72 @@
+# DSL Examples Catalog
+
+This module ships the curated example DSLs for the cbs-nova platform. Each `.java` file under [`src/dsl/`](src/dsl) defines one or more processes, transactions, or functions and demonstrates specific helpers and DSL authoring patterns.
+
+## Layout
+
+- **DSL sources**: `src/dsl/*.java` (author-edited).
+- **Record models**: `src/models/*.java` (inputs/outputs used by the examples).
+- **Generated output**: `build/generated/` — produced by the `cbs.nova.dsl` Gradle plugin. **Never edit generated code.**
+
+## Catalog
+
+| Example | Definitions | Helpers / DSL features | Scenario | Tests |
+|---------|-------------|------------------------|----------|-------|
+| [`ApiKeyProvisioningDsl`](src/dsl/ApiKeyProvisioningDsl.java) | `ApiKeyProvisioning` | `secret` (token + bytes) | Provision a cryptographic API key and an idempotency key. | `AdvancedDslExamplesTest.apiKeyProvisioningPreviewProducesCryptographicKeys` |
+| [`AuditTrailDsl`](src/dsl/AuditTrailDsl.java) | `AuditTrail` | `currentTimestamp` (UTC + zone) | Stamp an audit record with both UTC and timezone-aware timestamps. | `AdvancedDslExamplesTest.auditTrailPreviewStampsUtcAndZoneAwareTimestamps` |
+| [`BatchProcessingDsl`](src/dsl/BatchProcessingDsl.java) | `BatchProcessing` | `explainVia`, plain Java reduction | Sum a batch of items and produce a readable summary. | `IntermediateDslExamplesTest.batchProcessingPreviewSumsAndSummarizes`, `DslExamplesEndToEndTest.generatedDslWorkflowExecutesThroughTemporal`, `BatchProcessingDslIntegrationTest.runsBatchProcessingDslThroughServiceApi` |
+| [`CsvYamlExportDsl`](src/dsl/CsvYamlExportDsl.java) | `CsvYamlExport` | `parseCsv`, `parseYaml`, `formatCsv` | Merge CSV rows with a YAML lookup table and re-emit formatted CSV. | No dedicated DSL-level test; helper coverage in unit tests. |
+| [`DistributedTracingDsl`](src/dsl/DistributedTracingDsl.java) | `DistributedTracing` | `otel` (span, event, baggage, inject/extract context, end span) | Exercise the OpenTelemetry span lifecycle and W3C context propagation. | `AdvancedDslExamplesTest.distributedTracingPreviewRunsAndReturnsTraceparent` |
+| [`ExceptionProbeDsl`](src/dsl/ExceptionProbeDsl.java) | `ExceptionProbe` | `conditionalFailing`, compensation | Probe conditional failure and the resulting compensation log. | `AdvancedDslExamplesTest.exceptionProbePreviewSucceedsWhenHelperSucceeds`, `AdvancedDslExamplesTest.exceptionProbePreviewFailsWhenHelperFails` |
+| [`HelperPipelineDsl`](src/dsl/HelperPipelineDsl.java) | `HelperPipeline` | `filterRecords`, `arithmetic`, `formatMessage`, `ctx.asJsonValue()` path navigation, compensation | Chain filtering, summing, templating, and JSON-path extraction. | No dedicated DSL-level test; helpers covered by unit tests. |
+| [`HttpResilienceDsl`](src/dsl/HttpResilienceDsl.java) | `httpCallTxResilient`, `httpCallTxFragile`, `HttpResilienceSuccess`, `HttpResilienceCompensated`, `HttpResilienceUncaught` | `httpCall`, `compensationTracker`, `runTransaction`, task queue, retry policy, `startToCloseTimeout`, compensation | Compare resilient and fragile HTTP transactions against a flaky endpoint. | `HttpResilienceDslIntegrationTest` (success, compensation, uncaught, timeout) |
+| [`InvoiceGenerationDsl`](src/dsl/InvoiceGenerationDsl.java) | `InvoiceGeneration` | Plain Java math | Compute invoice subtotal, tax, and total. | `IntermediateDslExamplesTest.invoiceGenerationPreviewComputesTotals` |
+| [`JsonPatchRoundTripDsl`](src/dsl/JsonPatchRoundTripDsl.java) | `JsonPatchRoundTrip` | `jsonPatch` (apply), `jsonExtract` | Apply a JSON Patch and read a path from the patched document. | No dedicated DSL-level test; helpers covered by unit tests. |
+| [`JwtHttpCallDsl`](src/dsl/JwtHttpCallDsl.java) | `JwtHttpCall` | `jwt` (verify), `httpAuth` (bearer), `httpCall` | Verify a JWT, build a bearer auth header, and call an API. | No dedicated DSL-level test; helpers covered by unit tests. |
+| [`ListOpsDsl`](src/dsl/ListOpsDsl.java) | `ListOps` | `listOps` (pluck, distinct, countBy) | Pluck categories, deduplicate them, and count records per category. | No dedicated DSL-level test; `ListOpsHelperTest` covers the helper. |
+| [`LongWorkSimulationDsl`](src/dsl/LongWorkSimulationDsl.java) | `LongWorkSimulation` | Transaction with `startToCloseTimeout` and `heartbeatTimeout` | Simulate long-running work with Temporal heartbeats. | `IntermediateDslExamplesTest.longWorkSimulationPreviewCompletesAllSteps` |
+| [`MaskSensitiveDataDsl`](src/dsl/MaskSensitiveDataDsl.java) | `MaskSensitiveData` | `mask` (default + edges), `formatMessage` | Mask a card number and redact a payer reference before notification/audit. | No dedicated DSL-level test; `MaskHelperTest` / `MaskHelperPropertyTest` cover the helper. |
+| [`NestedCompensationDsl`](src/dsl/NestedCompensationDsl.java) | `ncStep1`, `ncStep2`, `ncStep3`, `NestedCompensation` | Transactions, compensation | Show saga compensation rolling back nested transactions when step 3 fails. | `AdvancedDslExamplesTest.nestedCompensationPreviewFailsAtStep3` |
+| [`OrderIdGenerationDsl`](src/dsl/OrderIdGenerationDsl.java) | `OrderIdGeneration` | `uuidV7` (random + namespaced) | Generate random and deterministic UUIDv7 identifiers for an order. | `AdvancedDslExamplesTest.orderIdGenerationPreviewProducesRandomAndDeterministicIds` |
+| [`OrderMetricsDsl`](src/dsl/OrderMetricsDsl.java) | `OrderMetrics` | `metric` (counter + timer), compensation | Emit order-processing counter and timer metrics. | No dedicated DSL-level test; `MetricHelperTest` covers the helper. |
+| [`OrderSagaDsl`](src/dsl/OrderSagaDsl.java) | `reserveInventory`, `chargePayment`, `OrderSaga` | Transactions, compensation | Reserve inventory and charge payment in a compensated order saga. | `AdvancedDslExamplesTest.orderSagaPreviewCompletesSuccessfully` |
+| [`PaginatedUrlDsl`](src/dsl/PaginatedUrlDsl.java) | `PaginatedUrl` | `urlEncode`, `queryString` | Build a paginated URL from an encoded path segment and query params. | No dedicated DSL-level test; helpers covered by unit tests. |
+| [`PricingFunctionsDsl`](src/dsl/PricingFunctionsDsl.java) | `lineTotalFn`, `orderPricingFn`, `CheckoutProcess`, `QuoteTransaction` | `arithmetic` (sum, round), `Dsl.function`, `callFunction`, transaction, process | Reusable order-pricing logic (subtotal, VIP discount, tax) consumed by a process and a transaction. | `PricingFunctionsDslTest.checkoutProcessAndQuoteTransactionShareOrderPricingFn` |
+| [`RecordAggregationDsl`](src/dsl/RecordAggregationDsl.java) | `RecordAggregation` | `listOps` (pluck, groupBy), `arithmetic` (mean, max) | Group records and compute mean/max over a numeric field. | No dedicated DSL-level test; helpers covered by unit tests. |
+| [`RecordOpsDsl`](src/dsl/RecordOpsDsl.java) | `RecordOps` | `filterRecords`, `sortRecords`, `pick` | Filter, sort, and project records into shaped output rows. | No dedicated DSL-level test; helpers covered by unit tests. |
+| [`ReleasePolicyDsl`](src/dsl/ReleasePolicyDsl.java) | `ReleasePolicy` | `semver` (parse, satisfies, bump, format) | Gate a release by semver range, bump the version, and stamp a candidate. | No dedicated DSL-level test; `SemverHelperTest` covers the helper. |
+| [`ReleaseWindowDsl`](src/dsl/ReleaseWindowDsl.java) | `ReleaseWindow` | `semver` (compare), `dateMath` (add) | Verify a minimum version and shift a release date by N days. | No dedicated DSL-level test; helpers covered by unit tests. |
+| [`RetryPolicyDsl`](src/dsl/RetryPolicyDsl.java) | `RetryPolicy` | `backoff` (none + full jitter) | Compute capped exponential retry delays for both jitter modes. | `AdvancedDslExamplesTest.retryPolicyPreviewComputesDeterministicAndRandomDelays`; also exercised by `HttpResilienceDslIntegrationTest` |
+| [`SampleDataGenerationDsl`](src/dsl/SampleDataGenerationDsl.java) | `SampleDataGeneration` | `random` (string, int, double, choice) | Generate a synthetic order record with random fields. | `AdvancedDslExamplesTest.sampleDataGenerationPreviewProducesSyntheticRecord` |
+| [`SampleProcessDsl`](src/dsl/SampleProcessDsl.java) | `SampleProcess` | Minimal process with no helpers | Echo a greeting from the request body. | `DslExamplesEndToEndTest` (secured endpoint disabled), `DslRunRepositoryIntegrationTest` |
+| [`ScheduleWindowDsl`](src/dsl/ScheduleWindowDsl.java) | `ScheduleWindow` | `parseDuration` (ISO-8601 + shorthand) | Resolve grace-period and hard-limit durations in ms/s/ISO form. | `AdvancedDslExamplesTest.scheduleWindowPreviewParsesIsoGracePeriodAndShorthandHardLimit`, `AdvancedDslExamplesTest.scheduleWindowPreviewParsesShorthandGracePeriodAndIsoHardLimit` |
+| [`SignalProbeDsl`](src/dsl/SignalProbeDsl.java) | `SignalProbe` | `ProcessBuilder.signal`, `awaitSignal` | Wait for an external approval signal and branch on its payload. | `SignalProbeDslIntegrationTest` |
+| [`SimpleGreetingDsl`](src/dsl/SimpleGreetingDsl.java) | `greetFn`, `SimpleGreeting` | `Dsl.function`, `runHelper` invoking a function | Reusable greeting function called from a minimal process. | No dedicated DSL-level test. |
+| [`SimpleOrderDsl`](src/dsl/SimpleOrderDsl.java) | `SimpleOrder` | Parameters, `MapOutput`, `runId`, compensation | Confirm an order from a parameter and log compensation. | No dedicated DSL-level test. |
+| [`SimpleValidationDsl`](src/dsl/SimpleValidationDsl.java) | `SimpleValidation` | Transaction parameters, `startToCloseTimeout`, `heartbeatTimeout`, `RetryPolicy`, compensation | Validate a numeric score range with retry and compensation. | No dedicated DSL-level test. |
+| [`UnreliableApiDsl`](src/dsl/UnreliableApiDsl.java) | `unreliableApiTxResilient`, `unreliableApiTxFragile`, `UnreliableApiSuccess`, `UnreliableApiCompensated`, `UnreliableApiUncaught` | `unreliableApi`, `compensationTracker`, `runTransaction`, task queue, retry policy, compensation, `explainVia` | Compare resilient and fragile calls to a simulated flaky API. | `UnreliableApiDslIntegrationTest` (success, compensation, uncaught) |
+| [`VersionProbeDsl`](src/dsl/VersionProbeDsl.java) | `VersionProbe` (version `v1`) | `fileLatch`, `ProcessBuilder.version` | Probe DSL versioning by latching payload across a registry reload. | `DslVersioningIntegrationTest.inFlightWorkflowKeepsUsingOriginalDslVersionAfterReload` |
+| [`WebhookSignatureDsl`](src/dsl/WebhookSignatureDsl.java) | `WebhookSignature` | `hmacSha256Sign`, `hmacSha256Verify` | Sign an outbound webhook and verify accept/reject scenarios. | `AdvancedDslExamplesTest.webhookSignaturePreviewSignsAndVerifiesAcrossScenarios` |
+| [`XmlExtractDsl`](src/dsl/XmlExtractDsl.java) | `XmlExtract` | `extractXml` | Extract guaranteed and optional values from XML via XPath. | No dedicated DSL-level test; `XmlExtractHelperTest` covers the helper. |
+
+## Test suites
+
+The example DSLs are compiled by the `cbs.nova.dsl` Gradle plugin and loaded through `cbs.nova.dsl.utils.DefinitionLoader` in unit and integration tests. The dedicated example test classes are:
+
+- [`AdvancedDslExamplesTest`](../starter/src/test/java/cbs/nova/starter/AdvancedDslExamplesTest.java) — preview-mode runs for the advanced helper/process examples.
+- [`IntermediateDslExamplesTest`](../starter/src/test/java/cbs/nova/starter/IntermediateDslExamplesTest.java) — preview-mode runs for intermediate examples plus `DevDslRuntime` usage.
+- [`PricingFunctionsDslTest`](../starter/src/test/java/cbs/nova/starter/PricingFunctionsDslTest.java) — end-to-end `Function` reuse between a process and a transaction.
+- [`DslExamplesEndToEndTest`](../starter/src/integrationTest/java/cbs/nova/starter/DslExamplesEndToEndTest.java) — runs a generated DSL workflow through a real Temporal cluster.
+- [`BatchProcessingDslIntegrationTest`](../starter/src/integrationTest/java/cbs/nova/dsl/example/integration/BatchProcessingDslIntegrationTest.java)
+- [`HttpResilienceDslIntegrationTest`](../starter/src/integrationTest/java/cbs/nova/dsl/example/integration/HttpResilienceDslIntegrationTest.java)
+- [`UnreliableApiDslIntegrationTest`](../starter/src/integrationTest/java/cbs/nova/dsl/example/integration/UnreliableApiDslIntegrationTest.java)
+- [`SignalProbeDslIntegrationTest`](../starter/src/integrationTest/java/cbs/nova/dsl/example/integration/SignalProbeDslIntegrationTest.java)
+- [`DslVersioningIntegrationTest`](../starter/src/integrationTest/java/cbs/nova/dsl/example/integration/DslVersioningIntegrationTest.java)
+
+## How to add an example
+
+1. Follow the kanban example-task pattern: add a task via `make kanban-add` (see [`docs/kanban.md`](../../../docs/kanban.md)).
+2. Add the DSL source under `src/dsl/` and its record models under `src/models/`.
+3. If the example introduces a new helper, document it in [`docs/dsl/helpers.md`](../../../docs/dsl/helpers.md) or add it to `cbs.nova.starter.HelperDocsCoverageTest.ALLOWED_UNDOCUMENTED` with a justification so the helper documentation-coverage test passes.
+4. Add a unit or integration test under `starter/src/test/` or `starter/src/integrationTest/` that exercises the new DSL.
+5. Run `make lint` before committing.
