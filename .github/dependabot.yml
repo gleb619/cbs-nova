@@ -1,0 +1,122 @@
+version: 2
+updates:
+  - package-ecosystem: "gradle"
+    directory: "/app/dsl"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+    groups:
+      all-dependencies:
+        patterns:
+          - "*"
+
+  - package-ecosystem: "gradle"
+    directory: "/app/server"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+    groups:
+      all-dependencies:
+        patterns:
+          - "*"
+
+  - package-ecosystem: "gradle"
+    directory: "/backend/dsl-platform"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+    groups:
+      all-dependencies:
+        patterns:
+          - "*"
+
+  - package-ecosystem: "gradle"
+    directory: "/backend/dsl-plugins"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+    groups:
+      all-dependencies:
+        patterns:
+          - "*"
+
+  - package-ecosystem: "gradle"
+    directory: "/backend/dsl-starter"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+    groups:
+      all-dependencies:
+        patterns:
+          - "*"
+
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+    groups:
+      all-dependencies:
+        patterns:
+          - "*"
+
+  - package-ecosystem: "npm"
+    directory: "/app/ui"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+    groups:
+      all-dependencies:
+        patterns:
+          - "*"
+
+  - package-ecosystem: "npm"
+    directory: "/scripts/kanban"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+    groups:
+      all-dependencies:
+        patterns:
+          - "*"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+    groups:
+      all-actions:
+        patterns:
+          - "*"
+
+  - package-ecosystem: "docker"
+    directory: "/app"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+    groups:
+      all-images:
+        patterns:
+          - "*"
+
+  - package-ecosystem: "docker"
+    directory: "/backend/dsl-plugins/dsl-builder"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+    groups:
+      all-images:
+        patterns:
+          - "*"
