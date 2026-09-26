@@ -17,6 +17,9 @@ class LoadtestCommand:
         "/api/v1/dsl/definitions",
         "/api/v1/dsl/helpers",
         "/api/v1/dsl/executions?limit=20",
+        "/api/v1/executions?limit=20",
+        "/api/v1/executions/stats",
+        "/api/v1/executions/stats/timeseries?windowHours=24&bucketMinutes=60",
         "/api/v1/dsl/drafts",
     ]
 
