@@ -11,9 +11,9 @@ frontend/
 │   ├── nuxt.config.dev.ts    # Standalone dev config — loads module.ts for local development
 │   ├── app/
 │   │   ├── components/       # ONLY plugin-specific shell/auth wrappers
-│   │   ├── pages/            # file-based routes registered by the module
-│   │   ├── stores/           # Pinia stores (auto-imported by the module)
-│   │   └── layouts/          # Nuxt layouts registered by the module
+│   │   ├── composables/      # shared Vue composables (auto-imported by the module)
+│   │   ├── layouts/          # Nuxt layouts registered by the module
+│   │   └── pages/            # file-based routes registered by the module
 │   └── server/               # Nitro BFF: JWT, proxy to Spring Boot
 │       ├── api/v1/           # proxy routes merged into the host Nitro server
 │       └── utils/            # config helpers, HTTP client
@@ -47,7 +47,7 @@ frontend/
 - No duplication between `components/` and `admin-ui-plugin/app/`
 
 ### What stays in `admin-ui-plugin`
-- Pages, layouts, Pinia stores
+- Pages, layouts, composable state
 - BFF routes (`server/api/v1/`) and JWT helpers (`server/utils/`)
 - BFF-coupled composables (e.g., `useDslApi`)
 - Plugin-specific Nuxt wrappers
@@ -76,8 +76,8 @@ frontend/
 ### Vue/Nuxt/TS
 - Use `<script setup lang="ts">` for all SFCs
 - Composition API + typed composables
-- Keep pages thin; logic in composables/stores
-- Pinia stores in `app/stores/` (auto-imported)
+- Keep pages thin; logic in composables
+- Composable state in `app/composables/` (auto-imported)
 - Server routes: TypeScript files under `server/api/v1/` exporting `defineEventHandler`
 
 ### `components` purity
@@ -91,7 +91,7 @@ frontend/
 ### Reactivity & state
 
 - **No `watch` / `watchEffect`** for cross-component coordination. Use event emit/listen (mitt, Vue `provide`/`inject`,
-  or Pinia store events). `watch` allowed only inside a single composable for narrow ref↔derived-sync on the SAME
+  or composable events). `watch` allowed only inside a single composable for narrow ref↔derived-sync on the SAME
   component scope.
 - **Polling requires a user-controllable UI toggle** (pause/play button + interval selector). Never start polling
   silently. Persist toggle + interval via `useLocalStorageState`.
@@ -192,7 +192,7 @@ Run it once after `pnpm install` if the sandbox blocks the auto-download.
 - **Add shared component**: Build in `components/src/components/`, export from `components/src/index.ts`, import via `@cbs/components` in `admin-ui-plugin`.
 - **Add API consumer**: Add Nitro route under `admin-ui-plugin/server/api/v1/`, reuse `server/utils/` helpers.
 - **Change colors**: Edit `components/src/tailwind.config.ts` and `docs/colors.md`.
-- **Add client state**: Add Pinia store in `admin-ui-plugin/app/stores/`.
+- **Add client state**: Add a composable in `admin-ui-plugin/app/composables/`.
 - **Move code to components**: Update internal imports to relative paths, update `components/src/index.ts` exports, adjust `admin-ui-plugin` imports.
 - **Add module option**: Extend `ModuleOptions` in `module.ts` and wire it in the `setup()` function.
 - **Change route prefix**: Set `routePrefix` in the host app's `adminUiPlugin` config key.

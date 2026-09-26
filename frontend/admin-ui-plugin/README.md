@@ -5,7 +5,7 @@ runner, executions) into any host Nuxt application. It bundles its own Nitro
 backend-for-frontend (BFF) that proxies requests from the browser to the
 Spring Boot DSL orchestrator, transparently forwarding headers (API key,
 trace context) and translating timeouts into a stable `504 BACKEND_TIMEOUT`
-response. The module auto-registers Pinia, the `cbs-admin` shell layout, the
+response. The module auto-registers composable state, the `cbs-admin` shell layout, the
 admin pages under a configurable route prefix, the global Tailwind stylesheet,
 and all BFF routes — so a host app only needs to add it to `modules:` and
 (optionally) override `adminUiPlugin` options.

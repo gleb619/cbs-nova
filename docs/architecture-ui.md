@@ -26,7 +26,6 @@ frontend/
 │   │   ├── composables/          # shared Vue composables (auto-imported by the module)
 │   │   ├── layouts/              # Nuxt layouts registered by the module
 │   │   ├── pages/                # pages registered by the module via extendPages
-│   │   └── stores/               # Pinia stores
 │   ├── server/                   # Nitro TypeScript backend (BFF)
 │   │   ├── api/v1/               # proxy routes to Spring Boot
 │   │   └── utils/                # JWT helpers, HTTP client, config
@@ -52,11 +51,10 @@ A **Nuxt module** that installs the full CBS Nova admin UI into any host Nuxt ap
 
 The module is the primary entry point (`module.ts`). When activated it:
 
-- registers pages (Dashboard, Runner, Schedules, Activity, Webhooks, Notifications, Approvals, Promote, DSL Workbench, Executions list, Executions detail) via `extendPages` — see the `cbs-admin-*` entries at `frontend/admin-ui-plugin/module.ts:352`,
+- registers pages (Dashboard, Runner, Schedules, Activity, Webhooks, Notifications, Approvals, Promote, DSL Workbench, Executions list, Executions detail) via `extendPages` — see the `cbs-admin-*` entries at `frontend/admin-ui-plugin/module.ts:345`,
 - registers the default shell layout (sidebar + top bar) via `addLayout`,
-- adds `@pinia/nuxt` if not already present,
-- injects the global Tailwind stylesheet,
 - exposes composables to the host app via auto-import dirs,
+- injects the global Tailwind stylesheet,
 - merges the Nitro `server/` directory into the host so BFF routes are available at `/api/v1/**`,
 - merges `backendBaseUrl`, `backendApiKey`, and `appName` into the host runtime config.
 

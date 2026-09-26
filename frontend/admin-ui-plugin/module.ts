@@ -55,7 +55,7 @@ function parseForwardedHeadersEnv(raw: string | undefined): Record<string, strin
 //   })
 //
 // The module registers:
-//   - Pinia for client-side state management
+//   - Composable-based state management
 //   - The default shell layout (sidebar + top bar)
 //   - All admin pages under the configured `routePrefix` (default: '/')
 //   - Nitro server routes under /api/v1/** that proxy to the Spring Boot backend
@@ -324,14 +324,6 @@ export default defineNuxtModule<ModuleOptions>({
     // free of $fetch. Mirrors the sidebarState plugin pattern.
     // -----------------------------------------------------------------------
     addPlugin({ src: resolve('./app/plugins/dslSchemaFetch.ts') })
-
-    // -----------------------------------------------------------------------
-    // Pinia
-    // -----------------------------------------------------------------------
-    if (!nuxt.options.modules?.includes('@pinia/nuxt')) {
-      nuxt.options.modules = nuxt.options.modules || []
-      nuxt.options.modules.push('@pinia/nuxt')
-    }
 
     // -----------------------------------------------------------------------
     // Layouts — register the default shell layout from this plugin

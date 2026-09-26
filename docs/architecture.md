@@ -30,7 +30,7 @@ roadmap.
 
 ## Core frontend
 
-- **`frontend/admin-ui-plugin`** — Nuxt module that mounts the full admin UI into any host Nuxt app. Includes Pinia state, Tailwind styling, and a Nitro-based TypeScript backend-for-frontend (BFF).
+- **`frontend/admin-ui-plugin`** — Nuxt module that mounts the full admin UI into any host Nuxt app. Includes composable-based state, Tailwind styling, and a Nitro-based TypeScript backend-for-frontend (BFF).
 - **`frontend/components`** — standalone Vue 3 + Vite component library exporting reusable SFCs, composables, and the
   canonical Tailwind color theme from `docs/colors.md`.
 - **Security pattern** — the browser never calls Spring Boot directly. The BFF holds and refreshes the JWT, then forwards
@@ -50,7 +50,7 @@ See [UI architecture](architecture-ui.md) for the frontend layout, communication
 ┌──────────────────────────────────┐      ┌──────────────────────────────────────────┐
 │  DSL Module (`backend/dsl-starter/dsl-examples/src/dsl/`) │      │  @cbs/admin-ui-plugin (Nuxt module)      │
 │  compact Java definitions         │      │  • Vue pages / components                 │
-│                                   │      │  • Pinia stores                           │
+│                                   │      │  • Composable state                           │
 └──────────────┬────────────────────┘      │  • Nitro server/ BFF routes               │
                │                          └────────────────────┬─────────────────────┘
                │                                             │ HTTP + JWT

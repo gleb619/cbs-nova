@@ -9,7 +9,7 @@ cbs-nova is a Temporal DSL Orchestration Engine with a Java backend and a Vue/Nu
 
 - If your task is about the Java backend, DSL, code generation, Temporal workers, or Spring Boot API: read
   `backend/AGENTS.md` first.
-- If your task is about the Vue/Nuxt UI, Tailwind styling, Pinia stores, or BFF routes: read 
+- If your task is about the Vue/Nuxt UI, Tailwind styling, composables, or BFF routes: read 
   `frontend/AGENTS.md` first.
 
 ## Architecture docs
