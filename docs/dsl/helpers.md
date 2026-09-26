@@ -396,6 +396,26 @@ SortRecordsOut newest = ctx.runHelper("sortRecords",
         .as(SortRecordsOut.class);
 ```
 
+### Merge multiple records
+
+`mergeRecords` combines two or more `Map<String, Object>` records into one. The `mode`
+discriminator is matched case-insensitively and defaults to `"shallow"`:
+
+- `"shallow"` (default): later records overwrite earlier records key-by-key at the top level
+  only. A single record returns an equivalent map.
+- `"deep"`: nested maps are merged recursively key-by-key. Non-map values are overwritten
+  (last-write-wins), lists are replaced rather than concatenated, and when a key exists as a
+  map in one record and a scalar in another the scalar wins.
+
+```java
+MergeRecordsOut defaults = ctx.runHelper("mergeRecords",
+        new MergeRecordsIn(List.of(defaultsRecord, callResponse), "deep"))
+        .as(MergeRecordsOut.class);
+Map<String, Object> merged = defaults.result();
+```
+
+`records` must contain at least one record. Unknown `mode` yields `IllegalArgumentException`.
+
 ## Object shaping
 
 ### Shape an outbound payload with `pick`
