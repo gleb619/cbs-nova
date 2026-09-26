@@ -7,6 +7,7 @@ import cbs.nova.dsl.FunctionContext;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.exception.DslEntityNotFoundException;
 import cbs.nova.dsl.exception.DslExecutionException;
+import cbs.nova.dsl.explain.ExecutableExplainDecorator;
 import cbs.nova.dsl.function.FunctionRichContext;
 import cbs.nova.dsl.registry.HelperRegistry;
 import lombok.RequiredArgsConstructor;
@@ -33,7 +34,7 @@ public final class DefaultHelperRunner implements HelperRunner {
       var cast = (Executable<Object, Object>) helper.get();
       result = switch (ctx.mode()) {
         case EXPLAIN -> {
-          var explained = cast.explain((Context<Object>) ctx);
+          var explained = ExecutableExplainDecorator.explain(cast, ctx);
           yield Result.success(explained.withInfo(name, explained.description()));
         }
         case PREVIEW, HIERARCHY -> cast.preview((Context<Object>) ctx);

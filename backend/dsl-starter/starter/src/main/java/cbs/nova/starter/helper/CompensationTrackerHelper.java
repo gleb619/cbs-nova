@@ -2,6 +2,7 @@ package cbs.nova.starter.helper;
 
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Executable;
+import cbs.nova.dsl.ExplainSupport;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.annotation.Helper;
 import cbs.nova.dsl.model.ExplainReport;
@@ -15,7 +16,10 @@ import org.jspecify.annotations.NonNull;
 
 @Helper(name = "compensationTracker")
 @RequiredArgsConstructor
-public class CompensationTrackerHelper implements Executable<Map<String, Object>, String> {
+public class CompensationTrackerHelper
+        implements
+          Executable<Map<String, Object>, String>,
+          ExplainSupport<Map<String, Object>, ExplainReport> {
 
   private final @NonNull Cache<String, Marker> markers;
 

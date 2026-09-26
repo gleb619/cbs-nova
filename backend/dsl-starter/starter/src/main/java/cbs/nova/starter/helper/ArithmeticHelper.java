@@ -2,6 +2,7 @@ package cbs.nova.starter.helper;
 
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Executable;
+import cbs.nova.dsl.ExplainSupport;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.annotation.Helper;
 import cbs.nova.dsl.model.ExplainReport;
@@ -17,7 +18,10 @@ import java.util.Locale;
 import org.jspecify.annotations.NonNull;
 
 @Helper(name = "arithmetic")
-public class ArithmeticHelper implements Executable<ArithmeticIn, ArithmeticOut> {
+public class ArithmeticHelper
+        implements
+          Executable<ArithmeticIn, ArithmeticOut>,
+          ExplainSupport<ArithmeticIn, ExplainReport> {
 
   @Override
   public @NonNull Result<ArithmeticOut> execute(@NonNull Context<ArithmeticIn> ctx) {
