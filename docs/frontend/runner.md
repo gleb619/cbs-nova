@@ -1,183 +1,129 @@
 # Runner UI
 
-The runner UI lets operators and flow authors execute a selected DSL definition and inspect the result. It is the main surface for interacting with the three operational modes of the backend: Preview, Run, and Explain.
+The runner UI lets operators and flow authors execute a selected DSL definition and inspect the result. It is the main surface for the backend's three operational modes: Preview, Run, and Explain.
 
 ## Purpose
 
 - Validate DSL definitions quickly without touching the live Temporal cluster.
 - Trigger production executions against Temporal with clear confirmation.
-- Generate human-readable explanations and diagrams for documentation or review.
-- Surface typed inputs, outputs, metadata, and errors in one place.
+- Generate human-readable explanations of a definition's flow.
+- Surface typed inputs, outputs, call trees, live dry-run logs, and errors in one place.
 
-## Layout
+## Page structure
 
-The runner panel is split into three vertical regions:
+Route: `/runner` (`frontend/admin-ui-plugin/app/pages/runner.vue`). The page is built from components in the `@cbs/components` package (`frontend/components/src/components/runner/`), with shared state in `useRunner` (`app/composables/useRunner.ts`).
 
-| Region | Content |
-|--------|---------|
-| **Top bar** | Definition selector and mode switcher |
-| **Left side** | Auto-generated input form |
-| **Right side** | Output panel with tabs for result, metadata, and errors |
+From top to bottom:
 
-On smaller viewports the input form and output panel stack vertically.
+1. **Page header** — title "Runner" plus the `StatusIndicator` status pill.
+2. **Control row** — `RunnerDefinitionSelector` combobox, `RunnerModeSwitcher` segmented control, and the Submit / Compare-with-previous / Reset buttons.
+3. **Two-column grid** (`lg:grid-cols-2`) — Input card on the left, Output card on the right.
+4. **Preview-mode notice** — a full-width "Faking external calls" info card shown only in Preview mode.
+
+The selected definition and mode are synced to the URL query string (`?name=`, `?mode=`) so a run can be shared or refreshed.
 
 ## Mode switcher
 
-A segmented control selects the operational mode for the next execution:
+`RunnerModeSwitcher` is a segmented `radiogroup` control with three modes (`RunnerMode = 'preview' | 'run' | 'explain'` in `components/src/types/runner.ts`):
 
 | Mode | Backend call | Effect |
 |------|--------------|--------|
-| **Preview** | `POST /api/dsl/preview/{name}` | Dry-run execution directly against the DSL runtime; no Temporal cluster is used. |
-| **Run** | Starts the generated Temporal workflow | Live execution against the configured Temporal cluster. |
-| **Explain** | `POST /api/dsl/explain/{name}` | Dry-run execution that also returns a description and diagram. |
+| **Preview** | `preview()` in `useDslApi` → BFF dry-run | Dry-run execution directly against the DSL runtime; no Temporal cluster is used. Sends an `X-Request-Id` header used as the SSE log-stream key. |
+| **Run** | `run()` in `useDslApi` → BFF run | Live execution against the configured Temporal cluster. Sends an `Idempotency-Key` header. |
+| **Explain** | `explain()` in `useDslApi` → BFF explain | Dry-run execution that also returns a description and report chain. |
 
-The selected mode is persisted in the URL query string so a run can be shared or refreshed.
+There is no Hierarchy mode in the runner. Hierarchy is available only as a body-editor tab in the DSL workbench (`dsl/HierarchyTab.vue`, fed by `dslApi.hierarchy()`).
 
-Only one mode is active at a time. Switching modes clears transient output but keeps the input form values so the same payload can be reused across modes.
+All requests share the `{ body, metadata }` envelope; the runner does not expose a metadata editor — it passes `metadata: undefined`.
+
+Switching modes does not clear output; output is cleared on definition selection and via the Reset button. Input form values persist across mode switches so the same payload can be reused.
 
 ## Definition selector
 
-The top bar contains a combobox that lists all available DSL definitions registered in the backend registries. Selecting a definition:
-
-- loads its typed input record schema,
-- rebuilds the input form,
-- clears previous output,
-- updates the URL.
-
-If the selected definition has no input record or only an empty record, the form collapses to a single submit button.
+`RunnerDefinitionSelector` lists all available DSL definitions registered in the backend registries. Selecting a definition loads its typed input record schema, rebuilds the input form, clears previous output, and updates the URL.
 
 ## Input form
 
-The input form is auto-generated from the selected definition's typed input record. The frontend receives the JSON schema and renders controls for each field:
+`RunnerInputForm` is schema-driven from the selected definition's input JSON schema:
 
-| JSON schema type | Rendered control |
-|------------------|------------------|
-| `string` | Text input |
-| `number` / `integer` | Number input |
-| `boolean` | Toggle switch |
-| `enum` | Dropdown |
-| `array` | Repeating field group with add/remove buttons |
-| `object` | Nested fieldset |
-| `date` / `datetime` | Date/time picker |
+- When the schema has properties, one `InputField` is rendered per property. `InputField` renders:
+  - `string` → text input,
+  - `number` / `integer` → number input,
+  - `boolean` → checkbox,
+  - everything else (array, object, enum, date) → a plain JSON textarea.
+- Required fields are marked with a red `*` and validated on blur ("is required").
+- When the definition has no input record or an empty schema, the form falls back to a single freeform JSON textarea for the whole payload.
 
-- Required fields are marked and validated before submission.
-- Nested records are expanded inline using fieldsets.
-- Arrays show an empty first row by default when the field is required.
-- Validation errors from the form are displayed next to the offending field and block submission.
-
-The form payload is assembled into the `body` field of the `Context` object sent to the backend:
-
-```json
-{
-  "body": { /* generated from the form */ },
-  "metadata": {
-    "correlationId": "...",
-    "startedFrom": "ui-runner"
-  }
-}
-```
-
-Metadata fields are editable through a collapsible "Advanced" section.
+The form payload is assembled into the `body` field of the envelope sent to the backend.
 
 ## Confirmation step for Run mode
 
-Because Run mode executes against a live Temporal cluster, the UI inserts a confirmation step before the request is sent:
+Because Run mode executes against a live Temporal cluster, the UI inserts a confirmation step (`RunConfirmationModal`):
 
 1. The user fills the input form and clicks **Run**.
-2. A modal appears with:
-   - the definition name,
-   - the target environment/cluster label,
-   - a summary of the input payload,
-   - a clear warning that this will create a real workflow execution,
-   - a required checkbox: "I understand this runs against Temporal".
+2. A modal appears with the definition name, a summary of the input payload, a warning that this creates a real workflow execution, and a required checkbox ("I understand this will run the workflow").
 3. The user must check the box and click **Confirm** before the request proceeds.
 
-Preview and Explain modes do not show this confirmation step.
+Preview and Explain modes skip this confirmation.
 
-The confirmation dialog can be skipped for the current session if the user checks "Don't ask again during this session". This preference is stored in session storage, not persisted across browser sessions.
+The dialog offers a "Don't ask again during this session" preference stored in session storage under `skip-run-confirm`. Note: the current `useRunner` implementation always shows the modal in run mode — the stored preference is not consulted.
 
 ## Output panel
 
-The output panel appears on the right side after an execution request finishes or fails. It is organized into tabs.
+`RunnerOutputPanel` sits on the right side and is organized into a tab bar:
 
-### Result tab
+| Tab | Visibility | Content |
+|-----|------------|---------|
+| **Result** | Always | The typed `body` returned by the backend, rendered as a plain `<pre>` JSON view. |
+| **Metadata** | Always | The `metadata` map returned in the result. |
+| **Errors** | Always | Failures via the shared `ErrorList` component with error-code badges. |
+| **Call Tree** | Preview / Explain | Recursive AST tree (`CallTreeTab` / `CallTreeNode`) built from `output.astTree`; nodes are PROCESS / TRANSACTION / HELPER / FUNCTION calls. |
+| **Logs** | Preview / Explain | Live dry-run log lines streamed over SSE while running; inline `dryRunLogs` take over after completion. Level color chips, line count, and "Copy all" (`DryRunLogsTab`). |
+| **External Calls** | Preview / Explain | External system calls observed during the dry run, with a summary badge (`ExternalCallsTab`, `ExternalCallsBadge`). |
+| **Diff** | Preview with baseline | Difference between the current run and a saved baseline: AST diff (`ASTDiffNode`, `DiffLine`) and metrics diff (`MetricsDiffView`, `MetricsDiffTable`). |
 
-Displays the typed `body` returned by the backend. Object fields are rendered as a read-only structured view with copy-to-clipboard buttons for individual values and the whole payload. Primitive values are shown inline.
+"Compare with previous" snapshots the current output as `baselineOutput` and re-runs; the Diff tab then appears.
 
-### Metadata tab
+## Live log streaming (SSE)
 
-Shows the `metadata` map returned in the `Context`:
-
-- execution trace entries,
-- correlation ID,
-- timing information,
-- custom metadata added by the DSL definition.
-
-Metadata is rendered as a key-value list or, when the value is an object/array, as a collapsible JSON tree.
-
-### Errors tab
-
-Appears only when the execution fails. It displays:
-
-- a human-readable error message,
-- the error category (validation, runtime, Temporal, network),
-- the stack trace or trace ID when available,
-- a link to the relevant execution details view for Run mode failures.
-
-If the failure happened during a Run-mode Temporal execution, the panel also shows the Temporal workflow ID and run ID.
+`useDryRunLogStream` (`app/composables/useDryRunLogStream.ts`) opens a native `EventSource` connection to `/api/v1/dsl/dry-run/{traceId}/logs`, keyed by the `X-Request-Id` sent with the preview/explain request. It exposes `status` (`idle | connecting | open | error`) and emitter-based `onLogLine` / `onOpen` / `onError` callbacks. When SSE is unsupported, the Logs tab falls back to the inline `dryRunLogs` returned with the response. There is a single connection at a time.
 
 ## Explain mode output
 
-Explain mode adds two dedicated sections above the standard output tabs:
+Explain mode renders `ExplainOutput` above the standard tabs:
 
-### Description
-
-A natural language summary of the execution flow returned by the backend in the `ExplainReport`. It lists the main steps, branches, compensations, and external system calls in plain language.
-
-### Mermaid diagram
-
-The `mermaidDiagram` field from the report is rendered with Mermaid.js. The diagram shows:
-
-- start and end nodes,
-- Processes, Transactions, Helpers, and Functions as labeled nodes,
-- sequence edges,
-- gateways for branches,
-- compensation paths where applicable.
-
-A copy button lets the user copy the raw Mermaid source. The diagram container supports zoom and pan when it does not fit the panel.
+- **Description** — the natural-language summary from the `ExplainReport`, listing main steps, branches, and external calls.
+- **Report chain** — `ExplainReportChain` / `ExplainReportList` walk the nested reports.
+- **Raw views** — `ExplainRawView`, `ExplainMarkdownView`, and `ExplainDiffView` expose the report in other formats.
+- **Mermaid diagram** — the `mermaidDiagram` field is shown as raw text in a `<pre>` block. It is not rendered with Mermaid.js and there is no copy/zoom control.
 
 ## Status display
 
-A status indicator in the output panel header shows the current execution state:
+`StatusIndicator` in the page header shows the current execution state:
 
-| State | Indicator | Meaning |
-|-------|-----------|---------|
-| Idle | Gray dot | No request in progress. |
-| Loading | Spinning amber indicator | Request sent, waiting for response. |
-| Success | Green check | Execution completed successfully. |
-| Failed | Red cross | Execution returned an error or threw an exception. |
-| Running (Run mode) | Pulsing blue indicator | Workflow is active on Temporal; poll for updates. |
+| State | Meaning |
+|-------|---------|
+| Idle | No request in progress. |
+| Loading | Request sent, waiting for response. |
+| Running | Workflow is active on Temporal (pulsing indicator). |
+| Success | Execution completed successfully. |
+| Failed | Execution returned an error or threw an exception. |
 
-For Run mode, the status also includes the Temporal workflow ID and a link to the execution details view once the workflow has started.
+Run mode is awaited synchronously by `useRunner.submit()`: the request completes and the status settles to success or failed. The returned workflow ID is available in the `RunnerOutput` data; deep polling and diagnostics live in the execution details view ([execution-details.md](./execution-details.md)).
 
 ## Error handling
-
-Errors can come from several layers. The runner handles each with a specific message and, when possible, recovery action:
 
 | Source | Handling |
 |--------|----------|
 | Form validation | Inline field errors; submit is blocked. |
-| Network failure | Retry button and a message with the HTTP status. |
-| Backend validation | Error tab with the validation message and field path. |
-| Runtime exception | Error tab with stack trace and trace ID. |
-| Temporal failure | Error tab with workflow ID, run ID, and link to execution details. |
-
-Long-running Run mode executions are not awaited synchronously. The UI starts the workflow, receives the workflow ID, and redirects or updates the status to "Running". Polling for completion is handled by the execution details view.
+| Network failure | Error surfaced in the Errors tab. |
+| Backend validation / runtime exception | Errors tab with the validation message and error-code badge. |
+| Temporal failure (Run mode) | Errors tab; the workflow ID from the response is available for follow-up in the executions view. |
 
 ## Best practices
 
 - Always start with **Preview** to validate a DSL definition before switching to **Run**.
-- Use **Explain** to generate diagrams for runbooks or stakeholder review.
-- Keep input payloads small and focused; use the metadata section for traceability.
+- Use **Explain** to generate descriptions and diagrams for runbooks or stakeholder review.
+- Watch the **Logs** tab during Preview to see live execution traces via SSE.
+- Use **Compare with previous** to spot behavioral drift between two Preview runs.
 - Review the confirmation dialog payload carefully before confirming a live Run.
-- Copy the correlation ID from the metadata tab when reporting an issue.

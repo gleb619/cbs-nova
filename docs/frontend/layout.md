@@ -1,164 +1,86 @@
 # Admin UI Layout
 
-This document defines the responsive admin-shell layout for the cbs-nova Vue/Nuxt frontend. It builds on the workspace structure described in `docs/architecture-ui.md` and the Tailwind color system in `docs/colors.md`.
+This document describes the responsive admin-shell layout of the cbs-nova Vue/Nuxt frontend as implemented today: `app/layouts/admin.vue` renders the `AppShell` component from `@cbs/components` (`frontend/components/src/components/AppShell.vue`), which composes `AppSidebar`, `AppTopBar`, `AppMobileDrawer`, and `AppFooter`. It builds on the workspace structure in `docs/architecture-ui.md` and the Tailwind color system in `docs/colors.md`.
 
 ## Overview
 
-The admin interface follows a common sidebar + main-content pattern. The shell is a single flex column that fills the viewport. On desktop, a collapsible sidebar sits beside the content. On mobile, the sidebar becomes a slide-over drawer triggered from a sticky top bar.
+The admin interface follows a sidebar + main-content pattern. The shell is a single `flex h-screen` container. On desktop (`md` and up), a collapsible sidebar sits beside the content. On mobile, the sidebar is hidden and becomes a slide-over drawer triggered from the top bar.
 
-The layout relies on Tailwind CSS utility classes and standard breakpoints (`sm`, `md`, `lg`, `xl`). No custom JavaScript layout engine is required.
+The layout relies on Tailwind CSS utility classes and standard breakpoints (`sm`, `md`, `lg`, `xl`). No custom JavaScript layout engine is required; visibility state is managed by the `useSidebar` composable (`components/src/composables/`).
 
 ## Desktop Layout
 
-- The shell is a horizontal flex container (`flex`) that fills `100vh`.
-- A left sidebar has a default width of `~240px` (`w-60`).
-- The sidebar can be collapsed to a narrow rail (`w-16`) or hidden entirely via a state toggle.
-- To the right of the sidebar, a vertical flex column holds the sticky top app bar and the scrollable `main` content area.
-- `main` uses `flex-1 overflow-auto` so page content scrolls independently while the top bar remains visible.
-
-### Desktop ASCII Diagram
-
-```
-+-------------------------------------------------------------+
-|  SIDEBAR  |  TOP APP BAR (sticky)                          |
-|  ~240px   |  [logo]  Page title        [actions] [user ▼]  |
-|           +-------------------------------------------------+
-|           |                                                 |
-|  Nav      |  MAIN CONTENT                                   |
-|  items    |  (scrollable)                                   |
-|           |                                                 |
-|           |  +-------------------------------------------+  |
-|           |  |  Cards / tables / forms                   |  |
-|           |  +-------------------------------------------+  |
-|           |                                                 |
-|           |  +-------------------------------------------+  |
-|           |  |  More content...                          |  |
-|           |  +-------------------------------------------+  |
-|           |                                                 |
-+-----------+-------------------------------------------------+
-```
+- The shell is a horizontal flex container filling the viewport height (`AppShell`: `flex h-screen`).
+- The sidebar (`AppSidebar`) is `hidden md:flex` with widths `w-60` (~240 px) expanded, `w-16` collapsed, `w-0` fully hidden.
+- To the right, a vertical flex column holds the top app bar and the scrollable `main` content area (`NuxtPage`).
+- `main` scrolls independently while the top bar remains visible.
 
 ## Mobile Layout
 
-- Below the `md` breakpoint, the sidebar is hidden by default.
-- A sticky top bar spans the full width and contains a hamburger toggle on the left.
-- Tapping the hamburger opens the sidebar as a slide-over drawer from the left.
-- The drawer overlays the content with a semi-transparent backdrop and closes when the backdrop is tapped, a nav item is selected, or the close button is pressed.
-- The `main` area remains scrollable underneath the fixed top bar.
-
-### Mobile ASCII Diagram
-
-```
-Closed drawer:
-+-----------------------------+
-|  ☰  Page title    [actions] |
-+-----------------------------+
-|                             |
-|  MAIN CONTENT               |
-|  (scrollable)               |
-|                             |
-|  +-----------------------+  |
-|  |  Cards / tables ...   |  |
-|  +-----------------------+  |
-|                             |
-+-----------------------------+
-
-Open drawer:
-+-----------------------------+
-|  ☰  Page title    [actions] |  <- top bar stays sticky
-+-----------------------------+
-|+-----------+                |
-||  SIDEBAR  |  ▓▓▓▓▓▓▓▓▓▓▓▓  |
-||  (drawer) |  ▓ backdrop ▓  |
-||  Nav      |  ▓▓▓▓▓▓▓▓▓▓▓▓  |
-||  items    |                |
-|+-----------+                |
-|  MAIN CONTENT               |
-|  (scrollable)               |
-+-----------------------------+
-```
+- Below the `md` breakpoint the sidebar is hidden.
+- `AppMobileDrawer` renders the sidebar as a fixed-position drawer (`w-64`, `z-40`) with a `z-30` semi-transparent backdrop (`md:hidden`).
+- The drawer closes on backdrop tap, nav selection, or the close button; transitions use Tailwind `transition` utilities.
 
 ## Top App Bar
 
-The top app bar is a single horizontal flex row, sticky at the top (`sticky top-0 z-10`), with a neutral or white surface background.
+`AppTopBar` is a horizontal flex row slotted into `AppShell`. Its slots are filled by `admin.vue`:
 
-From left to right:
+1. **Toggle** — `AppSidebarToggle` (collapse/expand; sidebar can also be restored via `AppSidebarRestoreHandle` / hidden via `AppSidebarHideButton` in the sidebar itself).
+2. **Brand** — "CBS Nova Admin" logo/brand linking back to the dashboard.
+3. **Widgets** — `DslDraftsWidget` (saved DSL drafts menu) and `NotificationsWidget` (notification bell with unread count and a details drawer with mark-read / mark-all-read / dismiss).
+4. **Trailing** — auth state from `useAuth`: sign-in/sign-out and the display name.
 
-1. **Hamburger toggle** — visible on mobile only (`md:hidden`) to open the slide-over drawer.
-2. **Logo / brand mark** — compact, links back to the dashboard.
-3. **Page title** — current view name, left-aligned.
-4. **Spacer** — `flex-1` to push global actions to the right.
-5. **Global actions** — contextual buttons such as "New workflow", "Refresh", notifications.
-6. **User menu** — avatar or name with a dropdown for profile, settings, and sign-out.
+## Sidebar Navigation
 
-Suggested Tailwind classes:
+The sidebar holds a single flat nav list (`navItems` in `admin.vue`, rendered by `AppNavItem`), not grouped sections. Each item shows a hotkey hint chip:
 
-- Height: `h-16`
-- Background: `bg-white` or `bg-neutral-50`
-- Border: `border-b border-neutral-200`
-- Padding: `px-4`
+| Nav item | Route |
+|----------|-------|
+| Dashboard | `/` |
+| DSL Workbench | `/dsl-workbench` |
+| Runner | `/runner` |
+| Schedules | `/schedules` |
+| Activity | `/activity` |
+| Webhooks | `/webhooks` |
+| Notifications | `/notifications` |
+| Approvals | `/approvals` |
+| Promote | `/promote` |
+| Executions | `/executions` |
 
-## Sidebar
+The active item is styled with `bg-primary-500 text-white`; hover uses a neutral highlight. The sidebar surface is dark (`bg-neutral-800`).
 
-The sidebar holds primary navigation grouped by section.
+## Footer
 
-### Desktop Behavior
+`AppFooter` (composed of `AppFooterCopyright`, `AppFooterGitInfo`, `AppFooterLinks`) sits at the bottom of the shell with build/git info from `useAdminInfo` (`/api/v1/info`) and a link to the documentation site (base URL via `buildDocsBaseUrl`).
 
-- Width: `w-60` (~240 px) expanded, `w-16` collapsed.
-- Background: `bg-white` or `bg-neutral-50`.
-- Border: `border-r border-neutral-200`.
-- Toggle control in the top bar or sidebar footer collapses/expands the sidebar.
-- Collapsed state shows icon-only navigation with tooltips.
+## Global surfaces
 
-### Mobile Behavior
-
-- Hidden by default.
-- Rendered as a fixed-position drawer (`fixed inset-y-0 left-0 z-40`).
-- Width: `w-64`.
-- Backdrop: `fixed inset-0 z-30 bg-neutral-900/50`.
-- Enter/exit transitions are handled with Tailwind `transition` utilities.
-
-## Main Content Area
-
-- `main` is the scrollable region for page content.
-- It uses `flex-1 overflow-auto` inside the vertical flex column to the right of the sidebar.
-- Internal pages use a content wrapper with consistent padding (`p-4 md:p-6` or `p-6 lg:p-8`).
-- Page width is fluid; max-width containers are optional per view.
+- **Toasts** — `AppToastContainer` renders ephemeral notifications driven by the `useNotifications` toast store in `components/src/composables/useNotifications.ts`. (Note: `app/composables/useNotifications.ts` is a different, backend-facing composable for notification-rule CRUD used by the `/notifications` page.)
+- **Drafts entry points** — the top-bar `DslDraftsWidget`, plus the workbench draft flow (`useWorkbenchDraft`, `DraftRestoreBanner`, `DraftsList`). `admin.vue` owns server-draft fetching via `useSavedDrafts` and dispatches `dsl:save` on Ctrl/Cmd+S.
+- **Activity feed** — the `/activity` page hosting the `ActivityFeed` component.
 
 ## Breakpoints
 
-Use Tailwind’s default breakpoints for the responsive behavior:
-
-| Breakpoint | Width   | Layout behavior                                              |
-|------------|---------|--------------------------------------------------------------|
-| `sm`       | 640 px  | Minor spacing adjustments.                                   |
-| `md`       | 768 px  | Sidebar becomes visible inline; hamburger hidden.            |
-| `lg`       | 1024 px | Comfortable content padding, sidebar fully expanded.         |
-| `xl`       | 1280 px | Optional wider max-width for dashboards with large tables.   |
+| Breakpoint | Width | Layout behavior |
+|------------|-------|-----------------|
+| `sm` | 640 px | Minor spacing adjustments. |
+| `md` | 768 px | Sidebar becomes visible inline; mobile drawer hidden. |
+| `lg` | 1024 px | Comfortable content padding; runner grid switches to two columns. |
+| `xl` | 1280 px | Optional wider max-width for dashboards with large tables. |
 
 ## Z-Index Stacking
 
-| Layer        | Z-Index | Notes                                      |
-|--------------|---------|--------------------------------------------|
-| Main content | auto    | Base scrolling layer.                      |
-| Top app bar  | 10      | Sticky header stays above content.         |
-| Backdrop     | 30      | Dims content when mobile drawer is open.   |
-| Sidebar drawer | 40    | Sits above backdrop and top app bar.       |
-| Dropdowns    | 50      | User menu and action menus.                |
-
-## Color Application
-
-Apply the palette from `docs/colors.md` as follows:
-
-- **Page background:** `bg-background` (`#f8f8f6`).
-- **Top bar / sidebar:** `bg-white` with `border-neutral-200`.
-- **Active nav item:** `bg-primary-100 text-primary-700` or `text-primary-600`.
-- **Hover nav item:** `bg-neutral-100 text-neutral-800`.
-- **Backdrop:** `bg-neutral-900/50`.
+| Layer | Z-Index | Notes |
+|-------|---------|-------|
+| Main content | auto | Base scrolling layer. |
+| Top app bar | sticky | Stays above content while scrolling. |
+| Backdrop | 30 | Dims content when the mobile drawer is open. |
+| Sidebar drawer | 40 | Sits above backdrop. |
+| Dropdowns / drawers | 50+ | User menu, drafts, and notification drawers. |
 
 ## Accessibility
 
-- The hamburger toggle has an accessible label.
+- The sidebar toggle has an accessible label.
 - The mobile drawer traps focus while open and restores focus on close.
-- Nav links use semantic `<a>` or `<NuxtLink>` elements.
+- Nav links use semantic `<NuxtLink>` elements.
 - Sufficient color contrast is maintained per `docs/colors.md`.
