@@ -137,12 +137,12 @@ const splitButtonBorder = computed(() =>
 const splitDivider = computed(() => (saveDisabled.value ? 'bg-neutral-300' : 'bg-blue-700'))
 const actionClasses = computed(() =>
   saveDisabled.value
-    ? 'text-neutral-400 cursor-not-allowed bg-white'
+    ? 'text-neutral-500 bg-neutral-100 cursor-not-allowed'
     : 'text-white bg-blue-600 hover:bg-blue-700',
 )
 const chevronClasses = computed(() =>
   saveDisabled.value || !hasAutosave.value
-    ? 'text-neutral-300 bg-white cursor-not-allowed'
+    ? 'text-neutral-400 bg-neutral-100 cursor-not-allowed'
     : 'text-white bg-blue-600 hover:bg-blue-700',
 )
 </script>
