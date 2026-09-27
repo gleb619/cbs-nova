@@ -27,6 +27,10 @@ vi.mock('../MonacoEditor.vue', () => ({
 const mountTab = (props: Record<string, unknown> = {}) =>
   mount(CodeTab, { props: { code: 'initial', ...props } })
 
+const openAutosaveDropdown = async (wrapper: ReturnType<typeof mountTab>) => {
+  await wrapper.find('[data-testid="code-tab-save-dropdown-toggle"]').trigger('click')
+}
+
 describe('CodeTab', () => {
   let wrapper: ReturnType<typeof mountTab>
 
@@ -48,14 +52,14 @@ describe('CodeTab', () => {
   it('shows the dirty indicator and enables Save only after editing', async () => {
     wrapper = mountTab()
 
-    expect(wrapper.find('[data-testid="workbench-dirty-indicator"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="code-tab-dirty-indicator"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="code-tab-save"]').attributes('disabled')).toBeDefined()
 
     await wrapper.find('[data-testid="code-tab-textarea"]').setValue('changed')
 
-    const indicator = wrapper.find('[data-testid="workbench-dirty-indicator"]')
+    const indicator = wrapper.find('[data-testid="code-tab-dirty-indicator"]')
     expect(indicator.exists()).toBe(true)
-    expect(indicator.text()).toContain('unsaved changes')
+    expect(indicator.text()).toContain('unsaved')
     expect(wrapper.find('[data-testid="code-tab-save"]').attributes('disabled')).toBeUndefined()
   })
 
@@ -66,12 +70,13 @@ describe('CodeTab', () => {
     await wrapper.find('[data-testid="code-tab-save"]').trigger('click')
 
     expect(wrapper.emitted('save')).toEqual([['changed']])
-    expect(wrapper.find('[data-testid="workbench-dirty-indicator"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="code-tab-dirty-indicator"]').exists()).toBe(false)
   })
 
   it('autosaves on blur when the blur mode is picked', async () => {
     wrapper = mountTab()
 
+    await openAutosaveDropdown(wrapper)
     await wrapper.find('[data-testid="code-tab-autosave-blur"]').trigger('click')
     await wrapper.find('[data-testid="code-tab-textarea"]').setValue('changed')
     await wrapper.find('[data-testid="code-tab-textarea"]').trigger('blur')
@@ -82,6 +87,7 @@ describe('CodeTab', () => {
   it('does not autosave on blur when an interval mode is picked', async () => {
     wrapper = mountTab()
 
+    await openAutosaveDropdown(wrapper)
     await wrapper.find('[data-testid="code-tab-autosave-5s"]').trigger('click')
     await wrapper.find('[data-testid="code-tab-textarea"]').setValue('changed')
     await wrapper.find('[data-testid="code-tab-textarea"]').trigger('blur')
@@ -93,6 +99,7 @@ describe('CodeTab', () => {
     vi.useFakeTimers()
     wrapper = mountTab()
 
+    await openAutosaveDropdown(wrapper)
     await wrapper.find('[data-testid="code-tab-autosave-5s"]').trigger('click')
     await wrapper.find('[data-testid="code-tab-textarea"]').setValue('changed')
 
@@ -105,6 +112,7 @@ describe('CodeTab', () => {
 
   it('persists the autosave mode', async () => {
     wrapper = mountTab()
+    await openAutosaveDropdown(wrapper)
     await wrapper.find('[data-testid="code-tab-autosave-1min"]').trigger('click')
     wrapper.unmount()
 
@@ -112,33 +120,34 @@ describe('CodeTab', () => {
     expect(stored).toBe(JSON.stringify('1min'))
 
     wrapper = mountTab()
-    expect(wrapper.find('[data-testid="code-tab-autosave-1min"]').attributes('aria-pressed')).toBe(
-      'true',
+    await openAutosaveDropdown(wrapper)
+    expect(wrapper.find('[data-testid="code-tab-autosave-1min"]').classes()).toEqual(
+      expect.arrayContaining(['font-semibold']),
     )
   })
 
   it('renders the save status chip for each status', async () => {
     wrapper = mountTab()
 
-    expect(wrapper.find('[data-testid="draft-save-status"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="code-tab-save-status"]').exists()).toBe(false)
 
     await wrapper.setProps({ saveStatus: 'dirty' })
-    let status = wrapper.find('[data-testid="draft-save-status"]')
+    let status = wrapper.find('[data-testid="code-tab-save-status"]')
     expect(status.text()).toContain('Unsaved changes')
     expect(status.classes()).toEqual(expect.arrayContaining(['bg-amber-50']))
 
     await wrapper.setProps({ saveStatus: 'saving' })
-    status = wrapper.find('[data-testid="draft-save-status"]')
+    status = wrapper.find('[data-testid="code-tab-save-status"]')
     expect(status.text()).toContain('Saving')
     expect(status.classes()).toEqual(expect.arrayContaining(['bg-blue-50']))
 
     await wrapper.setProps({ saveStatus: 'saved', lastSavedAt: new Date() })
-    status = wrapper.find('[data-testid="draft-save-status"]')
+    status = wrapper.find('[data-testid="code-tab-save-status"]')
     expect(status.text()).toMatch(/Saved (just now|\ds ago)/)
     expect(status.classes()).toEqual(expect.arrayContaining(['bg-green-50']))
 
     await wrapper.setProps({ saveStatus: 'error' })
-    status = wrapper.find('[data-testid="draft-save-status"]')
+    status = wrapper.find('[data-testid="code-tab-save-status"]')
     expect(status.text()).toContain('Save failed')
     expect(status.classes()).toEqual(expect.arrayContaining(['bg-red-50']))
   })
@@ -146,7 +155,7 @@ describe('CodeTab', () => {
   it('retry button in the error state re-emits save', async () => {
     wrapper = mountTab({ saveStatus: 'error' })
 
-    await wrapper.find('[data-testid="draft-save-retry"]').trigger('click')
+    await wrapper.find('[data-testid="code-tab-save-retry"]').trigger('click')
 
     expect(wrapper.emitted('save')).toEqual([['initial']])
   })
@@ -167,7 +176,7 @@ describe('CodeTab', () => {
     expect(
       (wrapper.find('[data-testid="code-tab-textarea"]').element as HTMLTextAreaElement).value,
     ).toBe('initial')
-    expect(wrapper.find('[data-testid="workbench-dirty-indicator"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="code-tab-dirty-indicator"]').exists()).toBe(false)
   })
 
   it('emits update:code as the user types', async () => {

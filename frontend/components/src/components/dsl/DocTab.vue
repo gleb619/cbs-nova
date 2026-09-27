@@ -7,6 +7,7 @@ import type { JsonSchema } from '../../types/jsonSchema'
 import { parseMarkdownDoc, serializeMarkdownDoc } from '../../utils/markdownDoc'
 import MarkdownBodyEditor from './MarkdownBodyEditor.vue'
 import MonacoEditor from './MonacoEditor.vue'
+import SaveAction from './SaveAction.vue'
 import SchemaForm from './SchemaForm.vue'
 
 const props = withDefaults(
@@ -141,34 +142,6 @@ onBeforeUnmount(() => {
   window.removeEventListener('dsl:save', handleGlobalSave)
   window.removeEventListener('keydown', handleHotkey)
 })
-
-const saveStatusClasses = computed(() => {
-  switch (props.saveStatus) {
-    case 'dirty':
-      return 'bg-amber-50 text-amber-700 border border-amber-200'
-    case 'saving':
-      return 'bg-blue-50 text-blue-700 border border-blue-200'
-    case 'saved':
-      return 'bg-green-50 text-green-700 border border-green-200'
-    case 'error':
-      return 'bg-red-50 text-red-700 border border-red-200'
-    default:
-      return 'text-gray-500'
-  }
-})
-
-const saveStatusText = computed(() => {
-  switch (props.saveStatus) {
-    case 'dirty':
-      return 'Unsaved changes'
-    case 'saving':
-      return 'Saving…'
-    case 'error':
-      return 'Save failed — Retry'
-    default:
-      return ''
-  }
-})
 </script>
 
 <template>
@@ -194,46 +167,14 @@ const saveStatusText = computed(() => {
         </span>
       </div>
       <div class="ml-auto flex items-center gap-2">
-        <span
-          v-if="saveStatusText"
-          class="inline-flex items-center gap-1.5 text-xs rounded-full px-2.5 py-1"
-          :class="saveStatusClasses"
-          data-testid="doc-tab-save-status"
-          role="status"
-        >
-          <span>{{ saveStatusText }}</span>
-          <button
-            v-if="saveStatus === 'error'"
-            type="button"
-            class="ml-1 underline hover:no-underline"
-            data-testid="doc-tab-save-retry"
-            @click="requestSave"
-          >
-            Retry
-          </button>
-        </span>
-        <span
-          v-if="isDirty"
-          class="inline-flex items-center gap-1.5 text-xs text-amber-700"
-          data-testid="doc-tab-dirty-indicator"
-          role="status"
-          aria-label="You have unsaved changes"
-        >
-          <span aria-hidden="true" class="inline-block h-2 w-2 rounded-full bg-amber-500"></span>
-          <span>unsaved</span>
-        </span>
-        <button
-          type="button"
-          class="px-3 py-1 text-xs font-medium rounded border"
-          :class="isDirty
-            ? 'border-blue-600 bg-blue-600 text-white hover:bg-blue-700'
-            : 'border-neutral-300 text-neutral-400 cursor-not-allowed'"
-          :disabled="!isDirty || busy"
-          data-testid="doc-tab-save"
-          @click="requestSave"
-        >
-          Save
-        </button>
+        <SaveAction
+          testid-prefix="doc-tab"
+          :is-dirty="isDirty"
+          :busy="busy"
+          :save-status="saveStatus"
+          :last-saved-at="lastSavedAt"
+          @save="requestSave"
+        />
       </div>
     </div>
     <div class="flex-1 min-h-0 overflow-auto">

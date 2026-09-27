@@ -5,6 +5,7 @@ import { createNamespacedLocalStorageState } from '../../composables/useLocalSto
 import type { DslConstruct, HelperCatalogEntry } from '../../types/dsl'
 import HotkeyTooltip from '../HotkeyTooltip.vue'
 import MonacoEditor, { type EditorMarker } from './MonacoEditor.vue'
+import SaveAction, { type AutosaveOption } from './SaveAction.vue'
 
 const props = withDefaults(
   defineProps<{
@@ -55,6 +56,14 @@ const AUTOSAVE_INTERVALS: Record<string, number> = {
 
 const useCodeTabStorage = createNamespacedLocalStorageState('cbs-nova:code-tab')
 const autosaveMode = useCodeTabStorage<string>('autosave-mode', 'off')
+
+const autosaveOptions: readonly AutosaveOption[] = [
+  { value: 'off', label: 'Off' },
+  { value: '5s', label: '5s' },
+  { value: '30s', label: '30s' },
+  { value: '1min', label: '1 min' },
+  { value: 'blur', label: 'On blur' },
+]
 
 const savedHashInternal = ref(calculateCrc32(props.code))
 const localHash = computed(() => calculateCrc32(localCode.value))
@@ -170,54 +179,6 @@ onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleHotkey)
 })
 
-const autosaveOptions = [
-  { value: 'off', label: 'Off' },
-  { value: '5s', label: '5s' },
-  { value: '30s', label: '30s' },
-  { value: '1min', label: '1 min' },
-  { value: 'blur', label: 'On blur' },
-]
-
-function formatSavedTime(date: Date | null): string {
-  if (!date) return ''
-  const seconds = Math.floor((Date.now() - date.getTime()) / 1000)
-  if (seconds < 10) return 'just now'
-  if (seconds < 60) return `${seconds}s ago`
-  const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return `${minutes}m ago`
-  return `${Math.floor(minutes / 60)}h ago`
-}
-
-const saveStatusClasses = computed(() => {
-  switch (props.saveStatus) {
-    case 'dirty':
-      return 'bg-amber-50 text-amber-700 border border-amber-200'
-    case 'saving':
-      return 'bg-blue-50 text-blue-700 border border-blue-200'
-    case 'saved':
-      return 'bg-green-50 text-green-700 border border-green-200'
-    case 'error':
-      return 'bg-red-50 text-red-700 border border-red-200'
-    default:
-      return 'text-gray-500'
-  }
-})
-
-const saveStatusText = computed(() => {
-  switch (props.saveStatus) {
-    case 'dirty':
-      return 'Unsaved changes'
-    case 'saving':
-      return 'Saving…'
-    case 'saved':
-      return `Saved ${formatSavedTime(props.lastSavedAt ?? null)}`
-    case 'error':
-      return 'Save failed — Retry'
-    default:
-      return props.lastSavedAt ? 'Saved' : ''
-  }
-})
-
 function onEditorInput(value: string) {
   localCode.value = value
   emit('update:code', value)
@@ -265,69 +226,18 @@ defineExpose({ revealPosition, insertAtCursor })
           Validate
         </button>
       </HotkeyTooltip>
-      <HotkeyTooltip :keys="saveShortcut">
-        <button
-          type="button"
-          class="px-3 py-1 text-xs font-medium rounded border"
-          :class="isDirty
-            ? 'border-blue-600 bg-blue-600 text-white hover:bg-blue-700'
-            : 'border-neutral-300 text-neutral-400 cursor-not-allowed'"
-          :disabled="!isDirty"
-          data-testid="code-tab-save"
-          @click="requestSave"
-        >
-          Save
-        </button>
-      </HotkeyTooltip>
-      <div class="flex items-center rounded border border-neutral-300 overflow-hidden">
-        <button
-          v-for="option in autosaveOptions"
-          :key="option.value"
-          type="button"
-          class="px-2 py-1 text-xs"
-          :class="autosaveMode === option.value
-            ? 'bg-neutral-800 text-white'
-            : 'text-neutral-600 hover:bg-neutral-100'"
-          :data-testid="`code-tab-autosave-${option.value}`"
-          :aria-pressed="autosaveMode === option.value"
-          @click="setAutosaveMode(option.value)"
-        >
-          {{ option.label }}
-        </button>
-      </div>
-      <span
-        v-if="saveStatusText"
-        class="inline-flex items-center gap-1.5 text-xs rounded-full px-2.5 py-1"
-        :class="saveStatusClasses"
-        data-testid="draft-save-status"
-        role="status"
-      >
-        <span
-          v-if="saveStatus === 'saving'"
-          class="inline-block h-3 w-3 rounded-full border-2 border-current border-t-transparent animate-spin"
-          aria-hidden="true"
-        ></span>
-        <span>{{ saveStatusText }}</span>
-        <button
-          v-if="saveStatus === 'error'"
-          type="button"
-          class="ml-1 underline hover:no-underline"
-          data-testid="draft-save-retry"
-          @click="requestSave"
-        >
-          Retry
-        </button>
-      </span>
-      <span
-        v-if="isDirty"
-        class="inline-flex items-center gap-1.5 text-xs text-amber-700"
-        data-testid="workbench-dirty-indicator"
-        role="status"
-        aria-label="You have unsaved changes"
-      >
-        <span aria-hidden="true" class="inline-block h-2 w-2 rounded-full bg-amber-500"></span>
-        <span>unsaved changes</span>
-      </span>
+      <SaveAction
+        testid-prefix="code-tab"
+        :is-dirty="isDirty"
+        :busy="busy"
+        :save-status="saveStatus"
+        :last-saved-at="lastSavedAt"
+        :autosave-options="autosaveOptions"
+        :autosave-mode="autosaveMode"
+        :save-shortcut="saveShortcut"
+        @save="requestSave"
+        @update:autosave-mode="setAutosaveMode"
+      />
     </div>
     <div class="p-3 flex-1 min-h-0">
       <div
