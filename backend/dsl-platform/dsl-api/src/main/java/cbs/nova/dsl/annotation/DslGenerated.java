@@ -19,5 +19,7 @@ public @interface DslGenerated {
 
   String dslPlatformVersion();
 
-  // dslBuildInfo / dslGitInfo are a tracked follow-up.
+  String dslBuildInfo();
+
+  String dslGitInfo();
 }

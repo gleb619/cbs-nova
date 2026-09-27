@@ -56,6 +56,8 @@ class TransactionCodeGeneratorTest {
     assertThat(iface.source()).contains("namePrefix");
     assertThat(iface.source()).contains("LoanDisbursement_");
     assertThat(iface.source()).contains("@" + DslGenerated.class.getSimpleName());
+    assertThat(iface.source()).contains("dslBuildInfo = \"");
+    assertThat(iface.source()).contains("dslGitInfo = \"");
     assertThat(iface.source()).contains("@" + Generated.class.getSimpleName());
     assertThat(iface.source())
             .contains("generator = \"" + TransactionCodeGenerator.class.getName() + "\"");
@@ -101,6 +103,8 @@ class TransactionCodeGeneratorTest {
     assertThat(impl.source()).contains("request.payload()");
     assertThat(impl.source()).contains("DslTemporalTransactionRequest<String> request");
     assertThat(impl.source()).contains("@" + DslGenerated.class.getSimpleName());
+    assertThat(impl.source()).contains("dslBuildInfo = \"");
+    assertThat(impl.source()).contains("dslGitInfo = \"");
     assertThat(impl.source()).contains("@" + Generated.class.getSimpleName());
     assertThat(impl.source()).doesNotContain("ExecutionMode.RUN");
     assertThat(impl.source()).doesNotContain("TransactionRouting");

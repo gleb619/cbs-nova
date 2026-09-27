@@ -63,6 +63,8 @@ class ProcessCodeGeneratorTest {
             .contains("Object execute(" + DslTemporalProcessRequest.class.getSimpleName()
                     + "<String> request)");
     assertThat(iface.source()).contains("@" + DslGenerated.class.getSimpleName());
+    assertThat(iface.source()).contains("dslBuildInfo = \"");
+    assertThat(iface.source()).contains("dslGitInfo = \"");
     assertThat(iface.source()).contains("@" + Generated.class.getSimpleName());
     assertThat(iface.source())
             .contains("generator = \"" + ProcessCodeGenerator.class.getName() + "\"");
@@ -114,6 +116,8 @@ class ProcessCodeGeneratorTest {
     assertThat(impl.source()).doesNotContain("TransactionRouting");
     assertThat(impl.source()).doesNotContain("Saga");
     assertThat(impl.source()).contains("@" + DslGenerated.class.getSimpleName());
+    assertThat(impl.source()).contains("dslBuildInfo = \"");
+    assertThat(impl.source()).contains("dslGitInfo = \"");
     assertThat(impl.source()).contains("@" + Generated.class.getSimpleName());
     assertThat(impl.source())
             .contains("generator = \"" + ProcessCodeGenerator.class.getName() + "\"");
@@ -213,6 +217,8 @@ class ProcessCodeGeneratorTest {
     assertThat(impl.source()).doesNotContain("TransactionRouting");
     assertThat(impl.source()).doesNotContain("Saga");
     assertThat(impl.source()).contains("@" + DslGenerated.class.getSimpleName());
+    assertThat(impl.source()).contains("dslBuildInfo = \"");
+    assertThat(impl.source()).contains("dslGitInfo = \"");
     assertThat(impl.source()).contains("@" + Generated.class.getSimpleName());
   }
 
