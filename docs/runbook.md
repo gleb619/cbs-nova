@@ -1217,6 +1217,165 @@ calls the same BFF endpoint and lists rows newest first; the panel is wired from
 | `400 INVALID_REQUEST "Invalid value for query parameter 'offset': …"` | 400 | `offset` is not a valid integer. | Pass an integer. |
 | Filter returns no rows for a known failing definition | 200 (empty list) | The failing event wrote rows under `RELOAD` (source directory) or a different definition context than expected. | Query without `definition` and scan `source`/`definition` values, or query the exact directory string for reload failures. |
 
+## Inspect webhook deliveries
+
+The append-only `dsl_webhook_deliveries` table records the outcome of every run-completion
+webhook delivery: one row per (subscription, completed run), whether the HTTP call succeeded
+or not. When a downstream system reports "we never got the callback" (or got it late), this
+log is the first place to look.
+
+Source: `WebhookDispatcher` (writes outcomes on the `cbs-nova-webhook-*` delivery executor),
+`WebhookDeliveryRecordRepository` (reads), routes registered by `WebhookRouterConfiguration`;
+BFF proxy at
+[`frontend/admin-ui-plugin/server/api/v1/dsl/webhooks/deliveries.get.ts`](../frontend/admin-ui-plugin/server/api/v1/dsl/webhooks/deliveries.get.ts).
+
+Use the BFF path (`/api/v1/dsl/webhooks/deliveries`) so the browser's `X-Api-Key` / JWT / RBAC
+posture is applied consistently. The backend at `:8090` exposes the same route at
+`/api/dsl/webhooks/deliveries` and behaves identically. The route only exists when webhooks are
+enabled (`cbs.nova.dsl.webhooks.enabled=true`, default `false` — see
+[`dsl/runtime.md`](dsl/runtime.md)); a `404` on this path means the feature is off.
+
+> Request and response envelopes in this section are taken from handler code and tests,
+> not a live capture.
+
+### Query the log
+
+```bash
+curl -sS 'http://localhost:3000/api/v1/dsl/webhooks/deliveries?limit=20&offset=0' | jq
+```
+
+Returns `PageResponse<WebhookDeliveryDto>`: `{items: [...], total, offset, limit}`.
+Items are newest first (by `occurred_at`, then `id`). Each item carries:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `id` | long | Row identity (`BIGSERIAL`). |
+| `occurredAt` | string | ISO-8601 UTC instant when the outcome row was appended (delivery finished). |
+| `subscriptionId` | string | The matching subscription's `definition-pattern` — this is the filter key. |
+| `eventType` | string | Currently always `run.completed`. |
+| `url` | string | Delivery target; truncated to 2048 chars if longer (URL still delivered). |
+| `status` | string | HTTP status code as a string on a completed response (`200`, `404`, ...), or a non-numeric outcome — see below. 2xx–3xx counts as success. |
+| `attempts` | int | Delivery attempts made for this event; bounded by `cbs.nova.dsl.webhooks.max-retries` (default `3`). |
+| `lastError` | string? | Message of the last transport failure (IO/timeout); absent when a response completed on the wire, even for a 4xx/5xx. |
+| `durationMs` | long? | Wall-clock time from delivery start to final outcome. |
+
+`status` values to expect:
+
+- `"200"`–`"399"` — delivered; the last attempt returned a success code.
+- `"400"`–`"499"` (except `"429"`) — the receiver rejected the request; **not retried**
+  (terminal client error), so `attempts` is `1`.
+- `"429"` / `"5xx"` — retried until `max-retries`; if still failing, the last code is stored.
+- `failed` — every attempt died on the wire (connection refused, timeout, DNS); `lastError`
+  holds the last exception message.
+- `rejected` — non-https URL while `cbs.nova.dsl.webhooks.allow-plain-http=false`; never sent.
+- `serialization_failed` — the payload could not be serialized; never sent.
+- `interrupted` — the delivery thread was interrupted mid-retry-loop.
+
+Example envelope:
+
+```json
+{
+  "items": [
+    {
+      "id": 1287,
+      "occurredAt": "2026-09-26T12:34:57.123Z",
+      "subscriptionId": "orders-*",
+      "eventType": "run.completed",
+      "url": "https://hooks.example.com/cbs-nova",
+      "status": "200",
+      "attempts": 1,
+      "lastError": null,
+      "durationMs": 187
+    },
+    {
+      "id": 1286,
+      "occurredAt": "2026-09-26T11:02:11.456Z",
+      "subscriptionId": "orders-*",
+      "eventType": "run.completed",
+      "url": "https://hooks.example.com/cbs-nova",
+      "status": "failed",
+      "attempts": 3,
+      "lastError": "Connection timed out",
+      "durationMs": 15012
+    }
+  ],
+  "total": 2,
+  "offset": 0,
+  "limit": 20
+}
+```
+
+### Filter and paginate
+
+- `subscriptionId` (optional) — exact match on the subscription pattern column
+  (`definition-pattern` from the config), e.g. `orders-*`. Blank/absent = all subscriptions.
+- `limit` (optional) — page size, default `50`, clamped to `1..500`.
+- `offset` (optional) — rows to skip, default `0`, must be non-negative.
+
+`total` is the full matching count; advance pages by raising `offset` in `limit` increments.
+
+### Where rows come from
+
+- **Static subscriptions.** On every run completion the dispatcher matches the configured
+  `cbs.nova.dsl.webhooks.subscriptions` by `definition-pattern` glob against the process name
+  (plus the optional `statuses` filter), then POSTs the `run.completed` payload asynchronously
+  on the `cbs-nova-webhook-*` executor and appends one outcome row per matching subscription.
+  Retries are bounded: up to `max-retries` attempts (default `3`) with linear backoff
+  (`retry-backoff * attempt`, default `PT2S` * attempt); `5xx`, `429`, and transport errors are
+  retried, other `4xx` are terminal after the first attempt.
+- **Append-only.** There is no update or delete path anywhere; a row is written for failures
+  too, so "no row for this run" is itself a finding (see below).
+- **Rule-based notification deliveries do NOT write this table.** The T565 rule sink
+  (`dispatchTo`) shares the transport (signing, https enforcement, bounded retries) but audits
+  through `dsl_notification_rule_firing` and returns the outcome inline — never here.
+- **Ephemeral companion endpoint.** `GET /api/webhooks/deliveries` on the backend (not proxied
+  by the BFF) returns the last in-JVM outcome per subscription. It is per-replica state that
+  vanishes on restart; use it to check that a specific replica's dispatcher is alive, and the
+  persisted log above for the durable audit trail.
+
+### Dispatcher logs
+
+Successful deliveries produce **no log line** — the row in `dsl_webhook_deliveries` is the
+audit trail. WARNs from the `cbs.nova.starter.webhook.WebhookDispatcher` logger cover the
+exceptional paths: payload serialization failure, non-https rejection, HMAC signature
+computation failure, and delivery-row persistence failure. The app container's stdout:
+
+```bash
+docker compose -f app/docker-compose.yml logs app | grep -i webhook
+```
+
+### Common failure cases
+
+| Symptom | HTTP | Cause | Fix |
+|---|---|---|---|
+| `404 NOT_FOUND` on `/api/v1/dsl/webhooks/deliveries` (or the BFF proxy surfaces a backend 404) | 404 | `cbs.nova.dsl.webhooks.enabled=false` (the default) — the route is only registered when the feature is on. | Set `cbs.nova.dsl.webhooks.enabled=true` (plus subscriptions) and restart. |
+| `status="failed"`, `attempts=3`, `lastError` set | 200 (row body) | Every attempt died on the wire: connection refused, DNS, or `timeout` (`PT5S` default) against the target. | Fix connectivity to `url` or raise `cbs.nova.dsl.webhooks.timeout`; the receiver never saw a request. |
+| `status="rejected"` | 200 (row body) | `http://` URL while `allow-plain-http=false`; the request was never sent. | Use `https://`, or explicitly set `cbs.nova.dsl.webhooks.allow-plain-http=true`. |
+| `status="401"`/`"403"` with `attempts=1` | 200 (row body) | Terminal client error — receiver rejected the payload (auth header, signature `secret` mismatch); 4xx other than 429 is never retried. | Fix credentials/secret on the subscription; replay the run to re-deliver. |
+| `status="429"` or `"5xx"` with `attempts=max-retries` | 200 (row body) | Receiver throttling/overload; retried with linear backoff then gave up. | Stabilize the receiver, then replay the run; consider `max-retries`/`retry-backoff` if the receiver is slow to recover. |
+| Numeric `status` (even `500`) with `lastError=null` | 200 (row body) | Not an error in the transport — a response completed on the wire; `lastError` is only set for wire failures. | Read `status` as the receiver's HTTP code. |
+| Completed run but no row at all | 200 (empty list) | No subscription matched (`definition-pattern` glob or `statuses` filter), the list is empty, or the delivery went through the rule-based sink (see above). | Check `cbs.nova.dsl.webhooks.subscriptions` patterns against the process name; audit rule-based deliveries via `dsl_notification_rule_firing` instead. |
+| `401 UNAUTHORIZED` going direct to backend | 401 | `cbs.dsl.auth.enabled=true` and the `X-Api-Key` is missing/invalid. | Supply the configured `X-Api-Key`, or go through the BFF. |
+
+### Verifying deliveries end-to-end
+
+```bash
+# 1. Confirm the feature is on and a subscription pattern matches your process name
+#    (cbs.nova.dsl.webhooks.enabled=true, subscriptions[].definition-pattern, in application config)
+
+# 2. Complete a matching run, then read the newest outcome rows
+curl -sS 'http://localhost:3000/api/v1/dsl/webhooks/deliveries?limit=5' | \
+  jq '.items[] | {occurredAt, subscriptionId, status, attempts, lastError, durationMs}'
+
+# 3. Narrow to one subscription; total = full match count for paging
+curl -sS 'http://localhost:3000/api/v1/dsl/webhooks/deliveries?subscriptionId=orders-*&limit=10' | \
+  jq '{total, statuses: [.items[].status]}'
+
+# 4. Direct backend path — same shape; needs X-Api-Key when cbs.dsl.auth.enabled=true
+curl -sS -H 'X-Api-Key: <key>' \
+  'http://localhost:8090/api/dsl/webhooks/deliveries?limit=5&offset=0' | jq
+```
+
 ## Manage VHS tape lifecycle
 
 Record DSL executions to versioned JSON Lines tapes, list them, inspect their raw contents,
