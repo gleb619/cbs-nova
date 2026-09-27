@@ -217,18 +217,11 @@ describe('DocTab', () => {
     expect(idxA).toBeGreaterThan(idxKeep)
   })
 
-  it('renders the doc-tab-header with title and Save button', () => {
+  it('renders the doc-tab-header with a Save button', () => {
     wrapper = mountTab()
 
     expect(wrapper.find('[data-testid="doc-tab-header"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="doc-tab-header-title"]').text()).toBe('Documentation')
     expect(wrapper.find('[data-testid="doc-tab-save"]').exists()).toBe(true)
-  })
-
-  it('shows the frontmatter name in the header', () => {
-    wrapper = mountTab()
-
-    expect(wrapper.find('[data-testid="doc-tab-header-name"]').text()).toContain('BatchProcessing')
   })
 
   it('does not duplicate the Save button into the footer', () => {
@@ -314,5 +307,77 @@ describe('DocTab', () => {
 
     const saved = wrapper.emitted('save')?.at(-1)?.[0] as string
     expect(saved).toContain('# changed')
+  })
+
+  describe('autosave dropdown', () => {
+    const openDropdown = async (wrapper: ReturnType<typeof mountTab>) => {
+      await wrapper.find('[data-testid="doc-tab-save-dropdown-toggle"]').trigger('click')
+    }
+
+    it('renders the dropdown toggle and opens the menu', async () => {
+      wrapper = mountTab()
+
+      expect(wrapper.find('[data-testid="doc-tab-save-dropdown-toggle"]').exists()).toBe(true)
+      expect(wrapper.find('[data-testid="doc-tab-save-dropdown"]').exists()).toBe(false)
+
+      await openDropdown(wrapper)
+
+      const dropdown = wrapper.find('[data-testid="doc-tab-save-dropdown"]')
+      expect(dropdown.exists()).toBe(true)
+      const options = dropdown.findAll('[data-testid^="doc-tab-autosave-"]').map((node) =>
+        node.attributes('data-testid'),
+      )
+      expect(options).toEqual([
+        'doc-tab-autosave-off',
+        'doc-tab-autosave-5s',
+        'doc-tab-autosave-30s',
+        'doc-tab-autosave-1min',
+        'doc-tab-autosave-blur',
+      ])
+    })
+
+    it('persists the selected autosave mode and marks it active', async () => {
+      wrapper = mountTab()
+      await openDropdown(wrapper)
+      await wrapper.find('[data-testid="doc-tab-autosave-1min"]').trigger('click')
+      wrapper.unmount()
+
+      expect(window.localStorage.getItem('cbs-nova:doc-tab:autosave-mode')).toBe(
+        JSON.stringify('1min'),
+      )
+
+      wrapper = mountTab()
+      await openDropdown(wrapper)
+      expect(wrapper.find('[data-testid="doc-tab-autosave-1min"]').classes()).toEqual(
+        expect.arrayContaining(['font-semibold']),
+      )
+    })
+
+    it('autosaves on blur when the blur mode is picked', async () => {
+      wrapper = mountTab()
+
+      await openDropdown(wrapper)
+      await wrapper.find('[data-testid="doc-tab-autosave-blur"]').trigger('click')
+      await wrapper.find('[data-testid="md-paragraph-1"]').setValue('# changed')
+      await wrapper.find('[data-testid="md-paragraph-1"]').trigger('focusout')
+
+      const saved = wrapper.emitted('save')?.at(-1)?.[0] as string
+      expect(saved).toContain('# changed')
+    })
+
+    it('autosaves on the picked interval when dirty', async () => {
+      vi.useFakeTimers()
+      wrapper = mountTab()
+
+      await openDropdown(wrapper)
+      await wrapper.find('[data-testid="doc-tab-autosave-5s"]').trigger('click')
+      await wrapper.find('[data-testid="md-paragraph-1"]').setValue('# changed')
+
+      vi.advanceTimersByTime(5000)
+      expect(wrapper.emitted('save')).toHaveLength(1)
+
+      vi.advanceTimersByTime(5000)
+      expect(wrapper.emitted('save')).toHaveLength(1)
+    })
   })
 })

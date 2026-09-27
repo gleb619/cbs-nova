@@ -7,7 +7,7 @@ import type { JsonSchema } from '../../types/jsonSchema'
 import { parseMarkdownDoc, serializeMarkdownDoc } from '../../utils/markdownDoc'
 import MarkdownBodyEditor from './MarkdownBodyEditor.vue'
 import MonacoEditor from './MonacoEditor.vue'
-import SaveAction from './SaveAction.vue'
+import SaveAction, { type AutosaveOption } from './SaveAction.vue'
 import SchemaForm from './SchemaForm.vue'
 
 const props = withDefaults(
@@ -59,6 +59,22 @@ const mode = useDocTabStorage<DocMode>('mode', 'form', {
     }
   },
 })
+
+const AUTOSAVE_INTERVALS: Record<string, number> = {
+  '5s': 5000,
+  '30s': 30000,
+  '1min': 60000,
+}
+
+const autosaveMode = useDocTabStorage<string>('autosave-mode', 'off')
+
+const autosaveOptions: readonly AutosaveOption[] = [
+  { value: 'off', label: 'Manual' },
+  { value: '5s', label: '5s' },
+  { value: '30s', label: '30s' },
+  { value: '1min', label: '1 min' },
+  { value: 'blur', label: 'On blur' },
+]
 
 const frontmatterSchema: JsonSchema = {
   type: 'object',
@@ -115,6 +131,34 @@ function handleGlobalSave() {
   if (!props.readOnly && !props.busy) requestSave()
 }
 
+let autosaveTimer: ReturnType<typeof setInterval> | undefined
+
+function clearAutosaveTimer() {
+  if (autosaveTimer !== undefined) {
+    clearInterval(autosaveTimer)
+    autosaveTimer = undefined
+  }
+}
+
+function applyAutosaveMode() {
+  clearAutosaveTimer()
+  const interval = AUTOSAVE_INTERVALS[autosaveMode.value]
+  if (interval !== undefined && !props.readOnly) {
+    autosaveTimer = setInterval(() => {
+      if (isDirty.value) requestSave()
+    }, interval)
+  }
+}
+
+function setAutosaveMode(mode: string) {
+  autosaveMode.value = mode
+  applyAutosaveMode()
+}
+
+function handleBlur() {
+  if (autosaveMode.value === 'blur' && isDirty.value) requestSave()
+}
+
 const isMac =
   typeof navigator !== 'undefined' &&
   /Mac|iPhone|iPad|iPod/.test(navigator.platform || navigator.userAgent || '')
@@ -137,10 +181,12 @@ function handleHotkey(event: KeyboardEvent) {
 onMounted(() => {
   window.addEventListener('dsl:save', handleGlobalSave)
   window.addEventListener('keydown', handleHotkey)
+  applyAutosaveMode()
 })
 onBeforeUnmount(() => {
   window.removeEventListener('dsl:save', handleGlobalSave)
   window.removeEventListener('keydown', handleHotkey)
+  clearAutosaveTimer()
 })
 </script>
 
@@ -151,21 +197,6 @@ onBeforeUnmount(() => {
       class="flex flex-wrap items-center gap-2 px-3 py-1.5 border-b border-neutral-200 bg-white"
       data-testid="doc-tab-header"
     >
-      <div class="flex items-center gap-2 min-w-0">
-        <span
-          class="text-xs font-semibold uppercase tracking-wide text-neutral-700"
-          data-testid="doc-tab-header-title"
-        >
-          Documentation
-        </span>
-        <span
-          v-if="parsed.frontmatter.name"
-          class="text-xs text-neutral-500 truncate"
-          data-testid="doc-tab-header-name"
-        >
-          · {{ parsed.frontmatter.name }}
-        </span>
-      </div>
       <div class="ml-auto flex items-center gap-2">
         <SaveAction
           testid-prefix="doc-tab"
@@ -173,12 +204,15 @@ onBeforeUnmount(() => {
           :busy="busy"
           :save-status="saveStatus"
           :last-saved-at="lastSavedAt"
+          :autosave-options="autosaveOptions"
+          :autosave-mode="autosaveMode"
           @save="requestSave"
+          @update:autosave-mode="setAutosaveMode"
         />
       </div>
     </div>
     <div class="flex-1 min-h-0 overflow-auto">
-      <div v-if="mode === 'form'" class="flex flex-col gap-4 p-3" data-testid="doc-tab-form">
+      <div v-if="mode === 'form'" class="flex flex-col gap-4 p-3" data-testid="doc-tab-form" @focusout="handleBlur">
         <SchemaForm
           :schema="frontmatterSchema"
           :model-value="parsed.frontmatter"
@@ -190,7 +224,7 @@ onBeforeUnmount(() => {
           <MarkdownBodyEditor :body="parsed.body" :read-only="readOnly" @update:body="updateBody" />
         </fieldset>
       </div>
-      <div v-if="mode === 'raw'" class="p-3 h-full min-h-[300px]" data-testid="doc-tab-raw">
+      <div v-if="mode === 'raw'" class="p-3 h-full min-h-[300px]" data-testid="doc-tab-raw" @focusout="handleBlur">
         <div
           class="relative h-full min-h-[300px] overflow-hidden rounded border border-neutral-200 bg-white"
         >
