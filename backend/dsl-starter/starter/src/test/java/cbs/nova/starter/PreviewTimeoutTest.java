@@ -25,6 +25,7 @@ import cbs.nova.starter.logging.DryRunLogbackAppender;
 import cbs.nova.starter.logging.ThreadLocalDryRunLoggingContext;
 import cbs.nova.starter.reporting.HierarchyDiagramRenderer;
 import cbs.nova.starter.service.PreviewResultCache;
+import cbs.nova.starter.core.StarterConstants;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -95,6 +96,8 @@ class PreviewTimeoutTest {
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.value().success()).isTrue();
     assertThat(result.value().output()).isEqualTo("ok");
+    assertThat(meterRegistry.counter(StarterConstants.PREVIEW_OUTCOME_COUNTER, "outcome", "success")
+            .count()).isEqualTo(1.0);
     assertThat(elapsed).isLessThan(500);
   }
 
@@ -114,6 +117,8 @@ class PreviewTimeoutTest {
             .isEqualTo(PreviewErrorCode.PREVIEW_TIMEOUT.name());
     assertThat(elapsed).isLessThan(500);
     assertThat(meterRegistry.counter("dsl.preview.timeout").count()).isEqualTo(1.0);
+    assertThat(meterRegistry.counter(StarterConstants.PREVIEW_OUTCOME_COUNTER, "outcome", "timeout")
+            .count()).isEqualTo(1.0);
   }
 
   @Test
