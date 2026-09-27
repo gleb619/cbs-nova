@@ -18,6 +18,7 @@ from .commands.seed_history import SeedHistoryCommand
 from .commands.services import ServicesCommand
 from .commands.stack import StackCommand
 from .commands.vhs import VhsCommand
+from .commands.worktree_seed import WorktreeSeedCommand
 
 
 class CLI:
@@ -111,6 +112,12 @@ class CLI:
                        help="backend base URL (fetches /api/dsl/helpers, falls back to objects/search)")
         p.add_argument("--out", default="docs/helpers.md", help="output markdown path")
         p.set_defaults(handler=HelpersDocCommand)
+
+        p = subparsers.add_parser(
+            "worktree-seed", help="Copy git-ignored build prerequisites (gradle wrapper, node_modules, build/) into a worktree"
+        )
+        WorktreeSeedCommand.register(p)
+        p.set_defaults(handler=WorktreeSeedCommand)
 
         # Run CI workflow locally via wrkflw (works around the empty-tmp-dir bug).
         p = subparsers.add_parser(

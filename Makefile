@@ -287,6 +287,12 @@ task-start: ## Create worktree + branch for a task: make task-start TASK_ID=T123
 	@test -n "$(TASK_ID)" || (echo "TASK_ID is required" && exit 1)
 	@test ! -d "$(WORKTREE_DIR)" || (echo "Worktree $(WORKTREE_DIR) already exists" && exit 1)
 	git worktree add "$(WORKTREE_DIR)" -b "$(BRANCH_NAME)"
+	@python3 $(SCRIPT) worktree-seed "$(WORKTREE_DIR)"
+
+.PHONY: task-seed
+task-seed: ## Re-copy git-ignored build files into an existing worktree: make task-seed TASK_ID=T123
+	@test -n "$(TASK_ID)" || (echo "TASK_ID is required" && exit 1)
+	@python3 $(SCRIPT) worktree-seed "$(WORKTREE_DIR)"
 
 .PHONY: task-merge
 task-merge: ## Merge task branch, remove worktree + branch: make task-merge TASK_ID=T123
