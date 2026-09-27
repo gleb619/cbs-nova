@@ -289,19 +289,8 @@ public final class GlobalManager {
     return generatedClassRegistry.findProcess(name).isPresent();
   }
 
-  @Deprecated(forRemoval = true)
-  public boolean hasGeneratedTransaction(@NonNull String name) {
-    return generatedClassRegistry.findTransaction(name).isPresent();
-  }
-
-  @Deprecated(forRemoval = true)
-  public @NonNull List<GeneratedClassDescriptor> generatedProcesses() {
-    return generatedClassRegistry.processes();
-  }
-
-  @Deprecated(forRemoval = true)
-  public @NonNull List<GeneratedClassDescriptor> generatedTransactions() {
-    return generatedClassRegistry.transactions();
+  public @NonNull GeneratedClassRegistry generatedClassRegistry() {
+    return generatedClassRegistry;
   }
 
   public void registerGeneratedClass(@NonNull GeneratedClassDescriptor descriptor) {
