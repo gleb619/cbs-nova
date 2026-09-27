@@ -99,7 +99,7 @@ public class TemporalConfiguration {
   @ConditionalOnMissingBean(name = "dslWorkerFactory")
   ApplicationRunner temporalWorkerRegistrationRunner(WorkerFactory workerFactory) {
     return args -> {
-      var processes = GlobalManager.globalManager().generatedProcesses();
+      var processes = GlobalManager.globalManager().generatedClassRegistry().processes();
       if (processes.isEmpty()) {
         return;
       }

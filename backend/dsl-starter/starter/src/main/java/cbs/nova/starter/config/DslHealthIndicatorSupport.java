@@ -55,7 +55,7 @@ final class DslHealthIndicatorSupport {
   }
 
   private static List<String> configuredTaskQueues() {
-    return GlobalManager.globalManager().generatedProcesses().stream()
+    return GlobalManager.globalManager().generatedClassRegistry().processes().stream()
             .filter(descriptor -> descriptor.type() == DslType.PROCESS)
             .map(GeneratedClassDescriptor::taskQueue)
             .distinct()
