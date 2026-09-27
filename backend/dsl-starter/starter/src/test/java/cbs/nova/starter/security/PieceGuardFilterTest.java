@@ -70,9 +70,12 @@ class PieceGuardFilterTest {
     auditServiceProvider = provider;
     when(auditServiceProvider.getIfAvailable()).thenReturn(auditService);
     clock = new AtomicLong(1_000_000_000L);
-    filter = newFilter(new CbsDslManifestProperties(true, "classpath:piece-manifest.yaml"),
+    filter = newFilter(
+            new CbsDslManifestProperties(true, "classpath:piece-manifest.yaml", null, null, null,
+                    null, null),
             new PropertiesFeatureFlagSource(
-                    new CbsDslManifestProperties(true, "classpath:piece-manifest.yaml")));
+                    new CbsDslManifestProperties(true, "classpath:piece-manifest.yaml", null, null,
+                            null, null, null)));
   }
 
   @AfterEach
@@ -183,7 +186,8 @@ class PieceGuardFilterTest {
     pieceWith(List.of(new PreCheck.FeatureFlagCheck("anything")));
     FeatureFlagSource seam = (flag, request) -> "anything".equals(flag);
 
-    filter = newFilter(new CbsDslManifestProperties(true, "classpath:piece-manifest.yaml"), seam);
+    filter = newFilter(new CbsDslManifestProperties(true, "classpath:piece-manifest.yaml", null,
+            null, null, null, null), seam);
 
     Invocation invocation = invoke(new MockHttpServletRequest("POST", ROUTE),
             chainWriting(200, "ok"));
@@ -327,9 +331,12 @@ class PieceGuardFilterTest {
   @Test
   void successfulExecutionTriggersPostCheckPipelineWithExecutionContext() throws Exception {
     PieceCheckPipeline pipeline = mock(PieceCheckPipeline.class);
-    filter = newFilter(new CbsDslManifestProperties(true, "classpath:piece-manifest.yaml"),
+    filter = newFilter(
+            new CbsDslManifestProperties(true, "classpath:piece-manifest.yaml", null, null, null,
+                    null, null),
             new PropertiesFeatureFlagSource(
-                    new CbsDslManifestProperties(true, "classpath:piece-manifest.yaml")),
+                    new CbsDslManifestProperties(true, "classpath:piece-manifest.yaml", null, null,
+                            null, null, null)),
             pipeline, null);
     authenticateAs("caller", Role.AUTHOR);
     pieceWithPostChecks(List.of(new PreCheck.RoleCheck(List.of("author"))),
@@ -354,9 +361,12 @@ class PieceGuardFilterTest {
   @Test
   void postChecksNeverRunOnFailedExecutionStatus() throws Exception {
     PieceCheckPipeline pipeline = mock(PieceCheckPipeline.class);
-    filter = newFilter(new CbsDslManifestProperties(true, "classpath:piece-manifest.yaml"),
+    filter = newFilter(
+            new CbsDslManifestProperties(true, "classpath:piece-manifest.yaml", null, null, null,
+                    null, null),
             new PropertiesFeatureFlagSource(
-                    new CbsDslManifestProperties(true, "classpath:piece-manifest.yaml")),
+                    new CbsDslManifestProperties(true, "classpath:piece-manifest.yaml", null, null,
+                            null, null, null)),
             pipeline, null);
     authenticateAs("caller", Role.AUTHOR);
     pieceWithPostChecks(List.of(new PreCheck.RoleCheck(List.of("author"))),
@@ -372,9 +382,12 @@ class PieceGuardFilterTest {
   @Test
   void postChecksNeverRunOnHandlerException() throws Exception {
     PieceCheckPipeline pipeline = mock(PieceCheckPipeline.class);
-    filter = newFilter(new CbsDslManifestProperties(true, "classpath:piece-manifest.yaml"),
+    filter = newFilter(
+            new CbsDslManifestProperties(true, "classpath:piece-manifest.yaml", null, null, null,
+                    null, null),
             new PropertiesFeatureFlagSource(
-                    new CbsDslManifestProperties(true, "classpath:piece-manifest.yaml")),
+                    new CbsDslManifestProperties(true, "classpath:piece-manifest.yaml", null, null,
+                            null, null, null)),
             pipeline, null);
     authenticateAs("caller", Role.AUTHOR);
     pieceWithPostChecks(List.of(new PreCheck.RoleCheck(List.of("author"))),
@@ -392,9 +405,12 @@ class PieceGuardFilterTest {
   @Test
   void postChecksNeverRunOnPreCheckDenial() throws Exception {
     PieceCheckPipeline pipeline = mock(PieceCheckPipeline.class);
-    filter = newFilter(new CbsDslManifestProperties(true, "classpath:piece-manifest.yaml"),
+    filter = newFilter(
+            new CbsDslManifestProperties(true, "classpath:piece-manifest.yaml", null, null, null,
+                    null, null),
             new PropertiesFeatureFlagSource(
-                    new CbsDslManifestProperties(true, "classpath:piece-manifest.yaml")),
+                    new CbsDslManifestProperties(true, "classpath:piece-manifest.yaml", null, null,
+                            null, null, null)),
             pipeline, null);
     authenticateAs("caller", Role.RUNNER);
     pieceWithPostChecks(List.of(new PreCheck.RoleCheck(List.of("operator"))),
@@ -410,9 +426,12 @@ class PieceGuardFilterTest {
   @Test
   void postChecksNeverRunForRoutesAbsentFromTheManifest() throws Exception {
     PieceCheckPipeline pipeline = mock(PieceCheckPipeline.class);
-    filter = newFilter(new CbsDslManifestProperties(true, "classpath:piece-manifest.yaml"),
+    filter = newFilter(
+            new CbsDslManifestProperties(true, "classpath:piece-manifest.yaml", null, null, null,
+                    null, null),
             new PropertiesFeatureFlagSource(
-                    new CbsDslManifestProperties(true, "classpath:piece-manifest.yaml")),
+                    new CbsDslManifestProperties(true, "classpath:piece-manifest.yaml", null, null,
+                            null, null, null)),
             pipeline, null);
     when(manifestService.findByRoute("GET", "/api/dsl/objects/search"))
             .thenReturn(Optional.empty());
@@ -428,9 +447,12 @@ class PieceGuardFilterTest {
     PieceCheckPipeline pipeline = mock(PieceCheckPipeline.class);
     PieceCheckBlockRegistry registry = mock(PieceCheckBlockRegistry.class);
     when(registry.isBlocked(PIECE_ID, "auth:caller")).thenReturn(true);
-    filter = newFilter(new CbsDslManifestProperties(true, "classpath:piece-manifest.yaml"),
+    filter = newFilter(
+            new CbsDslManifestProperties(true, "classpath:piece-manifest.yaml", null, null, null,
+                    null, null),
             new PropertiesFeatureFlagSource(
-                    new CbsDslManifestProperties(true, "classpath:piece-manifest.yaml")),
+                    new CbsDslManifestProperties(true, "classpath:piece-manifest.yaml", null, null,
+                            null, null, null)),
             pipeline, registry);
     // Pre-check would pass — the block alone must deny.
     authenticateAs("caller", Role.ADMIN);
@@ -455,9 +477,12 @@ class PieceGuardFilterTest {
     PieceCheckPipeline pipeline = mock(PieceCheckPipeline.class);
     PieceCheckBlockRegistry registry = mock(PieceCheckBlockRegistry.class);
     when(registry.isBlocked(anyString(), anyString())).thenReturn(false);
-    filter = newFilter(new CbsDslManifestProperties(true, "classpath:piece-manifest.yaml"),
+    filter = newFilter(
+            new CbsDslManifestProperties(true, "classpath:piece-manifest.yaml", null, null, null,
+                    null, null),
             new PropertiesFeatureFlagSource(
-                    new CbsDslManifestProperties(true, "classpath:piece-manifest.yaml")),
+                    new CbsDslManifestProperties(true, "classpath:piece-manifest.yaml", null, null,
+                            null, null, null)),
             pipeline, registry);
     authenticateAs("caller", Role.AUTHOR);
     pieceWithPostChecks(List.of(new PreCheck.RoleCheck(List.of("author"))), List.of());

@@ -116,24 +116,30 @@ public class RecordingConnection implements Connection {
           @Nullable String sql) {
     return statement == null
             ? null
-            : new RecordingPreparedStatement(statement, sql, target(), externalCallRecorder);
+            : new RecordingPreparedStatement(
+                    new RecordingPreparedStatement.ConstructorArgs(statement, sql, target(),
+                            externalCallRecorder));
   }
 
   private @Nullable CallableStatement wrapCallable(@Nullable CallableStatement statement,
           @Nullable String sql) {
     return statement == null
             ? null
-            : new RecordingCallableStatement(statement, sql, target(), externalCallRecorder);
+            : new RecordingCallableStatement(
+                    new RecordingCallableStatement.ConstructorArgs(statement, sql, target(),
+                            externalCallRecorder));
   }
 
   private Statement wrapStatement(@NonNull Statement statement, @Nullable String sql) {
     if (statement instanceof CallableStatement callableStatement) {
-      return new RecordingCallableStatement(callableStatement, sql, target(),
-              externalCallRecorder);
+      return new RecordingCallableStatement(
+              new RecordingCallableStatement.ConstructorArgs(callableStatement, sql, target(),
+                      externalCallRecorder));
     }
     if (statement instanceof PreparedStatement preparedStatement) {
-      return new RecordingPreparedStatement(preparedStatement, sql, target(),
-              externalCallRecorder);
+      return new RecordingPreparedStatement(
+              new RecordingPreparedStatement.ConstructorArgs(preparedStatement, sql, target(),
+                      externalCallRecorder));
     }
     return new RecordingStatement(statement, sql, target(), externalCallRecorder);
   }

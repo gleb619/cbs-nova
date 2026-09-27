@@ -45,7 +45,9 @@ class RecordingCallableStatementTest {
   }
 
   private CallableStatement newCallableStatement(String sql) {
-    return new RecordingCallableStatement(delegate, sql, TARGET, externalCallRecorder);
+    return new RecordingCallableStatement(
+            new RecordingCallableStatement.ConstructorArgs(delegate, sql, TARGET,
+                    externalCallRecorder));
   }
 
   @Test
