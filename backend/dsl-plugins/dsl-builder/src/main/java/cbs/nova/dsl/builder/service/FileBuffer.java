@@ -2,16 +2,20 @@ package cbs.nova.dsl.builder.service;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public class FileBuffer {
 
   private final Cache<String, String> pending;
+  private final AtomicLong version = new AtomicLong();
 
   public void stage(String relativePath, String content) {
     pending.put(normalize(relativePath), content);
+    version.incrementAndGet();
   }
 
   public String get(String relativePath) {
@@ -25,11 +29,22 @@ public class FileBuffer {
         snapshot.put(key, value);
       }
     });
+    if (!snapshot.isEmpty()) {
+      version.incrementAndGet();
+    }
     return snapshot;
   }
 
   public int pendingCount() {
     return (int) pending.estimatedSize();
+  }
+
+  public List<String> stagedPaths() {
+    return List.copyOf(pending.asMap().keySet());
+  }
+
+  public long version() {
+    return version.get();
   }
 
   Cache<String, String> cache() {

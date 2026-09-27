@@ -1,33 +1,35 @@
 package cbs.nova.dsl.builder.service;
 
 import cbs.nova.dsl.builder.config.DslBuilderProperties;
+import cbs.nova.dsl.builder.model.DslFileModels.FileEntry;
 import cbs.nova.dsl.utils.Strings;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Stream;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Supplier;
+import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 /**
  * Maps a DSL construct {@code name} (the Workbench key, e.g. {@code "BatchProcessing"}) to a path
- * inside this builder's own work tree, so by-name endpoints never depend on the caller's
- * filesystem view of the workspace.
+ * inside this builder's own work tree, so by-name endpoints never depend on the caller's filesystem
+ * view of the workspace.
  *
  * <p>
- * Source files follow the {@code <name>Dsl.java} then {@code <name>.java} naming convention,
- * checked directly at the work-tree root first and then by recursive filename search. Docs follow
- * the explain-resource convention: kebab-case {@code <kebab>.md} first, then the raw
- * {@code <name>.md}, resolved under the docs sub-directory.
+ * The workspace layout is fixed: DSL sources live in {@code src/dsl} and {@code src/models}, docs
+ * markdown lives flat under the docs sub-directory ({@code properties.docs().subDir()}). Resolution
+ * tries the naming conventions first (first hit wins), then falls back to content scans: a type
+ * declaration in any {@code src/models} file for sources, a yaml frontmatter {@code name:} field in
+ * any docs file for docs.
  *
  * <p>
- * Existence checks go through {@link FileService} so buffer-staged (not yet flushed) content is
- * respected; the recursive fallbacks scan the work tree on disk.
+ * Reads and existence checks go through {@link FileService} so buffer-staged (not yet flushed)
+ * content is respected. Scan results are cached per name and invalidated whenever the staged buffer
+ * changes (any stage or flush).
  */
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ByNamePathResolver {
@@ -35,62 +37,40 @@ public class ByNamePathResolver {
   private static final String DSL_FILE_SUFFIX = "Dsl.java";
   private static final String JAVA_SUFFIX = ".java";
   private static final String MARKDOWN_SUFFIX = ".md";
+  private static final String MODELS_DIR = "src/models";
+  private static final List<String> SOURCE_DIRS = List.of("src/dsl", MODELS_DIR);
+  private static final String TYPE_DECLARATION = "\\b(?:record|class|interface|enum)\\s+%s\\b";
 
-  private final WorkspaceService workspaceService;
   private final DslBuilderProperties properties;
   private final FileService fileService;
+  //TODO: refactor to a caffeine, hardcode is forbidden
+  private final Map<String, CachedPath> sourcePaths = new ConcurrentHashMap<>();
+  private final Map<String, CachedPath> docPaths = new ConcurrentHashMap<>();
 
   /**
    * @param name
    *          construct name.
-   * @return work-tree-relative forward-slash path of the DSL source file, or empty when no file
-   *         matches the naming convention anywhere under the work tree.
+   * @return work-tree-relative forward-slash path of the DSL source file, or empty when no
+   *         candidate exists.
    */
   public Optional<String> resolveSourcePath(String name) {
     if (name == null || name.isBlank()) {
       return Optional.empty();
     }
-    Path workTree = workspaceService.workTree();
-    List<String> candidates = List.of(name + DSL_FILE_SUFFIX, name + JAVA_SUFFIX);
-    for (String candidate : candidates) {
-      if (fileService.exists(candidate)) {
-        return Optional.of(candidate);
-      }
-    }
-    for (String candidate : candidates) {
-      Optional<Path> found = findByFilename(workTree, candidate);
-      if (found.isPresent()) {
-        return Optional.of(relativize(workTree, found.get()));
-      }
-    }
-    return Optional.empty();
+    return cached(sourcePaths, name, () -> resolveSource(name));
   }
 
   /**
    * @param name
    *          construct name.
-   * @return docs-root-relative forward-slash path of the existing doc, or empty when no doc
-   *         matches under the docs root.
+   * @return docs-root-relative forward-slash path of the existing doc, or empty when no candidate
+   *         exists.
    */
   public Optional<String> resolveDocPath(String name) {
     if (name == null || name.isBlank()) {
       return Optional.empty();
     }
-    String docsSubDir = properties.docs().subDir();
-    List<String> candidates = List.of(defaultDocPath(name), name + MARKDOWN_SUFFIX);
-    for (String candidate : candidates) {
-      if (fileService.exists(docsSubDir + "/" + candidate)) {
-        return Optional.of(candidate);
-      }
-    }
-    Path docsRoot = workspaceService.workTree().resolve(docsSubDir);
-    for (String candidate : candidates) {
-      Optional<Path> found = findByFilename(docsRoot, candidate);
-      if (found.isPresent()) {
-        return Optional.of(relativize(docsRoot, found.get()));
-      }
-    }
-    return Optional.empty();
+    return cached(docPaths, name, () -> resolveDoc(name));
   }
 
   /**
@@ -101,21 +81,65 @@ public class ByNamePathResolver {
     return Strings.toKebabCase(name) + MARKDOWN_SUFFIX;
   }
 
-  private static Optional<Path> findByFilename(Path root, String filename) {
-    if (root == null || !Files.isDirectory(root)) {
-      return Optional.empty();
+  private Optional<String> resolveSource(String name) {
+    for (String dir : SOURCE_DIRS) {
+      for (String filename : List.of(name + DSL_FILE_SUFFIX, name + JAVA_SUFFIX)) {
+        String candidate = dir + "/" + filename;
+        if (fileService.exists(candidate)) {
+          return Optional.of(candidate);
+        }
+      }
     }
-    try (Stream<Path> stream = Files.find(root, Integer.MAX_VALUE,
-            (path, _) -> Files.isRegularFile(path)
-                    && path.getFileName().toString().equals(filename))) {
-      return stream.findFirst();
+    return findTypeDeclaration(name);
+  }
+
+  private Optional<String> findTypeDeclaration(String name) {
+    Pattern declaration = Pattern.compile(TYPE_DECLARATION.formatted(Pattern.quote(name)));
+    return fileService.listAllFiles(MODELS_DIR, JAVA_SUFFIX).stream()
+            .map(FileEntry::path)
+            .filter(path -> declaresType(path, declaration))
+            .findFirst();
+  }
+
+  private boolean declaresType(String relativePath, Pattern declaration) {
+    String content = readQuietly(relativePath);
+    return content != null && declaration.matcher(content).find();
+  }
+
+  private Optional<String> resolveDoc(String name) {
+    String docsSubDir = properties.docs().subDir();
+    for (String candidate : List.of(defaultDocPath(name), name + MARKDOWN_SUFFIX)) {
+      if (fileService.exists(docsSubDir + "/" + candidate)) {
+        return Optional.of(candidate);
+      }
+    }
+    return fileService.listAllFiles(docsSubDir, MARKDOWN_SUFFIX).stream()
+            .map(FileEntry::path)
+            .filter(path -> name.equals(FrontmatterNameParser.name(readQuietly(path))))
+            .map(path -> path.substring(docsSubDir.length() + 1))
+            .findFirst();
+  }
+
+  private String readQuietly(String relativePath) {
+    try {
+      return fileService.readFile(relativePath).content();
     } catch (IOException e) {
-      log.warn("[DSL by-name] failed to search {} for {}: {}", root, filename, e.getMessage());
-      return Optional.empty();
+      return null;
     }
   }
 
-  private static String relativize(Path root, Path file) {
-    return root.relativize(file).toString().replace('\\', '/');
+  private Optional<String> cached(Map<String, CachedPath> cache, String name,
+          Supplier<Optional<String>> resolution) {
+    long bufferVersion = fileService.bufferVersion();
+    CachedPath cached = cache.get(name);
+    if (cached != null && cached.bufferVersion() == bufferVersion) {
+      return cached.path();
+    }
+    Optional<String> path = resolution.get();
+    cache.put(name, new CachedPath(bufferVersion, path));
+    return path;
+  }
+
+  private record CachedPath(long bufferVersion, Optional<String> path) {
   }
 }

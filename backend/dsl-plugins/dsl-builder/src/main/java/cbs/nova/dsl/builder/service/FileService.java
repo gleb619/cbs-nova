@@ -14,6 +14,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -71,6 +72,22 @@ public class FileService {
   public List<FileEntry> listFiles(String prefix) {
     ensureRoot();
     return repository.list(workspaceRoot(), prefix);
+  }
+
+  public List<FileEntry> listAllFiles(String prefix, String suffix) {
+    ensureRoot();
+    Map<String, FileEntry> byPath = new TreeMap<>();
+    repository.list(workspaceRoot(), prefix, suffix)
+            .forEach(entry -> byPath.put(entry.path(), entry));
+    buffer.stagedPaths().stream()
+            .filter(path -> path.endsWith(suffix))
+            .filter(path -> prefix == null || prefix.isBlank() || path.startsWith(prefix))
+            .forEach(path -> byPath.putIfAbsent(path, stagedEntry(path)));
+    return List.copyOf(byPath.values());
+  }
+
+  public long bufferVersion() {
+    return buffer.version();
   }
 
   public FileContentResponse readFile(String relativePath) throws IOException {
@@ -176,6 +193,11 @@ public class FileService {
     if (buffer.pendingCount() >= properties.files().maxQueueSize() && flushExecutor != null) {
       flushExecutor.execute(this::flushPending);
     }
+  }
+
+  private FileEntry stagedEntry(String relativePath) {
+    String content = buffer.get(relativePath);
+    return new FileEntry(relativePath, content == null ? 0L : content.length(), 0L);
   }
 
   private Path workspaceRoot() {

@@ -1,5 +1,6 @@
 package cbs.nova.dsl.builder.controller;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -219,6 +220,24 @@ class DocsControllerTest {
             .andExpect(status().isNotFound())
             .andExpect(jsonPath("$.code").value("NOT_FOUND"))
             .andExpect(jsonPath("$.message").value("no DSL doc for name: Missing"));
+  }
+
+  @Test
+  void readsDocByFrontmatterNameWhenFileNameDiffers() throws Exception {
+    mockMvc.perform(post("/api/dsl/docs/approval-flow.md")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(
+                    """
+                            {"path":"approval-flow.md","content":"---\\nname: ApprovalFlow\\n---\\n\\n# ApprovalFlow"}
+                            """))
+            .andExpect(status().isAccepted());
+    mockMvc.perform(post("/api/dsl/docs/flush"))
+            .andExpect(status().isOk());
+
+    mockMvc.perform(get("/api/dsl/docs/by-name/ApprovalFlow"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.path").value("docs/approval-flow.md"))
+            .andExpect(jsonPath("$.content").value(containsString("name: ApprovalFlow")));
   }
 
   @Test
