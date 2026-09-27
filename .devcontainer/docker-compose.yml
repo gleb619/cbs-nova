@@ -1,0 +1,14 @@
+# Devcontainer compose file. Uses `include:` (same pattern as app/docker-compose.yml) so
+# app/compose/postgres.yml's relative paths (postgres-initdb.d) resolve against its own
+# directory instead of this file's, and app/docker-compose.yml stays untouched.
+include:
+  - path: ../app/compose/postgres.yml
+
+services:
+  workspace:
+    image: mcr.microsoft.com/devcontainers/base:ubuntu-24.04
+    volumes:
+      - ..:/workspace:cached
+    command: sleep infinity
+    depends_on:
+      - postgres
