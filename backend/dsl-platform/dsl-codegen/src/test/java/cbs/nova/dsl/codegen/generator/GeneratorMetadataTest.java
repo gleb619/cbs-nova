@@ -14,6 +14,20 @@ class GeneratorMetadataTest {
   }
 
   @Test
+  void emittedAnnotationContainsDslBuildInfo() {
+    String annotation = GeneratorMetadata.annotation(GeneratorMetadataTest.class);
+
+    assertThat(annotation).contains("dslBuildInfo = \"");
+  }
+
+  @Test
+  void emittedAnnotationContainsDslGitInfo() {
+    String annotation = GeneratorMetadata.annotation(GeneratorMetadataTest.class);
+
+    assertThat(annotation).contains("dslGitInfo = \"");
+  }
+
+  @Test
   void emittedGeneratedCommentsContainDslPlatformVersion() {
     String annotation = GeneratorMetadata.annotation(GeneratorMetadataTest.class);
 
