@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import cbs.nova.dsl.builder.config.BuilderServiceConfiguration;
 import cbs.nova.dsl.builder.config.DslBuilderProperties;
 import cbs.nova.dsl.builder.repository.FileRepository;
+import cbs.nova.dsl.builder.service.ByNamePathResolver;
 import cbs.nova.dsl.builder.service.DocsService;
 import cbs.nova.dsl.builder.service.FileService;
 import cbs.nova.dsl.builder.service.GitService;
@@ -32,7 +33,8 @@ import org.springframework.test.web.servlet.MockMvc;
 @WebMvcTest(DocsController.class)
 @Import({DocsService.class, FileService.class, FileRepository.class, WorkspaceService.class,
     GitService.class,
-    BuilderServiceConfiguration.class, DocsControllerTest.Config.class})
+    BuilderServiceConfiguration.class, ByNamePathResolver.class,
+    DocsControllerTest.Config.class})
 class DocsControllerTest {
 
   private static final Path WORKSPACE = Path.of(System.getProperty("java.io.tmpdir"),
@@ -195,5 +197,47 @@ class DocsControllerTest {
             .content("oops"))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
+  }
+
+  @Test
+  void createsAndReadsDocByName() throws Exception {
+    mockMvc.perform(post("/api/dsl/docs/by-name/BatchProcessing")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"content\":\"# Batch\"}"))
+            .andExpect(status().isAccepted())
+            .andExpect(jsonPath("$.path").value("batch-processing.md"));
+
+    mockMvc.perform(get("/api/dsl/docs/by-name/BatchProcessing"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.path").value("docs/batch-processing.md"))
+            .andExpect(jsonPath("$.content").value("# Batch"));
+  }
+
+  @Test
+  void readByNameReturns404ForUnknownName() throws Exception {
+    mockMvc.perform(get("/api/dsl/docs/by-name/Missing"))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.code").value("NOT_FOUND"))
+            .andExpect(jsonPath("$.message").value("no DSL doc for name: Missing"));
+  }
+
+  @Test
+  void writesExistingDocByName() throws Exception {
+    mockMvc.perform(post("/api/dsl/docs/batch-processing.md")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"path\":\"batch-processing.md\",\"content\":\"# v1\"}"))
+            .andExpect(status().isAccepted());
+    mockMvc.perform(post("/api/dsl/docs/flush"))
+            .andExpect(status().isOk());
+
+    mockMvc.perform(post("/api/dsl/docs/by-name/BatchProcessing")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"content\":\"# v2\"}"))
+            .andExpect(status().isAccepted())
+            .andExpect(jsonPath("$.path").value("batch-processing.md"));
+
+    mockMvc.perform(get("/api/dsl/docs/batch-processing.md"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.content").value("# v2"));
   }
 }

@@ -33,12 +33,20 @@ public class DslFileService {
     return builderClient().readFile(relativePath);
   }
 
+  public FileContentResponse readFileByName(String name) {
+    return builderClient().readFileByName(name);
+  }
+
   public boolean exists(String relativePath) {
     return builderClient().fileExists(relativePath);
   }
 
   public void stageWrite(String relativePath, String content) {
     builderClient().stageWrite(relativePath, content);
+  }
+
+  public FileContentResponse stageWriteByName(String name, String content) {
+    return builderClient().stageWriteByName(name, content);
   }
 
   public int stageAll(List<FileContentRequest> files) {

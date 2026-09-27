@@ -26,12 +26,20 @@ public class DslDocsService {
     return builderClient().readDoc(relativePath);
   }
 
+  public FileContentResponse readDocByName(String name) {
+    return builderClient().readDocByName(name);
+  }
+
   public boolean docExists(String relativePath) {
     return builderClient().docExists(relativePath);
   }
 
   public void stageDocWrite(String relativePath, String content) {
     builderClient().stageDocWrite(relativePath, content);
+  }
+
+  public FileContentResponse stageDocWriteByName(String name, String content) {
+    return builderClient().stageDocWriteByName(name, content);
   }
 
   public int stageDocAll(List<FileContentRequest> files) {

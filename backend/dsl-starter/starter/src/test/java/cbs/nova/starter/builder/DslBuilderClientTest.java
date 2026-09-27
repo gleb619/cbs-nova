@@ -120,6 +120,65 @@ class DslBuilderClientTest {
   }
 
   @Test
+  void readFileByNameRequestsByNameEndpoint() {
+    var client = client(circuitBreaker(5, 30, 3));
+    server.expect(requestTo("http://localhost:8091/api/dsl/files/by-name/Foo"))
+            .andRespond(withSuccess(
+                    "{\"path\":\"dsl/FooDsl.java\",\"content\":\"class Foo {}\","
+                            + "\"pending\":false,\"crc32\":12}",
+                    MediaType.APPLICATION_JSON));
+
+    var response = client.readFileByName("Foo");
+
+    assertThat(response.path()).isEqualTo("dsl/FooDsl.java");
+    assertThat(response.content()).isEqualTo("class Foo {}");
+  }
+
+  @Test
+  void stageWriteByNamePostsContentAndReturnsResolvedPath() {
+    var client = client(circuitBreaker(5, 30, 3));
+    server.expect(requestTo("http://localhost:8091/api/dsl/files/by-name/Foo"))
+            .andExpect(method(HttpMethod.POST))
+            .andExpect(content().string("class Foo {}"))
+            .andRespond(withSuccess(
+                    "{\"path\":\"dsl/FooDsl.java\",\"content\":\"class Foo {}\","
+                            + "\"pending\":true,\"crc32\":12}",
+                    MediaType.APPLICATION_JSON));
+
+    var result = client.stageWriteByName("Foo", "class Foo {}");
+
+    assertThat(result.path()).isEqualTo("dsl/FooDsl.java");
+  }
+
+  @Test
+  void stageWriteByNameInvalidatesNameAndResolvedPathCaches() {
+    var client = client(circuitBreaker(5, 30, 3));
+    server.expect(requestTo("http://localhost:8091/api/dsl/files/by-name/Foo"))
+            .andRespond(withSuccess(
+                    "{\"path\":\"dsl/FooDsl.java\",\"content\":\"v1\",\"pending\":false,"
+                            + "\"crc32\":1}",
+                    MediaType.APPLICATION_JSON));
+    server.expect(requestTo("http://localhost:8091/api/dsl/files/by-name/Foo"))
+            .andExpect(method(HttpMethod.POST))
+            .andExpect(content().string("v2"))
+            .andRespond(withSuccess(
+                    "{\"path\":\"dsl/FooDsl.java\",\"content\":\"v2\",\"pending\":true,"
+                            + "\"crc32\":2}",
+                    MediaType.APPLICATION_JSON));
+    server.expect(requestTo("http://localhost:8091/api/dsl/files/by-name/Foo"))
+            .andRespond(withSuccess(
+                    "{\"path\":\"dsl/FooDsl.java\",\"content\":\"v2\",\"pending\":true,"
+                            + "\"crc32\":2}",
+                    MediaType.APPLICATION_JSON));
+
+    client.readFileByName("Foo");
+    client.stageWriteByName("Foo", "v2");
+    var refreshed = client.readFileByName("Foo");
+
+    assertThat(refreshed.content()).isEqualTo("v2");
+  }
+
+  @Test
   void stageWritePostsContent() {
     var client = client(circuitBreaker(5, 30, 3));
     server.expect(requestTo("http://localhost:8091/api/dsl/files/dsl/FooDsl.java"))

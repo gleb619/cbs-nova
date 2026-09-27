@@ -416,6 +416,28 @@ Map<String, Object> merged = defaults.result();
 
 `records` must contain at least one record. Unknown `mode` yields `IllegalArgumentException`.
 
+### Group records by a nested key path
+
+`groupRecords` buckets `records` by `key`, where `key` is a single dot-separated path
+(`"customer.region"`) or a `List<String>` of paths forming a composite key. Each path is
+resolved segment-by-segment through nested maps; a missing or null component resolves to the
+sentinel `"__null__"`, so records with absent keys land in a dedicated bucket instead of
+failing. Group order and record order within groups are stable (insertion order), and the
+resulting map is unmodifiable. `null`/empty `records` return an empty result; `null` records
+are skipped.
+
+```java
+GroupRecordsOut byRegion = ctx.runHelper("groupRecords",
+        new GroupRecordsIn(orders, "customer.region"))
+        .as(GroupRecordsOut.class);
+Map<Object, List<Map<String, Object>>> groups = byRegion.groups();
+
+// Composite key from several paths:
+GroupRecordsOut byRegionAndStatus = ctx.runHelper("groupRecords",
+        new GroupRecordsIn(orders, List.of("customer.region", "status")))
+        .as(GroupRecordsOut.class);
+```
+
 ## Object shaping
 
 ### Shape an outbound payload with `pick`
@@ -944,6 +966,27 @@ Map<String, Object> header  = (Map<String, Object>)
 Map<String, Object> payload = (Map<String, Object>)
         ((Map<String, Object>) parsed.result()).get("payload");
 String rawSignature = (String) ((Map<String, Object>) parsed.result()).get("signature");
+```
+
+---
+
+## Messaging (RabbitMQ)
+
+`amqpPublish` (`AmqpPublishIn(exchange, routingKey, payload)`) publishes a JSON payload to a
+RabbitMQ exchange/routing key via the host application's existing `AmqpTemplate` Spring bean —
+no extra broker connection is created. The helper validates first: `exchange`, `routingKey`,
+and `payload` must be non-blank, and `payload` must be well-formed JSON (it is sent as the
+message body with content-type `application/json`; malformed JSON fails with
+`IllegalArgumentException` before anything reaches the broker). If no `AmqpTemplate` bean is
+available (RabbitMQ not configured), the call fails with an explicit error rather than
+silently dropping the message.
+
+```java
+AmqpPublishOut published = ctx.runHelper("amqpPublish",
+        new AmqpPublishIn("orders.exchange", "order.created", payloadJson))
+        .as(AmqpPublishOut.class);
+// published.routingKey() echoes the routing key used;
+// published.timestamp() records when the helper handed the message to the broker
 ```
 
 ---

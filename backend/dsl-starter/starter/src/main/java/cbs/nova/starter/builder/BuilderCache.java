@@ -1,9 +1,11 @@
 package cbs.nova.starter.builder;
 
 import static cbs.nova.starter.core.StarterConstants.CACHE_DOC_EXISTS_PREFIX;
+import static cbs.nova.starter.core.StarterConstants.CACHE_DOC_NAME_PREFIX;
 import static cbs.nova.starter.core.StarterConstants.CACHE_DOC_PREFIX;
 import static cbs.nova.starter.core.StarterConstants.CACHE_DOCS_PREFIX;
 import static cbs.nova.starter.core.StarterConstants.CACHE_FILE_EXISTS_PREFIX;
+import static cbs.nova.starter.core.StarterConstants.CACHE_FILE_NAME_PREFIX;
 import static cbs.nova.starter.core.StarterConstants.CACHE_FILE_PREFIX;
 import static cbs.nova.starter.core.StarterConstants.CACHE_FILES_PREFIX;
 import static cbs.nova.starter.core.StarterConstants.CACHE_VCS_BRANCH_KEY;
@@ -35,6 +37,10 @@ public class BuilderCache {
     return get(CACHE_FILE_PREFIX + path, loader);
   }
 
+  public FileContentResponse readFileByName(String name, Supplier<FileContentResponse> loader) {
+    return get(CACHE_FILE_NAME_PREFIX + name, loader);
+  }
+
   public boolean fileExists(String path, Supplier<Boolean> loader) {
     return get(CACHE_FILE_EXISTS_PREFIX + path, loader);
   }
@@ -47,6 +53,10 @@ public class BuilderCache {
     return get(CACHE_DOC_PREFIX + path, loader);
   }
 
+  public FileContentResponse readDocByName(String name, Supplier<FileContentResponse> loader) {
+    return get(CACHE_DOC_NAME_PREFIX + name, loader);
+  }
+
   public boolean docExists(String path, Supplier<Boolean> loader) {
     return get(CACHE_DOC_EXISTS_PREFIX + path, loader);
   }
@@ -56,10 +66,18 @@ public class BuilderCache {
             || key.startsWith(CACHE_DOC_EXISTS_PREFIX + path));
   }
 
+  public void invalidateDocByName(String name, String resolvedPath) {
+    cache.invalidate(CACHE_DOC_NAME_PREFIX + name);
+    if (resolvedPath != null && !resolvedPath.isBlank()) {
+      invalidateDoc(resolvedPath);
+    }
+  }
+
   public void invalidateDocs() {
     invalidatePrefix(CACHE_DOCS_PREFIX);
     invalidatePrefix(CACHE_DOC_PREFIX);
     invalidatePrefix(CACHE_DOC_EXISTS_PREFIX);
+    invalidatePrefix(CACHE_DOC_NAME_PREFIX);
   }
 
   public Optional<RepoStatus> vcsStatus(Supplier<Optional<RepoStatus>> loader) {
@@ -89,10 +107,18 @@ public class BuilderCache {
             || key.startsWith(CACHE_FILE_EXISTS_PREFIX + path));
   }
 
+  public void invalidateFileByName(String name, String resolvedPath) {
+    cache.invalidate(CACHE_FILE_NAME_PREFIX + name);
+    if (resolvedPath != null && !resolvedPath.isBlank()) {
+      invalidateFile(resolvedPath);
+    }
+  }
+
   public void invalidateFiles() {
     invalidatePrefix(CACHE_FILES_PREFIX);
     invalidatePrefix(CACHE_FILE_PREFIX);
     invalidatePrefix(CACHE_FILE_EXISTS_PREFIX);
+    invalidatePrefix(CACHE_FILE_NAME_PREFIX);
   }
 
   public void invalidateVcsStatus() {

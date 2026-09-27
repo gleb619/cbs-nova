@@ -70,6 +70,37 @@ class DslBuilderDocsClientTest {
   }
 
   @Test
+  void readDocByNameRequestsByNameEndpoint() {
+    var client = client();
+    server.expect(requestTo("http://localhost:8091/api/dsl/docs/by-name/FooBar"))
+            .andRespond(withSuccess(
+                    "{\"path\":\"foo-bar.md\",\"content\":\"# Foo\",\"pending\":false,"
+                            + "\"crc32\":12}",
+                    MediaType.APPLICATION_JSON));
+
+    var response = client.readDocByName("FooBar");
+
+    assertThat(response.path()).isEqualTo("foo-bar.md");
+    assertThat(response.content()).isEqualTo("# Foo");
+  }
+
+  @Test
+  void stageDocWriteByNamePostsStructuredContentAndReturnsResolvedPath() {
+    var client = client();
+    server.expect(requestTo("http://localhost:8091/api/dsl/docs/by-name/FooBar"))
+            .andExpect(method(HttpMethod.POST))
+            .andExpect(content().string("# Foo"))
+            .andRespond(withSuccess(
+                    "{\"path\":\"foo-bar.md\",\"content\":\"# Foo\",\"pending\":true,"
+                            + "\"crc32\":12}",
+                    MediaType.APPLICATION_JSON));
+
+    var result = client.stageDocWriteByName("FooBar", "# Foo");
+
+    assertThat(result.path()).isEqualTo("foo-bar.md");
+  }
+
+  @Test
   void readDocCachesSubsequentReads() {
     var client = client();
     server.expect(requestTo("http://localhost:8091/api/dsl/docs/foo-bar.md"))

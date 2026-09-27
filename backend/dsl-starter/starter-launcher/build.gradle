@@ -19,6 +19,9 @@ dependencies {
   runtimeOnly libs.micrometer.registry.prometheus
   implementation libs.springdoc.openapi.starter.webmvc.ui
   implementation libs.openfeign.core
+  // starter marks spring-boot-starter-amqp compileOnly (AmqpPublishHelper is optional-by-bean);
+  // the deployable launcher must carry it so @SpringHelper instantiation finds AmqpTemplate classes
+  implementation libs.spring.boot.starter.amqp
   //implementation libs.spring.kafka
 
   testImplementation libs.bundles.spring.test

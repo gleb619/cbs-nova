@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import cbs.nova.dsl.builder.config.BuilderServiceConfiguration;
 import cbs.nova.dsl.builder.config.DslBuilderProperties;
 import cbs.nova.dsl.builder.repository.FileRepository;
+import cbs.nova.dsl.builder.service.ByNamePathResolver;
 import cbs.nova.dsl.builder.service.FileService;
 import cbs.nova.dsl.builder.service.GitService;
 import cbs.nova.dsl.builder.service.WorkspaceService;
@@ -30,7 +31,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(FileController.class)
 @Import({FileService.class, FileRepository.class, WorkspaceService.class, GitService.class,
-    BuilderServiceConfiguration.class,
+    BuilderServiceConfiguration.class, ByNamePathResolver.class,
     FileControllerTest.Config.class})
 class FileControllerTest {
 
@@ -176,5 +177,59 @@ class FileControllerTest {
     mockMvc.perform(get("/api/dsl/files/../secret.txt"))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
+  }
+
+  @Test
+  void readsFileByNameAfterResolvingNamingConvention() throws Exception {
+    mockMvc.perform(post("/api/dsl/files/src/dsl/ByNameDsl.java")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"path\":\"src/dsl/ByNameDsl.java\",\"content\":\"class ByName {}\"}"))
+            .andExpect(status().isAccepted());
+
+    mockMvc.perform(post("/api/dsl/files/flush"))
+            .andExpect(status().isOk());
+
+    mockMvc.perform(get("/api/dsl/files/by-name/ByName"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.path").value("src/dsl/ByNameDsl.java"))
+            .andExpect(jsonPath("$.content").value("class ByName {}"));
+  }
+
+  @Test
+  void readByNameReturns404ForUnknownName() throws Exception {
+    mockMvc.perform(get("/api/dsl/files/by-name/Missing"))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.code").value("NOT_FOUND"))
+            .andExpect(jsonPath("$.message").value("no DSL file for name: Missing"));
+  }
+
+  @Test
+  void writesFileByName() throws Exception {
+    mockMvc.perform(post("/api/dsl/files/src/dsl/ByNameDsl.java")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"path\":\"src/dsl/ByNameDsl.java\",\"content\":\"v1\"}"))
+            .andExpect(status().isAccepted());
+    mockMvc.perform(post("/api/dsl/files/flush"))
+            .andExpect(status().isOk());
+
+    mockMvc.perform(post("/api/dsl/files/by-name/ByName")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"content\":\"v2\"}"))
+            .andExpect(status().isAccepted())
+            .andExpect(jsonPath("$.path").value("src/dsl/ByNameDsl.java"))
+            .andExpect(jsonPath("$.content").value("v2"));
+
+    mockMvc.perform(get("/api/dsl/files/src/dsl/ByNameDsl.java"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.content").value("v2"));
+  }
+
+  @Test
+  void writeByNameReturns404ForUnknownName() throws Exception {
+    mockMvc.perform(post("/api/dsl/files/by-name/Missing")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"content\":\"x\"}"))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.code").value("NOT_FOUND"));
   }
 }

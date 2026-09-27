@@ -12,9 +12,9 @@ import org.springframework.stereotype.Component;
  * <p>
  * Every doc carries its construct {@code name} twice: once in the YAML frontmatter (the key the
  * Workbench searches and the {@code by-name} endpoints resolve against) and once as the leading
- * {@code # <name>} heading of the body (the title readers see). {@link DocNameResolver} owns the
- * name-to-path mapping; this class owns the name-to-content mapping, so the Workbench UI and the
- * HTTP write path cannot drift apart.
+ * {@code # <name>} heading of the body (the title readers see). The dsl-builder by-name endpoints
+ * own the name-to-path mapping; this class owns the name-to-content mapping, so the Workbench UI
+ * and the HTTP write path cannot drift apart.
  *
  * <p>
  * The parser is intentionally minimal: docs are flat {@code key: value} frontmatter written by the

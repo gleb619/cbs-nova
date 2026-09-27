@@ -22,12 +22,16 @@ services:
     stop_grace_period: 35s
     environment:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+      # SHARED mode: serve the host dsl-examples tree directly instead of cloning.
+      CBS_DSL_BUILDER_SOURCE_DIR: /workspace
+      CBS_DSL_BUILDER_DOCS_SUBDIR: src/resources/explain
       CBS_DSL_BUILDER_GIT_REPO_URL: ${CBS_DSL_BUILDER_GIT_REPO_URL:-git@github.com:gleb619/cbs-nova.git}
       CBS_DSL_BUILDER_GIT_SUB_PATH: ${CBS_DSL_BUILDER_GIT_SUB_PATH:-backend/dsl-starter/dsl-examples}
       CBS_DSL_BUILDER_GIT_BRANCH: ${CBS_DSL_BUILDER_GIT_BRANCH:-}
       GIT_SSH_COMMAND: ssh -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=/var/lib/dsl-builder/known_hosts
     volumes:
       - dsl-builder-data:/var/lib/dsl-builder
+      - ../../backend/dsl-starter/dsl-examples:/workspace
       - ${HOME}/.ssh:/home/appuser/.ssh:ro
     healthcheck:
       # TCP probe via /dev/tcp (the JRE image strips curl/wget; see app.yml

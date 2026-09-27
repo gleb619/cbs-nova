@@ -2,6 +2,7 @@ package cbs.nova.starter.controller;
 
 import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.starter.config.properties.DslProperties;
+import cbs.nova.starter.exception.BuilderApiException;
 import cbs.nova.starter.model.DslFileModels.BulkWriteRequest;
 import cbs.nova.starter.model.DslFileModels.BulkWriteResult;
 import cbs.nova.starter.model.DslFileModels.FileContentRequest;
@@ -10,14 +11,12 @@ import cbs.nova.starter.model.DslFileModels.FileEntry;
 import cbs.nova.starter.model.DslFileModels.FlushResult;
 import cbs.nova.starter.model.DslFileModels.PendingWritesStatus;
 import cbs.nova.starter.service.DslDocsService;
-import cbs.nova.starter.service.DocNameResolver;
 import cbs.nova.starter.service.DocTemplateService;
 import jakarta.servlet.ServletException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -36,7 +35,6 @@ public class DslDocsHandler {
 
   private final DslProperties dslProperties;
   private final DslDocsService docsService;
-  private final DocNameResolver docNameResolver;
   private final DocTemplateService docTemplateService;
   private final ObjectMapper objectMapper;
 
@@ -87,11 +85,17 @@ public class DslDocsHandler {
     if (name == null || name.isBlank()) {
       return badRequest("name is required");
     }
-    Optional<String> resolved = docNameResolver.existingDocPath(name);
-    if (resolved.isEmpty()) {
-      return ServerResponse.notFound().build();
+    try {
+      FileContentResponse response = docsService.readDocByName(name);
+      return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(response);
+    } catch (BuilderApiException e) {
+      if (e.getStatusCode().value() == 404) {
+        return ServerResponse.notFound().build();
+      }
+      throw e;
+    } catch (IllegalStateException e) {
+      return serviceUnavailable(e.getMessage());
     }
-    return doReadDoc(resolved.get());
   }
 
   public ServerResponse writeByName(ServerRequest request) throws IOException {
@@ -103,14 +107,20 @@ public class DslDocsHandler {
     if (name == null || name.isBlank()) {
       return badRequest("name is required");
     }
-    String path = docNameResolver.existingDocPath(name)
-            .orElseGet(() -> docNameResolver.defaultDocPath(name));
     String content = readBody(request);
     // New doc creation: guarantee the doc carries its name in the frontmatter
     // (search) and a `# <name>` section in the body (view) before it hits disk.
-    docsService.stageDocWrite(path, docTemplateService.ensureDocStructure(name, content));
-    log.info("[DSL docs] staged write for {} (resolved from {})", path, name);
-    return accepted(new FileContentResponse(path, content, FileContentResponse.crc32(content)));
+    try {
+      FileContentResponse result = docsService.stageDocWriteByName(name,
+              docTemplateService.ensureDocStructure(name, content));
+      log.info("[DSL docs] staged write for {} (resolved from {})", result.path(), name);
+      return accepted(result);
+    } catch (BuilderApiException e) {
+      if (e.getStatusCode().value() == 404) {
+        return ServerResponse.notFound().build();
+      }
+      throw e;
+    }
   }
 
   private ServerResponse doReadDoc(String path) throws IOException {

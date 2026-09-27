@@ -9,8 +9,8 @@ import cbs.nova.starter.model.DslFileModels.FileEntry;
 import cbs.nova.starter.model.DslFileModels.FlushResult;
 import cbs.nova.starter.model.DslFileModels.PendingWritesStatus;
 import cbs.nova.dsl.model.ErrorResponse;
+import cbs.nova.starter.exception.BuilderApiException;
 import cbs.nova.starter.service.DslFileService;
-import cbs.nova.starter.service.DslSourcePathResolver;
 import jakarta.servlet.ServletException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,7 +26,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 @Slf4j
 @Component
@@ -36,7 +35,6 @@ public class DslFileHandler {
 
   private final DslProperties dslProperties;
   private final DslFileService fileService;
-  private final DslSourcePathResolver sourcePathResolver;
   private final ObjectMapper objectMapper;
 
   public ServerResponse list(ServerRequest request) {
@@ -86,11 +84,17 @@ public class DslFileHandler {
     if (name == null || name.isBlank()) {
       return badRequest("name is required");
     }
-    Optional<String> resolved = sourcePathResolver.relativePath(name);
-    if (resolved.isEmpty() || resolved.get().isBlank()) {
-      return ServerResponse.notFound().build();
+    try {
+      FileContentResponse response = fileService.readFileByName(name);
+      return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(response);
+    } catch (BuilderApiException e) {
+      if (e.getStatusCode().value() == 404) {
+        return ServerResponse.notFound().build();
+      }
+      throw e;
+    } catch (IllegalStateException e) {
+      return serviceUnavailable(e.getMessage());
     }
-    return doReadFile(resolved.get());
   }
 
   public ServerResponse writeByName(ServerRequest request) throws IOException {
@@ -102,16 +106,17 @@ public class DslFileHandler {
     if (name == null || name.isBlank()) {
       return badRequest("name is required");
     }
-    Optional<String> resolved = sourcePathResolver.relativePath(name);
-    if (resolved.isEmpty() || resolved.get().isBlank()) {
-      return ServerResponse.notFound().build();
-    }
-    String path = resolved.get();
     String content = readBody(request);
-    fileService.stageWrite(path, content);
-    log.info("[DSL files] staged write for {} (resolved from {})", path, name);
-    return accepted(
-            new FileContentResponse(path, content, FileContentResponse.crc32(content)));
+    try {
+      FileContentResponse result = fileService.stageWriteByName(name, content);
+      log.info("[DSL files] staged write for {} (resolved from {})", result.path(), name);
+      return accepted(result);
+    } catch (BuilderApiException e) {
+      if (e.getStatusCode().value() == 404) {
+        return ServerResponse.notFound().build();
+      }
+      throw e;
+    }
   }
 
   private ServerResponse doReadFile(String path) throws IOException {

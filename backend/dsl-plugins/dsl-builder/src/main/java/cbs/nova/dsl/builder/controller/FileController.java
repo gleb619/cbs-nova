@@ -8,6 +8,7 @@ import cbs.nova.dsl.builder.model.DslFileModels.FileContentResponse;
 import cbs.nova.dsl.builder.model.DslFileModels.FileEntry;
 import cbs.nova.dsl.builder.model.DslFileModels.FlushResult;
 import cbs.nova.dsl.builder.model.DslFileModels.PendingWritesStatus;
+import cbs.nova.dsl.builder.service.ByNamePathResolver;
 import cbs.nova.dsl.builder.service.FileService;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -33,6 +34,7 @@ import tools.jackson.databind.ObjectMapper;
 public class FileController {
 
   private final FileService fileService;
+  private final ByNamePathResolver pathResolver;
   private final ObjectMapper objectMapper;
 
   @GetMapping
@@ -53,6 +55,29 @@ public class FileController {
   @GetMapping("/exists/{*path}")
   public boolean exists(@PathVariable String path) {
     return fileService.exists(sanitizePath(path));
+  }
+
+  @GetMapping("/by-name/{name}")
+  public FileContentResponse readByName(@PathVariable String name) throws IOException {
+    String resolved = resolveByName(name);
+    try {
+      return fileService.readFile(resolved);
+    } catch (IOException e) {
+      throw new BuilderApiException(HttpStatus.NOT_FOUND, "NOT_FOUND", e.getMessage());
+    }
+  }
+
+  @PostMapping("/by-name/{name}")
+  public ResponseEntity<FileContentResponse> writeByName(@PathVariable String name,
+          @RequestBody(required = false) String rawBody) throws IOException {
+    String resolved = resolveByName(name);
+    String content = extractContent(rawBody);
+    fileService.stageWrite(resolved, content);
+    log.info("[DSL files] staged write for {} (resolved from {})", resolved, name);
+    return ResponseEntity.accepted()
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(new FileContentResponse(resolved, content, true,
+                    FileContentResponse.crc32(content)));
   }
 
   @PostMapping("/{*path}")
@@ -95,6 +120,15 @@ public class FileController {
   @GetMapping("/status")
   public PendingWritesStatus status() {
     return new PendingWritesStatus(fileService.pendingCount());
+  }
+
+  private String resolveByName(String name) {
+    if (name == null || name.isBlank()) {
+      throw new IllegalArgumentException("name is required");
+    }
+    return pathResolver.resolveSourcePath(name)
+            .orElseThrow(() -> new BuilderApiException(HttpStatus.NOT_FOUND, "NOT_FOUND",
+                    "no DSL file for name: " + name));
   }
 
   private String extractContent(String rawBody) throws IOException {

@@ -68,6 +68,10 @@ public class DslBuilderClient {
     return cache.readFile(path, () -> execute(() -> doReadFile(path)));
   }
 
+  public FileContentResponse readFileByName(String name) {
+    return cache.readFileByName(name, () -> execute(() -> doReadFileByName(name)));
+  }
+
   public boolean fileExists(String path) {
     return cache.fileExists(path, () -> execute(() -> doFileExists(path)));
   }
@@ -76,6 +80,13 @@ public class DslBuilderClient {
     execute(() -> doStageWrite(path, content));
     cache.invalidateFile(path);
     cache.invalidateVcsStatus();
+  }
+
+  public FileContentResponse stageWriteByName(String name, String content) {
+    FileContentResponse result = execute(() -> doStageWriteByName(name, content));
+    cache.invalidateFileByName(name, result == null ? null : result.path());
+    cache.invalidateVcsStatus();
+    return result;
   }
 
   public BulkWriteResult stageAll(List<FileContentRequest> files) {
@@ -213,6 +224,11 @@ public class DslBuilderClient {
             .body(FileContentResponse.class);
   }
 
+  private FileContentResponse doReadFileByName(String name) {
+    return restClient.get().uri(uriBuilder -> fileByNameUri(uriBuilder, name)).retrieve()
+            .body(FileContentResponse.class);
+  }
+
   private boolean doFileExists(String path) {
     Boolean exists = restClient.get()
             .uri(uriBuilder -> uriBuilder.path("/api/dsl/files/exists/")
@@ -224,6 +240,11 @@ public class DslBuilderClient {
   private Void doStageWrite(String path, String content) {
     return restClient.post().uri(uriBuilder -> fileUri(uriBuilder, path)).body(content).retrieve()
             .body(Void.class);
+  }
+
+  private FileContentResponse doStageWriteByName(String name, String content) {
+    return restClient.post().uri(uriBuilder -> fileByNameUri(uriBuilder, name)).body(content)
+            .retrieve().body(FileContentResponse.class);
   }
 
   private BulkWriteResult doStageAll(List<FileContentRequest> files) {
@@ -291,6 +312,10 @@ public class DslBuilderClient {
 
   private static URI fileUri(UriBuilder uriBuilder, String path) {
     return uriBuilder.path("/api/dsl/files/").pathSegment(path.split("/")).build();
+  }
+
+  private static URI fileByNameUri(UriBuilder uriBuilder, String name) {
+    return uriBuilder.path("/api/dsl/files/by-name/").pathSegment(name).build();
   }
 
   private <T> T execute(Callable<T> call) {

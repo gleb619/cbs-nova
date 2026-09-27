@@ -126,7 +126,14 @@ class PieceManifestCoverageTest {
           // path delegates to workbench-publish, manifest piece T626 pending
           "POST /api/dsl/drafts/{name}/change-request",
           "POST /api/dsl/change-requests/{id}/approve",
-          "POST /api/dsl/change-requests/{id}/reject");
+          "POST /api/dsl/change-requests/{id}/reject",
+          // Drafts git VCS ops (fetch/pull/rebase/commit) — git-client source-control panel;
+          // same deferred workbench surface as the sibling draft routes above
+          // (T549 control-plane scope), manifest piece pending
+          "POST /api/dsl/drafts/commit",
+          "POST /api/dsl/drafts/fetch",
+          "POST /api/dsl/drafts/pull",
+          "POST /api/dsl/drafts/rebase");
 
   private static final Pattern ROUTE_INVOCATION = Pattern.compile(
           "\\.(?:POST|PUT|DELETE)\\(\\s*\"([^\"]+)\"");

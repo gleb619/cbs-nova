@@ -8,6 +8,7 @@ import cbs.nova.dsl.builder.model.DslFileModels.FileContentResponse;
 import cbs.nova.dsl.builder.model.DslFileModels.FileEntry;
 import cbs.nova.dsl.builder.model.DslFileModels.FlushResult;
 import cbs.nova.dsl.builder.model.DslFileModels.PendingWritesStatus;
+import cbs.nova.dsl.builder.service.ByNamePathResolver;
 import cbs.nova.dsl.builder.service.DocsService;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -35,6 +36,7 @@ public class DocsController {
   private static final String MARKDOWN_SUFFIX = ".md";
 
   private final DocsService docsService;
+  private final ByNamePathResolver pathResolver;
   private final ObjectMapper objectMapper;
 
   @GetMapping
@@ -55,6 +57,32 @@ public class DocsController {
   @GetMapping("/exists/{*path}")
   public boolean exists(@PathVariable String path) {
     return docsService.docExists(sanitizeDocPath(path));
+  }
+
+  @GetMapping("/by-name/{name}")
+  public FileContentResponse readByName(@PathVariable String name) throws IOException {
+    String resolved = resolveByName(name);
+    try {
+      return docsService.readDoc(resolved);
+    } catch (IOException e) {
+      throw new BuilderApiException(HttpStatus.NOT_FOUND, "NOT_FOUND", e.getMessage());
+    }
+  }
+
+  @PostMapping("/by-name/{name}")
+  public ResponseEntity<FileContentResponse> writeByName(@PathVariable String name,
+          @RequestBody(required = false) String rawBody) throws IOException {
+    requireName(name);
+    // A missing doc means creation, not an error: fall back to the default kebab-case path.
+    String resolved = pathResolver.resolveDocPath(name)
+            .orElseGet(() -> pathResolver.defaultDocPath(name));
+    String content = extractContent(rawBody);
+    docsService.stageDocWrite(resolved, content);
+    log.info("[DSL docs] staged write for {} (resolved from {})", resolved, name);
+    return ResponseEntity.accepted()
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(new FileContentResponse(resolved, content, true,
+                    FileContentResponse.crc32(content)));
   }
 
   @PostMapping("/{*path}")
@@ -97,6 +125,19 @@ public class DocsController {
   @GetMapping("/status")
   public PendingWritesStatus status() {
     return new PendingWritesStatus(docsService.pendingDocs());
+  }
+
+  private String resolveByName(String name) {
+    requireName(name);
+    return pathResolver.resolveDocPath(name)
+            .orElseThrow(() -> new BuilderApiException(HttpStatus.NOT_FOUND, "NOT_FOUND",
+                    "no DSL doc for name: " + name));
+  }
+
+  private void requireName(String name) {
+    if (name == null || name.isBlank()) {
+      throw new IllegalArgumentException("name is required");
+    }
   }
 
   private String extractContent(String rawBody) throws IOException {

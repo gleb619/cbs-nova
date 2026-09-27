@@ -1,6 +1,8 @@
 package cbs.nova.starter.builder;
 
+import static cbs.nova.starter.core.StarterConstants.CACHE_DOC_NAME_PREFIX;
 import static cbs.nova.starter.core.StarterConstants.CACHE_FILE_EXISTS_PREFIX;
+import static cbs.nova.starter.core.StarterConstants.CACHE_FILE_NAME_PREFIX;
 import static cbs.nova.starter.core.StarterConstants.CACHE_FILE_PREFIX;
 import static cbs.nova.starter.core.StarterConstants.CACHE_FILES_PREFIX;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -46,6 +48,38 @@ class BuilderCacheTest {
                       || s.startsWith(CACHE_FILE_PREFIX)
                       || s.startsWith(CACHE_FILE_EXISTS_PREFIX);
             });
+  }
+
+  @Test
+  void invalidateFilesDropsByNameEntries() {
+    cache.readFileByName("Foo", () -> null);
+
+    cache.invalidateFiles();
+
+    assertThat(backing.asMap().keySet())
+            .noneMatch(key -> key.toString().startsWith(CACHE_FILE_NAME_PREFIX));
+  }
+
+  @Test
+  void invalidateFileByNameDropsNameAndResolvedPathEntries() {
+    cache.readFileByName("Foo", () -> null);
+    cache.readFile("dsl/FooDsl.java", () -> null);
+
+    cache.invalidateFileByName("Foo", "dsl/FooDsl.java");
+
+    assertThat(backing.asMap().keySet())
+            .noneMatch(key -> key.toString().startsWith(CACHE_FILE_NAME_PREFIX)
+                    || key.toString().startsWith(CACHE_FILE_PREFIX + "dsl/FooDsl.java"));
+  }
+
+  @Test
+  void invalidateDocsDropsByNameEntries() {
+    cache.readDocByName("Foo", () -> null);
+
+    cache.invalidateDocs();
+
+    assertThat(backing.asMap().keySet())
+            .noneMatch(key -> key.toString().startsWith(CACHE_DOC_NAME_PREFIX));
   }
 
   @Test

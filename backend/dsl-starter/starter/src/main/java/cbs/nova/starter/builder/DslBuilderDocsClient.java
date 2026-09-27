@@ -38,6 +38,10 @@ public class DslBuilderDocsClient {
     return cache.readDoc(path, () -> execute(() -> doReadDoc(path)));
   }
 
+  public FileContentResponse readDocByName(String name) {
+    return cache.readDocByName(name, () -> execute(() -> doReadDocByName(name)));
+  }
+
   public boolean docExists(String path) {
     return cache.docExists(path, () -> execute(() -> doDocExists(path)));
   }
@@ -46,6 +50,13 @@ public class DslBuilderDocsClient {
     execute(() -> doStageDocWrite(path, content));
     cache.invalidateDoc(path);
     cache.invalidateVcsStatus();
+  }
+
+  public FileContentResponse stageDocWriteByName(String name, String content) {
+    FileContentResponse result = execute(() -> doStageDocWriteByName(name, content));
+    cache.invalidateDocByName(name, result == null ? null : result.path());
+    cache.invalidateVcsStatus();
+    return result;
   }
 
   public BulkWriteResult stageDocAll(List<FileContentRequest> files) {
@@ -80,6 +91,11 @@ public class DslBuilderDocsClient {
             .body(FileContentResponse.class);
   }
 
+  private FileContentResponse doReadDocByName(String name) {
+    return restClient.get().uri(uriBuilder -> docByNameUri(uriBuilder, name)).retrieve()
+            .body(FileContentResponse.class);
+  }
+
   private boolean doDocExists(String path) {
     Boolean exists = restClient.get()
             .uri(uriBuilder -> uriBuilder.path("/api/dsl/docs/exists/")
@@ -91,6 +107,11 @@ public class DslBuilderDocsClient {
   private Void doStageDocWrite(String path, String content) {
     return restClient.post().uri(uriBuilder -> docUri(uriBuilder, path)).body(content).retrieve()
             .body(Void.class);
+  }
+
+  private FileContentResponse doStageDocWriteByName(String name, String content) {
+    return restClient.post().uri(uriBuilder -> docByNameUri(uriBuilder, name)).body(content)
+            .retrieve().body(FileContentResponse.class);
   }
 
   private BulkWriteResult doStageDocAll(List<FileContentRequest> files) {
@@ -110,6 +131,10 @@ public class DslBuilderDocsClient {
 
   private static URI docUri(UriBuilder uriBuilder, String path) {
     return uriBuilder.path("/api/dsl/docs/").pathSegment(path.split("/")).build();
+  }
+
+  private static URI docByNameUri(UriBuilder uriBuilder, String name) {
+    return uriBuilder.path("/api/dsl/docs/by-name/").pathSegment(name).build();
   }
 
   private <T> T execute(Callable<T> call) {

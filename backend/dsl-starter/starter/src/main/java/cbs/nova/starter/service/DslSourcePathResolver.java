@@ -19,9 +19,8 @@ import org.springframework.stereotype.Component;
  * {@code "dsl/LoanDisbursementDsl.java"}.
  *
  * <p>
- * Used by {@link DslFileHandler} ({@code /api/dsl/files/by-name/...}) and
- * {@link DslDefinitionStatusResolver} (resolve status from the DSL source file's git state, per
- * drafts spec §3.2 / §7 step 2). The lookup is intentionally cheap and cache-free; the
+ * Used by {@link DslDefinitionStatusResolver} (resolve status from the DSL source file's git
+ * state, per drafts spec §3.2 / §7 step 2). The lookup is intentionally cheap and cache-free; the
  * {@code resolveAll} caller resolves each name once per call.
  *
  * <p>
