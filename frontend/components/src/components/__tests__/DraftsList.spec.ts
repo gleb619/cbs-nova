@@ -58,8 +58,7 @@ describe('DraftsList', () => {
     const wrapper = mountList()
 
     const alpha = wrapper.findAll('[data-testid="dsl-saved-drafts-item"]')[0]
-    expect(alpha.attributes('tabindex')).toBe('0')
-    expect(alpha.attributes('role')).toBe('button')
+    expect(alpha.element.tagName).toBe('BUTTON')
     expect(alpha.attributes('aria-label')).toBe('Open draft alpha')
   })
 

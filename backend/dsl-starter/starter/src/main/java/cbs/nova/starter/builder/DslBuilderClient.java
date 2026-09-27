@@ -40,7 +40,7 @@ public class DslBuilderClient {
   private final BuilderRequestExecutor executor;
   private final BuilderCache cache;
 
-  //TODO: replace ctor with lombok's one
+  // TODO: replace ctor with lombok's one
   public DslBuilderClient(RestClient restClient, ThreadPoolBulkhead queue, Bulkhead bulkhead,
           CircuitBreaker breaker, BuilderCache cache) {
     this.restClient = restClient;

@@ -27,24 +27,23 @@ function onRowActivate(_event: KeyboardEvent | MouseEvent, name: string) {
 <template>
   <section :data-testid="testId" class="flex flex-col">
     <ul v-if="drafts.length" class="flex flex-col">
-      <li
-        v-for="draft in drafts"
-        :key="draft.name"
-        :data-testid="itemTestId"
-        :aria-label="`Open draft ${draft.name}`"
-        tabindex="0"
-        role="button"
-        class="cursor-pointer border-b border-gray-800 px-3 py-2 text-sm hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-500"
-        :class="selectedName === draft.name ? 'bg-gray-700' : ''"
-        @click="onRowActivate($event, draft.name)"
-        @keydown.enter="onRowActivate($event, draft.name)"
-        @keydown.space.prevent="onRowActivate($event, draft.name)"
-      >
-        <div class="font-medium text-gray-100">{{ draft.name }}</div>
-        <div class="text-xs text-gray-400">
-          {{ draft.type ?? '—' }}
-          · {{ draft.status ?? 'Draft' }}
-        </div>
+      <li v-for="draft in drafts" :key="draft.name">
+        <button
+          type="button"
+          :data-testid="itemTestId"
+          :aria-label="`Open draft ${draft.name}`"
+          class="w-full cursor-pointer border-b border-gray-800 px-3 py-2 text-left text-sm hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-500"
+          :class="selectedName === draft.name ? 'bg-gray-700' : ''"
+          @click="onRowActivate($event, draft.name)"
+          @keydown.enter="onRowActivate($event, draft.name)"
+          @keydown.space.prevent="onRowActivate($event, draft.name)"
+        >
+          <div class="font-medium text-gray-100">{{ draft.name }}</div>
+          <div class="text-xs text-gray-400">
+            {{ draft.type ?? '—' }}
+            · {{ draft.status ?? 'Draft' }}
+          </div>
+        </button>
       </li>
     </ul>
     <p v-else-if="loading" class="px-3 py-2 text-xs text-gray-400">Loading drafts…</p>
