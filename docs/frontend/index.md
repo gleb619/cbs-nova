@@ -16,10 +16,10 @@ The frontend gives operators and flow authors a single place to manage orchestra
 
 | Document | Focus |
 |----------|-------|
-| [layout.md](./layout.md) | Overall page layout, navigation, and responsive shell |
+| [layout.md](./layout.md) | Admin shell: sidebar, top bar, nav inventory, and responsive layout |
 | [dsl-workbench.md](./dsl-workbench.md) | DSL editing experience: editor, validation, and flow structure |
-| [runner.md](./runner.md) | Run/preview controls, input forms, and mode selection |
-| [execution-details.md](./execution-details.md) | Execution view, event history, status, and diagnostics |
+| [runner.md](./runner.md) | Runner page: Preview/Run/Explain modes, input form, SSE log streaming, output tabs |
+| [execution-details.md](./execution-details.md) | Executions list and detail view: event history, status, signals, and diagnostics |
 
 ## Relationship to other docs
 
