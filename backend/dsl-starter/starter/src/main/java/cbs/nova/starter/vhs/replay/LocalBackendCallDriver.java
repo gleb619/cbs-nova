@@ -39,7 +39,6 @@ public final class LocalBackendCallDriver implements VhsCallDriver {
   private final ObjectMapper objectMapper;
   private final HttpClient httpClient;
 
-  // TODO: replace ctor with lomboks one
   @Deprecated(forRemoval = true)
   public LocalBackendCallDriver(
           @NonNull String baseUrl, long requestTimeoutMs, @NonNull ObjectMapper objectMapper) {

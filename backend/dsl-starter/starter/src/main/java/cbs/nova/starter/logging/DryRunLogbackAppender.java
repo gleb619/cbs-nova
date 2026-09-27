@@ -20,7 +20,6 @@ public class DryRunLogbackAppender extends AppenderBase<ILoggingEvent> {
   @Getter
   private final @Nullable DryRunLogEventPublisher publisher;
 
-  // TODO: replace ctor with lomboks one
   @Deprecated(forRemoval = true)
   public DryRunLogbackAppender(
           @NonNull DryRunLoggingContext dryRunLoggingContext,

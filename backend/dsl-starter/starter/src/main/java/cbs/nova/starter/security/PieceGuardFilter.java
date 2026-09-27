@@ -102,7 +102,6 @@ public final class PieceGuardFilter extends OncePerRequestFilter {
   private final @Nullable PieceCheckBlockRegistry blockRegistry;
   private final ConcurrentHashMap<String, Bucket> buckets = new ConcurrentHashMap<>();
 
-  // TODO: replace ctor with lomboks one
   @Deprecated(forRemoval = true)
   public PieceGuardFilter(
           PieceManifestService manifestService,

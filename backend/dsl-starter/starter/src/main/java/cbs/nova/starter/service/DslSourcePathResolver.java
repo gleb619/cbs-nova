@@ -19,8 +19,8 @@ import org.springframework.stereotype.Component;
  * {@code "dsl/LoanDisbursementDsl.java"}.
  *
  * <p>
- * Used by {@link DslDefinitionStatusResolver} (resolve status from the DSL source file's git
- * state, per drafts spec §3.2 / §7 step 2). The lookup is intentionally cheap and cache-free; the
+ * Used by {@link DslDefinitionStatusResolver} (resolve status from the DSL source file's git state,
+ * per drafts spec §3.2 / §7 step 2). The lookup is intentionally cheap and cache-free; the
  * {@code resolveAll} caller resolves each name once per call.
  *
  * <p>
@@ -42,7 +42,6 @@ public class DslSourcePathResolver {
   private final DslProperties dslProperties;
   private final Function<String, Optional<String>> filenameLookup;
 
-  // TODO: replace ctor with lomboks one
   @Deprecated(forRemoval = true)
   @Autowired
   public DslSourcePathResolver(DslProperties dslProperties) {

@@ -39,13 +39,11 @@ public final class VhsRecorder implements DslExecutionListener {
   private final List<String> recordableRoutes;
   private final ConcurrentHashMap<String, RunState> states = new ConcurrentHashMap<>();
 
-  // TODO: replace ctor with lomboks one
   @Deprecated(forRemoval = true)
   public VhsRecorder(@NonNull VhsTapeSink sink, @NonNull List<String> recordableRoutes) {
     this(sink, recordableRoutes, VhsScrubber.disabled());
   }
 
-  // TODO: replace ctor with lomboks one
   @Deprecated(forRemoval = true)
   public VhsRecorder(
           @NonNull VhsTapeSink sink,

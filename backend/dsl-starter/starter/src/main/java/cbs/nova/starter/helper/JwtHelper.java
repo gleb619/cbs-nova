@@ -31,7 +31,6 @@ public class JwtHelper implements Executable<JwtIn, JwtOut> {
   private final ObjectMapper mapper;
   private final JwtProperties properties;
 
-  // TODO: replace ctor with lomboks one
   @Deprecated(forRemoval = true)
   public JwtHelper() {
     this(new ObjectMapper(), new JwtProperties(null, null));

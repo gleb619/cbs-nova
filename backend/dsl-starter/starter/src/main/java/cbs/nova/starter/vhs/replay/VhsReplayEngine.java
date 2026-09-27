@@ -64,14 +64,12 @@ public final class VhsReplayEngine {
   private final @NonNull Sleeper sleeper;
   private final @NonNull VhsReplayFaker faker;
 
-  // TODO: replace ctor with lomboks one
   @Deprecated(forRemoval = true)
   public VhsReplayEngine(
           @NonNull CbsVhsReplayProperties properties, @NonNull VhsCallDriver driver) {
     this(properties, driver, new VhsTapeReader(), millis -> Thread.sleep(millis));
   }
 
-  // TODO: replace ctor with lomboks one
   @Deprecated(forRemoval = true)
   public VhsReplayEngine(
           @NonNull CbsVhsReplayProperties properties,

@@ -46,7 +46,6 @@ public class HttpCallHelper implements Executable<HttpCallIn, HttpCallOut> {
    * {@code cbs.dsl.helper.http-call} bound properties instead. The per-policy client snapshot is
    * built eagerly here (post-delegation) so legacy call sites keep their eager-snapshot semantics.
    */
-  // TODO: replace ctor with lomboks one
   @Deprecated(forRemoval = true)
   public HttpCallHelper(HttpClient client, CbsNovaLoggingProperties loggingProperties) {
     this(client, loggingProperties, HttpCallProperties.permissive());

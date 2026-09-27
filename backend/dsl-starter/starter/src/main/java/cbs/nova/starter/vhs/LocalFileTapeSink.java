@@ -36,7 +36,6 @@ public final class LocalFileTapeSink implements VhsTapeSink {
   private final ConcurrentHashMap<String, VhsTapeWriter> writers = new ConcurrentHashMap<>();
   private final AtomicInteger openTapeCount = new AtomicInteger();
 
-  // TODO: replace ctor with lomboks one
   @Deprecated(forRemoval = true)
   public LocalFileTapeSink(@NonNull CbsVhsProperties properties) {
     this(properties, JsonMapper.builder().build(), Instant::now);

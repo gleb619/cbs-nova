@@ -38,7 +38,6 @@ public class JsonPatchHelper implements Executable<JsonPatchIn, JsonPatchOut> {
   private final ObjectMapper mapper;
   private final JsonPatchProperties properties;
 
-  // TODO: replace ctor with lomboks one
   @Deprecated(forRemoval = true)
   public JsonPatchHelper() {
     this(new ObjectMapper(), new JsonPatchProperties(false));

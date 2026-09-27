@@ -35,7 +35,6 @@ public final class VhsLoadTest {
   private final @NonNull CbsVhsReplayProperties replayProperties;
   private final @NonNull VhsTapeReader tapeReader;
 
-  // TODO: replace ctor with lomboks one
   @Deprecated(forRemoval = true)
   public VhsLoadTest(
           @NonNull MeterRegistry meterRegistry,
