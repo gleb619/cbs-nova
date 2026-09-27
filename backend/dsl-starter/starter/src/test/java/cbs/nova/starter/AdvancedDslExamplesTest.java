@@ -1,5 +1,7 @@
 package cbs.nova.starter;
 
+import cbs.nova.dslexamples.v1.ConfigValidationModels.ConfigValidationIn;
+import cbs.nova.dslexamples.v1.ConfigValidationModels.ConfigValidationOut;
 import cbs.nova.dslexamples.v1.DataIntegrityModels.DataIntegrityIn;
 import cbs.nova.dslexamples.v1.DataIntegrityModels.DataIntegrityOut;
 import cbs.nova.dslexamples.v1.SafeTemplatingModels.SafeTemplatingIn;
@@ -390,6 +392,36 @@ class AdvancedDslExamplesTest {
     assertThat(out.missingKeyResult()).isEqualTo("Coupon: ");
     assertThat(out.resolvedKeys()).containsExactly("order.id");
     assertThat(out.trustedGreeting()).isEqualTo("Hello 42!");
+  }
+
+  @Test
+  void dslConfigValidationPreviewParsesValidatesAndFormatsConfig() {
+    String configYaml = "service: payment-gateway\n"
+            + "version: 2.3.1\n"
+            + "releaseDate: \"2026-09-27\"\n"
+            + "maxRetries: 12\n";
+    String schema = "{\"type\":\"object\","
+            + "\"required\":[\"service\",\"version\",\"releaseDate\",\"maxRetries\"],"
+            + "\"properties\":{"
+            + "\"service\":{\"type\":\"string\"},"
+            + "\"version\":{\"type\":\"string\"},"
+            + "\"releaseDate\":{\"type\":\"string\"},"
+            + "\"maxRetries\":{\"type\":\"number\"}}}";
+    var input = new ConfigValidationIn(configYaml, schema);
+    Context<ConfigValidationIn> ctx = SimpleContext.builder(input).mode(ExecutionMode.PREVIEW)
+            .build();
+
+    Result<?> result = GlobalManager.globalManager().runProcess("ConfigValidation", ctx);
+
+    assertThat(result.isSuccess()).as("cause: %s", result.cause()).isTrue();
+    ConfigValidationOut out = (ConfigValidationOut) result.value();
+    assertThat(out.schemaValid()).isTrue();
+    assertThat(out.schemaErrorCount()).isZero();
+    assertThat(out.versionFormatValid()).isTrue();
+    // ISO_LOCAL_DATE parsed at start-of-day in UTC normalizes to a Z-suffixed instant.
+    assertThat(out.parsedReleaseDate()).isEqualTo("2026-09-27T00:00:00Z");
+    assertThat(out.formattedThreshold()).isEqualTo("12");
+    assertThat(out.canonicalYaml()).contains("service: payment-gateway", "version: 2.3.1");
   }
 
   private static HelperInstanceResolver typedHelperResolver() {
