@@ -26,7 +26,6 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -119,7 +118,7 @@ public final class SourceCompiler {
             parsePackage(basePackage));
     compileProvider(compiler, classpath, providerSource, outputDir);
 
-    return loadDefinitions(outputDir, providerFqcn);
+    return loadProviderDefinitions(outputDir, providerFqcn);
   }
 
   private List<PreprocessResult> preprocessDslSources(
@@ -346,10 +345,9 @@ public final class SourceCompiler {
     return fileName.substring(0, fileName.length() - ".java".length());
   }
 
-  @Deprecated(forRemoval = true)
-  private @NonNull List<DslObject> loadDefinitions(
+  private @NonNull List<DslObject> loadProviderDefinitions(
           @NonNull Path outputDir,
-          @SuppressWarnings("unused") @NonNull String providerFqcn) {
+          @NonNull String providerFqcn) {
     URL url;
     try {
       url = outputDir.toUri().toURL();
@@ -361,18 +359,15 @@ public final class SourceCompiler {
     var loader = new URLClassLoader(new URL[]{url},
             Thread.currentThread().getContextClassLoader());
     try {
-      var providers = ServiceLoader.load(DslDefinitionProvider.class, loader);
-      for (var provider : providers) {
-        return provider.definitions();
-      }
-      log.atLevel(Level.DEBUG).log(
-              () -> "[SourceCompiler] No DslDefinitionProvider discovered in output directory");
+      var clazz = loader.loadClass(providerFqcn);
+      var provider = (DslDefinitionProvider) clazz.getDeclaredConstructor().newInstance();
+      return provider.definitions();
     } catch (Exception e) {
       log.atLevel(Level.DEBUG).setCause(e)
               .log(() -> "[SourceCompiler] Failed to load DSL definitions: %s"
                       .formatted(e.getMessage()));
+      return List.of();
     }
-    return List.of();
   }
 
   private String parsePackage(String targetPackage) {
