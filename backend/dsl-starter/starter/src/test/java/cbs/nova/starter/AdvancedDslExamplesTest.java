@@ -20,6 +20,7 @@ import cbs.nova.dslexamples.v1.OrderSagaModels.OrderSagaIn;
 import cbs.nova.dslexamples.v1.OrderSagaModels.OrderSagaOut;
 import cbs.nova.dslexamples.v1.RetryPolicyModels.RetryPolicyIn;
 import cbs.nova.dslexamples.v1.RetryPolicyModels.RetryPolicyOut;
+import cbs.nova.dslexamples.v1.SchemaValidationModels.*;
 import cbs.nova.dslexamples.v1.ScheduleWindowModels.ScheduleWindowIn;
 import cbs.nova.dslexamples.v1.ScheduleWindowModels.ScheduleWindowOut;
 import cbs.nova.dslexamples.v1.AuditTrailModels.AuditTrailIn;
@@ -135,6 +136,34 @@ class AdvancedDslExamplesTest {
     assertThat(tail1).isEqualTo(tail2);
   }
 
+  @Test
+  void schemaValidationPreviewReportsValidInvalidAndFailFast() {
+    String schema = "{\"type\":\"object\",\"required\":[\"name\",\"age\"],"
+            + "\"properties\":{\"name\":{\"type\":\"string\"},\"age\":{\"type\":\"number\"}}}";
+    var input = new SchemaValidationIn(
+            schema,
+            "{\"name\":\"Alice\",\"age\":30}",
+            "{\"age\":\"not-a-number\"}",
+            "{\"age\":\"not-a-number\"}",
+            true);
+    Context<SchemaValidationIn> ctx = SimpleContext.builder(input).mode(ExecutionMode.PREVIEW)
+            .build();
+
+    Result<?> result = GlobalManager.globalManager().runProcess("SchemaValidation", ctx);
+
+    assertThat(result.isSuccess()).as("cause: %s", result.cause()).isTrue();
+    SchemaValidationOut out = (SchemaValidationOut) result.value();
+    assertThat(out.validResult()).isTrue();
+    assertThat(out.validErrorCount()).isZero();
+    assertThat(out.invalidResult()).isFalse();
+    assertThat(out.invalidErrorCount()).isGreaterThanOrEqualTo(2);
+    assertThat(out.firstInvalidPath()).isEqualTo("$.name");
+    assertThat(out.firstInvalidMessage()).isEqualTo("field is required");
+    assertThat(out.failFastResult()).isFalse();
+    assertThat(out.failFastErrorCount()).isEqualTo(1);
+    assertThat(out.firstFailFastPath()).isEqualTo("$.name");
+    assertThat(out.firstFailFastMessage()).isEqualTo("field is required");
+  }
   @Test
   void retryPolicyPreviewComputesDeterministicAndRandomDelays() {
     var input = new RetryPolicyIn(6, 1000L, 60000L);
