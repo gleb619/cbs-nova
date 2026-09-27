@@ -1,5 +1,6 @@
 package cbs.nova.starter.service;
 
+import cbs.nova.starter.idempotency.IdempotentReplayException;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;

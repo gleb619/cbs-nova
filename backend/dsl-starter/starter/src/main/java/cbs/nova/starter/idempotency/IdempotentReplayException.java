@@ -1,10 +1,7 @@
-package cbs.nova.starter.service;
+package cbs.nova.starter.idempotency;
 
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
-//TODO: move to a correspondent package
-@Getter
 @RequiredArgsConstructor
 public final class IdempotentReplayException extends RuntimeException {
 
