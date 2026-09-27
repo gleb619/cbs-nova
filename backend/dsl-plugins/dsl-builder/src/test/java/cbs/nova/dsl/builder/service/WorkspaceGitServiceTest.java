@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import cbs.nova.dsl.builder.config.DslBuilderProperties;
+import cbs.nova.dsl.builder.config.DslBuilderProperties.PullStrategy;
 import cbs.nova.dsl.builder.exception.BuilderApiException;
 import cbs.nova.dsl.builder.model.VcsModels.CommitResult;
 import cbs.nova.dsl.builder.model.VcsModels.DiscardResult;
@@ -333,7 +334,8 @@ class WorkspaceGitServiceTest {
     Files.writeString(repo.resolve("README.md"), "v2");
 
     var properties = dslBuilderProperties(repo,
-            new DslBuilderProperties.Git(false, null, null, null, null, null, 5, false, "origin"));
+            new DslBuilderProperties.Git(false, null, null, null, null, null, 5, false, "origin",
+                    PullStrategy.REBASE));
     var status = new GitStatusService(properties, Clock.systemUTC());
     var service = new WorkspaceGitService(properties,
             new WorkspaceService(properties, new GitService()),
@@ -365,7 +367,8 @@ class WorkspaceGitServiceTest {
   void branchIsEmptyWhenGitDisabled() throws Exception {
     Path repo = initRepo();
     var properties = dslBuilderProperties(repo,
-            new DslBuilderProperties.Git(false, null, null, null, null, null, 5, false, "origin"));
+            new DslBuilderProperties.Git(false, null, null, null, null, null, 5, false, "origin",
+                    PullStrategy.REBASE));
     var status = new GitStatusService(properties, Clock.systemUTC());
     var service = new WorkspaceGitService(properties,
             new WorkspaceService(properties, new GitService()),
@@ -450,6 +453,296 @@ class WorkspaceGitServiceTest {
     assertThat(workspaceHead(workspace)).isEqualTo(result.commitId());
   }
 
+  @Test
+  void fetchReportsNewCommitsFromOrigin() throws Exception {
+    Path bare = initBareRepo();
+    Path workspace = cloneWorkspace(bare);
+    Path other = cloneWorkspace(bare);
+    Files.writeString(other.resolve("README.md"), "from-other");
+    commitAndPush(other, "upstream change");
+
+    var service = newService(workspace, null);
+
+    var result = service.fetch();
+
+    assertThat(result.branch()).isEqualTo("main");
+    assertThat(result.fetched()).isTrue();
+    assertThat(result.behind()).isEqualTo(1);
+    assertThat(result.ahead()).isZero();
+    assertThat(result.remoteHead()).isEqualTo(bareHead(bare));
+    // Fetch refreshes remote-tracking refs only — HEAD must not move.
+    assertThat(workspaceHead(workspace)).isNotEqualTo(bareHead(bare));
+  }
+
+  @Test
+  void fetchWhenUpToDateReportsNothingNew() throws Exception {
+    Path bare = initBareRepo();
+    Path workspace = cloneWorkspace(bare);
+
+    var service = newService(workspace, null);
+
+    var result = service.fetch();
+
+    assertThat(result.fetched()).isFalse();
+    assertThat(result.behind()).isZero();
+    assertThat(result.ahead()).isZero();
+    assertThat(result.remoteHead()).isEqualTo(workspaceHead(workspace));
+  }
+
+  @Test
+  void fetchWithoutRemoteRaises409() throws Exception {
+    Path repo = initRepo();
+
+    var service = newService(repo, null);
+
+    assertThatThrownBy(service::fetch)
+            .isInstanceOfSatisfying(BuilderApiException.class, ex -> {
+              assertThat(ex.getStatus().value()).isEqualTo(409);
+              assertThat(ex.getCode()).isEqualTo("GIT_NOT_CONFIGURED");
+            });
+  }
+
+  @Test
+  void pullFastForwardsWhenBehind() throws Exception {
+    Path bare = initBareRepo();
+    Path workspace = cloneWorkspace(bare);
+    Path other = cloneWorkspace(bare);
+    Files.writeString(other.resolve("README.md"), "from-other");
+    commitAndPush(other, "upstream change");
+
+    var service = newService(workspace, null);
+
+    var result = service.pull();
+
+    assertThat(result.pulled()).isTrue();
+    assertThat(result.strategy()).isEqualTo("REBASE");
+    assertThat(result.updatedFrom()).isNotEqualTo(result.updatedTo());
+    assertThat(result.updatedTo()).isEqualTo(bareHead(bare));
+    assertThat(result.behind()).isZero();
+    assertThat(workspaceHead(workspace)).isEqualTo(bareHead(bare));
+    assertThat(Files.readString(workspace.resolve("README.md"))).isEqualTo("from-other");
+  }
+
+  @Test
+  void pullIsNoOpWhenUpToDate() throws Exception {
+    Path bare = initBareRepo();
+    Path workspace = cloneWorkspace(bare);
+    String head = workspaceHead(workspace);
+
+    var service = newService(workspace, null);
+
+    var result = service.pull();
+
+    assertThat(result.pulled()).isFalse();
+    assertThat(result.updatedFrom()).isNull();
+    assertThat(result.updatedTo()).isNull();
+    assertThat(result.message()).isNull();
+    assertThat(workspaceHead(workspace)).isEqualTo(head);
+  }
+
+  @Test
+  void pullRebasesLocalCommitsWhenDiverged() throws Exception {
+    Path bare = initBareRepo();
+    Path workspace = cloneWorkspace(bare);
+    Path other = cloneWorkspace(bare);
+    Files.writeString(other.resolve("upstream.txt"), "upstream");
+    commitAndPush(other, "upstream change");
+    Files.writeString(workspace.resolve("local.txt"), "local");
+    commit(workspace, "local change");
+    String localHead = workspaceHead(workspace);
+
+    var service = newService(workspace, null);
+
+    var result = service.pull();
+
+    assertThat(result.pulled()).isTrue();
+    assertThat(result.strategy()).isEqualTo("REBASE");
+    assertThat(result.updatedFrom()).isEqualTo(localHead);
+    assertThat(result.updatedTo()).isEqualTo(workspaceHead(workspace));
+    assertThat(result.behind()).isZero();
+    assertThat(result.ahead()).isEqualTo(1);
+    // Rebased: single-parent head sitting directly on top of the upstream commit.
+    RevCommit head = currentHead(workspace);
+    assertThat(head.getParents()).hasSize(1);
+    assertThat(head.getParents()[0].getName()).isEqualTo(bareHead(bare));
+    assertThat(Files.exists(workspace.resolve("local.txt"))).isTrue();
+    assertThat(Files.exists(workspace.resolve("upstream.txt"))).isTrue();
+  }
+
+  @Test
+  void pullRebaseConflictAbortsAndKeepsLocalCommit() throws Exception {
+    Path bare = initBareRepo();
+    Path workspace = cloneWorkspace(bare);
+    Path other = cloneWorkspace(bare);
+    Files.writeString(other.resolve("README.md"), "from-other");
+    commitAndPush(other, "upstream change");
+    Files.writeString(workspace.resolve("README.md"), "from-ws1");
+    commit(workspace, "conflicting local change");
+    String localHead = workspaceHead(workspace);
+
+    var service = newService(workspace, null);
+
+    var result = service.pull();
+
+    assertThat(result.pulled()).isFalse();
+    assertThat(result.message()).containsIgnoringCase("conflict");
+    assertThat(workspaceHead(workspace)).isEqualTo(localHead);
+    assertThat(Files.readString(workspace.resolve("README.md"))).isEqualTo("from-ws1");
+    try (Git git = Git.open(workspace.toFile())) {
+      assertThat(git.getRepository().getRepositoryState().name()).isEqualTo("SAFE");
+    }
+  }
+
+  @Test
+  void pullWithMergeStrategyCreatesMergeCommit() throws Exception {
+    Path bare = initBareRepo();
+    Path workspace = cloneWorkspace(bare);
+    Path other = cloneWorkspace(bare);
+    Files.writeString(other.resolve("upstream.txt"), "upstream");
+    commitAndPush(other, "upstream change");
+    Files.writeString(workspace.resolve("local.txt"), "local");
+    commit(workspace, "local change");
+
+    var service = newService(workspace, null, false, "origin", PullStrategy.MERGE);
+
+    var result = service.pull();
+
+    assertThat(result.pulled()).isTrue();
+    assertThat(result.strategy()).isEqualTo("MERGE");
+    assertThat(result.behind()).isZero();
+    assertThat(currentHead(workspace).getParents()).hasSize(2);
+  }
+
+  @Test
+  void pullWithMergeStrategyConflictStaysInProgress() throws Exception {
+    Path bare = initBareRepo();
+    Path workspace = cloneWorkspace(bare);
+    Path other = cloneWorkspace(bare);
+    Files.writeString(other.resolve("README.md"), "from-other");
+    commitAndPush(other, "upstream change");
+    Files.writeString(workspace.resolve("README.md"), "from-ws1");
+    commit(workspace, "conflicting local change");
+
+    var service = newService(workspace, null, false, "origin", PullStrategy.MERGE);
+
+    var result = service.pull();
+
+    // Git-native behaviour: the merge remains in progress with conflict markers so the user can
+    // resolve and commit — nothing is reset.
+    assertThat(result.pulled()).isFalse();
+    assertThat(result.message()).containsIgnoringCase("merge conflict");
+    try (Git git = Git.open(workspace.toFile())) {
+      assertThat(git.getRepository().getRepositoryState().name()).isEqualTo("MERGING");
+      assertThat(git.status().call().getConflicting()).containsExactly("README.md");
+    }
+  }
+
+  @Test
+  void rebaseOntoOriginLinearizesHistory() throws Exception {
+    Path bare = initBareRepo();
+    Path workspace = cloneWorkspace(bare);
+    Path other = cloneWorkspace(bare);
+    Files.writeString(other.resolve("upstream.txt"), "upstream");
+    commitAndPush(other, "upstream change");
+    Files.writeString(workspace.resolve("local.txt"), "local");
+    commit(workspace, "local change");
+    String localHead = workspaceHead(workspace);
+
+    var service = newService(workspace, null);
+
+    var result = service.rebase();
+
+    assertThat(result.rebased()).isTrue();
+    assertThat(result.updatedFrom()).isEqualTo(localHead);
+    assertThat(result.updatedTo()).isEqualTo(workspaceHead(workspace));
+    assertThat(result.behind()).isZero();
+    assertThat(result.ahead()).isEqualTo(1);
+    RevCommit head = currentHead(workspace);
+    assertThat(head.getParents()).hasSize(1);
+    assertThat(head.getParents()[0].getName()).isEqualTo(bareHead(bare));
+  }
+
+  @Test
+  void rebaseIsNoOpWhenUpToDate() throws Exception {
+    Path bare = initBareRepo();
+    Path workspace = cloneWorkspace(bare);
+    String head = workspaceHead(workspace);
+
+    var service = newService(workspace, null);
+
+    var result = service.rebase();
+
+    assertThat(result.rebased()).isFalse();
+    assertThat(result.updatedFrom()).isNull();
+    assertThat(result.message()).isNull();
+    assertThat(workspaceHead(workspace)).isEqualTo(head);
+  }
+
+  @Test
+  void rebaseConflictAbortsAndKeepsHead() throws Exception {
+    Path bare = initBareRepo();
+    Path workspace = cloneWorkspace(bare);
+    Path other = cloneWorkspace(bare);
+    Files.writeString(other.resolve("README.md"), "from-other");
+    commitAndPush(other, "upstream change");
+    Files.writeString(workspace.resolve("README.md"), "from-ws1");
+    commit(workspace, "conflicting local change");
+    String localHead = workspaceHead(workspace);
+
+    var service = newService(workspace, null);
+
+    var result = service.rebase();
+
+    assertThat(result.rebased()).isFalse();
+    assertThat(result.message()).containsIgnoringCase("conflict");
+    assertThat(workspaceHead(workspace)).isEqualTo(localHead);
+    assertThat(Files.readString(workspace.resolve("README.md"))).isEqualTo("from-ws1");
+    try (Git git = Git.open(workspace.toFile())) {
+      assertThat(git.getRepository().getRepositoryState().name()).isEqualTo("SAFE");
+    }
+  }
+
+  @Test
+  void syncOpsFailWhenGitIsDisabled() throws Exception {
+    Path repo = initRepo();
+
+    var properties = dslBuilderProperties(repo,
+            new DslBuilderProperties.Git(false, null, null, null, null, null, 5, false,
+                    "origin", PullStrategy.REBASE));
+    var status = new GitStatusService(properties, Clock.systemUTC());
+    var service = new WorkspaceGitService(properties,
+            new WorkspaceService(properties, new GitService()),
+            () -> status) {
+    };
+
+    assertThatThrownBy(service::fetch)
+            .isInstanceOfSatisfying(BuilderApiException.class,
+                    ex -> assertThat(ex.getCode()).isEqualTo("GIT_NOT_CONFIGURED"));
+    assertThatThrownBy(service::pull)
+            .isInstanceOfSatisfying(BuilderApiException.class,
+                    ex -> assertThat(ex.getCode()).isEqualTo("GIT_NOT_CONFIGURED"));
+    assertThatThrownBy(service::rebase)
+            .isInstanceOfSatisfying(BuilderApiException.class,
+                    ex -> assertThat(ex.getCode()).isEqualTo("GIT_NOT_CONFIGURED"));
+  }
+
+  private static void commitAndPush(Path dir, String message) throws Exception {
+    try (Git git = Git.open(dir.toFile())) {
+      git.add().addFilepattern(".").call();
+      git.commit().setMessage(message).setAuthor("b", "b@example.com")
+              .setCommitter("b", "b@example.com").call();
+      git.push().call();
+    }
+  }
+
+  private static void commit(Path dir, String message) throws Exception {
+    try (Git git = Git.open(dir.toFile())) {
+      git.add().addFilepattern(".").call();
+      git.commit().setMessage(message).setAuthor("b", "b@example.com")
+              .setCommitter("b", "b@example.com").call();
+    }
+  }
+
   private Path initBareRepo() throws Exception {
     // Build a normal repo with an initial commit, then clone it as a bare repo so the
     // bare origin reliably has refs/heads/main and a HEAD that JGit clients can follow.
@@ -512,9 +805,15 @@ class WorkspaceGitServiceTest {
 
   private static WorkspaceGitService newService(Path workspaceDir, String configuredRepoDir,
           boolean pushOnCommit, String remote) {
+    return newService(workspaceDir, configuredRepoDir, pushOnCommit, remote,
+            PullStrategy.REBASE);
+  }
+
+  private static WorkspaceGitService newService(Path workspaceDir, String configuredRepoDir,
+          boolean pushOnCommit, String remote, PullStrategy pullStrategy) {
     var properties = dslBuilderProperties(workspaceDir,
             new DslBuilderProperties.Git(true, configuredRepoDir,
-                    null, null, null, null, 5, pushOnCommit, remote));
+                    null, null, null, null, 5, pushOnCommit, remote, pullStrategy));
     var status = new GitStatusService(properties, Clock.systemUTC());
     return new WorkspaceGitService(properties, new WorkspaceService(properties, new GitService()),
             () -> status) {
@@ -530,7 +829,7 @@ class WorkspaceGitServiceTest {
           String configuredRepoDir, boolean pushOnCommit, String remote) {
     var properties = dslBuilderProperties(workspaceDir,
             new DslBuilderProperties.Git(true, configuredRepoDir,
-                    null, null, null, null, 5, pushOnCommit, remote));
+                    null, null, null, null, 5, pushOnCommit, remote, PullStrategy.REBASE));
     var status = new GitStatusService(properties, Clock.systemUTC());
     return new WorkspaceGitService(properties, new WorkspaceService(properties, new GitService()),
             () -> status) {

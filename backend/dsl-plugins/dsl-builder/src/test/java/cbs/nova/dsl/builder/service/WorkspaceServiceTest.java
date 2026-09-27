@@ -3,6 +3,7 @@ package cbs.nova.dsl.builder.service;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.builder.config.DslBuilderProperties;
+import cbs.nova.dsl.builder.config.DslBuilderProperties.PullStrategy;
 import cbs.nova.dsl.builder.config.WorkspaceMode;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -127,7 +128,7 @@ class WorkspaceServiceTest {
             null,
             null,
             new DslBuilderProperties.Git(true, null, null, repoUrl, null, null, 5, false,
-                    "origin"),
+                    "origin", PullStrategy.REBASE),
             null,
             new DslBuilderProperties.Bundles(1, 200),
             null,

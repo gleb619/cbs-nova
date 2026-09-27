@@ -184,9 +184,10 @@ describe('admin.vue saved drafts widget', () => {
     expect(wrapper.find('[data-testid="dsl-saved-drafts-widget-count"]').text()).toBe('2')
   })
 
-  it('renders the git-client header with Fetch, Pull and Rebase actions', async () => {
+  it('renders the git-client panel header with Fetch, Pull and Rebase actions', async () => {
     const wrapper = mountLayout()
     await flush()
+    await openPanel(wrapper)
 
     for (const op of ['fetch', 'pull', 'rebase']) {
       expect(wrapper.find(`[data-testid="dsl-saved-drafts-${op}"]`).exists()).toBe(true)

@@ -22,14 +22,15 @@ const METADATA: DraftsMetadata = {
 
 const NO_GIT_METADATA: DraftsMetadata = { ...METADATA, gitEnabled: false }
 
-// The panel is a positioned dropdown (no teleport), so it renders in place.
+// The drawer teleports into <body>; stub Teleport so it renders in place.
 const mountWidget = (props: Record<string, unknown> = {}, slots: Record<string, unknown> = {}) =>
   mount(DraftsWidget, {
     props: { drafts: DRAFTS, ...props },
     slots: slots as never,
+    global: { stubs: { teleport: true } },
   })
 
-const open = async (wrapper: ReturnType<typeof mountWidget>) => {
+const openDrawer = async (wrapper: ReturnType<typeof mountWidget>) => {
   await wrapper.find('[data-testid="dsl-saved-drafts-widget-details"]').trigger('click')
 }
 
@@ -38,17 +39,11 @@ describe('DraftsWidget', () => {
     window.localStorage.clear()
   })
 
-  describe('header', () => {
-    it('renders the panel with a source-control heading and the draft count', () => {
+  describe('navbar pill', () => {
+    it('renders the pill with the draft count', () => {
       const wrapper = mountWidget()
       expect(wrapper.find('[data-testid="dsl-saved-drafts-widget"]').exists()).toBe(true)
       expect(wrapper.find('[data-testid="dsl-saved-drafts-widget-count"]').text()).toBe('2')
-      expect(wrapper.text()).toContain('Source Control')
-    })
-
-    it('honours a custom title and the deprecated drawerTitle', () => {
-      expect(mountWidget({ title: 'Changes' }).text()).toContain('Changes')
-      expect(mountWidget({ drawerTitle: 'Legacy' }).text()).toContain('Legacy')
     })
 
     it('shows an ellipsis while the first load is in flight', () => {
@@ -67,23 +62,73 @@ describe('DraftsWidget', () => {
       expect(badge.classes()).toContain('bg-red-100')
       expect(badge.attributes('title')).toBe('boom')
     })
+  })
 
-    it('renders Fetch, Pull and Rebase buttons with accessible labels and tooltips', () => {
+  describe('drawer', () => {
+    it('keeps the drawer closed until Details is pressed', async () => {
       const wrapper = mountWidget()
-      for (const [id, label] of [
+      expect(wrapper.find('[data-testid="dsl-saved-drafts-drawer"]').exists()).toBe(false)
+      await openDrawer(wrapper)
+      expect(wrapper.find('[data-testid="dsl-saved-drafts-drawer"]').exists()).toBe(true)
+      expect(wrapper.emitted('open')).toHaveLength(1)
+    })
+
+    it('persists the open drawer across mounts', async () => {
+      const wrapper = mountWidget()
+      await openDrawer(wrapper)
+      expect(window.localStorage.getItem('cbs-nova:drafts-widget:drawer-open')).toBe('true')
+
+      const remounted = mountWidget()
+      expect(remounted.find('[data-testid="dsl-saved-drafts-drawer"]').exists()).toBe(true)
+    })
+
+    it('emits select and closes the drawer when a file is picked', async () => {
+      const wrapper = mountWidget()
+      await openDrawer(wrapper)
+      await wrapper.find('[data-testid="dsl-saved-drafts-item"]').trigger('click')
+      expect(wrapper.emitted('select')).toEqual([['alpha']])
+      expect(wrapper.find('[data-testid="dsl-saved-drafts-drawer"]').exists()).toBe(false)
+    })
+
+    it('emits refresh on mount when autoLoad is set', () => {
+      expect(mountWidget({ autoLoad: true }).emitted('refresh')).toHaveLength(1)
+      expect(mountWidget().emitted('refresh')).toBeUndefined()
+    })
+  })
+
+  describe('panel header', () => {
+    it('shows the panel title and honours a custom one', async () => {
+      const wrapper = mountWidget()
+      await openDrawer(wrapper)
+      const header = wrapper.find('[data-testid="dsl-saved-drafts-panel-header"]')
+      expect(header.exists()).toBe(true)
+      expect(header.text()).toContain('Source Control')
+
+      const custom = mountWidget({ title: 'Changes' })
+      await openDrawer(custom)
+      expect(custom.find('[data-testid="dsl-saved-drafts-panel-header"]').text()).toContain(
+        'Changes',
+      )
+    })
+
+    it('renders Fetch, Pull and Rebase with accessible labels and tooltips', async () => {
+      const wrapper = mountWidget()
+      await openDrawer(wrapper)
+      for (const [op, label] of [
         ['fetch', 'Fetch from remote'],
         ['pull', 'Pull from remote'],
         ['rebase', 'Rebase onto remote'],
       ]) {
-        const button = wrapper.find(`[data-testid="dsl-saved-drafts-${id}"]`)
+        const button = wrapper.find(`[data-testid="dsl-saved-drafts-${op}"]`)
         expect(button.exists()).toBe(true)
         expect(button.attributes('aria-label')).toBe(label)
         expect(button.attributes('title')).toBe(label)
       }
     })
 
-    it('emits fetch, pull and rebase when the remote buttons are pressed', async () => {
+    it('emits fetch, pull and rebase', async () => {
       const wrapper = mountWidget()
+      await openDrawer(wrapper)
       await wrapper.find('[data-testid="dsl-saved-drafts-fetch"]').trigger('click')
       await wrapper.find('[data-testid="dsl-saved-drafts-pull"]').trigger('click')
       await wrapper.find('[data-testid="dsl-saved-drafts-rebase"]').trigger('click')
@@ -92,15 +137,25 @@ describe('DraftsWidget', () => {
       expect(wrapper.emitted('rebase')).toHaveLength(1)
     })
 
-    it('disables the remote buttons while loading or a remote op is in flight', () => {
+    it('shows a pending label for the running operation', async () => {
+      const wrapper = mountWidget({ fetching: true, pulling: true, rebasing: true })
+      await openDrawer(wrapper)
+      expect(wrapper.find('[data-testid="dsl-saved-drafts-fetch"]').text()).toBe('Fetching…')
+      expect(wrapper.find('[data-testid="dsl-saved-drafts-pull"]').text()).toBe('Pulling…')
+      expect(wrapper.find('[data-testid="dsl-saved-drafts-rebase"]').text()).toBe('Rebasing…')
+    })
+
+    it('disables the remote buttons while loading or a remote op runs', async () => {
       const loading = mountWidget({ loading: true })
+      await openDrawer(loading)
       for (const op of ['fetch', 'pull', 'rebase']) {
         expect(
           loading.find(`[data-testid="dsl-saved-drafts-${op}"]`).attributes('disabled'),
         ).toBeDefined()
       }
 
-      const busy = mountWidget({ fetching: true })
+      const busy = mountWidget({ pulling: true })
+      await openDrawer(busy)
       for (const op of ['fetch', 'pull', 'rebase']) {
         expect(
           busy.find(`[data-testid="dsl-saved-drafts-${op}"]`).attributes('disabled'),
@@ -108,20 +163,9 @@ describe('DraftsWidget', () => {
       }
     })
 
-    it('shows a pending label for the operation that is running', () => {
-      expect(
-        mountWidget({ fetching: true }).find('[data-testid="dsl-saved-drafts-fetch"]').text(),
-      ).toBe('Fetching…')
-      expect(
-        mountWidget({ pulling: true }).find('[data-testid="dsl-saved-drafts-pull"]').text(),
-      ).toBe('Pulling…')
-      expect(
-        mountWidget({ rebasing: true }).find('[data-testid="dsl-saved-drafts-rebase"]').text(),
-      ).toBe('Rebasing…')
-    })
-
-    it('disables the remote buttons when the workspace has no git', () => {
+    it('disables the remote buttons when the workspace has no git', async () => {
       const wrapper = mountWidget({ metadata: NO_GIT_METADATA })
+      await openDrawer(wrapper)
       for (const op of ['fetch', 'pull', 'rebase']) {
         expect(
           wrapper.find(`[data-testid="dsl-saved-drafts-${op}"]`).attributes('disabled'),
@@ -129,93 +173,56 @@ describe('DraftsWidget', () => {
       }
     })
 
-    it('emits refresh from the header refresh button and disables it while loading', async () => {
+    it('emits refresh from the drawer action and disables it while loading', async () => {
       const wrapper = mountWidget()
-      await wrapper.find('[data-testid="dsl-saved-drafts-drawer-refresh"]').trigger('click')
+      await openDrawer(wrapper)
+      const button = wrapper.find('[data-testid="dsl-saved-drafts-drawer-refresh"]')
+      expect(button.exists()).toBe(true)
+      expect(button.find('svg').exists()).toBe(true)
+      expect(button.text()).toBe('')
+      await button.trigger('click')
       expect(wrapper.emitted('refresh')).toHaveLength(1)
+
       await wrapper.setProps({ loading: true })
-      expect(
-        wrapper.find('[data-testid="dsl-saved-drafts-drawer-refresh"]').attributes('disabled'),
-      ).toBeDefined()
+      const busy = wrapper.find('[data-testid="dsl-saved-drafts-drawer-refresh"]')
+      expect(busy.attributes('disabled')).toBeDefined()
+      expect(busy.find('svg').classes()).toContain('animate-spin')
     })
   })
 
-  describe('panel visibility', () => {
-    it('keeps the panel closed until the heading is pressed', async () => {
-      const wrapper = mountWidget()
-      expect(wrapper.find('[data-testid="dsl-saved-drafts-panel"]').exists()).toBe(false)
-      await open(wrapper)
-      expect(wrapper.find('[data-testid="dsl-saved-drafts-panel"]').exists()).toBe(true)
-      expect(wrapper.emitted('open')).toHaveLength(1)
-    })
-
-    it('collapses the panel again on a second press', async () => {
-      const wrapper = mountWidget()
-      await open(wrapper)
-      await wrapper.find('[data-testid="dsl-saved-drafts-widget-details"]').trigger('click')
-      expect(wrapper.find('[data-testid="dsl-saved-drafts-panel"]').exists()).toBe(false)
-    })
-
-    it('persists the open state across mounts', async () => {
-      const wrapper = mountWidget()
-      await open(wrapper)
-      expect(window.localStorage.getItem('cbs-nova:drafts-widget:expanded')).toBe('true')
-
-      const remounted = mountWidget()
-      expect(remounted.find('[data-testid="dsl-saved-drafts-panel"]').exists()).toBe(true)
-    })
-
-    it('exposes the expanded state to assistive tech', async () => {
-      const wrapper = mountWidget()
-      const toggle = () => wrapper.find('[data-testid="dsl-saved-drafts-widget-details"]')
-      expect(toggle().attributes('aria-expanded')).toBe('false')
-      expect(toggle().attributes('aria-label')).toBe('Toggle source control panel')
-      await open(wrapper)
-      expect(toggle().attributes('aria-expanded')).toBe('true')
-    })
-  })
-
-  describe('body', () => {
+  describe('panel body', () => {
     it('lists the changed files with a git status badge', async () => {
       const wrapper = mountWidget()
-      await open(wrapper)
+      await openDrawer(wrapper)
       const items = wrapper.findAll('[data-testid="dsl-saved-drafts-item"]')
       expect(items).toHaveLength(2)
       expect(items[0].text()).toContain('alpha')
-
-      const badges = wrapper.findAll('[data-testid="dsl-saved-drafts-item-status"]')
-      expect(badges.map((badge) => badge.text())).toEqual(['Modified', 'Added'])
+      expect(
+        wrapper.findAll('[data-testid="dsl-saved-drafts-item-status"]').map((b) => b.text()),
+      ).toEqual(['Modified', 'Added'])
     })
 
     it('renders a per-file revert button that discards just that file', async () => {
       const wrapper = mountWidget()
-      await open(wrapper)
-      const rowActions = wrapper.findAll('[data-testid="dsl-saved-drafts-item-discard"]')
-      expect(rowActions).toHaveLength(2)
-      expect(rowActions[1].attributes('aria-label')).toBe('Revert beta')
-      await rowActions[1].trigger('click')
+      await openDrawer(wrapper)
+      const actions = wrapper.findAll('[data-testid="dsl-saved-drafts-item-discard"]')
+      expect(actions).toHaveLength(2)
+      expect(actions[1].attributes('aria-label')).toBe('Revert beta')
+      await actions[1].trigger('click')
       expect(wrapper.emitted('discard')).toEqual([['beta']])
-    })
-
-    it('emits select when a file row is picked and keeps the panel open', async () => {
-      const wrapper = mountWidget()
-      await open(wrapper)
-      await wrapper.find('[data-testid="dsl-saved-drafts-item"]').trigger('click')
-      expect(wrapper.emitted('select')).toEqual([['alpha']])
-      expect(wrapper.find('[data-testid="dsl-saved-drafts-panel"]').exists()).toBe(true)
     })
 
     it('highlights the selected file', async () => {
       const wrapper = mountWidget({ selectedName: 'beta' })
-      await open(wrapper)
+      await openDrawer(wrapper)
       const items = wrapper.findAll('[data-testid="dsl-saved-drafts-item"]')
       expect(items[0].classes()).not.toContain('bg-gray-700')
       expect(items[1].classes()).toContain('bg-gray-700')
     })
 
-    it('renders the error inside the panel', async () => {
+    it('renders the error inside the body', async () => {
       const wrapper = mountWidget({ error: 'drafts unavailable' })
-      await open(wrapper)
+      await openDrawer(wrapper)
       expect(wrapper.find('[data-testid="dsl-saved-drafts-drawer-error"]').text()).toContain(
         'drafts unavailable',
       )
@@ -223,26 +230,26 @@ describe('DraftsWidget', () => {
 
     it('omits the error region when there is no error', async () => {
       const wrapper = mountWidget()
-      await open(wrapper)
+      await openDrawer(wrapper)
       expect(wrapper.find('[data-testid="dsl-saved-drafts-drawer-error"]').exists()).toBe(false)
     })
 
-    it('keeps DraftMetadataCard above the file list as compact workspace info', async () => {
+    it('keeps the compact workspace info above the file list', async () => {
       const wrapper = mountWidget({ metadata: METADATA })
-      await open(wrapper)
+      await openDrawer(wrapper)
       expect(wrapper.find('[data-testid="draft-metadata-card"]').exists()).toBe(true)
       expect(wrapper.find('[data-testid="draft-metadata-card-branch"]').text()).toBe('main')
     })
 
-    it('renders DraftMetadataCard in loading state when metadataLoading is true', async () => {
+    it('renders the workspace info in loading state', async () => {
       const wrapper = mountWidget({ metadata: null, metadataLoading: true })
-      await open(wrapper)
+      await openDrawer(wrapper)
       expect(wrapper.find('[data-testid="draft-metadata-card-loading"]').exists()).toBe(true)
     })
 
-    it('renders DraftMetadataCard error when metadataError is set', async () => {
+    it('renders the workspace info error', async () => {
       const wrapper = mountWidget({ metadataError: 'metadata unavailable' })
-      await open(wrapper)
+      await openDrawer(wrapper)
       expect(wrapper.find('[data-testid="draft-metadata-card-error"]').text()).toContain(
         'metadata unavailable',
       )
@@ -260,7 +267,7 @@ describe('DraftsWidget', () => {
             h('div', { 'data-testid': 'slot-footer' }, [`footer:${slotProps.drafts.length}`]),
         },
       )
-      await open(wrapper)
+      await openDrawer(wrapper)
       expect(wrapper.find('[data-testid="slot-header"]').text()).toBe('header:2')
       expect(wrapper.find('[data-testid="slot-footer"]').text()).toBe('footer:2')
       await wrapper.find('[data-testid="slot-header"]').trigger('click')
@@ -268,12 +275,12 @@ describe('DraftsWidget', () => {
     })
   })
 
-  describe('footer commit box', () => {
-    it('renders a commit message input and both actions', async () => {
+  describe('panel footer', () => {
+    it('renders the commit message input and both actions', async () => {
       const wrapper = mountWidget()
-      await open(wrapper)
+      await openDrawer(wrapper)
+      expect(wrapper.find('[data-testid="dsl-saved-drafts-commit-box"]').exists()).toBe(true)
       const input = wrapper.find('[data-testid="dsl-saved-drafts-commit-message"]')
-      expect(input.exists()).toBe(true)
       expect(input.attributes('aria-label')).toBe('Commit message')
       expect(wrapper.find('[data-testid="dsl-saved-drafts-commit"]').exists()).toBe(true)
       expect(wrapper.find('[data-testid="dsl-saved-drafts-revert-all"]').exists()).toBe(true)
@@ -281,7 +288,7 @@ describe('DraftsWidget', () => {
 
     it('emits commit with the trimmed message and clears the input', async () => {
       const wrapper = mountWidget()
-      await open(wrapper)
+      await openDrawer(wrapper)
       await wrapper
         .find('[data-testid="dsl-saved-drafts-commit-message"]')
         .setValue('  update flow  ')
@@ -297,7 +304,7 @@ describe('DraftsWidget', () => {
 
     it('keeps commit disabled without a message, without changes or while committing', async () => {
       const wrapper = mountWidget()
-      await open(wrapper)
+      await openDrawer(wrapper)
       const commit = () => wrapper.find('[data-testid="dsl-saved-drafts-commit"]')
       expect(commit().attributes('disabled')).toBeDefined()
 
@@ -308,36 +315,23 @@ describe('DraftsWidget', () => {
       expect(commit().attributes('disabled')).toBeDefined()
       expect(commit().text()).toBe('Committing…')
 
-      await wrapper.setProps({ drafts: [] })
-      await wrapper.setProps({ committing: false })
+      await wrapper.setProps({ drafts: [], committing: false })
       expect(commit().attributes('disabled')).toBeDefined()
     })
 
     it('emits a bare discard for discard all', async () => {
       const wrapper = mountWidget()
-      await open(wrapper)
+      await openDrawer(wrapper)
       await wrapper.find('[data-testid="dsl-saved-drafts-revert-all"]').trigger('click')
       expect(wrapper.emitted('discard')).toEqual([[]])
     })
 
     it('disables discard all when there is nothing to discard', async () => {
       const wrapper = mountWidget({ drafts: [] })
-      await open(wrapper)
+      await openDrawer(wrapper)
       expect(
         wrapper.find('[data-testid="dsl-saved-drafts-revert-all"]').attributes('disabled'),
       ).toBeDefined()
-    })
-  })
-
-  describe('loading lifecycle', () => {
-    it('emits refresh on mount when autoLoad is set', () => {
-      const wrapper = mountWidget({ autoLoad: true })
-      expect(wrapper.emitted('refresh')).toHaveLength(1)
-    })
-
-    it('does not emit refresh on mount by default', () => {
-      const wrapper = mountWidget()
-      expect(wrapper.emitted('refresh')).toBeUndefined()
     })
   })
 })

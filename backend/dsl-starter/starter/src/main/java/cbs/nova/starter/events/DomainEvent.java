@@ -12,6 +12,7 @@ import org.jspecify.annotations.Nullable;
 public sealed interface DomainEvent permits
         DomainEvent.RunLifecycleEvent,
         DomainEvent.DefinitionLifecycleEvent,
+        WorkspaceLifecycleEvent,
         DomainEvent.PieceNotified {
 
   @JsonProperty("eventType")

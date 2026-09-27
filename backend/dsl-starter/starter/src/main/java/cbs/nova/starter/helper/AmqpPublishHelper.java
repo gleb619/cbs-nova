@@ -15,6 +15,7 @@ import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessageProperties;
 import org.springframework.amqp.core.MessagePropertiesBuilder;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 
@@ -32,6 +33,7 @@ public class AmqpPublishHelper implements Executable<AmqpPublishIn, AmqpPublishO
   private final @Nullable AmqpTemplate amqpTemplate;
   private final @NonNull ObjectMapper mapper;
 
+  @Autowired
   public AmqpPublishHelper(ObjectProvider<AmqpTemplate> amqpTemplateProvider,
           ObjectMapper mapper) {
     this.amqpTemplate = amqpTemplateProvider.getIfAvailable();

@@ -40,7 +40,9 @@ public record DslBuilderProperties(
     workspaceMode = workspaceMode == null ? WorkspaceMode.SHARED : workspaceMode;
     queue = queue == null ? new Queue(100, 4) : queue;
     files = files == null ? new Files(5, 100, 32, 8, 5L) : files;
-    git = git == null ? new Git(true, null, null, null, null, null, 5, false, "origin") : git;
+    git = git == null
+            ? new Git(true, null, null, null, null, null, 5, false, "origin", PullStrategy.REBASE)
+            : git;
     fileBuffer = fileBuffer == null ? new FileBuffer(1000, 3600L) : fileBuffer;
     bundles = bundles == null ? new Bundles(1, 200) : bundles;
     gradleJavaMin = gradleJavaMin == null ? 8 : gradleJavaMin;
@@ -131,7 +133,17 @@ public record DslBuilderProperties(
           String branch,
           @DefaultValue("5") int statusCacheTtlSeconds,
           @DefaultValue("false") boolean pushOnCommit,
-          @DefaultValue("origin") String remote) {
+          @DefaultValue("origin") String remote,
+          @DefaultValue("REBASE") PullStrategy pullStrategy) {
+
+    public Git {
+      pullStrategy = pullStrategy == null ? PullStrategy.REBASE : pullStrategy;
+    }
+  }
+
+  /** How {@code POST /api/dsl/vcs/pull} integrates fetched upstream commits on divergence. */
+  public enum PullStrategy {
+    REBASE, MERGE
   }
 
   public record FileBuffer(

@@ -62,15 +62,18 @@ function closeDrawer() {
       >
         <div class="flex items-center justify-between p-3 border-b border-gray-800">
           <h3 class="text-sm font-semibold text-gray-100">{{ title }}</h3>
-          <button
-            type="button"
-            class="p-1.5 rounded hover:bg-gray-800 text-gray-400 hover:text-gray-100"
-            :aria-label="closeLabel"
-            data-testid="drawer-close-button"
-            @click="closeDrawer"
-          >
-            ✕
-          </button>
+          <div class="flex items-center gap-1">
+            <slot name="actions" />
+            <button
+              type="button"
+              class="p-1.5 rounded hover:bg-gray-800 text-gray-400 hover:text-gray-100"
+              :aria-label="closeLabel"
+              data-testid="drawer-close-button"
+              @click="closeDrawer"
+            >
+              ✕
+            </button>
+          </div>
         </div>
         <slot />
       </aside>

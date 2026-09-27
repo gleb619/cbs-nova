@@ -4,6 +4,7 @@ import cbs.nova.starter.entity.NotificationRuleEntity;
 import cbs.nova.starter.entity.NotificationRuleFiringEntity;
 import cbs.nova.starter.events.DomainEvent;
 import cbs.nova.starter.events.DomainEventListener;
+import cbs.nova.starter.events.WorkspaceLifecycleEvent;
 import cbs.nova.starter.model.NotificationRuleModels.FireResultDto;
 import cbs.nova.starter.model.NotificationRuleModels.NotificationActionDto;
 import cbs.nova.starter.model.NotificationRuleModels.TestEventResponse;
@@ -194,6 +195,7 @@ public class NotificationRuleEngine implements DomainEventListener {
       case DomainEvent.DraftSaved e -> e.definitionName();
       case DomainEvent.DraftPublished e -> e.definitionName();
       case DomainEvent.ReloadFailed e -> e.definitionName();
+      case WorkspaceLifecycleEvent e -> e.aggregateId();
       case DomainEvent.PieceNotified _ -> null;
     };
   }
@@ -208,6 +210,7 @@ public class NotificationRuleEngine implements DomainEventListener {
       case DomainEvent.DraftSaved _ -> null;
       case DomainEvent.DraftPublished _ -> null;
       case DomainEvent.ReloadFailed _ -> null;
+      case WorkspaceLifecycleEvent _ -> null;
       case DomainEvent.PieceNotified _ -> null;
     };
   }

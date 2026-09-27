@@ -1,12 +1,16 @@
 package cbs.nova.dsl.builder.service;
 
 import cbs.nova.dsl.builder.config.DslBuilderProperties;
+import cbs.nova.dsl.builder.config.DslBuilderProperties.PullStrategy;
 import cbs.nova.dsl.builder.exception.BuilderApiException;
 import cbs.nova.dsl.builder.model.VcsModels.CommitRequest;
 import cbs.nova.dsl.builder.model.VcsModels.CommitResult;
 import cbs.nova.dsl.builder.model.VcsModels.DiscardRequest;
 import cbs.nova.dsl.builder.model.VcsModels.DiscardResult;
+import cbs.nova.dsl.builder.model.VcsModels.FetchResult;
 import cbs.nova.dsl.builder.model.VcsModels.LogEntry;
+import cbs.nova.dsl.builder.model.VcsModels.PullResult;
+import cbs.nova.dsl.builder.model.VcsModels.RebaseResult;
 import cbs.nova.dsl.vcs.ChangeType;
 import cbs.nova.dsl.vcs.RepoStatus;
 import jakarta.annotation.Nullable;
@@ -27,6 +31,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.eclipse.jgit.api.AddCommand;
 import org.eclipse.jgit.api.CommitCommand;
 import org.eclipse.jgit.api.Git;
+import org.eclipse.jgit.api.MergeCommand;
+import org.eclipse.jgit.api.MergeResult;
+import org.eclipse.jgit.api.RebaseCommand;
 import org.eclipse.jgit.api.ResetCommand;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.lib.ObjectId;
@@ -36,6 +43,7 @@ import org.eclipse.jgit.lib.PersonIdent;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevWalk;
+import org.eclipse.jgit.revwalk.RevWalkUtils;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.eclipse.jgit.transport.PushResult;
 import org.eclipse.jgit.transport.RemoteRefUpdate;
@@ -61,7 +69,7 @@ public class WorkspaceGitService {
 
   @Autowired
   @Deprecated(forRemoval = true)
-  //TODO: repalce ctor with a lombok's one
+  // TODO: repalce ctor with a lombok's one
   public WorkspaceGitService(DslBuilderProperties properties, WorkspaceService workspaceService,
           ObjectProvider<GitStatusService> gitStatusProvider) {
     this(properties, workspaceService, gitStatusProvider::getIfAvailable);
@@ -69,7 +77,7 @@ public class WorkspaceGitService {
 
   /** Test seam: pass in a fixed supplier so unit tests do not need the Spring context. */
   @Deprecated(forRemoval = true)
-  //TODO: repalce ctor with a lombok's one
+  // TODO: repalce ctor with a lombok's one
   WorkspaceGitService(DslBuilderProperties properties, WorkspaceService workspaceService,
           Supplier<GitStatusService> gitStatusProvider) {
     this.properties = properties;
@@ -395,6 +403,253 @@ public class WorkspaceGitService {
 
   /** Result of a {@link #push()}: ok + an optional message (null on success). */
   public record PushResult(boolean ok, String message) {
+  }
+
+  /**
+   * Fetch the configured remote for the active branch. Refreshes the remote-tracking ref and
+   * reports how far ahead/behind the workspace branch is relative to {@code origin/<branch>}.
+   */
+  public FetchResult fetch() {
+    try (Repository repository = openConfiguredRepository();
+            Git git = new Git(repository)) {
+      String branch = requireBranch(repository);
+      String remote = requireRemote(repository);
+      var fetchResult = git.fetch().setRemote(remote).call();
+      ObjectId upstream = repository.resolve(upstreamRef(remote, branch));
+      int[] ab = upstream != null ? aheadBehind(repository, "HEAD", upstream) : new int[]{0, 0};
+      invalidateGitStatus();
+      return new FetchResult(branch, !fetchResult.getTrackingRefUpdates().isEmpty(),
+              upstream != null ? upstream.getName() : null, ab[0], ab[1]);
+    } catch (IOException | GitAPIException e) {
+      throw vcsError(e);
+    }
+  }
+
+  /**
+   * Pull {@code origin/<branch>} into the workspace branch. Up to date is a no-op; strictly behind
+   * fast-forwards; on divergence the configured {@code cbs.dsl.builder.git.pull-strategy} applies
+   * (default {@link PullStrategy#REBASE}). A rebase conflict aborts the rebase and leaves the head
+   * and working tree untouched; a merge conflict follows git-native behaviour and stays in progress
+   * for manual resolution. Never forces.
+   */
+  public PullResult pull() {
+    try (Repository repository = openConfiguredRepository();
+            Git git = new Git(repository)) {
+      String branch = requireBranch(repository);
+      String remote = requireRemote(repository);
+      ObjectId upstream = fetchUpstream(git, repository, remote, branch);
+      PullStrategy strategy = properties.git().pullStrategy();
+      String headBefore = headOf(repository);
+      int[] before = aheadBehind(repository, "HEAD", upstream);
+      PullResult result;
+      if (before[1] == 0) {
+        result = new PullResult(branch, strategy.name(), false, null, null, before[0], 0, null);
+      } else if (before[0] == 0) {
+        result = fastForwardPull(git, repository, branch, strategy, upstream, headBefore, before);
+      } else if (strategy == PullStrategy.REBASE) {
+        result = rebasePull(git, repository, branch, upstream, headBefore, before);
+      } else {
+        result = mergePull(git, repository, branch, remote, upstream, headBefore, before);
+      }
+      invalidateGitStatus();
+      return result;
+    } catch (BuilderApiException e) {
+      throw e;
+    } catch (IOException | GitAPIException e) {
+      throw vcsError(e);
+    }
+  }
+
+  /**
+   * Rebase the workspace branch onto {@code origin/<branch>} after refreshing the remote-tracking
+   * ref. A conflicted rebase is aborted: the head and working tree stay as they were and the result
+   * carries a {@code message}. Never forces.
+   */
+  public RebaseResult rebase() {
+    try (Repository repository = openConfiguredRepository();
+            Git git = new Git(repository)) {
+      String branch = requireBranch(repository);
+      String remote = requireRemote(repository);
+      ObjectId upstream = fetchUpstream(git, repository, remote, branch);
+      String headBefore = headOf(repository);
+      int[] before = aheadBehind(repository, "HEAD", upstream);
+      org.eclipse.jgit.api.RebaseResult rebase = git.rebase().setUpstream(upstream).call();
+      org.eclipse.jgit.api.RebaseResult.Status status = rebase.getStatus();
+      RebaseResult result;
+      if (status == org.eclipse.jgit.api.RebaseResult.Status.OK
+              || status == org.eclipse.jgit.api.RebaseResult.Status.FAST_FORWARD) {
+        int[] ab = aheadBehind(repository, "HEAD", upstream);
+        result = new RebaseResult(branch, true, headBefore, headOf(repository), ab[0], ab[1],
+                null);
+      } else if (status == org.eclipse.jgit.api.RebaseResult.Status.UP_TO_DATE) {
+        result = new RebaseResult(branch, false, null, null, before[0], before[1], null);
+      } else {
+        List<String> conflicts = conflictingPaths(git, rebase);
+        abortRebase(git);
+        result = new RebaseResult(branch, false, null, null, before[0], before[1],
+                conflictMessage("rebase", status, conflicts));
+      }
+      invalidateGitStatus();
+      return result;
+    } catch (BuilderApiException e) {
+      throw e;
+    } catch (IOException | GitAPIException e) {
+      throw vcsError(e);
+    }
+  }
+
+  private PullResult fastForwardPull(Git git, Repository repository, String branch,
+          PullStrategy strategy, ObjectId upstream, String headBefore, int[] before)
+          throws GitAPIException, IOException {
+    MergeResult merge = git.merge().include(upstream)
+            .setFastForward(MergeCommand.FastForwardMode.FF_ONLY)
+            .call();
+    if (merge.getMergeStatus().isSuccessful()) {
+      return movedPullResult(repository, branch, strategy, upstream, headBefore);
+    }
+    return new PullResult(branch, strategy.name(), false, null, null, before[0], before[1],
+            "fast-forward refused: " + merge.getMergeStatus());
+  }
+
+  private PullResult rebasePull(Git git, Repository repository, String branch, ObjectId upstream,
+          String headBefore, int[] before) throws GitAPIException, IOException {
+    org.eclipse.jgit.api.RebaseResult rebase = git.rebase().setUpstream(upstream).call();
+    org.eclipse.jgit.api.RebaseResult.Status status = rebase.getStatus();
+    if (status == org.eclipse.jgit.api.RebaseResult.Status.OK
+            || status == org.eclipse.jgit.api.RebaseResult.Status.FAST_FORWARD) {
+      return movedPullResult(repository, branch, PullStrategy.REBASE, upstream, headBefore);
+    }
+    List<String> conflicts = conflictingPaths(git, rebase);
+    abortRebase(git);
+    return new PullResult(branch, PullStrategy.REBASE.name(), false, null, null,
+            before[0], before[1],
+            conflictMessage("rebase", status, conflicts));
+  }
+
+  private PullResult mergePull(Git git, Repository repository, String branch, String remote,
+          ObjectId upstream, String headBefore, int[] before) throws GitAPIException, IOException {
+    MergeResult merge = git.merge().include(upstream)
+            .setMessage("Merge " + remote + "/" + branch + " into " + branch)
+            .call();
+    if (merge.getMergeStatus().isSuccessful()) {
+      return movedPullResult(repository, branch, PullStrategy.MERGE, upstream, headBefore);
+    }
+    // Git-native behaviour: the merge stays in progress with conflict markers for the user to
+    // resolve and commit — nothing is reset and nothing is forced.
+    Map<String, int[][]> conflicts = merge.getConflicts();
+    String detail = conflicts == null || conflicts.isEmpty()
+            ? ""
+            : " in: " + String.join(", ", conflicts.keySet());
+    return new PullResult(branch, PullStrategy.MERGE.name(), false, null, null,
+            before[0], before[1], "merge conflict" + detail + " — resolve and commit");
+  }
+
+  private PullResult movedPullResult(Repository repository, String branch, PullStrategy strategy,
+          ObjectId upstream, String headBefore) throws IOException {
+    int[] ab = aheadBehind(repository, "HEAD", upstream);
+    return new PullResult(branch, strategy.name(), true, headBefore, headOf(repository),
+            ab[0], ab[1], null);
+  }
+
+  private static void abortRebase(Git git) {
+    try {
+      git.rebase().setOperation(RebaseCommand.Operation.ABORT).call();
+    } catch (GitAPIException e) {
+      log.warn("[DSL vcs] failed to abort rebase: {}", e.getMessage());
+    }
+  }
+
+  private static String conflictMessage(String operation,
+          org.eclipse.jgit.api.RebaseResult.Status status, List<String> conflicts) {
+    if (conflicts != null && !conflicts.isEmpty()) {
+      return operation + " stopped on conflict in: " + String.join(", ", conflicts)
+              + " — local changes preserved";
+    }
+    return operation + " stopped (" + status + ") — local changes preserved";
+  }
+
+  private static List<String> conflictingPaths(Git git,
+          org.eclipse.jgit.api.RebaseResult rebase) {
+    List<String> conflicts = rebase.getConflicts();
+    if (conflicts != null && !conflicts.isEmpty()) {
+      return conflicts;
+    }
+    try {
+      return List.copyOf(git.status().call().getConflicting());
+    } catch (GitAPIException e) {
+      return List.of();
+    }
+  }
+
+  private ObjectId fetchUpstream(Git git, Repository repository, String remote, String branch)
+          throws GitAPIException, IOException {
+    git.fetch().setRemote(remote).call();
+    ObjectId upstream = repository.resolve(upstreamRef(remote, branch));
+    if (upstream == null) {
+      throw new BuilderApiException(HttpStatus.CONFLICT, "VCS_ERROR",
+              "no upstream ref " + remote + "/" + branch + " after fetch");
+    }
+    return upstream;
+  }
+
+  private static String upstreamRef(String remote, String branch) {
+    return "refs/remotes/" + remote + "/" + branch;
+  }
+
+  private static int[] aheadBehind(Repository repository, String fromRef, ObjectId to)
+          throws IOException {
+    // RevWalkUtils.count(walk, a, b) counts commits reachable from a but not b.
+    try (RevWalk walk = new RevWalk(repository)) {
+      RevCommit from = walk.parseCommit(repository.resolve(fromRef));
+      RevCommit upstream = walk.parseCommit(to);
+      return new int[]{RevWalkUtils.count(walk, from, upstream),
+          RevWalkUtils.count(walk, upstream, from)};
+    }
+  }
+
+  private static String headOf(Repository repository) throws IOException {
+    ObjectId head = repository.resolve("HEAD");
+    return head != null ? head.getName() : null;
+  }
+
+  private Repository openConfiguredRepository() {
+    if (!gitEnabled()) {
+      throw new BuilderApiException(HttpStatus.CONFLICT, "GIT_NOT_CONFIGURED",
+              "git is disabled in builder configuration");
+    }
+    if (findRepoRoot() == null) {
+      throw new BuilderApiException(HttpStatus.CONFLICT, "GIT_NOT_CONFIGURED",
+              "no git repository found under workspace");
+    }
+    try {
+      return openRepository();
+    } catch (IOException e) {
+      throw vcsError(e);
+    }
+  }
+
+  private static String requireBranch(Repository repository) throws IOException {
+    String branch = repository.getBranch();
+    if (branch == null || branch.isBlank()) {
+      throw new BuilderApiException(HttpStatus.CONFLICT, "VCS_ERROR",
+              "workspace repository is on a detached HEAD");
+    }
+    return branch;
+  }
+
+  private String requireRemote(Repository repository) {
+    String remote = properties.git() != null ? properties.git().remote() : null;
+    if (remote == null || remote.isBlank()
+            || repository.getConfig().getString("remote", remote, "url") == null) {
+      throw new BuilderApiException(HttpStatus.CONFLICT, "GIT_NOT_CONFIGURED",
+              "remote '" + remote + "' is not configured in the workspace repository");
+    }
+    return remote;
+  }
+
+  private static BuilderApiException vcsError(Exception e) {
+    return new BuilderApiException(HttpStatus.INTERNAL_SERVER_ERROR, "VCS_ERROR",
+            e.getMessage());
   }
 
   // --- path / repo helpers ---

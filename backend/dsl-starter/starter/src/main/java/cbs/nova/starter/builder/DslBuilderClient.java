@@ -14,7 +14,10 @@ import cbs.nova.starter.model.VcsModels.CommitRequest;
 import cbs.nova.starter.model.VcsModels.CommitResult;
 import cbs.nova.starter.model.VcsModels.DiscardRequest;
 import cbs.nova.starter.model.VcsModels.DiscardResult;
+import cbs.nova.starter.model.VcsModels.FetchResult;
 import cbs.nova.starter.model.VcsModels.LogEntry;
+import cbs.nova.starter.model.VcsModels.PullResult;
+import cbs.nova.starter.model.VcsModels.RebaseResult;
 import cbs.nova.starter.model.VcsModels.WorkspaceInfo;
 import cbs.nova.dsl.vcs.RepoStatus;
 import io.github.resilience4j.bulkhead.Bulkhead;
@@ -116,6 +119,34 @@ public class DslBuilderClient {
 
   public DiscardResult discard(DiscardRequest request) {
     DiscardResult result = execute(() -> doDiscard(request));
+    cache.invalidateFiles();
+    cache.invalidateVcsStatus();
+    cache.invalidateVcsLog();
+    return result;
+  }
+
+  /**
+   * Fetch the builder workspace's configured remote. Read-only for the work tree, so only the
+   * cached VCS status is invalidated.
+   */
+  public FetchResult vcsFetch() {
+    FetchResult result = execute(this::doVcsFetch);
+    cache.invalidateVcsStatus();
+    return result;
+  }
+
+  /** Pull the builder workspace per its configured pull strategy. */
+  public PullResult vcsPull() {
+    PullResult result = execute(this::doVcsPull);
+    cache.invalidateFiles();
+    cache.invalidateVcsStatus();
+    cache.invalidateVcsLog();
+    return result;
+  }
+
+  /** Rebase the builder workspace branch onto its upstream. */
+  public RebaseResult vcsRebase() {
+    RebaseResult result = execute(this::doVcsRebase);
     cache.invalidateFiles();
     cache.invalidateVcsStatus();
     cache.invalidateVcsLog();
@@ -226,6 +257,18 @@ public class DslBuilderClient {
   private DiscardResult doDiscard(DiscardRequest request) {
     return restClient.post().uri("/api/dsl/vcs/discard").body(request).retrieve()
             .body(DiscardResult.class);
+  }
+
+  private FetchResult doVcsFetch() {
+    return restClient.post().uri("/api/dsl/vcs/fetch").retrieve().body(FetchResult.class);
+  }
+
+  private PullResult doVcsPull() {
+    return restClient.post().uri("/api/dsl/vcs/pull").retrieve().body(PullResult.class);
+  }
+
+  private RebaseResult doVcsRebase() {
+    return restClient.post().uri("/api/dsl/vcs/rebase").retrieve().body(RebaseResult.class);
   }
 
   private List<LogEntry> doLog(String path, int limit) {

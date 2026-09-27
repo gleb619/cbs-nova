@@ -60,6 +60,7 @@ cbs:
         sub-path: ${CBS_DSL_BUILDER_GIT_SUB_PATH:}
         branch: ${CBS_DSL_BUILDER_GIT_BRANCH:}
         status-cache-ttl-seconds: 5
+        pull-strategy: ${CBS_DSL_BUILDER_GIT_PULL_STRATEGY:REBASE}
       file-buffer:
         max-entries: 1000
         expire-after-write-seconds: 3600

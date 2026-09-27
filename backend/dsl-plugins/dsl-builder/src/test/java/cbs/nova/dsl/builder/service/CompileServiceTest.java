@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import cbs.nova.dsl.builder.config.DslBuilderProperties;
+import cbs.nova.dsl.builder.config.DslBuilderProperties.PullStrategy;
 import cbs.nova.dsl.builder.model.CompileModels.CompileRequest;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -158,7 +159,8 @@ class CompileServiceTest {
   void compilesFromConfiguredGitRepository() throws Exception {
     var origin = createRepositoryWithCommit();
     var git = new DslBuilderProperties.Git(
-            true, null, null, origin.toString(), null, "main", 5, false, "origin");
+            true, null, null, origin.toString(), null, "main", 5, false, "origin",
+            PullStrategy.REBASE);
     var request = new CompileRequest("v1", null, null, null, null, null, null);
 
     var result = service(properties(git)).compile(request);

@@ -137,4 +137,47 @@ public final class VcsModels {
           String message) {
 
   }
+
+  /** Result of {@code POST /api/dsl/vcs/fetch}: remote-tracking refs refreshed for the branch. */
+  public record FetchResult(
+          String branch,
+          boolean fetched,
+          @JsonInclude(JsonInclude.Include.NON_NULL) String remoteHead,
+          int ahead,
+          int behind) {
+
+  }
+
+  /**
+   * Result of {@code POST /api/dsl/vcs/pull}. {@code pulled} is true only when HEAD moved;
+   * {@code updatedFrom}/{@code updatedTo} carry the head commit ids around the move and are null
+   * when nothing changed. {@code message} describes a conflict/abort and is null on clean success.
+   */
+  public record PullResult(
+          String branch,
+          String strategy,
+          boolean pulled,
+          @JsonInclude(JsonInclude.Include.NON_NULL) String updatedFrom,
+          @JsonInclude(JsonInclude.Include.NON_NULL) String updatedTo,
+          int ahead,
+          int behind,
+          @JsonInclude(JsonInclude.Include.NON_NULL) String message) {
+
+  }
+
+  /**
+   * Result of {@code POST /api/dsl/vcs/rebase}: the workspace branch rebased onto
+   * {@code origin/<branch>}. {@code rebased} is false when already up to date or when the rebase
+   * aborted on conflict ({@code message} explains); the head is never moved on abort.
+   */
+  public record RebaseResult(
+          String branch,
+          boolean rebased,
+          @JsonInclude(JsonInclude.Include.NON_NULL) String updatedFrom,
+          @JsonInclude(JsonInclude.Include.NON_NULL) String updatedTo,
+          int ahead,
+          int behind,
+          @JsonInclude(JsonInclude.Include.NON_NULL) String message) {
+
+  }
 }

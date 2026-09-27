@@ -33,14 +33,14 @@ public class GitStatusService {
 
   @Autowired
   @Deprecated(forRemoval = true)
-  //TODO: repalce ctor with a lombok's one
+  // TODO: repalce ctor with a lombok's one
   public GitStatusService(DslBuilderProperties properties) {
     this(properties, Clock.systemUTC());
   }
 
   // Test seam: deterministic clock for TTL cache assertions. Behavior-preserving.
   @Deprecated(forRemoval = true)
-  //TODO: repalce ctor with a lombok's one
+  // TODO: repalce ctor with a lombok's one
   GitStatusService(DslBuilderProperties properties, Clock clock) {
     this.properties = properties;
     this.clock = clock;

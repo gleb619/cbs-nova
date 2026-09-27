@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import cbs.nova.dsl.builder.config.BuilderServiceConfiguration;
 import cbs.nova.dsl.builder.config.DslBuilderProperties;
+import cbs.nova.dsl.builder.config.DslBuilderProperties.PullStrategy;
 import cbs.nova.dsl.builder.repository.FileRepository;
 import cbs.nova.dsl.builder.service.FileService;
 import cbs.nova.dsl.builder.service.GitService;
@@ -24,6 +25,7 @@ import java.util.List;
 import java.util.stream.Stream;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.revwalk.RevCommit;
+import org.eclipse.jgit.transport.URIish;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -86,7 +88,7 @@ class VcsControllerTest {
               null,
               null,
               new DslBuilderProperties.Git(true, null, null, null, null,
-                      null, 0, true, "origin"),
+                      null, 0, true, "origin", PullStrategy.REBASE),
               null,
               new DslBuilderProperties.Bundles(1, 200),
               null,
@@ -349,5 +351,116 @@ class VcsControllerTest {
     mockMvc.perform(get("/api/dsl/vcs/branch"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.branch").doesNotExist());
+  }
+
+  @Test
+  void fetchEndpointReturns409WhenNoRemoteConfigured() throws Exception {
+    initRepositoryWithInitialCommit();
+
+    mockMvc.perform(post("/api/dsl/vcs/fetch"))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.code").value("GIT_NOT_CONFIGURED"));
+  }
+
+  @Test
+  void pullEndpointFastForwardsAgainstConfiguredRemote() throws Exception {
+    initRepositoryWithInitialCommit();
+    Path bare = initBareOriginWithCommitAhead();
+    addOriginRemote(bare);
+
+    mockMvc.perform(post("/api/dsl/vcs/pull"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.branch").value("main"))
+            .andExpect(jsonPath("$.strategy").value("REBASE"))
+            .andExpect(jsonPath("$.pulled").value(true))
+            .andExpect(jsonPath("$.behind").value(0));
+
+    try (Git git = Git.open(WORKSPACE.toFile())) {
+      assertThat(git.log().call().iterator().next().getShortMessage()).isEqualTo("origin ahead");
+    }
+  }
+
+  @Test
+  void pullEndpointReturns409WhenNoRemoteConfigured() throws Exception {
+    initRepositoryWithInitialCommit();
+
+    mockMvc.perform(post("/api/dsl/vcs/pull"))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.code").value("GIT_NOT_CONFIGURED"));
+  }
+
+  @Test
+  void rebaseEndpointReportsUpToDate() throws Exception {
+    initRepositoryWithInitialCommit();
+    Path bare = initBareOrigin();
+    addOriginRemote(bare);
+
+    mockMvc.perform(post("/api/dsl/vcs/rebase"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.branch").value("main"))
+            .andExpect(jsonPath("$.rebased").value(false))
+            .andExpect(jsonPath("$.message").doesNotExist());
+  }
+
+  @Test
+  void rebaseEndpointReturns409WhenNoRemoteConfigured() throws Exception {
+    initRepositoryWithInitialCommit();
+
+    mockMvc.perform(post("/api/dsl/vcs/rebase"))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.code").value("GIT_NOT_CONFIGURED"));
+  }
+
+  private Path initBareOrigin() throws IOException {
+    try {
+      Path normal = Files.createTempDirectory("dsl-builder-vcs-origin-");
+      Files.createDirectories(normal.resolve("dsl"));
+      try (Git git = Git.init().setDirectory(normal.toFile()).setInitialBranch("main").call()) {
+        Files.writeString(normal.resolve("README.md"), "v1");
+        Files.writeString(normal.resolve("dsl/LoanDsl.java"), "class LoanDsl {}");
+        git.add().addFilepattern(".").call();
+        git.commit().setMessage("initial").setAuthor("a", "a@example.com")
+                .setCommitter("a", "a@example.com").call();
+      }
+      Path bare = Files.createTempDirectory("dsl-builder-vcs-origin-bare-");
+      Git.cloneRepository().setURI(normal.toUri().toString())
+              .setDirectory(bare.toFile()).setBare(true).setBranch("main").call();
+      return bare;
+    } catch (IOException e) {
+      throw e;
+    } catch (Exception e) {
+      throw new IOException("failed to create bare origin", e);
+    }
+  }
+
+  private Path initBareOriginWithCommitAhead() throws IOException {
+    Path bare = initBareOrigin();
+    try {
+      Path clone = Files.createTempDirectory("dsl-builder-vcs-origin-clone-");
+      Git.cloneRepository().setURI(bare.toUri().toString())
+              .setDirectory(clone.toFile()).setBranch("main").call();
+      Files.writeString(clone.resolve("upstream.txt"), "upstream");
+      try (Git git = Git.open(clone.toFile())) {
+        git.add().addFilepattern(".").call();
+        git.commit().setMessage("origin ahead").setAuthor("a", "a@example.com")
+                .setCommitter("a", "a@example.com").call();
+        git.push().call();
+      }
+      return bare;
+    } catch (IOException e) {
+      throw e;
+    } catch (Exception e) {
+      throw new IOException("failed to advance bare origin", e);
+    }
+  }
+
+  private void addOriginRemote(Path bare) throws IOException {
+    try (Git git = Git.open(WORKSPACE.toFile())) {
+      git.remoteAdd().setName("origin").setUri(new URIish(bare.toUri().toString())).call();
+    } catch (IOException e) {
+      throw e;
+    } catch (Exception e) {
+      throw new IOException("failed to add origin remote", e);
+    }
   }
 }

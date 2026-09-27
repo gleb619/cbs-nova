@@ -98,6 +98,20 @@ describe('CbsDrawer', () => {
     expect(aside.find('p').text()).toBe('drawer body')
   })
 
+  it('renders the actions slot left of the close button', () => {
+    const wrapper = mountDrawer(
+      { open: true },
+      { actions: () => h('button', { type: 'button', 'data-testid': 'slot-action' }, 'Act') },
+    )
+
+    const aside = wrapper.get('[role="dialog"]')
+    const buttons = aside.findAll('button')
+    expect(buttons.map((b) => b.attributes('data-testid'))).toEqual([
+      'slot-action',
+      'drawer-close-button',
+    ])
+  })
+
   describe('useModalDialog integration', () => {
     let wrapper: ReturnType<typeof mountDrawer> | null = null
 

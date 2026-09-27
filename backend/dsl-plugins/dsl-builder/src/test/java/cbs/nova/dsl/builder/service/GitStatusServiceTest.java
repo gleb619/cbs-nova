@@ -3,6 +3,7 @@ package cbs.nova.dsl.builder.service;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.builder.config.DslBuilderProperties;
+import cbs.nova.dsl.builder.config.DslBuilderProperties.PullStrategy;
 import cbs.nova.dsl.vcs.ChangeType;
 import cbs.nova.dsl.vcs.RepoStatus;
 import java.nio.file.Files;
@@ -365,7 +366,7 @@ class GitStatusServiceTest {
   private static DslBuilderProperties.Git git(boolean enabled, String repositoryDir,
           int ttlSeconds) {
     return new DslBuilderProperties.Git(enabled, repositoryDir, null, null, null, null, ttlSeconds,
-            false, "origin");
+            false, "origin", PullStrategy.REBASE);
   }
 
   private static MutableClock mutableClock() {

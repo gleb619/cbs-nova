@@ -1,8 +1,13 @@
 package cbs.nova.starter.config.router;
 
 import cbs.nova.starter.controller.DslDraftHandler;
+import cbs.nova.starter.controller.DslDraftVcsHandler;
 import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.starter.model.PageResponse;
+import cbs.nova.starter.model.VcsModels.CommitResult;
+import cbs.nova.starter.model.VcsModels.FetchResult;
+import cbs.nova.starter.model.VcsModels.PullResult;
+import cbs.nova.starter.model.VcsModels.RebaseResult;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -92,10 +97,37 @@ public class DslDraftRouterConfiguration {
           "DSL Admin"}, responses = {
               @ApiResponse(responseCode = "200", description = "Draft payload returned"),
               @ApiResponse(responseCode = "404", description = "Definition has no source path", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+          })),
+      @RouterOperation(path = "/api/dsl/drafts/fetch", beanClass = DslDraftVcsHandler.class, beanMethod = "fetch", method = RequestMethod.POST, operation = @Operation(operationId = "fetchDraftsRepo", summary = "Fetch the configured git remote for the drafts workspace branch", tags = {
+          "DSL Admin"}, responses = {
+              @ApiResponse(responseCode = "200", description = "Fetch result with ahead/behind counts", content = @Content(mediaType = "application/json", schema = @Schema(implementation = FetchResult.class))),
+              @ApiResponse(responseCode = "409", description = "Builder not available, source directory not configured, or git remote missing", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+          })),
+      @RouterOperation(path = "/api/dsl/drafts/pull", beanClass = DslDraftVcsHandler.class, beanMethod = "pull", method = RequestMethod.POST, operation = @Operation(operationId = "pullDraftsRepo", summary = "Pull the drafts workspace branch per the builder pull strategy", tags = {
+          "DSL Admin"}, responses = {
+              @ApiResponse(responseCode = "200", description = "Pull result; message carries conflict/abort details", content = @Content(mediaType = "application/json", schema = @Schema(implementation = PullResult.class))),
+              @ApiResponse(responseCode = "409", description = "Builder not available, source directory not configured, or git remote missing", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+          })),
+      @RouterOperation(path = "/api/dsl/drafts/rebase", beanClass = DslDraftVcsHandler.class, beanMethod = "rebase", method = RequestMethod.POST, operation = @Operation(operationId = "rebaseDraftsRepo", summary = "Rebase the drafts workspace branch onto its upstream", tags = {
+          "DSL Admin"}, responses = {
+              @ApiResponse(responseCode = "200", description = "Rebase result; message carries conflict/abort details", content = @Content(mediaType = "application/json", schema = @Schema(implementation = RebaseResult.class))),
+              @ApiResponse(responseCode = "409", description = "Builder not available, source directory not configured, or git remote missing", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+          })),
+      @RouterOperation(path = "/api/dsl/drafts/commit", beanClass = DslDraftVcsHandler.class, beanMethod = "commit", method = RequestMethod.POST, operation = @Operation(operationId = "commitDrafts", summary = "Commit the listed definitions' source paths as one atomic commit", tags = {
+          "DSL Admin"}, responses = {
+              @ApiResponse(responseCode = "200", description = "Batch commit result", content = @Content(mediaType = "application/json", schema = @Schema(implementation = CommitResult.class))),
+              @ApiResponse(responseCode = "400", description = "Invalid request", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+              @ApiResponse(responseCode = "404", description = "A listed definition has no source path", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+              @ApiResponse(responseCode = "409", description = "Builder not available, source directory not configured, or nothing to commit", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
           }))
   })
-  RouterFunction<ServerResponse> dslDraftRouter(DslDraftHandler draftHandler) {
+  RouterFunction<ServerResponse> dslDraftRouter(DslDraftHandler draftHandler,
+          DslDraftVcsHandler vcsHandler) {
     return RouterFunctions.route()
+            .POST("/api/dsl/drafts/fetch", vcsHandler::fetch)
+            .POST("/api/dsl/drafts/pull", vcsHandler::pull)
+            .POST("/api/dsl/drafts/rebase", vcsHandler::rebase)
+            .POST("/api/dsl/drafts/commit", vcsHandler::commit)
             .GET("/api/dsl/drafts/metadata", draftHandler::metadata)
             .GET("/api/dsl/drafts", draftHandler::list)
             .GET("/api/dsl/drafts/{name}", draftHandler::read)

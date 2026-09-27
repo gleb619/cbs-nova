@@ -278,6 +278,10 @@ The BFF exposes all starter routes under `/api/v1/dsl/...`, as explicit Nitro ro
 | POST | `/api/dsl/drafts/{name}/history/{ts}/restore` | `restore` | Stages the commit's content as a `MODIFIED` draft, with no reload. Returns `status: "Draft"`. Audit `DRAFT_RESTORE`. |
 | GET | `/api/dsl/definitions/export[?include=drafts]` | `exportBundle` | `DefinitionBundle` of every definition's source file: content at `HEAD`, or the working tree with `include=drafts` |
 | POST | `/api/dsl/definitions/import[?dryRun=true]` | `importBundle` | Digest-verified, at most 200 definitions. `dryRun` compares each entry with the current file. Otherwise it writes each entry to its definition's source file (unknown names are `skipped`), reloads, and commits all written files as one `Import bundle` commit. |
+| POST | `/api/dsl/drafts/fetch` | `DslDraftVcsHandler.fetch` | Proxies to builder `POST /api/dsl/vcs/fetch`: fetches `origin` and reports `FetchResult {branch, fetched, remoteHead?, ahead, behind}`. Flushes pending writes first. 409 when `cbs.dsl.source-dir` is unset/missing or the git remote/repo is absent; 409 `GIT_REQUIRES_BUILDER` when the builder is unreachable. Audit `DRAFT_VCS_FETCH`, event `DraftsRepoFetched`. |
+| POST | `/api/dsl/drafts/pull` | `pull` | Proxies to builder `POST /api/dsl/vcs/pull` (§5.3). Fast-forwards when strictly behind, rebases (default) or merges per `cbs.dsl.builder.git.pull-strategy` when diverged; a conflict never destroys local commits (§5.3). Audit `DRAFT_VCS_PULL`, event `DraftsRepoPulled`. |
+| POST | `/api/dsl/drafts/rebase` | `rebase` | Proxies to builder `POST /api/dsl/vcs/rebase`: fetch first, rebase the branch onto its upstream; fast-forwards when strictly behind; a conflict aborts the rebase and leaves the working tree untouched. Audit `DRAFT_VCS_REBASE`, event `DraftsRepoRebased`. |
+| POST | `/api/dsl/drafts/commit` | `commit` | Batch commit. Body `BatchCommitRequest {message, names}`. Every listed definition name is resolved to its source path first — 404 when any name is unknown, before anything is touched — then pending writes are flushed and all paths are committed as one atomic commit (§5.3). 400 on blank `message` or empty `names`. Audit `DRAFTS_COMMIT`, event `DraftsCommitted`. |
 
 `{ts}` is always a git commit id.
 
@@ -332,13 +336,18 @@ source directory in `SHARED` mode, `cbs.dsl.builder.workspace-dir` in `WORKTREE`
 | GET | `/api/dsl/workspace` | – | `{mode, workTree}` — workspace mode (`SHARED`/`WORKTREE`) and the absolute directory backing file I/O. Consumed by the starter draft metadata. |
 | GET | `/api/dsl/vcs/branch` | – | `{branch}` of the workspace repo |
 | POST | `/api/dsl/vcs/commit` | `CommitRequest {paths, message, authorName, authorEmail}` | `CommitResult {commitId, paths, timestampMillis, pushed, pushError}`. `pushed` is `null` when push-on-commit is off. 409 `NOTHING_TO_COMMIT` if any listed path is clean. |
+| POST | `/api/dsl/vcs/fetch` | – | `FetchResult {branch, fetched, remoteHead?, ahead, behind}`: fetches `origin` and reports the branch's ahead/behind against its upstream. 409 `VCS_ERROR` when the branch has no upstream. |
+| POST | `/api/dsl/vcs/pull` | – | `PullResult {branch, strategy, pulled, updatedFrom?, updatedTo?, ahead, behind, message?}`. No-op when up to date; fast-forward only (never a merge) when strictly behind; when diverged, rebase onto upstream (default) or merge per `cbs.dsl.builder.git.pull-strategy`. A rebase conflict aborts the rebase so local commits and the tree survive (`message` explains); a merge conflict leaves the repo `MERGING` for the caller to resolve. |
+| POST | `/api/dsl/vcs/rebase` | – | `RebaseResult {branch, rebased, updatedFrom?, updatedTo?, ahead, behind, message?}`. Fetch first, then rebase onto upstream; fast-forwards when strictly behind; no-op when up to date; a conflict aborts the rebase, leaving the working tree untouched. |
 | POST | `/api/dsl/vcs/discard` | `DiscardRequest {paths}` | `DiscardResult {discarded}`. Clean paths are skipped. |
 | GET | `/api/dsl/vcs/log?path&limit` | `limit` defaults to 20, clamped to 1..200 | `LogEntry[] {commitId, timestampMillis, author, message}`, newest first |
 | GET | `/api/dsl/vcs/show?path&commit` | – | `{path, commitId, content}`, or 404 |
 
-Commit and discard flush pending writes first. When the workspace is a subdirectory of the repo,
+Commit, discard, fetch, pull and rebase flush pending writes first. When the workspace is a subdirectory of the repo,
 paths are translated to and from repo-relative form. A blank path or one containing `..` returns
-400 `INVALID_PATH`. Git disabled or no repo returns 409 `GIT_NOT_CONFIGURED`.
+400 `INVALID_PATH`. Git disabled or no repo returns 409 `GIT_NOT_CONFIGURED`. None of fetch, pull or
+rebase ever pushes; pull and rebase never force and never drop local commits — a conflict either aborts
+the rebase cleanly or leaves the repo `MERGING`.
 
 dsl-builder also serves `FileController` (`/api/dsl/files/**`) and `CompileController`
 (`/api/dsl/compile`, `/api/dsl/compile/{id}/download`). Errors are
@@ -439,6 +448,7 @@ All keys use the `cbs.dsl.` prefix.
 | `cbs.dsl.builder.git.{enabled,repository-dir,worktrees-dir,repo-url,sub-path,branch}` | `true`, … | dsl-builder | Worktree provisioning |
 | `cbs.dsl.builder.git.status-cache-ttl-seconds` | `5` | dsl-builder | Status cache TTL |
 | `cbs.dsl.builder.git.push-on-commit` / `remote` | `false` / `origin` | dsl-builder | Push after each publish commit |
+| `cbs.dsl.builder.git.pull-strategy` | `REBASE` | dsl-builder | Divergence handling for `POST /api/dsl/vcs/pull`: `REBASE` (default; conflict aborts the rebase, tree untouched) or `MERGE` (creates a merge commit; conflict leaves the repo `MERGING`) |
 | `cbs.dsl.builder.files.{flush-interval-seconds,max-queue-size,read-bulkhead-permits,write-bulkhead-permits}` | `5`, `100`, `32`, `8` | dsl-builder | Write buffer |
 | `cbs.dsl.builder.bundles.{bundle-format-version,bundle-max-definitions}` | `1`, `200` | dsl-builder | Bundle format and size limit |
 

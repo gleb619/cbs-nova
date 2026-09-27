@@ -5,7 +5,10 @@ import cbs.nova.dsl.builder.model.VcsModels.CommitRequest;
 import cbs.nova.dsl.builder.model.VcsModels.CommitResult;
 import cbs.nova.dsl.builder.model.VcsModels.DiscardRequest;
 import cbs.nova.dsl.builder.model.VcsModels.DiscardResult;
+import cbs.nova.dsl.builder.model.VcsModels.FetchResult;
 import cbs.nova.dsl.builder.model.VcsModels.LogEntry;
+import cbs.nova.dsl.builder.model.VcsModels.PullResult;
+import cbs.nova.dsl.builder.model.VcsModels.RebaseResult;
 import cbs.nova.dsl.builder.service.FileService;
 import cbs.nova.dsl.builder.service.GitStatusService;
 import cbs.nova.dsl.vcs.RepoStatus;
@@ -116,5 +119,29 @@ public class VcsController {
 
   /** Inline response shape for {@code GET /api/dsl/vcs/branch}. */
   public record BranchResponse(String branch) {
+  }
+
+  /** Fetch the configured remote for the active branch (I5: flush pending writes first). */
+  @PostMapping("/fetch")
+  public FetchResult fetch() {
+    flushPendingDrafts();
+    return workspaceGitService.fetch();
+  }
+
+  /**
+   * Pull {@code origin/<branch>} per {@code cbs.dsl.builder.git.pull-strategy} (I5: flush pending
+   * writes first so the work tree is current before git touches it).
+   */
+  @PostMapping("/pull")
+  public PullResult pull() {
+    flushPendingDrafts();
+    return workspaceGitService.pull();
+  }
+
+  /** Rebase the workspace branch onto {@code origin/<branch>} (I5: flush pending writes first). */
+  @PostMapping("/rebase")
+  public RebaseResult rebase() {
+    flushPendingDrafts();
+    return workspaceGitService.rebase();
   }
 }

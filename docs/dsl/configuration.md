@@ -235,6 +235,16 @@ hot-reload toggles.
 | `cbs.dsl.reload.enabled` | `boolean` | `false` | Whether hot reload of DSL definitions is enabled. |
 | `cbs.dsl.auth.api-key` | `String` | — (unset; no initializer) | API key for authenticated DSL endpoints (e.g. reload). |
 
+### `dsl.builder.git`
+
+Class: `DslBuilderProperties.Git` (record). Git wiring of the dsl-builder workspace repo (worktree
+provisioning, push-on-commit, status cache). See `docs/backend/drafts.md` §5.3 for the VCS endpoints
+these settings back.
+
+| Key | Type | Default | Effect |
+|-----|------|---------|--------|
+| `cbs.dsl.builder.git.pull-strategy` | `PullStrategy` | `REBASE` | How `POST /api/dsl/vcs/pull` handles divergence from upstream: `REBASE` (default; replay local commits onto upstream, abort cleanly on conflict leaving the tree untouched) or `MERGE` (create a merge commit; a conflict leaves the repo `MERGING`). |
+
 ---
 
 ## `cbs.dsl.manifest`

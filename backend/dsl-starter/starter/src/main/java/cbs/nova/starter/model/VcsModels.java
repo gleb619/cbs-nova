@@ -164,6 +164,52 @@ public final class VcsModels {
 
   }
 
+  /** Mirror of the builder {@code FetchResult} from {@code POST /api/dsl/vcs/fetch}. */
+  public record FetchResult(
+          String branch,
+          boolean fetched,
+          @JsonInclude(JsonInclude.Include.NON_NULL) String remoteHead,
+          int ahead,
+          int behind) {
+
+  }
+
+  /** Mirror of the builder {@code PullResult} from {@code POST /api/dsl/vcs/pull}. */
+  public record PullResult(
+          String branch,
+          String strategy,
+          boolean pulled,
+          @JsonInclude(JsonInclude.Include.NON_NULL) String updatedFrom,
+          @JsonInclude(JsonInclude.Include.NON_NULL) String updatedTo,
+          int ahead,
+          int behind,
+          @JsonInclude(JsonInclude.Include.NON_NULL) String message) {
+
+  }
+
+  /** Mirror of the builder {@code RebaseResult} from {@code POST /api/dsl/vcs/rebase}. */
+  public record RebaseResult(
+          String branch,
+          boolean rebased,
+          @JsonInclude(JsonInclude.Include.NON_NULL) String updatedFrom,
+          @JsonInclude(JsonInclude.Include.NON_NULL) String updatedTo,
+          int ahead,
+          int behind,
+          @JsonInclude(JsonInclude.Include.NON_NULL) String message) {
+
+  }
+
+  /**
+   * Batch staging-area commit ({@code POST /api/dsl/drafts/commit}): commits every listed
+   * definition's source path as one atomic commit per invariant I2 — all listed paths are committed
+   * or none, and unrelated staged files stay staged.
+   */
+  public record BatchCommitRequest(
+          @JsonInclude(JsonInclude.Include.NON_NULL) String message,
+          List<String> names) {
+
+  }
+
   /**
    * Snapshot of the current drafts workspace setup. Returned by
    * {@code GET /api/dsl/drafts/metadata}.
