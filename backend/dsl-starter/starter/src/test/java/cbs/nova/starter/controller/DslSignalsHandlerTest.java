@@ -84,6 +84,24 @@ class DslSignalsHandlerTest {
   }
 
   @Test
+  void sendSignalUnknownSignalReturns400NamingSignalAndRunId() throws Exception {
+    String json = body();
+    when(objectMapper.readValue(eq(json), eq(DslSignalsHandler.SignalRequest.class)))
+            .thenReturn(new DslSignalsHandler.SignalRequest(SIGNAL_NAME, PAYLOAD));
+    when(signalService.sendSignal(RUN_ID, SIGNAL_NAME, PAYLOAD))
+            .thenReturn(new DslSignalService.SignalResult(
+                    DslSignalService.Outcome.UNKNOWN_SIGNAL, null, "RUNNING"));
+
+    ServerResponse response = handler.sendSignal(postRequest(RUN_ID, json));
+
+    assertThat(response.statusCode().value()).isEqualTo(400);
+    ErrorResponse error = (ErrorResponse) ((EntityResponse<?>) response).entity();
+    assertThat(error.code()).isEqualTo("UNKNOWN_SIGNAL");
+    assertThat(error.message()).contains(SIGNAL_NAME).contains(RUN_ID);
+    assertThat(error.runId()).isEqualTo(RUN_ID);
+  }
+
+  @Test
   void sendSignalSentReturns200WithRunIdSignalNameAndStatus() throws Exception {
     String json = body();
     when(objectMapper.readValue(eq(json), eq(DslSignalsHandler.SignalRequest.class)))

@@ -156,6 +156,87 @@ class SignalProbeDslIntegrationTest {
   }
 
   @Test
+  void undeclaredSignalIsReportedAsUnknownSignal() throws Exception {
+    String runId = "signal-unknown-" + UUID.randomUUID();
+
+    @SuppressWarnings("unchecked")
+    Class<DslTemporalProcess<String>> iface = (Class<DslTemporalProcess<String>>) GlobalManager
+            .globalManager()
+            .findGeneratedProcess("SignalProbe").orElseThrow().temporalInterface();
+
+    var stub = workflowClient.newWorkflowStub(iface,
+            WorkflowOptions.newBuilder()
+                    .setWorkflowId(runId)
+                    .setTaskQueue(TASK_QUEUE)
+                    .setWorkflowExecutionTimeout(Duration.ofSeconds(30))
+                    .setWorkflowTaskTimeout(Duration.ofSeconds(5))
+                    .build());
+
+    CompletableFuture<Object> result = CompletableFuture.supplyAsync(() -> {
+      try {
+        return ((DslTemporalProcess<String>) stub).execute(
+                new DslTemporalProcessRequest<>(runId, "unknown-body"));
+      } catch (Exception e) {
+        throw new RuntimeException(e);
+      }
+    });
+
+    Thread.sleep(500);
+
+    // T672: confirmed against the real server — WorkflowStub.signal() never throws for an
+    // undeclared signal name; the service must detect it from the process definition instead.
+    DslSignalService signalService = new DslSignalService(workflowClient,
+            new cbs.nova.dsl.history.DslRunRepository() {
+              @Override
+              public cbs.nova.dsl.history.DslRun save(cbs.nova.dsl.history.DslRun run) {
+                return run;
+              }
+
+              @Override
+              public java.util.Optional<cbs.nova.dsl.history.DslRun> findByRunId(String id) {
+                return java.util.Optional.of(cbs.nova.dsl.history.DslRun.builder()
+                        .runId(id).processName("SignalProbe").status("RUNNING")
+                        .startedAt(java.time.Instant.now()).build());
+              }
+
+              @Override
+              public java.util.List<cbs.nova.dsl.history.DslRun> findByProcessName(
+                      String name) {
+                return java.util.List.of();
+              }
+
+              @Override
+              public cbs.nova.dsl.history.DslRunSearchResult search(String a, String b,
+                      String c, String d, int e, int f) {
+                return null;
+              }
+
+              @Override
+              public cbs.nova.dsl.history.DslRun updateFinished(String a, String b, String o,
+                      String e, java.time.Instant f, String g) {
+                return null;
+              }
+
+              @Override
+              public int updateFinishedIfRunning(String a, String b, String o, String e,
+                      java.time.Instant f, String g) {
+                return 0;
+              }
+            });
+
+    DslSignalService.SignalResult unknown = signalService.sendSignal(runId, "bogusSignal",
+            Map.of("approved", true));
+
+    assertThat(unknown.outcome()).isEqualTo(DslSignalService.Outcome.UNKNOWN_SIGNAL);
+
+    // Workflow still healthy: a declared signal completes it.
+    DslSignalService.SignalResult sent = signalService.sendSignal(runId, "approval",
+            Map.of("approved", true, "reviewer", "zoe"));
+    assertThat(sent.outcome()).isEqualTo(DslSignalService.Outcome.SENT);
+    assertThat(result.get()).isEqualTo("approved=true:zoe:unknown-body");
+  }
+
+  @Test
   void dslSignalServiceSendsSignal() throws Exception {
     String runId = "signal-svc-" + UUID.randomUUID();
 

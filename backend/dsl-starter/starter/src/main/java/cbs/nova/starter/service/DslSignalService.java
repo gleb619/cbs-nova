@@ -1,5 +1,6 @@
 package cbs.nova.starter.service;
 
+import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.history.DslRun;
 import cbs.nova.dsl.history.DslRunRepository;
 import cbs.nova.dsl.history.DslRunStatus;
@@ -28,7 +29,7 @@ public class DslSignalService {
   }
 
   public enum Outcome {
-    SENT, NOT_FOUND, NOT_RUNNING
+    SENT, NOT_FOUND, NOT_RUNNING, UNKNOWN_SIGNAL
   }
 
   public @NonNull SignalResult sendSignal(
@@ -45,6 +46,15 @@ public class DslSignalService {
       return new SignalResult(Outcome.NOT_RUNNING, run, run.status());
     }
 
+    // T672: Temporal's WorkflowStub.signal() never throws for an undeclared signal name —
+    // both the test server and a real server (1.25.x) silently drop it. Detect the
+    // undeclared-signal condition from the process definition instead.
+    if (isNotDeclaredSignal(run.processName(), signalName)) {
+      log.warn("Signal {} is not declared by process {} (run {})", signalName,
+              run.processName(), runId);
+      return new SignalResult(Outcome.UNKNOWN_SIGNAL, run, run.status());
+    }
+
     try {
       WorkflowStub stub = workflowClient.newUntypedWorkflowStub(runId);
       if (payload != null) {
@@ -58,6 +68,18 @@ public class DslSignalService {
       log.warn("Failed to send signal {} to run {}: {}", signalName, runId, e.getMessage());
       throw e;
     }
+  }
+
+  private static boolean isNotDeclaredSignal(@Nullable String processName,
+          @NonNull String signalName) {
+    if (processName == null) {
+      return false;
+    }
+    return GlobalManager.globalManager()
+            .findProcess(processName)
+            .map(process -> process.signals().stream()
+                    .noneMatch(signal -> signal.name().equals(signalName)))
+            .orElse(false);
   }
 
   public @Nullable Map<String, Object> querySignalState(@NonNull String runId) {
