@@ -1,0 +1,32 @@
+{
+  "name": "cbs-nova",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "workspace",
+  "workspaceFolder": "/workspace",
+  "features": {
+    "ghcr.io/devcontainers/features/java:1": {
+      "version": "25",
+      "installGradle": false
+    },
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "lts"
+    },
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
+  },
+  "postCreateCommand": "corepack enable && backend/dsl-platform/gradlew -p backend/dsl-platform publishToMavenLocal -x test && cd frontend && pnpm install",
+  "forwardPorts": [8090, 3000],
+  "portsAttributes": {
+    "8090": { "label": "Spring Boot (SERVER_PORT=8090)" },
+    "3000": { "label": "Nuxt dev server" }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "vscjava.vscode-java-pack",
+        "vue.volar",
+        "editorconfig.editorconfig"
+      ]
+    }
+  },
+  "remoteUser": "vscode"
+}
