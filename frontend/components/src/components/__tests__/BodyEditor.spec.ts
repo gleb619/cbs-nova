@@ -262,6 +262,7 @@ describe('BodyEditor', () => {
 
     await wrapper.find('[data-testid="body-editor-tab-docs"]').trigger('click')
 
+    expect(wrapper.find('[data-testid="doc-tab-header"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="doc-tab-footer"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="md-heading-text-0"]').attributes('readonly')).toBeDefined()
   })

@@ -173,6 +173,69 @@ const saveStatusText = computed(() => {
 
 <template>
   <div class="flex flex-col h-full" data-testid="doc-tab">
+    <div
+      v-if="!readOnly"
+      class="flex flex-wrap items-center gap-2 px-3 py-1.5 border-b border-neutral-200 bg-white"
+      data-testid="doc-tab-header"
+    >
+      <div class="flex items-center gap-2 min-w-0">
+        <span
+          class="text-xs font-semibold uppercase tracking-wide text-neutral-700"
+          data-testid="doc-tab-header-title"
+        >
+          Documentation
+        </span>
+        <span
+          v-if="parsed.frontmatter.name"
+          class="text-xs text-neutral-500 truncate"
+          data-testid="doc-tab-header-name"
+        >
+          · {{ parsed.frontmatter.name }}
+        </span>
+      </div>
+      <div class="ml-auto flex items-center gap-2">
+        <span
+          v-if="saveStatusText"
+          class="inline-flex items-center gap-1.5 text-xs rounded-full px-2.5 py-1"
+          :class="saveStatusClasses"
+          data-testid="doc-tab-save-status"
+          role="status"
+        >
+          <span>{{ saveStatusText }}</span>
+          <button
+            v-if="saveStatus === 'error'"
+            type="button"
+            class="ml-1 underline hover:no-underline"
+            data-testid="doc-tab-save-retry"
+            @click="requestSave"
+          >
+            Retry
+          </button>
+        </span>
+        <span
+          v-if="isDirty"
+          class="inline-flex items-center gap-1.5 text-xs text-amber-700"
+          data-testid="doc-tab-dirty-indicator"
+          role="status"
+          aria-label="You have unsaved changes"
+        >
+          <span aria-hidden="true" class="inline-block h-2 w-2 rounded-full bg-amber-500"></span>
+          <span>unsaved</span>
+        </span>
+        <button
+          type="button"
+          class="px-3 py-1 text-xs font-medium rounded border"
+          :class="isDirty
+            ? 'border-blue-600 bg-blue-600 text-white hover:bg-blue-700'
+            : 'border-neutral-300 text-neutral-400 cursor-not-allowed'"
+          :disabled="!isDirty || busy"
+          data-testid="doc-tab-save"
+          @click="requestSave"
+        >
+          Save
+        </button>
+      </div>
+    </div>
     <div class="flex-1 min-h-0 overflow-auto">
       <div v-if="mode === 'form'" class="flex flex-col gap-4 p-3" data-testid="doc-tab-form">
         <SchemaForm
@@ -264,46 +327,6 @@ const saveStatusText = computed(() => {
           {{ MODE_LABELS[option] }}
         </button>
       </div>
-      <button
-        type="button"
-        class="px-3 py-1 text-xs font-medium rounded border"
-        :class="isDirty
-          ? 'border-blue-600 bg-blue-600 text-white hover:bg-blue-700'
-          : 'border-neutral-300 text-neutral-400 cursor-not-allowed'"
-        :disabled="!isDirty"
-        data-testid="doc-tab-save"
-        @click="requestSave"
-      >
-        Save
-      </button>
-      <span
-        v-if="saveStatusText"
-        class="inline-flex items-center gap-1.5 text-xs rounded-full px-2.5 py-1"
-        :class="saveStatusClasses"
-        data-testid="doc-tab-save-status"
-        role="status"
-      >
-        <span>{{ saveStatusText }}</span>
-        <button
-          v-if="saveStatus === 'error'"
-          type="button"
-          class="ml-1 underline hover:no-underline"
-          data-testid="doc-tab-save-retry"
-          @click="requestSave"
-        >
-          Retry
-        </button>
-      </span>
-      <span
-        v-if="isDirty"
-        class="inline-flex items-center gap-1.5 text-xs text-amber-700"
-        data-testid="doc-tab-dirty-indicator"
-        role="status"
-        aria-label="You have unsaved changes"
-      >
-        <span aria-hidden="true" class="inline-block h-2 w-2 rounded-full bg-amber-500"></span>
-        <span>unsaved changes</span>
-      </span>
     </div>
   </div>
 </template>

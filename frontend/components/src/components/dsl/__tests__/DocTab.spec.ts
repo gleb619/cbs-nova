@@ -217,6 +217,36 @@ describe('DocTab', () => {
     expect(idxA).toBeGreaterThan(idxKeep)
   })
 
+  it('renders the doc-tab-header with title and Save button', () => {
+    wrapper = mountTab()
+
+    expect(wrapper.find('[data-testid="doc-tab-header"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="doc-tab-header-title"]').text()).toBe('Documentation')
+    expect(wrapper.find('[data-testid="doc-tab-save"]').exists()).toBe(true)
+  })
+
+  it('shows the frontmatter name in the header', () => {
+    wrapper = mountTab()
+
+    expect(wrapper.find('[data-testid="doc-tab-header-name"]').text()).toContain('BatchProcessing')
+  })
+
+  it('does not duplicate the Save button into the footer', () => {
+    wrapper = mountTab()
+
+    expect(wrapper.findAll('[data-testid="doc-tab-save"]')).toHaveLength(1)
+    const footer = wrapper.find('[data-testid="doc-tab-footer"]')
+    expect(footer.exists()).toBe(true)
+    expect(footer.find('[data-testid="doc-tab-save"]').exists()).toBe(false)
+  })
+
+  it('hides both header and footer in readOnly mode', () => {
+    wrapper = mountTab({ readOnly: true })
+
+    expect(wrapper.find('[data-testid="doc-tab-header"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="doc-tab-footer"]').exists()).toBe(false)
+  })
+
   it('applies bold marker to the last paragraph and emits update:doc', async () => {
     wrapper = mountTab({ doc: 'hello world\n' })
 
