@@ -3,6 +3,8 @@ import cbs.nova.starter.helper.model.ArithmeticIn;
 import cbs.nova.starter.helper.model.ArithmeticOut;
 import cbs.nova.starter.helper.model.ListOpsIn;
 import cbs.nova.starter.helper.model.ListOpsOut;
+import cbs.nova.starter.helper.model.MergeRecordsIn;
+import cbs.nova.starter.helper.model.MergeRecordsOut;
 import java.util.List;
 import java.util.Map;
 
@@ -48,7 +50,55 @@ List<DslObject> define() {
         }
         double max = ((Number) maxResult.as(ArithmeticOut.class).result()).doubleValue();
 
-        return Result.success(new AggregationOut(prices, groups, mean, max));
+        // sumBy: numeric sum of valueField across records. Non-numeric values or empty
+        // input fail the helper (IllegalArgumentException) and propagate as Result.failure.
+        var sumResult = ctx.runHelper("listOps",
+            new ListOpsIn("sumBy", in.records(), null, null, in.valueField(), null));
+        if (!sumResult.isSuccess()) {
+          return Result.failure(sumResult.cause());
+        }
+        double total = ((Number) sumResult.as(ListOpsOut.class).result()).doubleValue();
+
+        // minBy/maxBy: the whole record with the smallest/largest valueField (numeric
+        // comparison, ties broken by first occurrence). Same rejection rules as sumBy.
+        var minResult = ctx.runHelper("listOps",
+            new ListOpsIn("minBy", in.records(), null, null, in.valueField(), null));
+        if (!minResult.isSuccess()) {
+          return Result.failure(minResult.cause());
+        }
+        @SuppressWarnings("unchecked")
+        Map<String, Object> minRecord =
+            (Map<String, Object>) minResult.as(ListOpsOut.class).result();
+
+        var maxByResult = ctx.runHelper("listOps",
+            new ListOpsIn("maxBy", in.records(), null, null, in.valueField(), null));
+        if (!maxByResult.isSuccess()) {
+          return Result.failure(maxByResult.cause());
+        }
+        @SuppressWarnings("unchecked")
+        Map<String, Object> maxRecord =
+            (Map<String, Object>) maxByResult.as(ListOpsOut.class).result();
+
+        // mergeRecords shallow: top-level keys only, later records win key-by-key
+        // (a nested map from an earlier record is replaced wholesale by a later one).
+        var shallowMerge = ctx.runHelper("mergeRecords",
+            new MergeRecordsIn(in.mergeRecords(), "shallow"));
+        if (!shallowMerge.isSuccess()) {
+          return Result.failure(shallowMerge.cause());
+        }
+        Map<String, Object> shallowMerged = shallowMerge.as(MergeRecordsOut.class).result();
+
+        // mergeRecords deep: nested maps merge recursively key-by-key (last-write-wins
+        // for scalars); non-map values overwrite and lists are replaced, not concatenated.
+        var deepMerge = ctx.runHelper("mergeRecords",
+            new MergeRecordsIn(in.mergeRecords(), "deep"));
+        if (!deepMerge.isSuccess()) {
+          return Result.failure(deepMerge.cause());
+        }
+        Map<String, Object> deepMerged = deepMerge.as(MergeRecordsOut.class).result();
+
+        return Result.success(new AggregationOut(prices, groups, mean, max, total, minRecord,
+            maxRecord, shallowMerged, deepMerged));
       })
       .buildList();
 }
