@@ -1,5 +1,7 @@
 package cbs.nova.starter;
 
+import cbs.nova.dslexamples.v1.AggregationModels.AggregationIn;
+import cbs.nova.dslexamples.v1.AggregationModels.AggregationOut;
 import cbs.nova.dslexamples.v1.ConfigValidationModels.ConfigValidationIn;
 import cbs.nova.dslexamples.v1.ConfigValidationModels.ConfigValidationOut;
 import cbs.nova.dslexamples.v1.DataIntegrityModels.DataIntegrityIn;
@@ -12,11 +14,14 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
+import java.util.List;
+import java.util.Map;
 import java.util.zip.GZIPInputStream;
 
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.offset;
 
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.ExecutionMode;
@@ -324,6 +329,54 @@ class AdvancedDslExamplesTest {
     // The local timestamp is an offset-converted view of the same instant, so the
     // wall-clock part differs from UTC but the offset reflects the requested zone.
     assertThat(out.zone()).isEqualTo("Asia/Kolkata");
+  }
+
+  @Test
+  void recordAggregationPreviewAggregatesAndMergesRecords() {
+    List<Map<String, Object>> records = List.of(
+            Map.of("id", "o-1", "category", "electronics", "amount", 120.50),
+            Map.of("id", "o-2", "category", "books", "amount", 45.00),
+            Map.of("id", "o-3", "category", "electronics", "amount", 89.99));
+    List<Map<String, Object>> mergeRecords = List.of(
+            Map.of("id", "order-1",
+                    "status", "new",
+                    "customer", Map.of("name", "Ada", "tier", "gold"),
+                    "tags", List.of("a")),
+            Map.of("status", "paid",
+                    "customer", Map.of("tier", "platinum"),
+                    "note", "rush"));
+    var input = new AggregationIn(records, "amount", "category", mergeRecords);
+    Context<AggregationIn> ctx = SimpleContext.builder(input).mode(ExecutionMode.PREVIEW)
+            .build();
+
+    Result<?> result = GlobalManager.globalManager().runProcess("RecordAggregation", ctx);
+
+    assertThat(result.isSuccess()).as("cause: %s", result.cause()).isTrue();
+    AggregationOut out = (AggregationOut) result.value();
+
+    // sumBy over the amount field; minBy/maxBy return the whole record.
+    assertThat(out.total()).isEqualTo(255.49, offset(0.0001));
+    assertThat(out.minRecord()).containsEntry("id", "o-2");
+    assertThat(out.maxRecord()).containsEntry("id", "o-1");
+    assertThat(out.mean()).isEqualTo(85.1633, offset(0.0001));
+    assertThat(out.max()).isEqualTo(120.50, offset(0.0001));
+    assertThat(out.groups()).containsOnlyKeys("electronics", "books");
+
+    // Shallow merge replaces the nested customer map wholesale (last-write-wins),
+    // while deep merge recurses into it and keeps keys only the earlier record has.
+    assertThat(out.shallowMerged())
+            .containsEntry("id", "order-1")
+            .containsEntry("status", "paid")
+            .containsEntry("customer", Map.of("tier", "platinum"))
+            .containsEntry("note", "rush");
+    @SuppressWarnings("unchecked")
+    Map<String, Object> deepCustomer = (Map<String, Object>) out.deepMerged().get("customer");
+    assertThat(deepCustomer)
+            .containsEntry("name", "Ada")
+            .containsEntry("tier", "platinum");
+    assertThat(out.deepMerged())
+            .containsEntry("status", "paid")
+            .containsEntry("tags", List.of("a"));
   }
 
   @Test
