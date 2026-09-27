@@ -37,6 +37,12 @@ public class DslSignalsHandler {
                       "Execution run is not running: " + runId + " (status "
                               + result.currentStatus() + ")",
                       null, runId, null, null, null, null, null));
+      case UNKNOWN_SIGNAL -> ServerResponse.status(HttpStatus.BAD_REQUEST)
+              .contentType(MediaType.APPLICATION_JSON)
+              .body(new ErrorResponse("UNKNOWN_SIGNAL",
+                      "Signal '" + signalName + "' is not declared by the process for run "
+                              + runId,
+                      null, runId, null, null, null, null, null));
       case SENT -> ServerResponse.ok()
               .contentType(MediaType.APPLICATION_JSON)
               .body(Map.of("runId", runId, "signalName", signalName, "status", "sent"));

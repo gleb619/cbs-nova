@@ -10,8 +10,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.history.DslRun;
 import cbs.nova.dsl.history.DslRunStatus;
+import cbs.nova.dsl.process.ProcessDslObject;
+import cbs.nova.dsl.process.SignalDescriptor;
 import cbs.nova.dsl.repository.InMemoryDslRunRepository;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowNotFoundException;
@@ -91,6 +94,46 @@ class DslSignalServiceTest {
   }
 
   @Test
+  void undeclaredSignalIsReportedAsUnknownSignalWithoutTouchingTemporal() {
+    GlobalManager.globalManager().registerProcess(processWithSignals("T672ProbeProcess",
+            "approve"));
+    repository.save(running("run-1", "T672ProbeProcess"));
+
+    DslSignalService.SignalResult result = service.sendSignal("run-1", "bogus", null);
+
+    assertThat(result.outcome()).isEqualTo(DslSignalService.Outcome.UNKNOWN_SIGNAL);
+    assertThat(result.run()).isNotNull();
+    assertThat(result.currentStatus()).isEqualTo("RUNNING");
+    verifyNoInteractions(workflowClient);
+  }
+
+  @Test
+  void declaredSignalIsSentWhenProcessDeclaresIt() {
+    GlobalManager.globalManager().registerProcess(processWithSignals("T672DeclaredProbe",
+            "approve"));
+    WorkflowStub stub = mock(WorkflowStub.class);
+    when(workflowClient.newUntypedWorkflowStub("run-1")).thenReturn(stub);
+    repository.save(running("run-1", "T672DeclaredProbe"));
+
+    DslSignalService.SignalResult result = service.sendSignal("run-1", "approve", null);
+
+    verify(stub).signal("approve");
+    assertThat(result.outcome()).isEqualTo(DslSignalService.Outcome.SENT);
+  }
+
+  @Test
+  void unknownProcessDefinitionStillAttemptsTemporalSend() {
+    WorkflowStub stub = mock(WorkflowStub.class);
+    when(workflowClient.newUntypedWorkflowStub("run-1")).thenReturn(stub);
+    repository.save(running("run-1", "NoSuchT672Process"));
+
+    DslSignalService.SignalResult result = service.sendSignal("run-1", "approve", null);
+
+    verify(stub).signal("approve");
+    assertThat(result.outcome()).isEqualTo(DslSignalService.Outcome.SENT);
+  }
+
+  @Test
   void querySignalStateReturnsMappedStateForRunningRun() {
     WorkflowStub stub = mock(WorkflowStub.class);
     when(workflowClient.newUntypedWorkflowStub("run-1")).thenReturn(stub);
@@ -137,16 +180,71 @@ class DslSignalServiceTest {
   }
 
   private static DslRun running(String runId) {
-    return run(runId, DslRunStatus.RUNNING);
+    return run(runId, DslRunStatus.RUNNING, "LoanDisbursement");
+  }
+
+  private static DslRun running(String runId, String processName) {
+    return run(runId, DslRunStatus.RUNNING, processName);
   }
 
   private static DslRun run(String runId, DslRunStatus status) {
+    return run(runId, status, "LoanDisbursement");
+  }
+
+  private static DslRun run(String runId, DslRunStatus status, String processName) {
     return DslRun.builder()
             .runId(runId)
-            .processName("LoanDisbursement")
+            .processName(processName)
             .status(status.name())
             .startedAt(NOW.minusSeconds(30))
             .executionMode("RUN")
+            .build();
+  }
+
+  private static ProcessDslObject processWithSignals(String name, String... signalNames) {
+    return ProcessDslObject.builder()
+            .name(name)
+            .description("probe")
+            .taskQueue("t672-tq")
+            .version("v1")
+            .inputType(String.class)
+            .outputType(String.class)
+            .parameters(java.util.List.of())
+            .executeLogic(ctx -> null)
+            .previewLogic(ctx -> null)
+            .explainLogic(ctx -> null)
+            .descriptor(cbs.nova.dsl.DslDescriptor.builder()
+                    .objectDescriptor(new cbs.nova.dsl.model.ObjectDescriptor() {
+                      @Override
+                      public String name() {
+                        return name;
+                      }
+
+                      @Override
+                      public cbs.nova.dsl.DslObject.DslType type() {
+                        return cbs.nova.dsl.DslObject.DslType.PROCESS;
+                      }
+
+                      @Override
+                      public String description() {
+                        return "probe";
+                      }
+
+                      @Override
+                      public Class<?> inputType() {
+                        return String.class;
+                      }
+
+                      @Override
+                      public Class<?> outputType() {
+                        return String.class;
+                      }
+                    })
+                    .parameters(java.util.List.of())
+                    .build())
+            .signals(java.util.Arrays.stream(signalNames)
+                    .map(s -> new SignalDescriptor(s, String.class))
+                    .toList())
             .build();
   }
 }
