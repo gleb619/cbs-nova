@@ -71,7 +71,7 @@ class DslRunQueryCriteriaTest {
   @Test
   void fullSelectionCoversAllTableColumnsInOrder() {
     List<Selectable> selection = DslRunQueryCriteria.fullSelection(t, r);
-    assertThat(selection).hasSize(14);
+    assertThat(selection).hasSize(15);
 
     ExtendedSelectQuery query = new ExtendedSelectQuery();
     selection.forEach(query::addToSelection);
@@ -92,7 +92,8 @@ class DslRunQueryCriteriaTest {
                 d.execution_mode,
                 d.triggered_by,
                 d.correlation_id,
-                d.definition_hash
+                d.definition_hash,
+                d.content_hash
             FROM
                 dsl_runs d""");
   }

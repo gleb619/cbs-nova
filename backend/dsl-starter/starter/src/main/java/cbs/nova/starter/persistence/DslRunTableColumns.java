@@ -8,7 +8,8 @@ record DslRunTableColumns(Table table, TableColumn id, TableColumn runId,
         TableColumn processName, TableColumn status, TableColumn inputJson,
         TableColumn outputJson, TableColumn errorMessage, TableColumn contextJson,
         TableColumn startedAt, TableColumn finishedAt, TableColumn executionMode,
-        TableColumn triggeredBy, TableColumn correlationId, TableColumn definitionHash) {
+        TableColumn triggeredBy, TableColumn correlationId, TableColumn definitionHash,
+        TableColumn contentHash) {
 
   static DslRunTableColumns of(String name) {
     Table table = new Table(name);
@@ -26,9 +27,10 @@ record DslRunTableColumns(Table table, TableColumn id, TableColumn runId,
     TableColumn triggeredBy = table.get("triggered_by");
     TableColumn correlationId = table.get("correlation_id");
     TableColumn definitionHash = table.get("definition_hash");
+    TableColumn contentHash = table.get("content_hash");
     return new DslRunTableColumns(table, id, runId, processName, status, inputJson,
             outputJson, errorMessage, contextJson, startedAt, finishedAt, executionMode,
-            triggeredBy, correlationId, definitionHash);
+            triggeredBy, correlationId, definitionHash, contentHash);
   }
 
   TableReference refer() {

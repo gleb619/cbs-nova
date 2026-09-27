@@ -181,6 +181,7 @@ public final class InMemoryDslRunRepository implements DslRunRepository {
             .triggeredBy(existing.triggeredBy())
             .correlationId(existing.correlationId())
             .definitionHash(existing.definitionHash())
+            .contentHash(existing.contentHash())
             .build();
   }
 

@@ -31,6 +31,7 @@ class DslRunMapperTest {
             .triggeredBy("api")
             .correlationId("corr-1")
             .definitionHash("hash-1")
+            .contentHash("content-1")
             .build();
 
     DslRunEntity entity = mapper.toEntity(run);
@@ -49,6 +50,7 @@ class DslRunMapperTest {
     assertThat(entity.getTriggeredBy()).isEqualTo("api");
     assertThat(entity.getCorrelationId()).isEqualTo("corr-1");
     assertThat(entity.getDefinitionHash()).isEqualTo("hash-1");
+    assertThat(entity.getContentHash()).isEqualTo("content-1");
   }
 
   @Test
@@ -68,6 +70,7 @@ class DslRunMapperTest {
     entity.setTriggeredBy("scheduler");
     entity.setCorrelationId("corr-2");
     entity.setDefinitionHash("hash-2");
+    entity.setContentHash("content-2");
 
     DslRun run = mapper.toDomain(entity);
 
@@ -84,6 +87,7 @@ class DslRunMapperTest {
     assertThat(run.triggeredBy()).isEqualTo("scheduler");
     assertThat(run.correlationId()).isEqualTo("corr-2");
     assertThat(run.definitionHash()).isEqualTo("hash-2");
+    assertThat(run.contentHash()).isEqualTo("content-2");
   }
 
   @Test
@@ -121,6 +125,7 @@ class DslRunMapperTest {
     assertThat(entity.getTriggeredBy()).isNull();
     assertThat(entity.getCorrelationId()).isNull();
     assertThat(entity.getDefinitionHash()).isNull();
+    assertThat(entity.getContentHash()).isNull();
 
     DslRun roundTrip = mapper.toDomain(entity);
     assertThat(roundTrip.input()).isNull();

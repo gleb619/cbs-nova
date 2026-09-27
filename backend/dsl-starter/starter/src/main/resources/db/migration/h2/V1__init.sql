@@ -221,3 +221,19 @@ CREATE INDEX IF NOT EXISTS idx_dsl_change_request_definition_status
 
 CREATE INDEX IF NOT EXISTS idx_dsl_change_request_requested_at
     ON dsl_change_request (requested_at);
+
+-- T648: run content attribution — sha256 over the full definition source snapshot.
+-- content_hash is CONTENT identity: sha256 over the canonicalized reload/publish source
+-- snapshot (sorted path + content of every .java DSL source file), computed ONCE at
+-- publish/reload and cached keyed by definition name+version. Unlike definition_hash
+-- (descriptor identity), it changes when the definition LOGIC changes, even if the
+-- descriptor (taskQueue / version / timeouts) stays the same.
+-- Nullable: historical rows, runs before the first reload, and definitions never loaded
+-- via the reload path stay NULL. IF NOT EXISTS keeps the script idempotent: h2 test
+-- slices re-apply classpath migrations per test method against a shared in-memory DB.
+ALTER TABLE dsl_runs ADD COLUMN IF NOT EXISTS content_hash VARCHAR(64);
+
+COMMENT ON COLUMN dsl_runs.content_hash IS
+    'Content-identity sha256 (64-char lowercase hex) of the definition source snapshot at '
+    'publish/reload — complements descriptor-identity definition_hash. NULL for historical '
+    'rows and definitions not loaded via reload.';

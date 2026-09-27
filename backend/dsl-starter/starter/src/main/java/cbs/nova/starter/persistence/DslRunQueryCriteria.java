@@ -47,7 +47,8 @@ final class DslRunQueryCriteria {
             r.get(t.executionMode()),
             r.get(t.triggeredBy()),
             r.get(t.correlationId()),
-            r.get(t.definitionHash()));
+            r.get(t.definitionHash()),
+            r.get(t.contentHash()));
   }
 
   static FunctionCall minuteBucket(DslRunTableColumns t, TableReference r) {

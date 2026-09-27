@@ -16,6 +16,7 @@ public interface DslRunMapper {
   @Mapping(target = "triggeredBy", source = "triggeredBy")
   @Mapping(target = "correlationId", source = "correlationId")
   @Mapping(target = "definitionHash", source = "definitionHash")
+  @Mapping(target = "contentHash", source = "contentHash")
   DslRunEntity toEntity(DslRun run);
 
   @Mapping(target = "input", source = "inputJson")
@@ -25,5 +26,6 @@ public interface DslRunMapper {
   @Mapping(target = "triggeredBy", source = "triggeredBy")
   @Mapping(target = "correlationId", source = "correlationId")
   @Mapping(target = "definitionHash", source = "definitionHash")
+  @Mapping(target = "contentHash", source = "contentHash")
   DslRun toDomain(DslRunEntity entity);
 }

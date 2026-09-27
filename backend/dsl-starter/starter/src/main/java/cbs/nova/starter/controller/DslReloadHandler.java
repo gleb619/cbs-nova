@@ -29,6 +29,7 @@ import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.starter.model.ReloadResponse;
 import cbs.nova.starter.persistence.CompileDiagnosticRecordRepository;
 import cbs.nova.starter.events.DomainEvent;
+import cbs.nova.starter.service.DefinitionContentHash;
 import cbs.nova.starter.service.DomainEventPublisher;
 import cbs.nova.starter.service.DslAuditService;
 import cbs.nova.starter.service.PreviewResultCache;
@@ -193,9 +194,13 @@ public class DslReloadHandler {
       // singleton is not touched until the staging has fully succeeded.
       var candidate = DslConfig.dslConfig().globalManager();
       var load = loadDefinitions(reloadClassLoader, sourceDir, outputDir, candidate);
+      var sources = collectSources(sourceDir);
 
       // Atomic swap — only after every registration above has succeeded.
       GlobalManager.globalManager().replaceGlobalManager(candidate);
+      // T648: publish the content hash (sha256 over the source snapshot) for every definition
+      // loaded above, keyed by name+version, so run submission is a cheap cache lookup.
+      DefinitionContentHash.publish(sources, candidate);
       notifyGlobalManagerReplaced();
       // Preview results cached against the previous registry are now stale; flush after the swap
       // so a failed compile/staging leaves the cache (and the live registry) untouched.

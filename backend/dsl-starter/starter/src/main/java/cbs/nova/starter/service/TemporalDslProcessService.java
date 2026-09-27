@@ -172,6 +172,9 @@ public class TemporalDslProcessService {
               // T492: descriptor-identity hash of the definition this run executes; null
               // (never an exception) when the definition cannot be resolved.
               .definitionHash(RunDefinitionHash.of(processName))
+              // T648: content-identity hash of the definition source snapshot published at
+              // reload; null (never an exception) before the first reload.
+              .contentHash(DefinitionContentHash.of(processName))
               .build();
 
       submitDbWrite(() -> {

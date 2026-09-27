@@ -54,4 +54,7 @@ public class DslRunEntity {
 
   @Column("definition_hash")
   private String definitionHash;
+
+  @Column("content_hash")
+  private String contentHash;
 }

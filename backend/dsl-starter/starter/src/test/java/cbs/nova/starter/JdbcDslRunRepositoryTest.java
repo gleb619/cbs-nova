@@ -293,12 +293,14 @@ class JdbcDslRunRepositoryTest {
             .finishedAt(null)
             .executionMode(ExecutionMode.RUN.name())
             .definitionHash("a".repeat(64))
+            .contentHash("c".repeat(64))
             .build();
 
     repository.save(run);
     DslRun persisted = repository.findByRunId("run-hash").orElseThrow();
 
     assertThat(persisted.definitionHash()).isEqualTo("a".repeat(64));
+    assertThat(persisted.contentHash()).isEqualTo("c".repeat(64));
   }
 
   @Test
@@ -319,6 +321,7 @@ class JdbcDslRunRepositoryTest {
     DslRun persisted = repository.findByRunId("run-no-hash").orElseThrow();
 
     assertThat(persisted.definitionHash()).isNull();
+    assertThat(persisted.contentHash()).isNull();
   }
 
   @Test
@@ -334,6 +337,7 @@ class JdbcDslRunRepositoryTest {
             .finishedAt(Instant.now())
             .executionMode(ExecutionMode.RUN.name())
             .definitionHash("b".repeat(64))
+            .contentHash("d".repeat(64))
             .build();
     repository.save(run);
 
@@ -341,6 +345,7 @@ class JdbcDslRunRepositoryTest {
 
     assertThat(result.items()).hasSize(1);
     assertThat(result.items().get(0).definitionHash()).isEqualTo("b".repeat(64));
+    assertThat(result.items().get(0).contentHash()).isEqualTo("d".repeat(64));
   }
 
   private static DslRun run(String runId, DslRunStatus status, String output, String error) {

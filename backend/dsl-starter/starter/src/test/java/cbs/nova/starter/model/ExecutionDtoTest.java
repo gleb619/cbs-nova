@@ -145,11 +145,13 @@ class ExecutionDtoTest {
             .finishedAt(Instant.parse("2026-01-01T00:00:05Z"))
             .executionMode(ExecutionMode.RUN.name())
             .definitionHash("ab".repeat(32))
+            .contentHash("ef".repeat(32))
             .build();
 
     ExecutionDto dto = ExecutionDto.from(run);
 
     assertThat(dto.definitionHash()).isEqualTo("ab".repeat(32));
+    assertThat(dto.contentHash()).isEqualTo("ef".repeat(32));
   }
 
   @Test
@@ -170,8 +172,11 @@ class ExecutionDtoTest {
             ExecutionDto.from(base.definitionHash("cd".repeat(32)).build()));
     String withoutHash = objectMapper.writeValueAsString(
             ExecutionDto.from(base.definitionHash(null).build()));
+    String withContent = objectMapper.writeValueAsString(
+            ExecutionDto.from(base.contentHash("gh".repeat(32)).build()));
 
     assertThat(withHash).contains("\"definitionHash\":\"" + "cd".repeat(32) + "\"");
     assertThat(withoutHash).doesNotContain("definitionHash");
+    assertThat(withContent).contains("\"contentHash\":\"" + "gh".repeat(32) + "\"");
   }
 }

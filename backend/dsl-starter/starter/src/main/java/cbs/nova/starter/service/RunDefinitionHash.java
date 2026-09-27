@@ -18,8 +18,9 @@ import tools.jackson.databind.json.JsonMapper;
  * <p>
  * Phase 1 uses DESCRIPTOR identity — the same sha256 over the Jackson-serialized
  * {@link DslDescriptor} (taskQueue / version / timeouts) that the preview cache keys on — not full
- * logic identity: two functionally different definitions with the same descriptor collide. A true
- * content hash computed at publish/reload time is a planned Epic 5 follow-up.
+ * logic identity: two functionally different definitions with the same descriptor collide. The
+ * Phase 2 content hash over the full definition source lives in {@link DefinitionContentHash}
+ * (T648).
  */
 final class RunDefinitionHash {
 

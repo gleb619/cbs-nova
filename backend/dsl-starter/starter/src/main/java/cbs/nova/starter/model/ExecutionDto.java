@@ -31,7 +31,8 @@ public record ExecutionDto(
         @JsonInclude(JsonInclude.Include.NON_NULL) Object output,
         @JsonInclude(JsonInclude.Include.NON_NULL) List<ErrorEntry> errors,
         @JsonInclude(JsonInclude.Include.NON_NULL) List<TraceStepDto> trace,
-        @JsonInclude(JsonInclude.Include.NON_NULL) String definitionHash) {
+        @JsonInclude(JsonInclude.Include.NON_NULL) String definitionHash,
+        @JsonInclude(JsonInclude.Include.NON_NULL) String contentHash) {
 
   public static ExecutionDto from(DslRun run) {
     Instant finishedAt = run.finishedAt();
@@ -54,7 +55,10 @@ public record ExecutionDto(
             null,
             // T492: descriptor-identity hash of the definition the run executed; null for
             // historical rows and runs with an unresolvable definition.
-            run.definitionHash());
+            run.definitionHash(),
+            // T648: content-identity hash of the definition source snapshot; null before the
+            // first reload publishes it.
+            run.contentHash());
   }
 
   public static ExecutionDto fromDetail(DslRun run, ObjectMapper objectMapper) {
@@ -76,7 +80,8 @@ public record ExecutionDto(
             parseJsonOrRaw(run.output(), objectMapper),
             toErrors(run.error()),
             toTraceSteps(run.contextJson(), objectMapper),
-            base.definitionHash());
+            base.definitionHash(),
+            base.contentHash());
   }
 
   private static Object parseJsonOrRaw(String raw, ObjectMapper objectMapper) {
