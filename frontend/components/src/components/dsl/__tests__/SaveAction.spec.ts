@@ -4,7 +4,7 @@ import { nextTick } from 'vue'
 import SaveAction, { type AutosaveOption } from '../SaveAction.vue'
 
 const AUTOSAVE: AutosaveOption[] = [
-  { value: 'off', label: 'Off' },
+  { value: 'off', label: 'Manual' },
   { value: '5s', label: '5s' },
   { value: 'blur', label: 'On blur' },
 ]

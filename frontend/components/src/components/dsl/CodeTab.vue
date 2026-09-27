@@ -58,7 +58,7 @@ const useCodeTabStorage = createNamespacedLocalStorageState('cbs-nova:code-tab')
 const autosaveMode = useCodeTabStorage<string>('autosave-mode', 'off')
 
 const autosaveOptions: readonly AutosaveOption[] = [
-  { value: 'off', label: 'Off' },
+  { value: 'off', label: 'Manual' },
   { value: '5s', label: '5s' },
   { value: '30s', label: '30s' },
   { value: '1min', label: '1 min' },
