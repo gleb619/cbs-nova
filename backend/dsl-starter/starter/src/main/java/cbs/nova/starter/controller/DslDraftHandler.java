@@ -9,7 +9,6 @@ import cbs.nova.dsl.exception.ValidationException;
 import cbs.nova.dsl.utils.LineDiff;
 import cbs.nova.dsl.vcs.RepoStatus;
 import cbs.nova.starter.builder.DslBuilderClient;
-import cbs.nova.starter.model.DslFileModels.FileEntry;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.exception.BuilderApiException;
 import cbs.nova.starter.exception.DslCompilationException;
@@ -19,6 +18,7 @@ import cbs.nova.starter.model.VcsModels.CommitResult;
 import cbs.nova.starter.model.VcsModels.DefinitionBundle;
 import cbs.nova.starter.model.VcsModels.DefinitionHistoryEntry;
 import cbs.nova.starter.model.VcsModels.DiscardRequest;
+import cbs.nova.starter.model.VcsModels.DraftDetail;
 import cbs.nova.starter.model.VcsModels.DraftRequest;
 import cbs.nova.starter.model.VcsModels.DraftResponse;
 import cbs.nova.starter.model.VcsModels.DraftSummary;
@@ -27,6 +27,7 @@ import cbs.nova.starter.model.VcsModels.HistoryDiffResponse;
 import cbs.nova.starter.model.VcsModels.ImportBundleResult;
 import cbs.nova.starter.model.VcsModels.ImportEntryResult;
 import cbs.nova.starter.model.VcsModels.LogEntry;
+import cbs.nova.starter.model.VcsModels.WorkspaceInfo;
 import cbs.nova.dsl.model.CompileDiagnostic;
 import cbs.nova.starter.model.CompileDiagnosticSource;
 import cbs.nova.starter.model.PageResponse;
@@ -61,7 +62,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -84,8 +84,7 @@ public class DslDraftHandler {
   static final String GIT_NOT_CONFIGURED_CODE = "GIT_NOT_CONFIGURED";
   static final String GIT_REQUIRES_BUILDER_CODE = "GIT_REQUIRES_BUILDER";
   /**
-   * Maximum entries returned by {@link #history(ServerRequest)}; surfaced through the metadata
-   * endpoint so the dashboard renders the same number the API actually returns.
+   * Maximum entries returned by {@link #history(ServerRequest)}.
    */
   public static final int HISTORY_LIMIT = 50;
   static final long HISTORY_SIZE_UNKNOWN = -1L;
@@ -386,7 +385,15 @@ public class DslDraftHandler {
   }
 
   public ServerResponse metadata(ServerRequest request) {
-    Path sourceRoot = sourceDirOrNull();
+    WorkspaceInfo workspace = workspaceInfoOrNull();
+    Path sourceRoot;
+    String workspaceMode = null;
+    if (workspace != null && workspace.workTree() != null && !workspace.workTree().isBlank()) {
+      sourceRoot = Path.of(workspace.workTree());
+      workspaceMode = workspace.mode();
+    } else {
+      sourceRoot = sourceDirOrNull();
+    }
 
     String sourcePath = sourceRoot == null
             ? ""
@@ -400,22 +407,12 @@ public class DslDraftHandler {
       if (status.isPresent()) {
         List<String> changedPaths = changesUnderSourceRoot(status.get(), sourceRoot);
         draftCount = changedPaths.size();
-        if (!changedPaths.isEmpty()) {
-          try {
-            long totalBytes = totalSizeBytes(changedPaths, sourceRoot);
-            sizeMb = Math.round(totalBytes / 1_048_576.0 * 100.0) / 100.0;
-          } catch (RuntimeException e) {
-            log.warn("[DSL drafts] metadata: failed to read sizes for changed files: {}",
-                    e.getMessage());
-            sizeMb = null;
-          }
-        }
+        sizeMb = sizeMbOf(status.get(), sourceRoot, draftCount);
       }
     }
 
     boolean gitEnabled = dslProperties.git().enabled();
     int cacheTtl = dslProperties.git().statusCacheTtlSeconds();
-    int historyLimit = HISTORY_LIMIT;
 
     String gitBranch = null;
     if (gitEnabled) {
@@ -431,7 +428,25 @@ public class DslDraftHandler {
 
     return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON)
             .body(new DraftsMetadata(draftCount, sourcePath, sizeMb, gitBranch,
-                    gitEnabled, cacheTtl, historyLimit));
+                    gitEnabled, cacheTtl, workspaceMode));
+  }
+
+  /**
+   * The builder is the source of truth for the workspace (mode + actual work tree). Best-effort:
+   * any failure (builder down, older builder without the endpoint) yields {@code null} so the
+   * caller falls back to the starter's configured {@code cbs.dsl.source-dir}.
+   */
+  private @Nullable WorkspaceInfo workspaceInfoOrNull() {
+    DslBuilderClient client = builderClient();
+    if (client == null) {
+      return null;
+    }
+    try {
+      return client.workspace();
+    } catch (RuntimeException e) {
+      log.debug("[DSL drafts] metadata: workspace lookup failed: {}", e.getMessage());
+      return null;
+    }
   }
 
   private @Nullable Path sourceDirOrNull() {
@@ -474,30 +489,40 @@ public class DslDraftHandler {
   }
 
   /**
-   * Sum {@link FileEntry#sizeBytes()} for each changed file via the builder's listing API. Files
-   * that no longer exist on disk are silently skipped (their size contributes nothing). The listing
-   * returns repo-relative paths while the changed-path filter produces absolute paths, so we look
-   * up by the trailing components of the changed path.
+   * Total size in MB of the changed source files, from the builder-reported
+   * {@link RepoStatus#sizes} (repo-relative path → bytes). {@code 0.0} when there are no drafts;
+   * {@code null} when the status carries no sizes (e.g. an older builder). Deleted files contribute
+   * nothing.
    */
-  private long totalSizeBytes(List<String> changedPaths, Path sourceRoot) {
-    DslBuilderClient client = requireBuilderClient();
-    Map<String, Long> sizesByPath = new HashMap<>();
-    for (FileEntry entry : client.listFiles(null)) {
-      if (entry != null && entry.path() != null) {
-        sizesByPath.put(entry.path().replace('\\', '/'), entry.sizeBytes());
-      }
+  private static @Nullable Double sizeMbOf(RepoStatus status, Path sourceRoot, int changedCount) {
+    if (changedCount == 0) {
+      return 0.0;
     }
-    long total = 0L;
-    for (String p : changedPaths) {
-      String tail = p.replace('\\', '/');
-      for (Map.Entry<String, Long> e : sizesByPath.entrySet()) {
-        if (tail.endsWith('/' + e.getKey()) || tail.equals(e.getKey())) {
-          total += e.getValue();
-          break;
-        }
-      }
+    if (status.sizes().isEmpty()) {
+      return null;
     }
-    return total;
+    Path absoluteRoot = sourceRoot.toAbsolutePath().normalize();
+    Path repoRoot = status.workTree() != null
+            ? status.workTree().toAbsolutePath().normalize()
+            : absoluteRoot;
+    long totalBytes = status.sizes().entrySet().stream()
+            .filter(e -> underSourceRoot(repoRoot, absoluteRoot, e.getKey()))
+            .mapToLong(Map.Entry::getValue)
+            .sum();
+    return Math.round(totalBytes / 1_048_576.0 * 100.0) / 100.0;
+  }
+
+  private static boolean underSourceRoot(Path repoRoot, Path absoluteRoot,
+          String repoRelativePath) {
+    if (repoRelativePath == null || repoRelativePath.isBlank()) {
+      return false;
+    }
+    try {
+      return repoRoot.resolve(repoRelativePath.replace('\\', '/')).normalize()
+              .startsWith(absoluteRoot);
+    } catch (RuntimeException e) {
+      return false;
+    }
   }
 
   public ServerResponse read(ServerRequest request) throws IOException {
@@ -513,17 +538,9 @@ public class DslDraftHandler {
                       null, null, null, null, null, null));
     }
     String path = sourcePath.get();
-    String content = readWorkingTreeSource(path);
     DefinitionStatus status = statusOf(name);
-    DraftRequest payload = new DraftRequest(
-            name,
-            typeOf(name),
-            status.value(),
-            null,
-            null,
-            content,
-            null);
-    log.info("[DSL drafts] read {} from {}", name, path);
+    DraftDetail payload = new DraftDetail(name, typeOf(name), status.value());
+    log.info("[DSL drafts] read status for {} (path={})", name, path);
     return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(payload);
   }
 

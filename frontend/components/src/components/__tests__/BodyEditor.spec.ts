@@ -244,6 +244,19 @@ describe('BodyEditor', () => {
     expect(wrapper.emitted('save-doc')?.at(-1)?.[0]).toContain('# changed')
   })
 
+  it('passes the construct name so a new doc is seeded with name + heading', async () => {
+    const wrapper = mountBodyEditor({ construct, doc: '' })
+
+    await wrapper.find('[data-testid="body-editor-tab-docs"]').trigger('click')
+
+    expect(
+      (wrapper.find('[data-testid="schema-field-name"]').element as HTMLInputElement).value,
+    ).toBe('CreateOrder')
+    expect(
+      (wrapper.find('[data-testid="md-heading-text-0"]').element as HTMLInputElement).value,
+    ).toBe('CreateOrder')
+  })
+
   it('keeps the Docs tab functional without controlled doc input', async () => {
     const wrapper = mountBodyEditor({ construct })
 

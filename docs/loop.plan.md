@@ -3,7 +3,7 @@
 `/loop 30m docs/loop.plan.md`
 
 An R&D loop that **appends** one high‑impact improvement per cycle, a new task to `docs/kanban.md`.  
-It uses `codegraph` to survey the codebase, selects the most valuable gap (tests, features, helpers, docs, DX, perf, or
+It uses `codegraph` to survey the codebase, selects the most valuable gap (tests, features, docs, DX, perf, or
 refactoring), then create a task and plan file to **implements** later with quality checks. No code execution.
 
 ## Required Skills
@@ -40,7 +40,7 @@ Reindex deltas since last fire. Never skip — stale index → stale ideas.
 ### 2. SURVEY – assess current state
 
 - `codegraph_status` — confirm index healthy.
-- `codegraph_context` — current code reality. Note weak spots: untested areas, thin helpers,
+- `codegraph_context` — current code reality. Note weak spots: untested areas,
   missing integrations, gaps between `architecture*.md` roadmaps and implemented code.
 - Run test coverage (if available) to spot untested areas.
 - Scan `docs/kanban.md` for pending tasks and done items to avoid duplication. Use `make kanban-list`.
@@ -63,13 +63,12 @@ Using `brainstorming`, generate **3** concrete, actionable improvements from the
 
 | Category                  | Examples                                                                                    |
 |---------------------------|---------------------------------------------------------------------------------------------|
-| **Missing tests**         | Add unit/integration tests for untested helpers, services, or endpoints                     |
+| **Missing tests**         | Add unit/integration tests for untested handlers, services, or endpoints                       |
 | **New features**          | Implement a small feature requested in architecture roadmaps or TODOs                       |
 | **DX tooling**            | Improve build scripts, add dev containers, enhance logging, etc.                            |
 | **Performance**           | Optimize hot paths, add caching, reduce DB queries                                          |
 | **Refactoring**           | Eliminate duplication, extract methods, improve naming                                      |
 | **Documentation**         | Add inline docs, update README, create architecture diagrams                                |
-| **@Helper** additions     | Add usefull helpers to `starter` module                                                     |
 | **External integrations** | Like addition feature for usefull systems, like rabbitmq, nats, kafka, otel, cds, etc, e.g. |
 | **DSL examples**          | More cases to show more examples to demonstrate the possibilities of project                |
 

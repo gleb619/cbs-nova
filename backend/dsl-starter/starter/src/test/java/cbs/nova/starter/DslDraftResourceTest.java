@@ -9,6 +9,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import cbs.nova.dsl.Dsl;
@@ -34,6 +35,7 @@ import cbs.nova.starter.model.VcsModels.DefinitionBundleEntry;
 import cbs.nova.starter.model.VcsModels.DefinitionHistoryEntry;
 import cbs.nova.starter.model.VcsModels.DiscardRequest;
 import cbs.nova.starter.model.VcsModels.DiscardResult;
+import cbs.nova.starter.model.VcsModels.DraftDetail;
 import cbs.nova.starter.model.VcsModels.DraftRequest;
 import cbs.nova.starter.model.VcsModels.DraftResponse;
 import cbs.nova.starter.model.VcsModels.DraftSummary;
@@ -152,25 +154,22 @@ class DslDraftResourceTest {
   }
 
   @Test
-  void readReturnsSourceAndStatus() throws Exception {
+  void readReturnsStatusOnly() throws Exception {
     Files.createDirectories(sourceDir.resolve("dsl"));
     Files.writeString(sourceDir.resolve("dsl/FooDsl.java"), "class Foo {}");
     registerProcess("foo");
     when(sourcePathResolver.relativePath("foo")).thenReturn(Optional.of("dsl/FooDsl.java"));
     when(gitStatusResolver.status(sourceDir)).thenReturn(Optional.of(
             RepoStatus.of(sourceDir, Map.of("dsl/FooDsl.java", ChangeType.MODIFIED))));
-    when(client.readFile("dsl/FooDsl.java")).thenReturn(
-            new FileContentResponse("dsl/FooDsl.java", "class Foo {}", false, 0L));
 
     ServerResponse response = handler.read(getRequest("/api/dsl/drafts/foo",
             Map.of("name", "foo")));
 
     assertThat(response.statusCode().value()).isEqualTo(200);
-    DraftRequest body = (DraftRequest) ((EntityResponse<?>) response).entity();
-    assertThat(body.source()).isEqualTo("class Foo {}");
+    DraftDetail body = (DraftDetail) ((EntityResponse<?>) response).entity();
     assertThat(body.status()).isEqualTo("Modified");
     assertThat(body.type()).isEqualTo("process");
-    assertThat(body.savedAt()).isNull();
+    verifyNoInteractions(client);
   }
 
   @Test
@@ -367,7 +366,7 @@ class DslDraftResourceTest {
     when(gitStatusResolver.status(sourceDir)).thenReturn(Optional.of(
             RepoStatus.of(sourceDir, Map.of())));
     when(client.readFile("dsl/FooDsl.java")).thenReturn(
-            new FileContentResponse("dsl/FooDsl.java", "class Foo {}", false, 0L));
+            new FileContentResponse("dsl/FooDsl.java", "class Foo {}", 0L));
 
     handler.save(postRequestWithSource("/api/dsl/drafts/foo/save", "foo", "class Foo {}"));
     handler.read(getRequest("/api/dsl/drafts/foo", Map.of("name", "foo")));

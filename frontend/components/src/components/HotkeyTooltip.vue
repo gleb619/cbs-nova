@@ -32,7 +32,7 @@ const arrowClass = computed(() => arrowClasses[resolvedLocation.value])
 </script>
 
 <template>
-  <span class="relative inline-block">
+  <span class="relative inline-block rounded-l">
     <slot />
     <span
       v-if="visible"

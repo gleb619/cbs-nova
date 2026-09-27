@@ -80,6 +80,7 @@ class CompileControllerTest {
               null,
               null,
               null,
+              null,
               new DslBuilderProperties.Bundles(1, 200),
               null,
               null,

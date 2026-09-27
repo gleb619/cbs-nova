@@ -278,7 +278,7 @@ class DslDraftGitResourceTest {
     when(sourcePathResolver.relativePath("foo")).thenReturn(Optional.of("dsl/FooDsl.java"));
     when(client.vcsShow("dsl/FooDsl.java", "abc1234")).thenReturn("class Foo { one }");
     when(client.readFile("dsl/FooDsl.java")).thenReturn(
-            new FileContentResponse("dsl/FooDsl.java", "class Foo { two }", false, 0L));
+            new FileContentResponse("dsl/FooDsl.java", "class Foo { two }", 0L));
 
     ServerResponse response = handler.historyDiff(getRequest(
             "/api/dsl/drafts/foo/history/abc1234/diff",

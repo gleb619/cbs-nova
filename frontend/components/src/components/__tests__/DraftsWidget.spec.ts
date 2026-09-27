@@ -17,7 +17,7 @@ const METADATA: DraftsMetadata = {
   gitBranch: 'main',
   gitEnabled: true,
   statusCacheTtlSeconds: 5,
-  historyLimit: 20,
+  workspaceMode: 'SHARED',
 }
 
 // The drawer teleports into <body>; stub Teleport so it renders in place.

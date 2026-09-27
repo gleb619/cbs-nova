@@ -1,4 +1,4 @@
-import { useCrc32 } from '@cbs/components'
+import { createDefaultMarkdownDoc, useCrc32 } from '@cbs/components'
 import { type ComputedRef, computed, ref } from 'vue'
 
 export type DocSaveStatus = 'idle' | 'dirty' | 'saving' | 'saved' | 'error'
@@ -19,10 +19,6 @@ export interface UseWorkbenchDocReturn {
   saveDoc: () => Promise<void>
 }
 
-function defaultDocTemplate(name: string): string {
-  return `---\nname: ${name}\ndescription: \n---\n`
-}
-
 export function useWorkbenchDoc(options: UseWorkbenchDocOptions): UseWorkbenchDocReturn {
   const { calculateCrc32 } = useCrc32()
 
@@ -30,10 +26,18 @@ export function useWorkbenchDoc(options: UseWorkbenchDocOptions): UseWorkbenchDo
   const savedHash = ref<number | null>(null)
   const saveStatus = ref<DocSaveStatus>('idle')
   const lastSavedAt = ref<Date | null>(null)
+  // False while the doc is only a seeded template that has never been written
+  // to disk, so the first Save creates the file even when nothing was edited.
+  const persisted = ref(false)
   let loadToken = 0
+  let currentName = ''
 
   const dirty = computed(
-    () => savedHash.value !== null && calculateCrc32(doc.value) !== savedHash.value,
+    () =>
+      currentName !== '' &&
+      (persisted.value
+        ? savedHash.value !== null && calculateCrc32(doc.value) !== savedHash.value
+        : true),
   )
 
   async function loadDoc(name: string): Promise<void> {
@@ -42,6 +46,7 @@ export function useWorkbenchDoc(options: UseWorkbenchDocOptions): UseWorkbenchDo
       doc.value = ''
       savedHash.value = null
       saveStatus.value = 'idle'
+      persisted.value = false
       return
     }
     let content: string | null = null
@@ -51,7 +56,8 @@ export function useWorkbenchDoc(options: UseWorkbenchDocOptions): UseWorkbenchDo
       options.logError?.('failed to load doc', { error: (err as Error).message })
     }
     if (token !== loadToken) return
-    doc.value = content && content.length > 0 ? content : defaultDocTemplate(name)
+    persisted.value = Boolean(content && content.length > 0)
+    doc.value = persisted.value ? (content as string) : createDefaultMarkdownDoc(name)
     savedHash.value = calculateCrc32(doc.value)
     saveStatus.value = 'idle'
   }
@@ -70,6 +76,7 @@ export function useWorkbenchDoc(options: UseWorkbenchDocOptions): UseWorkbenchDo
     try {
       await options.writeDoc(name, doc.value)
       savedHash.value = calculateCrc32(doc.value)
+      persisted.value = true
       lastSavedAt.value = new Date()
       saveStatus.value = 'saved'
     } catch (err) {
@@ -77,8 +84,6 @@ export function useWorkbenchDoc(options: UseWorkbenchDocOptions): UseWorkbenchDo
       saveStatus.value = 'error'
     }
   }
-
-  let currentName = ''
 
   return {
     doc,

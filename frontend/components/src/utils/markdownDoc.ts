@@ -3,6 +3,11 @@ export interface MarkdownDoc {
   body: string
 }
 
+/** Frontmatter key that carries the construct name (the doc's search key). */
+export const DOC_NAME_KEY = 'name'
+/** Frontmatter key that carries the one-line summary. */
+export const DOC_DESCRIPTION_KEY = 'description'
+
 const FRONTMATTER_FENCE = '---'
 const FRONTMATTER_KEY_PATTERN = /^([A-Za-z0-9_-]+):(?:\s+(.*))?$/
 
@@ -37,6 +42,37 @@ export function serializeMarkdownDoc(doc: MarkdownDoc): string {
   }
   const frontmatter = entries.map(([key, value]) => `${key}: ${formatYamlScalar(value)}`).join('\n')
   return `---\n${frontmatter}\n---\n\n${body}\n`
+}
+
+/**
+ * Canonical skeleton for a *new* doc: YAML frontmatter carrying the construct
+ * `name` (the search key) plus a `# <name>` H1 section in the body (the view
+ * title). The name deliberately appears twice — frontmatter for search/lookup,
+ * heading for rendering.
+ */
+export function createDefaultMarkdownDoc(name: string, description = ''): string {
+  const trimmedName = name.trim()
+  return serializeMarkdownDoc({
+    frontmatter: trimmedName
+      ? { [DOC_NAME_KEY]: trimmedName, [DOC_DESCRIPTION_KEY]: description }
+      : {},
+    body: trimmedName ? `# ${trimmedName}\n` : '',
+  })
+}
+
+/**
+ * Rewrites the leading `# <from>` heading to `# <to>`, keeping the rest of the
+ * body untouched. Returns the body unchanged when the first line is not that
+ * heading, so a hand-written doc is never clobbered.
+ */
+export function renameDocTitle(body: string, from: string, to: string): string {
+  const previous = from.trim()
+  const next = to.trim()
+  if (!previous || !next || previous === next) return body
+  const lines = body.split('\n')
+  if (lines[0]?.trim() !== `# ${previous}`) return body
+  lines[0] = `# ${next}`
+  return lines.join('\n')
 }
 
 function unquoteYamlScalar(raw: string): string {

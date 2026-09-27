@@ -20,6 +20,7 @@ public record DslBuilderProperties(
         List<String> sourceFolders,
         String templatesDir,
         Path sourceDir,
+        @DefaultValue("SHARED") WorkspaceMode workspaceMode,
         @DefaultValue Queue queue,
         @DefaultValue Files files,
         @DefaultValue Git git,
@@ -36,6 +37,7 @@ public record DslBuilderProperties(
         @DefaultValue Docs docs) {
 
   public DslBuilderProperties {
+    workspaceMode = workspaceMode == null ? WorkspaceMode.SHARED : workspaceMode;
     queue = queue == null ? new Queue(100, 4) : queue;
     files = files == null ? new Files(5, 100, 32, 8, 5L) : files;
     git = git == null ? new Git(true, null, null, null, null, null, 5, false, "origin") : git;
@@ -66,14 +68,16 @@ public record DslBuilderProperties(
   public static DslBuilderProperties defaultsWithWorkspace(Path workspaceDir) {
     return new DslBuilderProperties(workspaceDir, Duration.ofMinutes(10), Duration.ofHours(1),
             null, "0.0.1-SNAPSHOT", "1.27.0", "4.0.4", "v1", List.of("clean", "build"),
-            List.of("dsl", "models"), "project/templates", null, null, null, null, null,
+            List.of("dsl", "models"), "project/templates", null, WorkspaceMode.SHARED,
+            null, null, null, null,
             new Bundles(1, 200), 8, 25, 200, null, null, null, false, null, null);
   }
 
   public DslBuilderProperties withQueue(Queue queue) {
     return new DslBuilderProperties(workspaceDir, cleanupInterval, sessionTtl, gradleJavaHome,
             dslVersion, temporalVersion, springBootVersion, defaultBuildVersion, buildTasks,
-            sourceFolders, templatesDir, sourceDir, queue, files, git, fileBuffer, bundles,
+            sourceFolders, templatesDir, sourceDir, workspaceMode, queue, files, git, fileBuffer,
+            bundles,
             gradleJavaMin, gradleJavaMax, buildLogMaxLines, jdkSearchPaths, jdkHomeEnvVar,
             allowedRepoSchemes, allowPlainHttpRepo, allowedRepoHosts, docs);
   }
@@ -81,7 +85,8 @@ public record DslBuilderProperties(
   public DslBuilderProperties withFiles(Files files) {
     return new DslBuilderProperties(workspaceDir, cleanupInterval, sessionTtl, gradleJavaHome,
             dslVersion, temporalVersion, springBootVersion, defaultBuildVersion, buildTasks,
-            sourceFolders, templatesDir, sourceDir, queue, files, git, fileBuffer, bundles,
+            sourceFolders, templatesDir, sourceDir, workspaceMode, queue, files, git, fileBuffer,
+            bundles,
             gradleJavaMin, gradleJavaMax, buildLogMaxLines, jdkSearchPaths, jdkHomeEnvVar,
             allowedRepoSchemes, allowPlainHttpRepo, allowedRepoHosts, docs);
   }
@@ -89,7 +94,8 @@ public record DslBuilderProperties(
   public DslBuilderProperties withGit(Git git) {
     return new DslBuilderProperties(workspaceDir, cleanupInterval, sessionTtl, gradleJavaHome,
             dslVersion, temporalVersion, springBootVersion, defaultBuildVersion, buildTasks,
-            sourceFolders, templatesDir, sourceDir, queue, files, git, fileBuffer, bundles,
+            sourceFolders, templatesDir, sourceDir, workspaceMode, queue, files, git, fileBuffer,
+            bundles,
             gradleJavaMin, gradleJavaMax, buildLogMaxLines, jdkSearchPaths, jdkHomeEnvVar,
             allowedRepoSchemes, allowPlainHttpRepo, allowedRepoHosts, docs);
   }
@@ -97,7 +103,8 @@ public record DslBuilderProperties(
   public DslBuilderProperties withFileBuffer(FileBuffer fileBuffer) {
     return new DslBuilderProperties(workspaceDir, cleanupInterval, sessionTtl, gradleJavaHome,
             dslVersion, temporalVersion, springBootVersion, defaultBuildVersion, buildTasks,
-            sourceFolders, templatesDir, sourceDir, queue, files, git, fileBuffer, bundles,
+            sourceFolders, templatesDir, sourceDir, workspaceMode, queue, files, git, fileBuffer,
+            bundles,
             gradleJavaMin, gradleJavaMax, buildLogMaxLines, jdkSearchPaths, jdkHomeEnvVar,
             allowedRepoSchemes, allowPlainHttpRepo, allowedRepoHosts, docs);
   }

@@ -62,6 +62,7 @@ class CompileServiceTest {
             null,
             null,
             null,
+            null,
             git,
             null,
             new DslBuilderProperties.Bundles(1, 200),

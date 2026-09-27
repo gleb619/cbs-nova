@@ -226,18 +226,20 @@ defineExpose({ revealPosition, insertAtCursor })
           Validate
         </button>
       </HotkeyTooltip>
-      <SaveAction
-        testid-prefix="code-tab"
-        :is-dirty="isDirty"
-        :busy="busy"
-        :save-status="saveStatus"
-        :last-saved-at="lastSavedAt"
-        :autosave-options="autosaveOptions"
-        :autosave-mode="autosaveMode"
-        :save-shortcut="saveShortcut"
-        @save="requestSave"
-        @update:autosave-mode="setAutosaveMode"
-      />
+      <div class="ml-auto flex items-center gap-2">
+        <SaveAction
+          testid-prefix="code-tab"
+          :is-dirty="isDirty"
+          :busy="busy"
+          :save-status="saveStatus"
+          :last-saved-at="lastSavedAt"
+          :autosave-options="autosaveOptions"
+          :autosave-mode="autosaveMode"
+          :save-shortcut="saveShortcut"
+          @save="requestSave"
+          @update:autosave-mode="setAutosaveMode"
+        />
+      </div>
     </div>
     <div class="p-3 flex-1 min-h-0">
       <div

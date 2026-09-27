@@ -64,7 +64,8 @@ describe('DocTab', () => {
     const emitted = wrapper.emitted('update:doc')?.at(-1)?.[0] as string
     expect(emitted).toContain('name: NewName')
     expect(emitted).toContain('description: Sums values')
-    expect(emitted).toContain('# BatchProcessing')
+    // The `# <name>` heading follows the frontmatter rename.
+    expect(emitted).toContain('# NewName')
   })
 
   it('emits update:doc with frontmatter preserved when the body changes', async () => {
@@ -83,6 +84,113 @@ describe('DocTab', () => {
     await wrapper.find('[data-testid="schema-field-name"]').setValue('MyDsl')
 
     expect(wrapper.emitted('update:doc')?.at(-1)?.[0]).toContain('name: MyDsl')
+  })
+
+  describe('new doc creation', () => {
+    it('seeds a blank doc with the name frontmatter and a "# " body section', () => {
+      wrapper = mountTab({ doc: '', name: 'LoanDisbursement' })
+
+      expect(
+        (wrapper.find('[data-testid="schema-field-name"]').element as HTMLInputElement).value,
+      ).toBe('LoanDisbursement')
+      expect(
+        (wrapper.find('[data-testid="md-heading-text-0"]').element as HTMLInputElement).value,
+      ).toBe('LoanDisbursement')
+    })
+
+    it('seeds the raw editor with the yaml header and heading', async () => {
+      wrapper = mountTab({ doc: '', name: 'LoanDisbursement' })
+
+      await wrapper.find('[data-testid="doc-tab-mode-raw"]').trigger('click')
+
+      const value = (
+        wrapper.find('[data-testid="doc-tab-textarea"]').element as HTMLTextAreaElement
+      ).value
+      expect(value).toBe(
+        '---\nname: LoanDisbursement\ndescription: ""\n---\n\n# LoanDisbursement\n',
+      )
+    })
+
+    it('renders the name in the view header and as the body heading', async () => {
+      wrapper = mountTab({ doc: '', name: 'LoanDisbursement' })
+
+      await wrapper.find('[data-testid="doc-tab-mode-view"]').trigger('click')
+
+      expect(wrapper.find('[data-testid="doc-tab-view-name"]').text()).toBe('LoanDisbursement')
+      expect(wrapper.find('[data-testid="doc-tab-view-body"]').html()).toContain(
+        '<h1>LoanDisbursement</h1>',
+      )
+    })
+
+    it('does not overwrite an existing doc when a name is supplied', () => {
+      wrapper = mountTab({ doc: SAMPLE_DOC, name: 'OtherName' })
+
+      expect(
+        (wrapper.find('[data-testid="schema-field-name"]').element as HTMLInputElement).value,
+      ).toBe('BatchProcessing')
+    })
+
+    it('leaves the doc blank when no name is supplied', () => {
+      wrapper = mountTab({ doc: '' })
+
+      expect(
+        (wrapper.find('[data-testid="schema-field-name"]').element as HTMLInputElement).value,
+      ).toBe('')
+      expect(wrapper.find('[data-testid="md-heading-text-0"]').exists()).toBe(false)
+    })
+
+    it('retitles the body heading when the frontmatter name changes', async () => {
+      wrapper = mountTab({ doc: '', name: 'LoanDisbursement' })
+
+      await wrapper.find('[data-testid="schema-field-name"]').setValue('Renamed')
+
+      const emitted = wrapper.emitted('update:doc')?.at(-1)?.[0] as string
+      expect(emitted).toContain('name: Renamed')
+      expect(emitted).toContain('# Renamed')
+    })
+
+    it('keeps a hand-written heading when the frontmatter name changes', async () => {
+      wrapper = mountTab({ doc: '---\nname: Old\n---\n\n# Custom title\n\ntext\n' })
+
+      await wrapper.find('[data-testid="schema-field-name"]').setValue('New')
+
+      const emitted = wrapper.emitted('update:doc')?.at(-1)?.[0] as string
+      expect(emitted).toContain('name: New')
+      expect(emitted).toContain('# Custom title')
+    })
+
+    it('adopts a doc that arrives from the parent after mount', async () => {
+      wrapper = mountTab({ doc: '', name: 'LoanDisbursement' })
+      expect(
+        (wrapper.find('[data-testid="schema-field-name"]').element as HTMLInputElement).value,
+      ).toBe('LoanDisbursement')
+
+      await wrapper.setProps({ doc: SAMPLE_DOC })
+
+      expect(
+        (wrapper.find('[data-testid="schema-field-name"]').element as HTMLInputElement).value,
+      ).toBe('BatchProcessing')
+      expect(wrapper.find('[data-testid="doc-tab-dirty-indicator"]').exists()).toBe(false)
+    })
+
+    it('does not discard local edits when the parent pushes a doc', async () => {
+      wrapper = mountTab()
+      await wrapper.find('[data-testid="md-paragraph-1"]').setValue('# local edit')
+
+      await wrapper.setProps({ doc: SAMPLE_DOC })
+
+      expect(wrapper.emitted('update:doc')?.at(-1)?.[0]).toContain('# local edit')
+      expect(wrapper.find('[data-testid="doc-tab-dirty-indicator"]').exists()).toBe(true)
+    })
+
+    it('ignores its own emission echoed back as a prop', async () => {
+      wrapper = mountTab()
+
+      await wrapper.find('[data-testid="md-paragraph-1"]').setValue('# local edit')
+      await wrapper.setProps({ doc: wrapper.emitted('update:doc')?.at(-1)?.[0] as string })
+
+      expect(wrapper.find('[data-testid="doc-tab-dirty-indicator"]').exists()).toBe(true)
+    })
   })
 
   it('switches to raw mode with a markdown editor and back', async () => {
@@ -224,6 +332,80 @@ describe('DocTab', () => {
     expect(wrapper.find('[data-testid="doc-tab-save"]').exists()).toBe(true)
   })
 
+  it('renders Refresh and Validate buttons in the header', () => {
+    wrapper = mountTab()
+
+    expect(wrapper.find('[data-testid="doc-tab-refresh"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="doc-tab-validate"]').exists()).toBe(true)
+  })
+
+  it('places Save to the right of Refresh and Validate', () => {
+    wrapper = mountTab()
+
+    const refresh = wrapper.find('[data-testid="doc-tab-refresh"]').element as HTMLElement
+    const validate = wrapper.find('[data-testid="doc-tab-validate"]').element as HTMLElement
+    const save = wrapper.find('[data-testid="doc-tab-save"]').element as HTMLElement
+    const compare = (a: HTMLElement, b: HTMLElement) =>
+      (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0
+    expect(compare(refresh, save)).toBe(true)
+    expect(compare(validate, save)).toBe(true)
+  })
+
+  it('disables Refresh and Validate when no callbacks are provided', () => {
+    wrapper = mountTab()
+
+    expect(wrapper.find('[data-testid="doc-tab-refresh"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.find('[data-testid="doc-tab-validate"]').attributes('disabled')).toBeDefined()
+  })
+
+  it('invokes the refresh callback when Refresh is clicked', async () => {
+    const refresh = vi.fn(async () => undefined)
+    wrapper = mountTab({ refresh })
+
+    expect(wrapper.find('[data-testid="doc-tab-refresh"]').attributes('disabled')).toBeUndefined()
+
+    await wrapper.find('[data-testid="doc-tab-refresh"]').trigger('click')
+
+    expect(refresh).toHaveBeenCalledTimes(1)
+  })
+
+  it('invokes the validate callback when Validate is clicked', async () => {
+    const validate = vi.fn(async () => undefined)
+    wrapper = mountTab({ validate })
+
+    await wrapper.find('[data-testid="doc-tab-validate"]').trigger('click')
+
+    expect(validate).toHaveBeenCalledTimes(1)
+  })
+
+  it('disables Refresh and Validate while busy', async () => {
+    const refresh = vi.fn(async () => undefined)
+    const validate = vi.fn(async () => undefined)
+    wrapper = mountTab({ refresh, validate })
+
+    await wrapper.setProps({ busy: true })
+
+    expect(wrapper.find('[data-testid="doc-tab-refresh"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.find('[data-testid="doc-tab-validate"]').attributes('disabled')).toBeDefined()
+
+    await wrapper.find('[data-testid="doc-tab-refresh"]').trigger('click')
+    await wrapper.find('[data-testid="doc-tab-validate"]').trigger('click')
+
+    expect(refresh).not.toHaveBeenCalled()
+    expect(validate).not.toHaveBeenCalled()
+  })
+
+  it('hides Refresh and Validate when readOnly', () => {
+    wrapper = mountTab({
+      readOnly: true,
+      refresh: vi.fn(),
+      validate: vi.fn(),
+    })
+
+    expect(wrapper.find('[data-testid="doc-tab-refresh"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="doc-tab-validate"]').exists()).toBe(false)
+  })
+
   it('does not duplicate the Save button into the footer', () => {
     wrapper = mountTab()
 
@@ -324,9 +506,9 @@ describe('DocTab', () => {
 
       const dropdown = wrapper.find('[data-testid="doc-tab-save-dropdown"]')
       expect(dropdown.exists()).toBe(true)
-      const options = dropdown.findAll('[data-testid^="doc-tab-autosave-"]').map((node) =>
-        node.attributes('data-testid'),
-      )
+      const options = dropdown
+        .findAll('[data-testid^="doc-tab-autosave-"]')
+        .map((node) => node.attributes('data-testid'))
       expect(options).toEqual([
         'doc-tab-autosave-off',
         'doc-tab-autosave-5s',
@@ -378,6 +560,65 @@ describe('DocTab', () => {
 
       vi.advanceTimersByTime(5000)
       expect(wrapper.emitted('save')).toHaveLength(1)
+    })
+  })
+
+  describe('hotkeys', () => {
+    function dispatchWindowKey(opts: KeyboardEventInit & { key: string }) {
+      window.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, ...opts }))
+    }
+
+    it('triggers refresh on Ctrl+Shift+R', async () => {
+      const refresh = vi.fn(async () => undefined)
+      wrapper = mountTab({ refresh })
+
+      dispatchWindowKey({ key: 'r', ctrlKey: true, shiftKey: true })
+
+      expect(refresh).toHaveBeenCalledTimes(1)
+    })
+
+    it('does not trigger refresh on plain Ctrl+R', async () => {
+      const refresh = vi.fn(async () => undefined)
+      wrapper = mountTab({ refresh })
+
+      dispatchWindowKey({ key: 'r', ctrlKey: true })
+
+      expect(refresh).not.toHaveBeenCalled()
+    })
+
+    it('triggers validate on Ctrl+Enter', async () => {
+      const validate = vi.fn(async () => undefined)
+      wrapper = mountTab({ validate })
+
+      dispatchWindowKey({ key: 'Enter', ctrlKey: true })
+
+      expect(validate).toHaveBeenCalledTimes(1)
+    })
+
+    it('does not trigger hotkeys when readOnly', async () => {
+      const refresh = vi.fn()
+      const validate = vi.fn()
+      wrapper = mountTab({ readOnly: true, refresh, validate })
+
+      dispatchWindowKey({ key: 'r', ctrlKey: true, shiftKey: true })
+      dispatchWindowKey({ key: 'Enter', ctrlKey: true })
+
+      expect(refresh).not.toHaveBeenCalled()
+      expect(validate).not.toHaveBeenCalled()
+    })
+
+    it('suppresses hotkeys while busy', async () => {
+      const refresh = vi.fn(async () => undefined)
+      const validate = vi.fn(async () => undefined)
+      wrapper = mountTab({ refresh, validate })
+
+      await wrapper.setProps({ busy: true })
+
+      dispatchWindowKey({ key: 'r', ctrlKey: true, shiftKey: true })
+      dispatchWindowKey({ key: 'Enter', ctrlKey: true })
+
+      expect(refresh).not.toHaveBeenCalled()
+      expect(validate).not.toHaveBeenCalled()
     })
   })
 })

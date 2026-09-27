@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { parseMarkdownDoc, serializeMarkdownDoc } from '../markdownDoc'
+import {
+  createDefaultMarkdownDoc,
+  parseMarkdownDoc,
+  renameDocTitle,
+  serializeMarkdownDoc,
+} from '../markdownDoc'
 
 describe('parseMarkdownDoc', () => {
   it('parses frontmatter and body', () => {
@@ -80,5 +85,54 @@ describe('round trip', () => {
     '# No frontmatter at all\n\nbody\n',
   ])('parse ∘ serialize preserves %j', (md) => {
     expect(serializeMarkdownDoc(parseMarkdownDoc(md))).toBe(md)
+  })
+})
+
+describe('createDefaultMarkdownDoc', () => {
+  it('puts the name in the frontmatter and in a "# " body heading', () => {
+    const md = createDefaultMarkdownDoc('LoanDisbursement')
+
+    expect(md).toBe('---\nname: LoanDisbursement\ndescription: ""\n---\n\n# LoanDisbursement\n')
+    expect(parseMarkdownDoc(md)).toEqual({
+      frontmatter: { name: 'LoanDisbursement', description: '' },
+      body: '# LoanDisbursement\n',
+    })
+  })
+
+  it('keeps a supplied description', () => {
+    expect(createDefaultMarkdownDoc('Foo', 'Sums values')).toContain('description: Sums values')
+  })
+
+  it('trims the name', () => {
+    expect(createDefaultMarkdownDoc('  Foo  ')).toBe(
+      '---\nname: Foo\ndescription: ""\n---\n\n# Foo\n',
+    )
+  })
+
+  it('returns an empty doc for a blank name', () => {
+    expect(createDefaultMarkdownDoc('   ')).toBe('')
+    expect(createDefaultMarkdownDoc('')).toBe('')
+  })
+})
+
+describe('renameDocTitle', () => {
+  it('retitles the leading heading', () => {
+    expect(renameDocTitle('# Old\n\nbody\n', 'Old', 'New')).toBe('# New\n\nbody\n')
+  })
+
+  it('leaves the body alone when the first line is a different heading', () => {
+    expect(renameDocTitle('# Something else\n\nbody\n', 'Old', 'New')).toBe(
+      '# Something else\n\nbody\n',
+    )
+  })
+
+  it('ignores blank, missing or unchanged names', () => {
+    expect(renameDocTitle('# Old\n', '', 'New')).toBe('# Old\n')
+    expect(renameDocTitle('# Old\n', 'Old', '  ')).toBe('# Old\n')
+    expect(renameDocTitle('# Old\n', 'Old', 'Old')).toBe('# Old\n')
+  })
+
+  it('does not retitle a heading that is not the first line', () => {
+    expect(renameDocTitle('intro\n# Old\n', 'Old', 'New')).toBe('intro\n# Old\n')
   })
 })

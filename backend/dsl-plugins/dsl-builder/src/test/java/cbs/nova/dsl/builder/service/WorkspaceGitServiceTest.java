@@ -335,7 +335,9 @@ class WorkspaceGitServiceTest {
     var properties = dslBuilderProperties(repo,
             new DslBuilderProperties.Git(false, null, null, null, null, null, 5, false, "origin"));
     var status = new GitStatusService(properties, Clock.systemUTC());
-    var service = new WorkspaceGitService(properties, () -> status) {
+    var service = new WorkspaceGitService(properties,
+            new WorkspaceService(properties, new GitService()),
+            () -> status) {
     };
 
     assertThatThrownBy(() -> service.commit(List.of("README.md"),
@@ -365,7 +367,9 @@ class WorkspaceGitServiceTest {
     var properties = dslBuilderProperties(repo,
             new DslBuilderProperties.Git(false, null, null, null, null, null, 5, false, "origin"));
     var status = new GitStatusService(properties, Clock.systemUTC());
-    var service = new WorkspaceGitService(properties, () -> status) {
+    var service = new WorkspaceGitService(properties,
+            new WorkspaceService(properties, new GitService()),
+            () -> status) {
     };
     assertThat(service.branch()).isEmpty();
   }
@@ -512,7 +516,8 @@ class WorkspaceGitServiceTest {
             new DslBuilderProperties.Git(true, configuredRepoDir,
                     null, null, null, null, 5, pushOnCommit, remote));
     var status = new GitStatusService(properties, Clock.systemUTC());
-    return new WorkspaceGitService(properties, () -> status) {
+    return new WorkspaceGitService(properties, new WorkspaceService(properties, new GitService()),
+            () -> status) {
     };
   }
 
@@ -527,7 +532,8 @@ class WorkspaceGitServiceTest {
             new DslBuilderProperties.Git(true, configuredRepoDir,
                     null, null, null, null, 5, pushOnCommit, remote));
     var status = new GitStatusService(properties, Clock.systemUTC());
-    return new WorkspaceGitService(properties, () -> status) {
+    return new WorkspaceGitService(properties, new WorkspaceService(properties, new GitService()),
+            () -> status) {
       @Override
       protected RevCommit executeCommit(org.eclipse.jgit.api.CommitCommand command) {
         throw new IllegalStateException("simulated commit failure");
@@ -549,6 +555,7 @@ class WorkspaceGitServiceTest {
             List.of("clean", "build"),
             List.of("dsl", "models"),
             "project/templates",
+            null,
             null,
             null,
             null,

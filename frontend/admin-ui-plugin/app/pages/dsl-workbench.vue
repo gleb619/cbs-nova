@@ -140,11 +140,6 @@ const workbenchDraft = useWorkbenchDraft(state.value.selectedName ?? '', {
       const result = (await workbench.autosaveDraft(body)) as { savedAt?: number } | undefined
       return result?.savedAt
     },
-    load: async (name: string) => {
-      const result = (await dslApi.readDraft(name)) as { source?: string; savedAt?: number } | null
-      if (typeof result?.source !== 'string' || typeof result.savedAt !== 'number') return null
-      return { body: result.source, savedAt: result.savedAt }
-    },
   },
 })
 const {
@@ -438,7 +433,7 @@ onMounted(async () => {
   // list has loaded — keeps ConstructExplorer free of URL navigation.
   deepLink.applyObjectName()
 
-  // Deep-link target: `?activeTab=<structure|code|preview|explain|problems>`
+  // Deep-link target: `?activeTab=<structure|code|docs|preview|explain|problems>`
   // Emits a window CustomEvent; BodyEditor listens (event-bus pattern).
   deepLink.applyActiveTab()
 

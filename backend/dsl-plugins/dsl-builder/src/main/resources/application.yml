@@ -11,6 +11,11 @@ spring:
 cbs:
   dsl:
     builder:
+      # SHARED (default): file I/O and git run directly in source-dir (else workspace-dir) —
+      # the same directory the starter's cbs.dsl.source-dir points at.
+      # WORKTREE: the builder manages workspace-dir as its own git worktree, provisioned
+      # from git.repo-url/branch/sub-path when empty.
+      workspace-mode: ${CBS_DSL_BUILDER_WORKSPACE_MODE:SHARED}
       workspace-dir: ${java.io.tmpdir}/dsl-builder
       cleanup-interval: PT10M
       session-ttl: PT1H

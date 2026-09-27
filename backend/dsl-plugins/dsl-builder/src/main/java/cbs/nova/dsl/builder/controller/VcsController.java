@@ -1,6 +1,5 @@
 package cbs.nova.dsl.builder.controller;
 
-import cbs.nova.dsl.builder.config.DslBuilderProperties;
 import cbs.nova.dsl.builder.exception.BuilderApiException;
 import cbs.nova.dsl.builder.model.VcsModels.CommitRequest;
 import cbs.nova.dsl.builder.model.VcsModels.CommitResult;
@@ -11,6 +10,7 @@ import cbs.nova.dsl.builder.service.FileService;
 import cbs.nova.dsl.builder.service.GitStatusService;
 import cbs.nova.dsl.vcs.RepoStatus;
 import cbs.nova.dsl.builder.service.WorkspaceGitService;
+import cbs.nova.dsl.builder.service.WorkspaceService;
 import jakarta.validation.constraints.NotBlank;
 import java.util.List;
 import java.util.Optional;
@@ -30,7 +30,7 @@ public class VcsController {
 
   private final GitStatusService gitStatusService;
   private final WorkspaceGitService workspaceGitService;
-  private final DslBuilderProperties properties;
+  private final WorkspaceService workspaceService;
   private final FileService fileService;
 
   @GetMapping("/status")
@@ -43,7 +43,7 @@ public class VcsController {
       fileService.flushPending();
       gitStatusService.invalidate();
     }
-    return gitStatusService.status(properties.workspaceDir())
+    return gitStatusService.status(workspaceService.workTree())
             .orElseThrow(() -> new BuilderApiException(HttpStatus.NOT_FOUND, "NOT_FOUND",
                     "no git repository found under workspace"));
   }

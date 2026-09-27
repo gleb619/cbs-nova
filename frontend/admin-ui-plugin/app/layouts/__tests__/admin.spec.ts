@@ -152,7 +152,6 @@ describe('admin.vue saved drafts widget', () => {
       gitBranch: 'main',
       gitEnabled: true,
       statusCacheTtlSeconds: 5,
-      historyLimit: 20,
     })
     navigateToMock.mockReset()
     vi.mocked(useRuntimeConfig as Mock).mockReturnValue({
@@ -206,7 +205,6 @@ describe('admin.vue saved drafts widget', () => {
       gitBranch: 'feature/drafts',
       gitEnabled: true,
       statusCacheTtlSeconds: 5,
-      historyLimit: 20,
     })
 
     const wrapper = mountLayout()
@@ -216,7 +214,7 @@ describe('admin.vue saved drafts widget', () => {
 
     expect(dslApi.getDraftsMetadata).toHaveBeenCalledOnce()
     expect(wrapper.find('[data-testid="draft-metadata-card-count"]').text()).toBe('7')
-    expect(wrapper.find('[data-testid="draft-metadata-card-path"]').text()).toBe('workspace/dsl')
+    expect(wrapper.find('[data-testid="draft-metadata-card-path"]').text()).toBe('...workspace/dsl')
     expect(wrapper.find('[data-testid="draft-metadata-card-branch"]').text()).toBe('feature/drafts')
   })
 

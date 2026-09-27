@@ -5,10 +5,12 @@ import cbs.nova.dsl.vcs.ChangeType;
 import cbs.nova.dsl.vcs.GitChangeClassifier;
 import cbs.nova.dsl.vcs.RepoStatus;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -30,11 +32,15 @@ public class GitStatusService {
   private final ConcurrentHashMap<Path, Snapshot> cache = new ConcurrentHashMap<>();
 
   @Autowired
+  @Deprecated(forRemoval = true)
+  //TODO: repalce ctor with a lombok's one
   public GitStatusService(DslBuilderProperties properties) {
     this(properties, Clock.systemUTC());
   }
 
   // Test seam: deterministic clock for TTL cache assertions. Behavior-preserving.
+  @Deprecated(forRemoval = true)
+  //TODO: repalce ctor with a lombok's one
   GitStatusService(DslBuilderProperties properties, Clock clock) {
     this.properties = properties;
     this.clock = clock;
@@ -77,10 +83,29 @@ public class GitStatusService {
     try (Git git = new Git(repository)) {
       Status status = git.status().call();
       Map<String, ChangeType> changes = classify(status);
-      return RepoStatus.of(
-              repository.getWorkTree().toPath().toAbsolutePath().normalize(),
-              changes);
+      Path workTree = repository.getWorkTree().toPath().toAbsolutePath().normalize();
+      return RepoStatus.of(workTree, changes, sizesOf(changes.keySet(), workTree));
     }
+  }
+
+  /**
+   * On-disk size in bytes for each changed path that still exists as a regular file. Deleted paths
+   * contribute nothing; sizes are read right after the JGit scan so a pending-write flush (I5) is
+   * reflected.
+   */
+  private static Map<String, Long> sizesOf(Set<String> changedPaths, Path workTree) {
+    Map<String, Long> sizes = new HashMap<>();
+    for (String path : changedPaths) {
+      try {
+        Path file = workTree.resolve(path.replace('\\', '/')).normalize();
+        if (file.startsWith(workTree) && Files.isRegularFile(file)) {
+          sizes.put(path, Files.size(file));
+        }
+      } catch (IOException e) {
+        log.debug("[DSL git] failed to read size for {}: {}", path, e.getMessage());
+      }
+    }
+    return sizes;
   }
 
   private boolean gitEnabled() {

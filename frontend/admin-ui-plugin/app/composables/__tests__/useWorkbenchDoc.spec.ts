@@ -25,14 +25,32 @@ describe('useWorkbenchDoc', () => {
     expect(doc.dirty.value).toBe(false)
   })
 
-  it('falls back to a default frontmatter template when no doc exists', async () => {
+  it('falls back to a default template with name frontmatter and body heading when no doc exists', async () => {
     readDoc.mockResolvedValueOnce(null)
     const doc = useWorkbenchDoc({ readDoc, writeDoc, logError })
 
     await doc.loadDoc('LoanDisbursement')
 
-    expect(doc.doc.value).toBe('---\nname: LoanDisbursement\ndescription: \n---\n')
+    expect(doc.doc.value).toBe(
+      '---\nname: LoanDisbursement\ndescription: ""\n---\n\n# LoanDisbursement\n',
+    )
+    // A never-written doc counts as dirty so the first Save creates the file.
+    expect(doc.dirty.value).toBe(true)
+  })
+
+  it('creates a new doc on the first save even without edits', async () => {
+    readDoc.mockResolvedValueOnce(null)
+    const doc = useWorkbenchDoc({ readDoc, writeDoc, logError })
+    await doc.loadDoc('LoanDisbursement')
+
+    await doc.saveDoc()
+
+    expect(writeDoc).toHaveBeenCalledWith(
+      'LoanDisbursement',
+      '---\nname: LoanDisbursement\ndescription: ""\n---\n\n# LoanDisbursement\n',
+    )
     expect(doc.dirty.value).toBe(false)
+    expect(doc.saveStatus.value).toBe('saved')
   })
 
   it('falls back to the default template when the doc read fails', async () => {

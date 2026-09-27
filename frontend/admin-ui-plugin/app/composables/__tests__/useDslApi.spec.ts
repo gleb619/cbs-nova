@@ -191,7 +191,6 @@ describe('useDslApi', () => {
       gitBranch: 'main',
       gitEnabled: true,
       statusCacheTtlSeconds: 5,
-      historyLimit: 20,
     }
     fetchMock.mockResolvedValueOnce(metadata)
     const api = useDslApi()
@@ -577,7 +576,7 @@ describe('useDslApi', () => {
   })
 
   it('readDslFile GETs /api/v1/dsl/files/by-name/{name} and returns content', async () => {
-    fetchMock.mockResolvedValueOnce({ path: 'LoanDsl.java', content: 'class A {}', pending: false })
+    fetchMock.mockResolvedValueOnce({ path: 'LoanDsl.java', content: 'class A {}' })
     const api = useDslApi()
 
     const result = await api.readDslFile('LoanDsl')

@@ -53,6 +53,7 @@ describe('useWorkbenchShareLink', () => {
     expect(BODY_EDITOR_TABS).toEqual([
       'structure',
       'code',
+      'docs',
       'preview',
       'explain',
       'hierarchy',

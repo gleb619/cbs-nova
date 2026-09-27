@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import cbs.nova.dsl.builder.config.BuilderServiceConfiguration;
 import cbs.nova.dsl.builder.config.DslBuilderProperties;
+import cbs.nova.dsl.builder.config.WorkspaceMode;
 import cbs.nova.dsl.builder.model.DslFileModels.FileContentRequest;
 import cbs.nova.dsl.builder.model.DslFileModels.FileContentResponse;
 import cbs.nova.dsl.builder.repository.FileRepository;
@@ -18,6 +19,7 @@ import java.util.concurrent.Semaphore;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.springframework.beans.factory.ObjectProvider;
 
 class FileServiceTest {
 
@@ -31,7 +33,12 @@ class FileServiceTest {
 
   @BeforeEach
   void setUp() {
-    var properties = new DslBuilderProperties(
+    var properties = properties(WorkspaceMode.SHARED);
+    service = fileService(properties);
+  }
+
+  private DslBuilderProperties properties(WorkspaceMode mode) {
+    return new DslBuilderProperties(
             workspaceDir,
             Duration.ofMinutes(10),
             Duration.ofHours(1),
@@ -44,6 +51,7 @@ class FileServiceTest {
             List.of("dsl", "models"),
             "project/templates",
             sourceDir,
+            mode,
             null,
             new DslBuilderProperties.Files(0, 100, 32, 8, 5L),
             null,
@@ -58,12 +66,15 @@ class FileServiceTest {
             false,
             null,
             null);
-    var gitStatusProvider = new NoOpGitStatusProvider();
-    service = new FileService(properties, new FileRepository(),
+  }
+
+  private static FileService fileService(DslBuilderProperties properties) {
+    return new FileService(properties, new FileRepository(),
             new FileBuffer(
                     BuilderServiceConfiguration.pendingCache(properties, Ticker.systemTicker())),
             new FileBulkhead(new Semaphore(1), new Semaphore(1), 5L),
-            gitStatusProvider);
+            new WorkspaceService(properties, new GitService()),
+            new NoOpGitStatusProvider());
   }
 
   /**
@@ -74,7 +85,7 @@ class FileServiceTest {
    */
   private static final class NoOpGitStatusProvider
           implements
-            org.springframework.beans.factory.ObjectProvider<GitStatusService> {
+            ObjectProvider<GitStatusService> {
     @Override
     public GitStatusService getIfAvailable() {
       return null;
@@ -92,7 +103,7 @@ class FileServiceTest {
    */
   private static final class SingleObjectProvider<T>
           implements
-            org.springframework.beans.factory.ObjectProvider<T> {
+            ObjectProvider<T> {
     private final T value;
 
     SingleObjectProvider(T value) {
@@ -135,6 +146,7 @@ class FileServiceTest {
               null,
               null,
               null,
+              null,
               new DslBuilderProperties.Bundles(1, 200),
               null,
               null,
@@ -158,14 +170,14 @@ class FileServiceTest {
   }
 
   @SuppressWarnings("unchecked")
-  private static org.springframework.beans.factory.ObjectProvider<GitStatusService> castingProvider(
+  private static ObjectProvider<GitStatusService> castingProvider(
           GitStatusService value) {
-    return (org.springframework.beans.factory.ObjectProvider<GitStatusService>) (org.springframework.beans.factory.ObjectProvider<?>) new SingleObjectProvider<>(
+    return (ObjectProvider<GitStatusService>) (ObjectProvider<?>) new SingleObjectProvider<>(
             value);
   }
 
   @Test
-  void readsFromSourceRootWhenWorkspaceFileMissing() throws IOException {
+  void readsFromSharedSourceRoot() throws IOException {
     Path nested = sourceDir.resolve("dsl").resolve("LoanDsl.java");
     Files.createDirectories(nested.getParent());
     Files.writeString(nested, "source content");
@@ -179,14 +191,54 @@ class FileServiceTest {
   }
 
   @Test
-  void readsFromWorkspaceRootWhenDraftExists() throws IOException {
+  void sharedModeFlushesWritesIntoSourceDir() throws IOException {
+    service.stageWrite("dsl/LoanDsl.java", "draft content");
+    service.flushPending();
+
+    assertThat(Files.readString(sourceDir.resolve("dsl/LoanDsl.java"))).isEqualTo("draft content");
+    assertThat(Files.exists(workspaceDir.resolve("dsl/LoanDsl.java"))).isFalse();
+  }
+
+  @Test
+  void worktreeModeFlushesWritesIntoWorkspaceDir() throws IOException {
+    var worktreeService = fileService(properties(WorkspaceMode.WORKTREE));
+
+    worktreeService.stageWrite("dsl/LoanDsl.java", "draft content");
+    worktreeService.flushPending();
+
+    assertThat(Files.readString(workspaceDir.resolve("dsl/LoanDsl.java")))
+            .isEqualTo("draft content");
+    assertThat(Files.exists(sourceDir.resolve("dsl/LoanDsl.java"))).isFalse();
+  }
+
+  @Test
+  void worktreeModeDoesNotFallBackToSourceDirForReads() throws IOException {
     Path nested = sourceDir.resolve("dsl").resolve("LoanDsl.java");
     Files.createDirectories(nested.getParent());
     Files.writeString(nested, "source content");
+    var worktreeService = fileService(properties(WorkspaceMode.WORKTREE));
 
+    assertThatThrownBy(() -> worktreeService.readFile("dsl/LoanDsl.java"))
+            .isInstanceOf(IOException.class)
+            .hasMessageContaining("file not found");
+  }
+
+  @Test
+  void worktreeModeListsFilesFromWorkspaceDir() throws IOException {
+    Files.createDirectories(workspaceDir.resolve("dsl"));
+    Files.writeString(workspaceDir.resolve("dsl/A.java"), "a");
+    var worktreeService = fileService(properties(WorkspaceMode.WORKTREE));
+
+    assertThat(worktreeService.listFiles(null)).extracting(e -> e.path())
+            .containsExactly("dsl/A.java");
+  }
+
+  @Test
+  void readsPendingDraftFromBuffer() throws IOException {
     service.stageWrite("dsl/LoanDsl.java", "draft content");
 
     var response = service.readFile("dsl/LoanDsl.java");
+
     assertThat(response.content()).isEqualTo("draft content");
     assertThat(response.crc32()).isEqualTo(FileContentResponse.crc32("draft content"));
     assertThat(response.pending()).isTrue();
@@ -208,14 +260,14 @@ class FileServiceTest {
   }
 
   @Test
-  void throwsWhenFileMissingInBothRoots() {
+  void throwsWhenFileMissingInRoot() {
     assertThatThrownBy(() -> service.readFile("dsl/MissingDsl.java"))
             .isInstanceOf(IOException.class)
             .hasMessageContaining("file not found");
   }
 
   @Test
-  void existsChecksBufferAndBothRoots() throws IOException {
+  void existsChecksBufferAndRoot() throws IOException {
     Path nested = sourceDir.resolve("dsl").resolve("LoanDsl.java");
     Files.createDirectories(nested.getParent());
     Files.writeString(nested, "source content");
@@ -228,7 +280,7 @@ class FileServiceTest {
   }
 
   @Test
-  void listsFilesFromWorkspaceRootOnly() throws IOException {
+  void listsFilesFromSharedRoot() throws IOException {
     Path source = sourceDir.resolve("dsl").resolve("A.java");
     Files.createDirectories(source.getParent());
     Files.writeString(source, "a");
@@ -239,7 +291,7 @@ class FileServiceTest {
     var entries = service.listFiles(null);
 
     assertThat(entries).extracting(e -> e.path())
-            .containsExactly("dsl/C.java", "models/B.java");
+            .containsExactly("dsl/A.java", "dsl/C.java", "models/B.java");
     assertThat(service.listFiles("models")).extracting(e -> e.path())
             .containsExactly("models/B.java");
   }
@@ -255,7 +307,7 @@ class FileServiceTest {
     var result = service.flushPending();
     assertThat(result.flushed()).isEqualTo(2);
     assertThat(result.failed()).isZero();
-    assertThat(Files.readString(workspaceDir.resolve("dsl/B.java"))).isEmpty();
+    assertThat(Files.readString(sourceDir.resolve("dsl/B.java"))).isEmpty();
   }
 
   @Test
@@ -271,42 +323,14 @@ class FileServiceTest {
   void flushPendingInvalidatesGitStatusWhenAtLeastOneFileLands() throws IOException {
     // Gap G6 / invariant I5: a just-flushed write must show as a draft on the next status read.
     // Use a recording GitStatusService stub so we can assert {@code invalidate()} was called.
-    var properties = new DslBuilderProperties(
-            workspaceDir,
-            Duration.ofMinutes(10),
-            Duration.ofHours(1),
-            null,
-            "0.0.1-SNAPSHOT",
-            "1.27.0",
-            "4.0.4",
-            "v1",
-            List.of("clean", "build"),
-            List.of("dsl", "models"),
-            "project/templates",
-            sourceDir,
-            null,
-            new DslBuilderProperties.Files(0, 100, 32, 8, 5L),
-            null,
-            null,
-            new DslBuilderProperties.Bundles(1, 200),
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            false,
-            null,
-            null);
+    var properties = properties(WorkspaceMode.SHARED);
     var recording = new RecordingGitStatusService();
-    @SuppressWarnings("unchecked")
-    var provider = (org.springframework.beans.factory.ObjectProvider<GitStatusService>) (org.springframework.beans.factory.ObjectProvider<?>) new SingleObjectProvider<>(
-            recording);
     var fileService = new FileService(properties, new FileRepository(),
             new FileBuffer(
                     BuilderServiceConfiguration.pendingCache(properties, Ticker.systemTicker())),
             new FileBulkhead(new Semaphore(1), new Semaphore(1), 5L),
-            provider);
+            new WorkspaceService(properties, new GitService()),
+            castingProvider(recording));
 
     fileService.stageWrite("dsl/A.java", "a");
     var result = fileService.flushPending();
@@ -318,38 +342,13 @@ class FileServiceTest {
   @Test
   void flushPendingSkipsInvalidationWhenBufferIsEmpty() throws IOException {
     var recording = new RecordingGitStatusService();
-    var noopProperties = new DslBuilderProperties(
-            workspaceDir,
-            Duration.ofMinutes(10),
-            Duration.ofHours(1),
-            null,
-            "0.0.1-SNAPSHOT",
-            "1.27.0",
-            "4.0.4",
-            "v1",
-            List.of("clean", "build"),
-            List.of("dsl", "models"),
-            "project/templates",
-            sourceDir,
-            null,
-            new DslBuilderProperties.Files(0, 100, 32, 8, 5L),
-            null,
-            null,
-            new DslBuilderProperties.Bundles(1, 200),
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            false,
-            null,
-            null);
+    var noopProperties = properties(WorkspaceMode.SHARED);
     service = new FileService(noopProperties,
             new FileRepository(),
             new FileBuffer(BuilderServiceConfiguration.pendingCache(noopProperties,
                     Ticker.systemTicker())),
             new FileBulkhead(new Semaphore(1), new Semaphore(1), 5L),
+            new WorkspaceService(noopProperties, new GitService()),
             castingProvider(recording));
 
     // No staged writes, nothing flushed — invalidate must not run.

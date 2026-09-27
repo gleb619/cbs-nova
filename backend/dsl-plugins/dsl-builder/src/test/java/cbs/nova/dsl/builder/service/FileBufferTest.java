@@ -155,6 +155,7 @@ class FileBufferTest {
             null,
             null,
             null,
+            null,
             new DslBuilderProperties.FileBuffer(maxEntries, expireAfterWriteSeconds),
             new DslBuilderProperties.Bundles(1, 200),
             null,

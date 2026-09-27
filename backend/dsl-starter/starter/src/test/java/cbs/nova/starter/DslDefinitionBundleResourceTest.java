@@ -120,7 +120,7 @@ class DslDefinitionBundleResourceTest {
                     .build());
     when(sourcePathResolver.relativePath("A")).thenReturn(Optional.of("A.java"));
     when(client.readFile("A.java")).thenReturn(
-            new FileContentResponse("A.java", "class A { draft }", false, 0L));
+            new FileContentResponse("A.java", "class A { draft }", 0L));
 
     ServerResponse response = handler.exportBundle(getRequest(
             "/api/dsl/definitions/export?include=drafts", null));

@@ -192,6 +192,18 @@ describe('CodeTab', () => {
     expect(wrapper.find('[data-testid="code-tab-validate"]').exists()).toBe(true)
   })
 
+  it('places Save to the right of Refresh and Validate', () => {
+    wrapper = mountTab()
+
+    const refresh = wrapper.find('[data-testid="code-tab-refresh"]').element as HTMLElement
+    const validate = wrapper.find('[data-testid="code-tab-validate"]').element as HTMLElement
+    const save = wrapper.find('[data-testid="code-tab-save"]').element as HTMLElement
+    const compare = (a: HTMLElement, b: HTMLElement) =>
+      (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0
+    expect(compare(refresh, save)).toBe(true)
+    expect(compare(validate, save)).toBe(true)
+  })
+
   it('disables Refresh and Validate when no callbacks are provided', () => {
     wrapper = mountTab()
 

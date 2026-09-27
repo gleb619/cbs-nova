@@ -11,6 +11,7 @@ import cbs.nova.starter.model.DslFileModels.FlushResult;
 import cbs.nova.starter.model.DslFileModels.PendingWritesStatus;
 import cbs.nova.starter.service.DslDocsService;
 import cbs.nova.starter.service.DocNameResolver;
+import cbs.nova.starter.service.DocTemplateService;
 import jakarta.servlet.ServletException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -36,6 +37,7 @@ public class DslDocsHandler {
   private final DslProperties dslProperties;
   private final DslDocsService docsService;
   private final DocNameResolver docNameResolver;
+  private final DocTemplateService docTemplateService;
   private final ObjectMapper objectMapper;
 
   public ServerResponse list(ServerRequest request) {
@@ -73,7 +75,7 @@ public class DslDocsHandler {
     docsService.stageDocWrite(path, content);
     log.info("[DSL docs] staged write for {}", path);
     return accepted(
-            new FileContentResponse(path, content, true, FileContentResponse.crc32(content)));
+            new FileContentResponse(path, content, FileContentResponse.crc32(content)));
   }
 
   public ServerResponse readByName(ServerRequest request) throws IOException {
@@ -104,10 +106,11 @@ public class DslDocsHandler {
     String path = docNameResolver.existingDocPath(name)
             .orElseGet(() -> docNameResolver.defaultDocPath(name));
     String content = readBody(request);
-    docsService.stageDocWrite(path, content);
+    // New doc creation: guarantee the doc carries its name in the frontmatter
+    // (search) and a `# <name>` section in the body (view) before it hits disk.
+    docsService.stageDocWrite(path, docTemplateService.ensureDocStructure(name, content));
     log.info("[DSL docs] staged write for {} (resolved from {})", path, name);
-    return accepted(
-            new FileContentResponse(path, content, true, FileContentResponse.crc32(content)));
+    return accepted(new FileContentResponse(path, content, FileContentResponse.crc32(content)));
   }
 
   private ServerResponse doReadDoc(String path) throws IOException {

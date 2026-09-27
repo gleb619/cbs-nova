@@ -56,18 +56,24 @@ import org.springframework.stereotype.Component;
 public class WorkspaceGitService {
 
   private final DslBuilderProperties properties;
+  private final WorkspaceService workspaceService;
   private final Supplier<GitStatusService> gitStatusProvider;
 
   @Autowired
-  public WorkspaceGitService(DslBuilderProperties properties,
+  @Deprecated(forRemoval = true)
+  //TODO: repalce ctor with a lombok's one
+  public WorkspaceGitService(DslBuilderProperties properties, WorkspaceService workspaceService,
           ObjectProvider<GitStatusService> gitStatusProvider) {
-    this(properties, gitStatusProvider::getIfAvailable);
+    this(properties, workspaceService, gitStatusProvider::getIfAvailable);
   }
 
   /** Test seam: pass in a fixed supplier so unit tests do not need the Spring context. */
-  WorkspaceGitService(DslBuilderProperties properties,
+  @Deprecated(forRemoval = true)
+  //TODO: repalce ctor with a lombok's one
+  WorkspaceGitService(DslBuilderProperties properties, WorkspaceService workspaceService,
           Supplier<GitStatusService> gitStatusProvider) {
     this.properties = properties;
+    this.workspaceService = workspaceService;
     this.gitStatusProvider = gitStatusProvider;
   }
 
@@ -405,12 +411,12 @@ public class WorkspaceGitService {
   }
 
   private Path workspaceRoot() {
-    Path root = properties.workspaceDir();
-    if (root == null) {
+    try {
+      return workspaceService.workTree();
+    } catch (IllegalStateException e) {
       throw new BuilderApiException(HttpStatus.CONFLICT, "GIT_NOT_CONFIGURED",
               "cbs.dsl.builder.workspace-dir is not configured");
     }
-    return root.toAbsolutePath().normalize();
   }
 
   /** Resolve the repo root: configured repo dir else {@code findGitDir(workspaceDir)}. */

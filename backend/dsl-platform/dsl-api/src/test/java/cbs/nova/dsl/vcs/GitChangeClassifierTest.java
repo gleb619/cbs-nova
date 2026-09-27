@@ -143,6 +143,35 @@ class GitChangeClassifierTest {
 
     assertThat(status.dirtyPaths()).containsExactly("x.txt");
     assertThat(status.changeOf("x.txt")).contains(ChangeType.DELETED);
+    assertThat(status.sizes()).isEmpty();
+    assertThat(status.sizeOf("x.txt")).isEmpty();
+  }
+
+  @Test
+  void repoStatusCarriesSizesWhenProvided() {
+    RepoStatus status = new RepoStatus(Path.of("/repo"), null,
+            Map.of("a.java", ChangeType.MODIFIED), Map.of("a.java", 123L));
+
+    assertThat(status.dirtyPaths()).containsExactly("a.java");
+    assertThat(status.sizes()).containsEntry("a.java", 123L);
+    assertThat(status.sizeOf("a.java")).contains(123L);
+    assertThat(status.sizeOf("missing.java")).isEmpty();
+  }
+
+  @Test
+  void repoStatusNullSizesNormaliseToEmpty() {
+    RepoStatus status = new RepoStatus(Path.of("/repo"), null, null, null);
+
+    assertThat(status.sizes()).isEmpty();
+  }
+
+  @Test
+  void repoStatusNormalisesUriStyleWorkTree() {
+    Path uriStyle = Path.of(java.net.URI.create("file:///repo"));
+
+    RepoStatus status = new RepoStatus(uriStyle, null, Map.of("a.java", ChangeType.MODIFIED));
+
+    assertThat(status.workTree()).isEqualTo(Path.of("/repo"));
   }
 
   @Test
@@ -170,5 +199,46 @@ class GitChangeClassifierTest {
             .containsExactlyInAnyOrderElementsOf(original.dirtyPaths());
     assertThat(roundTripped.changes()).isEqualTo(original.changes());
     assertThat(roundTripped.changeOf("c.java")).contains(ChangeType.DELETED);
+  }
+
+  @Test
+  void jacksonRoundTripPreservesSizes() throws Exception {
+    Class<?> mapperClass;
+    try {
+      mapperClass = Class.forName("tools.jackson.databind.ObjectMapper");
+    } catch (ClassNotFoundException e) {
+      return;
+    }
+
+    Object mapper = mapperClass.getDeclaredConstructor().newInstance();
+    Method write = mapperClass.getMethod("writeValueAsString", Object.class);
+    Method read = mapperClass.getMethod("readValue", String.class, Class.class);
+
+    RepoStatus original = RepoStatus.of(Path.of("/repo"),
+            Map.of("a.java", ChangeType.MODIFIED), Map.of("a.java", 456L));
+    String json = (String) write.invoke(mapper, original);
+    RepoStatus roundTripped = (RepoStatus) read.invoke(mapper, json, RepoStatus.class);
+
+    assertThat(roundTripped.sizes()).containsEntry("a.java", 456L);
+  }
+
+  @Test
+  void jacksonParsesPayloadWithoutSizes() throws Exception {
+    Class<?> mapperClass;
+    try {
+      mapperClass = Class.forName("tools.jackson.databind.ObjectMapper");
+    } catch (ClassNotFoundException e) {
+      return;
+    }
+
+    Object mapper = mapperClass.getDeclaredConstructor().newInstance();
+    Method read = mapperClass.getMethod("readValue", String.class, Class.class);
+
+    String legacy = "{\"workTree\":\"/repo\",\"dirtyPaths\":[\"a.java\"],"
+            + "\"changes\":{\"a.java\":\"MODIFIED\"}}";
+    RepoStatus parsed = (RepoStatus) read.invoke(mapper, legacy, RepoStatus.class);
+
+    assertThat(parsed.changes()).containsEntry("a.java", ChangeType.MODIFIED);
+    assertThat(parsed.sizes()).isEmpty();
   }
 }

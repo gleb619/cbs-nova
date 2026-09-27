@@ -11,6 +11,7 @@ import cbs.nova.starter.controller.DslDocsHandler;
 import cbs.nova.starter.model.DslFileModels.FileContentResponse;
 import cbs.nova.starter.service.DslDocsService;
 import cbs.nova.starter.service.DocNameResolver;
+import cbs.nova.starter.service.DocTemplateService;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -42,7 +43,8 @@ class DslDocsHandlerTest {
     docsService = mock(DslDocsService.class);
     docNameResolver = mock(DocNameResolver.class);
     DslProperties properties = DslProperties.builder().sourceDir("/tmp/dsl").build();
-    handler = new DslDocsHandler(properties, docsService, docNameResolver, new ObjectMapper());
+    handler = new DslDocsHandler(properties, docsService, docNameResolver, new DocTemplateService(),
+            new ObjectMapper());
   }
 
   @Test
@@ -50,7 +52,7 @@ class DslDocsHandlerTest {
     when(docNameResolver.existingDocPath("BatchProcessing"))
             .thenReturn(Optional.of("batch-processing.md"));
     when(docsService.readDoc("batch-processing.md"))
-            .thenReturn(new FileContentResponse("batch-processing.md", "# Batch", false,
+            .thenReturn(new FileContentResponse("batch-processing.md", "# Batch",
                     FileContentResponse.crc32("# Batch")));
 
     ServerResponse response = handler.readByName(
@@ -73,7 +75,8 @@ class DslDocsHandlerTest {
   @Test
   void readByNameReturns409WhenSourceDirNotConfigured() throws IOException {
     DslProperties properties = DslProperties.builder().build();
-    handler = new DslDocsHandler(properties, docsService, docNameResolver, new ObjectMapper());
+    handler = new DslDocsHandler(properties, docsService, docNameResolver, new DocTemplateService(),
+            new ObjectMapper());
 
     ServerResponse response = handler.readByName(
             request("GET", "/api/dsl/docs/by-name/BatchProcessing", "BatchProcessing"));
@@ -91,7 +94,8 @@ class DslDocsHandlerTest {
                     "new doc"));
 
     assertThat(response.statusCode().value()).isEqualTo(202);
-    verify(docsService).stageDocWrite("batch-processing.md", "new doc");
+    verify(docsService).stageDocWrite("batch-processing.md",
+            "---\nname: BatchProcessing\ndescription: \"\"\n---\n\n# BatchProcessing\n\nnew doc\n");
   }
 
   @Test
@@ -104,7 +108,32 @@ class DslDocsHandlerTest {
                     "new doc"));
 
     assertThat(response.statusCode().value()).isEqualTo(202);
-    verify(docsService).stageDocWrite("batch-processing.md", "new doc");
+    verify(docsService).stageDocWrite("batch-processing.md",
+            "---\nname: BatchProcessing\ndescription: \"\"\n---\n\n# BatchProcessing\n\nnew doc\n");
+  }
+
+  @Test
+  void writeByNameFillsNameAndBodyHeadingForANewDoc() throws IOException {
+    when(docNameResolver.existingDocPath("BatchProcessing")).thenReturn(Optional.empty());
+    when(docNameResolver.defaultDocPath("BatchProcessing")).thenReturn("batch-processing.md");
+
+    handler.writeByName(requestWithBody("POST", "/api/dsl/docs/by-name/BatchProcessing",
+            "BatchProcessing", ""));
+
+    verify(docsService).stageDocWrite("batch-processing.md",
+            "---\nname: BatchProcessing\ndescription: \"\"\n---\n\n# BatchProcessing\n");
+  }
+
+  @Test
+  void writeByNameKeepsAUserSuppliedHeading() throws IOException {
+    when(docNameResolver.existingDocPath("BatchProcessing")).thenReturn(Optional.empty());
+    when(docNameResolver.defaultDocPath("BatchProcessing")).thenReturn("batch-processing.md");
+
+    handler.writeByName(requestWithBody("POST", "/api/dsl/docs/by-name/BatchProcessing",
+            "BatchProcessing", "# My own title\n\nprose\n"));
+
+    verify(docsService).stageDocWrite("batch-processing.md",
+            "---\nname: BatchProcessing\ndescription: \"\"\n---\n\n# My own title\n\nprose\n");
   }
 
   @Test

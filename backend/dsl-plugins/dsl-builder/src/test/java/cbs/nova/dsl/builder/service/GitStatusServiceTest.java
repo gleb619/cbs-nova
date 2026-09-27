@@ -269,6 +269,45 @@ class GitStatusServiceTest {
   }
 
   @Test
+  void reportsSizesForExistingChangedFiles() throws Exception {
+    Path repo = initRepo();
+    Files.writeString(repo.resolve("README.md"), "v2");
+    Files.writeString(repo.resolve("scratch.txt"), "scratch");
+
+    var service = newService(git(true, null, 60), mutableClock());
+
+    RepoStatus status = service.status(repo).orElseThrow();
+
+    assertThat(status.sizes())
+            .containsEntry("README.md", 2L)
+            .containsEntry("scratch.txt", 7L);
+    assertThat(status.sizeOf("README.md")).contains(2L);
+  }
+
+  @Test
+  void omitsSizeForDeletedFiles() throws Exception {
+    Path repo = initRepo();
+    Files.deleteIfExists(repo.resolve("README.md"));
+
+    var service = newService(git(true, null, 60), mutableClock());
+
+    RepoStatus status = service.status(repo).orElseThrow();
+
+    assertThat(status.changes()).containsEntry("README.md", ChangeType.DELETED);
+    assertThat(status.sizes()).isEmpty();
+  }
+
+  @Test
+  void cleanRepositoryHasEmptySizes() throws Exception {
+    Path repo = initRepo();
+    var service = newService(git(true, null, 60), mutableClock());
+
+    RepoStatus status = service.status(repo).orElseThrow();
+
+    assertThat(status.sizes()).isEmpty();
+  }
+
+  @Test
   void fromDirtyPathsYieldsEmptyChanges() {
     RepoStatus fromDirty = RepoStatus.fromDirtyPaths(Path.of("/repo"), Set.of("a.txt", "b.txt"));
 
@@ -304,6 +343,7 @@ class GitStatusServiceTest {
             java.util.List.of("clean", "build"),
             java.util.List.of("dsl", "models"),
             "project/templates",
+            null,
             null,
             null,
             null,

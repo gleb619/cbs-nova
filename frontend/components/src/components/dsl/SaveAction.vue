@@ -166,7 +166,7 @@ const saveStatusText = computed(() => {
       <span>unsaved</span>
     </span>
     <div
-      class="inline-flex rounded overflow-hidden border border-blue-600"
+      class="inline-flex rounded overflow-hidden border border-blue-600 bg-blue-600"
       :data-testid="`${testidPrefix}-save-split`"
     >
       <HotkeyTooltip :keys="saveShortcut">

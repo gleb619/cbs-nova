@@ -10,8 +10,10 @@ import cbs.nova.dsl.builder.config.BuilderServiceConfiguration;
 import cbs.nova.dsl.builder.config.DslBuilderProperties;
 import cbs.nova.dsl.builder.repository.FileRepository;
 import cbs.nova.dsl.builder.service.FileService;
+import cbs.nova.dsl.builder.service.GitService;
 import cbs.nova.dsl.builder.service.GitStatusService;
 import cbs.nova.dsl.builder.service.WorkspaceGitService;
+import cbs.nova.dsl.builder.service.WorkspaceService;
 import tools.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -33,7 +35,8 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(VcsController.class)
 @Import({GitStatusService.class, FileService.class, FileRepository.class,
-    WorkspaceGitService.class, BuilderServiceConfiguration.class, VcsControllerTest.Config.class})
+    WorkspaceGitService.class, WorkspaceService.class, GitService.class,
+    BuilderServiceConfiguration.class, VcsControllerTest.Config.class})
 class VcsControllerTest {
 
   private static final Path WORKSPACE = Path.of(System.getProperty("java.io.tmpdir"),
@@ -81,6 +84,7 @@ class VcsControllerTest {
               null,
               null,
               null,
+              null,
               new DslBuilderProperties.Git(true, null, null, null, null,
                       null, 0, true, "origin"),
               null,
@@ -113,7 +117,8 @@ class VcsControllerTest {
             .andExpect(jsonPath("$.workTree").isString())
             .andExpect(jsonPath("$.dirtyPaths").isArray())
             .andExpect(jsonPath("$.dirtyPaths[0]").value("dsl/LoanDsl.java"))
-            .andExpect(jsonPath("$.changes['dsl/LoanDsl.java']").value("UNTRACKED"));
+            .andExpect(jsonPath("$.changes['dsl/LoanDsl.java']").value("UNTRACKED"))
+            .andExpect(jsonPath("$.sizes['dsl/LoanDsl.java']").value("class LoanDsl {}".length()));
   }
 
   @Test

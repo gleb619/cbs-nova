@@ -9,6 +9,8 @@ import cbs.nova.dsl.builder.config.BuilderServiceConfiguration;
 import cbs.nova.dsl.builder.config.DslBuilderProperties;
 import cbs.nova.dsl.builder.repository.FileRepository;
 import cbs.nova.dsl.builder.service.FileService;
+import cbs.nova.dsl.builder.service.GitService;
+import cbs.nova.dsl.builder.service.WorkspaceService;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -27,7 +29,8 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(FileController.class)
-@Import({FileService.class, FileRepository.class, BuilderServiceConfiguration.class,
+@Import({FileService.class, FileRepository.class, WorkspaceService.class, GitService.class,
+    BuilderServiceConfiguration.class,
     FileControllerTest.Config.class})
 class FileControllerTest {
 
@@ -70,6 +73,7 @@ class FileControllerTest {
               List.of("clean", "build"),
               List.of("dsl", "models"),
               "project/templates",
+              null,
               null,
               null,
               new DslBuilderProperties.Files(0, 100, 32, 8, 5L),

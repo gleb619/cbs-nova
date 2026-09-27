@@ -346,6 +346,7 @@ defineExpose({ revealPosition, insertAtCursor, selectProblem })
         v-if="tab === 'docs'"
         :key="`${construct?.name ?? 'none'}:${codeEpoch}`"
         v-model:doc="bodyDoc"
+        :name="construct?.name ?? ''"
         :read-only="!construct"
         :save-status="saveStatus"
         :last-saved-at="lastSavedAt"

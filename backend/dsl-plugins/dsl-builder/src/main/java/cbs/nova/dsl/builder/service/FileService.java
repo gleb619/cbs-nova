@@ -32,6 +32,7 @@ public class FileService {
   private final FileRepository repository;
   private final FileBuffer buffer;
   private final FileBulkhead bulkhead;
+  private final WorkspaceService workspaceService;
   private final ObjectProvider<GitStatusService> gitStatusService;
 
   private final ReentrantLock flushLock = new ReentrantLock();
@@ -80,15 +81,9 @@ public class FileService {
     }
     bulkhead.acquireRead();
     try {
-      Path workspace = workspaceRoot();
-      if (repository.exists(workspace, relativePath)) {
-        String content = repository.read(workspace, relativePath);
-        return new FileContentResponse(relativePath, content, false,
-                FileContentResponse.crc32(content));
-      }
-      Path source = sourceRoot();
-      if (repository.exists(source, relativePath)) {
-        String content = repository.read(source, relativePath);
+      Path root = workspaceRoot();
+      if (repository.exists(root, relativePath)) {
+        String content = repository.read(root, relativePath);
         return new FileContentResponse(relativePath, content, false,
                 FileContentResponse.crc32(content));
       }
@@ -103,8 +98,7 @@ public class FileService {
     if (buffer.get(relativePath) != null) {
       return true;
     }
-    return repository.exists(workspaceRoot(), relativePath)
-            || repository.exists(sourceRoot(), relativePath);
+    return repository.exists(workspaceRoot(), relativePath);
   }
 
   public void stageWrite(String relativePath, String content) {
@@ -184,13 +178,8 @@ public class FileService {
     }
   }
 
-  private Path sourceRoot() {
-    Path source = properties.sourceDir();
-    return source != null ? source : workspaceRoot();
-  }
-
   private Path workspaceRoot() {
-    return properties.workspaceDir();
+    return workspaceService.workTree();
   }
 
   private void ensureRoot() {

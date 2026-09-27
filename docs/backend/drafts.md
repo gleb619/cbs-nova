@@ -36,12 +36,34 @@ and git work to the **dsl-builder** service that owns the workspace.
 |------|---------|
 | DSL file | A `*.java` source under the workspace's DSL source root. The DSL annotation processor compiles it into Temporal workflows and activities. |
 | Definition | A named DSL construct (process, transaction or function) declared in a DSL file. The definition `name` is the Workbench key. |
-| Workspace | Directory on the server or in a Docker volume where dsl-builder keeps DSL sources: `cbs.dsl.builder.workspace-dir`, or `cbs.dsl.builder.source-dir` when that is set. |
-| Worktree | The git working tree that holds the workspace. It is either a clone of `cbs.dsl.builder.git.repo-url` / `branch` / `sub-path`, or a pre-provisioned repo at `cbs.dsl.builder.git.repository-dir`. |
+| Workspace | Directory that backs DSL file I/O. Resolved by dsl-builder from `cbs.dsl.builder.workspace-mode` (§1.1). |
+| Workspace mode | How the builder picks the workspace: `SHARED` (the shared source directory, dev/local default) or `WORKTREE` (a builder-managed git worktree). |
+| Worktree | The git working tree that holds the workspace. In `SHARED` mode it is the shared source directory itself; in `WORKTREE` mode it is a clone of `cbs.dsl.builder.git.repo-url` / `branch` / `sub-path` provisioned at `cbs.dsl.builder.workspace-dir`. |
 | Draft | A DSL file whose git status is not clean. |
 | Published | The DSL file content at `HEAD`, which is also what the runtime has loaded. |
 | Working set | All definitions with their status (`GET /api/dsl/working-set`). It drives the Workbench tree badges. |
 | Pending write | A file write that dsl-builder accepted (`202`) and buffered, but has not yet flushed to disk. |
+
+### 1.1 Workspace modes
+
+The builder is the source of truth for the workspace, selected by
+`cbs.dsl.builder.workspace-mode` (default `SHARED`):
+
+- **`SHARED`** — the builder works directly on `cbs.dsl.builder.source-dir` (falling back to
+  `cbs.dsl.builder.workspace-dir`). File reads/writes hit exactly the files the user edits in the
+  IDE; git operations run in that directory. Deploy it so the builder's source dir equals the
+  starter's `cbs.dsl.source-dir`. If the directory is not inside a git repository, VCS endpoints
+  return `GIT_NOT_CONFIGURED` and every definition resolves to `PUBLISHED`. This is the
+  dev/local mode.
+- **`WORKTREE`** — the builder manages `cbs.dsl.builder.workspace-dir` as its own git worktree,
+  cloned from `cbs.dsl.builder.git.repo-url` / `branch` / `sub-path` when the workspace is empty
+  and no repository is found there. The starter delegates everything there; draft metadata
+  reports the builder's actual workspace path so the user knows where the file lives.
+
+`GET /api/dsl/workspace` (builder) returns `{mode, workTree}` — the live resolution of the mode
+and the absolute directory backing file I/O. The starter's `GET /api/dsl/drafts/metadata`
+consumes it: `sourcePath` is the builder-reported `workTree` when the builder is reachable
+(the starter's `cbs.dsl.source-dir` is only a fallback), and `workspaceMode` surfaces the mode.
 ---
 
 ## 2. Architecture
@@ -103,13 +125,16 @@ unstaged changes are not separate states for the user. Renames show up as
 {
   "workTree": "/abs/path",
   "dirtyPaths": ["dsl/LoanDsl.java", "dsl/NewDsl.java"],
-  "changes": { "dsl/LoanDsl.java": "MODIFIED", "dsl/NewDsl.java": "UNTRACKED" }
+  "changes": { "dsl/LoanDsl.java": "MODIFIED", "dsl/NewDsl.java": "UNTRACKED" },
+  "sizes": { "dsl/LoanDsl.java": 4211, "dsl/NewDsl.java": 98 }
 }
 ```
 
 - `dirtyPaths` is the key set of `changes`. A payload without `changes` still parses, and
   `changes` is then empty.
-- `RepoStatus.changeOf(path)` looks up a single path.
+- `sizes` maps each changed path to its on-disk size in bytes, read right after the JGit scan.
+  Deleted paths are omitted. A payload without `sizes` still parses, and `sizes` is then empty.
+- `RepoStatus.changeOf(path)` looks up a single path; `RepoStatus.sizeOf(path)` a single size.
 - The starter's `DslGitStatusResolver` delegates to `DslBuilderClient.vcsStatus()` via the builder client.
 
 **Freshness.** A saved edit is visible as a draft immediately:
@@ -167,6 +192,51 @@ strikethrough and bold emphasis on the name when the status signals a build prob
 | **History** | `git log -- <source path>`, newest first | none |
 | **Restore(commit)** | Writes the file content at that commit into the working tree (stage + flush). The result is a `MODIFIED` draft. | none until publish |
 
+### 4.1 One flow: draft → change request → approval → publish
+
+With `cbs.dsl.approval.required=true` a draft is not published directly. Draft, branch, change
+request and approval form one flow:
+
+```
+ edit ──► DRAFT (MODIFIED/ADDED/DELETED on workspace branch)
+            │ POST /drafts/{name}/change-request   (snapshot of source file)
+            ▼
+        CR PENDING ──new CR for same definition──► older CR SUPERSEDED
+            │ approve (AUTHOR+, not requester unless ADMIN)      │ reject (+ comment)
+            ▼                                                     ▼
+        CR APPROVED ──► publishPayload: reload → commit [+ push]  CR REJECTED (draft stays)
+                            │
+                            ▼
+                   PUBLISHED (commit on workspace branch = `commitId`)
+```
+
+| Step | Draft side | Change-request side |
+|------|------------|---------------------|
+| Edit / save | working-tree file changes, status `MODIFIED`/`ADDED`/`DELETED` | none |
+| Submit | file is read as-is, not modified | row in `dsl_change_request`, status `PENDING`, `draftContent` = `DraftRequest` JSON snapshot. Any earlier `PENDING` CR of the definition becomes `SUPERSEDED`. Audit `CHANGE_REQUEST_CREATE`. |
+| Approve | snapshot `source` is written back and published (§5.5). Response is the normal `DraftResponse` (`reloaded`, `commitId`, ...). | status `APPROVED`, `approvedBy`, `approvedAt`, `comment`. Audit `CHANGE_REQUEST_APPROVE`. |
+| Reject | working tree untouched, draft stays | status `REJECTED`, `comment`. Never publishes. Audit `CHANGE_REQUEST_REJECT`. |
+| Discard draft | file reverts to `HEAD` | an open `PENDING` CR is not touched; it still holds its snapshot |
+
+**Branch.** The workspace has exactly one checked-out branch (`GET /api/dsl/vcs/branch`,
+`DraftsMetadata.gitBranch`). All drafts, all snapshots and all approval commits land on that
+branch. A change request stores no branch of its own. The commit created by an approved publish
+is the link between a CR and the branch history: `commitId` in the publish response, then
+`GET /api/dsl/drafts/{name}/commits` / `history`. With `git.push-on-commit=true` the approved
+commit is pushed to `git.remote` on that same branch.
+
+**Rules.**
+
+- Only `PENDING` CRs can be decided. Anything else returns `409`.
+- Deciding needs role `AUTHOR` or higher. The requester cannot approve or reject their own CR
+  unless `ADMIN`. Both violations return `403 FORBIDDEN`.
+- The snapshot is what gets published, not the current file. Edits after submit are not part of
+  the CR. Submit again to replace the CR.
+- Publish failure on approve (reload error) does not roll back the CR status: the CR is already
+  `APPROVED`, and the response carries `reloaded=false` and `diagnostics`. Fix the source, submit a
+  new CR.
+- No `DataSource` → no `ChangeRequestService` bean → no change-request routes.
+
 ### Invariants
 
 - **I1.** Draft status is derived from `git status` and is never stored.
@@ -194,14 +264,14 @@ The BFF exposes all starter routes under `/api/v1/dsl/...`, as explicit Nitro ro
 | Method | Path | Handler | Behaviour |
 |--------|------|---------|-----------|
 | GET | `/api/dsl/drafts?limit&offset` | `DslDraftHandler.list` | `PageResponse<DraftSummary>` of definitions whose source file has a git change, sorted by name |
-| GET | `/api/dsl/drafts/{name}` | `read` | `DraftRequest` with the definition's name, type, current `DefinitionStatus` and the working-tree `source`. 404 when the definition has no source path. |
+| GET | `/api/dsl/drafts/{name}` | `read` | `DraftDetail { name, type, status }` with the definition's name, type and current `DefinitionStatus`. Status only — no source content; read the working-tree source via `GET /api/dsl/files/by-name/{name}`. 404 when the definition has no source path. |
 | POST | `/api/dsl/drafts/{name}/save` | `save` | Writes the body's `source` to the definition's source file (stage + flush). 400 when `source` is blank, 404 when there is no source path. Returns `status: "Draft"`. Audit `DRAFT_WRITE`, event `DraftSaved`. |
 | POST | `/api/dsl/drafts/{name}/publish` | `publish` | Writes the body's `source` first when it is present, then runs the publish flow (§4, §5.5). 403 when the approval gate is on and the caller is below OPERATOR. |
 | POST | `/api/dsl/drafts/{name}/change-request` | `ChangeRequestHandler.submit` | Submits the draft for approval |
 | POST | `/api/dsl/drafts/{name}/discard` | `discard` | Reverts the source file to `HEAD`. Returns `status: "Discarded"`. Audit `DRAFT_DISCARD`. 404 when the definition has no source path. |
 | DELETE | `/api/dsl/drafts/{name}` | `delete` | Same as `discard` |
 | GET | `/api/dsl/drafts/{name}/commits?limit` | `commits` | `git log` of the definition's source path |
-| GET | `/api/dsl/drafts/metadata` | `metadata` | `DraftsMetadata {draftCount, sourcePath, sizeMb, gitBranch, gitEnabled, statusCacheTtlSeconds, historyLimit}`: the number and size of changed DSL files, the source dir, the workspace branch (from dsl-builder `GET /api/dsl/vcs/branch`) and the git settings. Shown in the Workbench `DraftMetadataCard`. |
+| GET | `/api/dsl/drafts/metadata` | `metadata` | `DraftsMetadata {draftCount, sourcePath, sizeMb, gitBranch, gitEnabled, statusCacheTtlSeconds, workspaceMode}`: the number and size of changed DSL files, the actual workspace directory (builder-reported `workTree` from `GET /api/dsl/workspace`, falling back to `cbs.dsl.source-dir`), the workspace mode (`SHARED`/`WORKTREE`, `null` when the builder is unreachable), the workspace branch (from dsl-builder `GET /api/dsl/vcs/branch`) and the git settings. `sizeMb` is the total of the builder-reported `RepoStatus.sizes` for changed files under the source root, rounded to two decimals (`0.0` when there are no drafts, `null` when the status carries no sizes). Shown in the Workbench `DraftMetadataCard`. |
 | GET | `/api/dsl/drafts/{name}/history` | `history` | `DefinitionHistoryEntry[]` from `git log` of the source file, newest first, at most `DslDraftHandler.HISTORY_LIMIT` (50). `timestamp` is the commit id, `timestampMillis`/`lastModifiedMillis` are the commit time and `sizeBytes` is `-1`. |
 | GET | `/api/dsl/drafts/{name}/history/{ts}` | `historyEntry` | `DraftRequest` whose `source` is the file at commit `{ts}`, with status `History`. 404 if the file is missing at that commit or the commit is unknown. |
 | GET | `/api/dsl/drafts/{name}/history/{ts}/diff` | `historyDiff` | `HistoryDiffResponse`: the file at that commit (`before`) against the current working tree (`after`), as `LineDiff` hunks |
@@ -215,13 +285,33 @@ The BFF exposes all starter routes under `/api/v1/dsl/...`, as explicit Nitro ro
 `cbs.dsl.source-dir` the handlers return `409 NOT_CONFIGURED`. If the directory does not exist they
 return `409 NOT_FOUND`.
 
+### 5.1.1 Starter: change requests
+
+`ChangeRequestHandler` (routes in `config/router/ChangeRequestRouterConfiguration`), backed by
+`ChangeRequestService`. See §4.1 for the flow.
+
+| Method | Path | Handler | Behaviour |
+|--------|------|---------|-----------|
+| POST | `/api/dsl/drafts/{name}/change-request` | `submit` | Snapshots the definition's source file. `201` + `ChangeRequestEntity`. 404 when no source path or file, 409 when `cbs.dsl.source-dir` is unset. |
+| GET | `/api/dsl/change-requests?definitionName&status` | `list` | Newest first. `status` is `PENDING`, `APPROVED`, `REJECTED` or `SUPERSEDED` (case-insensitive), otherwise 400 `INVALID_REQUEST`. |
+| POST | `/api/dsl/change-requests/{id}/approve` | `approve` | Optional body `{comment}`. Publishes the snapshot, returns the publish result (§5.5). 403 / 404 / 409. |
+| POST | `/api/dsl/change-requests/{id}/reject` | `reject` | Optional body `{comment}`. Returns the rejected `ChangeRequestEntity`. 403 / 404 / 409. |
+
+`ChangeRequestEntity` (`dsl_change_request`): `id`, `definitionName`, `draftContent` (snapshot
+JSON), `requestedBy`, `requestedAt`, `status`, `approvedBy`, `approvedAt`, `comment`.
+
+Admin UI: the **Approvals** page (`frontend/admin-ui-plugin/app/pages/approvals.vue`,
+`useApprovals`) lists CRs with a status filter, pending first. Approve and Reject buttons are
+guarded by the manifest guard `workbench-approve`, and Reject requires a reason. The backend
+re-checks role and guard.
+
 ### 5.2 Starter: files and status
 
 | Method | Path | Behaviour |
 |--------|------|-----------|
 | GET | `/api/dsl/files?prefix` | List DSL files |
-| GET | `/api/dsl/files/{*path}` | Read a file. Pending writes are served first. |
-| GET | `/api/dsl/files/by-name/{name}` | Read the source file of a definition |
+| GET | `/api/dsl/files/{*path}` | Read a file: `FileContentResponse { path, content, crc32 }`. Pending writes are served first. |
+| GET | `/api/dsl/files/by-name/{name}` | Read the source file of a definition: `FileContentResponse { path, content, crc32 }` |
 | POST | `/api/dsl/files/{*path}` | Stage a write (`202`). Body is raw text or `{"content": "..."}`. |
 | POST | `/api/dsl/files/by-name/{name}` | Stage a write to a definition's source file |
 | POST | `/api/dsl/files/bulk` | Stage several writes |
@@ -232,11 +322,14 @@ return `409 NOT_FOUND`.
 
 ### 5.3 dsl-builder: version control
 
-`VcsController`, backed by `WorkspaceGitService` (JGit):
+`VcsController`, backed by `WorkspaceGitService` (JGit). All git operations run in the
+builder's workspace work tree, resolved per `cbs.dsl.builder.workspace-mode` (§1.1): the shared
+source directory in `SHARED` mode, `cbs.dsl.builder.workspace-dir` in `WORKTREE` mode.
 
 | Method | Path | Body / params | Result |
 |--------|------|---------------|--------|
 | GET | `/api/dsl/vcs/status` | – | `RepoStatus`. 404 when there is no repo. |
+| GET | `/api/dsl/workspace` | – | `{mode, workTree}` — workspace mode (`SHARED`/`WORKTREE`) and the absolute directory backing file I/O. Consumed by the starter draft metadata. |
 | GET | `/api/dsl/vcs/branch` | – | `{branch}` of the workspace repo |
 | POST | `/api/dsl/vcs/commit` | `CommitRequest {paths, message, authorName, authorEmail}` | `CommitResult {commitId, paths, timestampMillis, pushed, pushError}`. `pushed` is `null` when push-on-commit is off. 409 `NOTHING_TO_COMMIT` if any listed path is clean. |
 | POST | `/api/dsl/vcs/discard` | `DiscardRequest {paths}` | `DiscardResult {discarded}`. Clean paths are skipped. |
@@ -318,6 +411,10 @@ curl -X POST localhost:8090/api/dsl/drafts/LoanDisbursement/history/<commitId>/r
 
 - Mount the DSL repo, or an empty volume plus `cbs.dsl.builder.git.repo-url`, at
   `cbs.dsl.builder.workspace-dir`. Only dsl-builder mounts it read-write.
+- Local/dev deployments: keep the default `cbs.dsl.builder.workspace-mode=SHARED` and point
+  `cbs.dsl.builder.source-dir` (or `workspace-dir`) at the same directory as the starter's
+  `cbs.dsl.source-dir`, so the API edits exactly the files the IDE shows. `WORKTREE` mode is for
+  deployments where the builder owns a cloned worktree (e.g. the Docker Compose service).
 - Keep `cbs.dsl.builder.git.enabled=true` (the default). Without a git repo,
   `/api/dsl/vcs/status` returns 404, every definition resolves to `PUBLISHED`, and the
   git operations return `GIT_NOT_CONFIGURED`.
@@ -337,7 +434,8 @@ All keys use the `cbs.dsl.` prefix.
 | `cbs.dsl.source-dir` | – | starter | DSL source dir. Required by the draft handlers. |
 | `cbs.dsl.approval.required` | `false` | starter | Publish approval gate |
 | `cbs.dsl.builder-client.base-url` | `http://localhost:8091` | starter | Delegate to dsl-builder |
-| `cbs.dsl.builder.workspace-dir` / `source-dir` | – | dsl-builder | Workspace root (`source-dir` wins for the file API) |
+| `cbs.dsl.builder.workspace-mode` | `SHARED` | dsl-builder | Workspace mode: `SHARED` (source-dir, dev/local) or `WORKTREE` (builder-managed worktree, §1.1) |
+| `cbs.dsl.builder.workspace-dir` / `source-dir` | – | dsl-builder | Workspace root; in `SHARED` mode `source-dir` wins as the file/git root |
 | `cbs.dsl.builder.git.{enabled,repository-dir,worktrees-dir,repo-url,sub-path,branch}` | `true`, … | dsl-builder | Worktree provisioning |
 | `cbs.dsl.builder.git.status-cache-ttl-seconds` | `5` | dsl-builder | Status cache TTL |
 | `cbs.dsl.builder.git.push-on-commit` / `remote` | `false` / `origin` | dsl-builder | Push after each publish commit |
@@ -350,16 +448,17 @@ All keys use the `cbs.dsl.` prefix.
 
 | Area | Tests |
 |------|-------|
-| Change classification, `RepoStatus` | `dsl-api` `vcs/GitChangeClassifierTest` |
+| Change classification, `RepoStatus` (incl. `sizes`) | `dsl-api` `vcs/GitChangeClassifierTest` |
 | Builder git status + freshness | `GitStatusServiceTest`, `controller/VcsControllerTest` |
 | Builder commit / discard / log / show / push | `WorkspaceGitServiceTest`, `controller/VcsControllerTest` |
 | Builder files and flush | `FileServiceTest`, `FileBufferTest`, `FileBulkheadTest`, `controller/FileControllerTest` |
+| Builder workspace mode / root | `service/WorkspaceServiceTest`, `controller/WorkspaceControllerTest`, `config/DslBuilderPropertiesBindingTest` |
 | Starter git status | `service/DslGitStatusResolverTest` |
 | Definition → source path, definition status | `service/DslSourcePathResolverTest`, `service/DslDefinitionStatusResolverTest` |
 | Publish commit, discard, commits, git history / diff / restore | `DslDraftGitResourceTest` |
 | Draft routes | `DslDraftResourceTest` |
 | Drafts metadata | `DslDraftMetadataResourceTest`, `components/.../DraftMetadataCard.spec.ts`, BFF `drafts-metadata.spec.ts` |
-| Approval gate | `DslDraftApprovalGateTest`, `approval/ChangeRequestServiceTest` |
+| Approval gate, change requests | `DslDraftApprovalGateTest`, `approval/ChangeRequestServiceTest`, `controller/ChangeRequestHandlerTest` |
 | Bundles | `DslDefinitionBundleResourceTest` |
 | Builder client contract + cache invalidation | `builder/DslBuilderClientTest`, `builder/BuilderCacheTest` |
 | Property binding | `config/CbsDslPropertyPrefixTest`, `config/properties/DslBuilderClientPropertiesTest` |
@@ -393,7 +492,9 @@ cd frontend/admin-ui-plugin && npx vitest run server/api/v1/dsl/drafts
 | Definition → source path | `service/DslSourcePathResolver` | – |
 | Definition status | `service/DslDefinitionStatusResolver`, `model/DslIntrospectionModels.DefinitionStatus` | – |
 | Files | `controller/DslFileHandler`, `service/DslFileService` | `controller/FileController`, `service/FileService`, `FileBuffer`, `FileBulkhead` |
+| Change requests / approval | `controller/ChangeRequestHandler`, `service/ChangeRequestService`, `entity/ChangeRequestEntity`, `config/router/ChangeRequestRouterConfiguration` | – |
 | Bundles | `service/DslDefinitionBundleService` | – |
 | Compile / reload | `controller/DslReloadHandler` | `controller/CompileController`, `service/CompileService`, `GradleService` |
 | Clone / worktree | – | `service/GitService`, `RepoUrlValidator` |
+| Workspace mode / root | – | `service/WorkspaceService`, `controller/WorkspaceController` |
 | Remote client | `builder/DslBuilderClient`, `BuilderCache`, `config/BuilderClientConfiguration` | – |

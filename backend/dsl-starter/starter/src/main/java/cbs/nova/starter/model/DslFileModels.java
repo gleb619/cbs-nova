@@ -16,7 +16,6 @@ public final class DslFileModels {
   public record FileContentResponse(
           String path,
           String content,
-          boolean pending,
           long crc32) {
 
     public static long crc32(String content) {

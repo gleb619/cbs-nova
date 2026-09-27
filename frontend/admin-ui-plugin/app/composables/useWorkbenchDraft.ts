@@ -74,8 +74,11 @@ export interface WorkbenchDraftServerSync {
    * caller falls back to the local clock.
    */
   save: (body: string) => Promise<number | undefined>
-  /** Fetch the server-side draft payload, or null when none exists. */
-  load: (name: string) => Promise<WorkbenchDraftPayload | null>
+  /**
+   * Fetch the server-side draft payload, or null when none exists. Optional —
+   * when omitted the composable relies on the local draft copy only.
+   */
+  load?: (name: string) => Promise<WorkbenchDraftPayload | null>
 }
 
 export interface UseWorkbenchDraftOptions {
@@ -297,7 +300,7 @@ export function useWorkbenchDraft(
   }
 
   async function resolveServerDraft(nameAtLoad: string, local: WorkbenchDraftPayload | null) {
-    if (!server || !nameAtLoad) return
+    if (!server?.load || !nameAtLoad) return
     const token = ++serverLoadToken
     let serverDraft: WorkbenchDraftPayload | null = null
     try {

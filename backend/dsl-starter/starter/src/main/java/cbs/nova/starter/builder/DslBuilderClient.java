@@ -15,6 +15,7 @@ import cbs.nova.starter.model.VcsModels.CommitResult;
 import cbs.nova.starter.model.VcsModels.DiscardRequest;
 import cbs.nova.starter.model.VcsModels.DiscardResult;
 import cbs.nova.starter.model.VcsModels.LogEntry;
+import cbs.nova.starter.model.VcsModels.WorkspaceInfo;
 import cbs.nova.dsl.vcs.RepoStatus;
 import io.github.resilience4j.bulkhead.Bulkhead;
 import io.github.resilience4j.bulkhead.ThreadPoolBulkhead;
@@ -149,6 +150,15 @@ public class DslBuilderClient {
     });
   }
 
+  /**
+   * Workspace mode and actual work tree of the connected dsl-builder
+   * ({@code GET /api/dsl/workspace}). Never cached: the builder is the source of truth for the
+   * workspace, and this call is only made from the metadata endpoint.
+   */
+  public WorkspaceInfo workspace() {
+    return execute(this::doWorkspace);
+  }
+
   private CompileResult doCompile(CompileRequest request) {
     return restClient.post().uri("/api/dsl/compile").body(request).retrieve()
             .body(CompileResult.class);
@@ -203,6 +213,10 @@ public class DslBuilderClient {
 
   private RepoStatus doVcsStatus() {
     return restClient.get().uri("/api/dsl/vcs/status").retrieve().body(RepoStatus.class);
+  }
+
+  private WorkspaceInfo doWorkspace() {
+    return restClient.get().uri("/api/dsl/workspace").retrieve().body(WorkspaceInfo.class);
   }
 
   private CommitResult doCommit(CommitRequest request) {

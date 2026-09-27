@@ -26,6 +26,7 @@ import cbs.nova.starter.model.VcsModels.CommitRequest;
 import cbs.nova.starter.model.VcsModels.CommitResult;
 import cbs.nova.starter.model.VcsModels.DiscardRequest;
 import cbs.nova.starter.model.VcsModels.DiscardResult;
+import cbs.nova.starter.model.VcsModels.WorkspaceInfo;
 import cbs.nova.starter.model.DslFileModels.FileContentResponse;
 import io.github.resilience4j.bulkhead.Bulkhead;
 import io.github.resilience4j.bulkhead.BulkheadConfig;
@@ -150,13 +151,15 @@ class DslBuilderClientTest {
     server.expect(requestTo("http://localhost:8091/api/dsl/vcs/status"))
             .andRespond(withSuccess(
                     "{\"workTree\":\"/repo\",\"dirtyPaths\":[\"dsl/Foo.java\"],"
-                            + "\"changes\":{\"dsl/Foo.java\":\"MODIFIED\"}}",
+                            + "\"changes\":{\"dsl/Foo.java\":\"MODIFIED\"},"
+                            + "\"sizes\":{\"dsl/Foo.java\":123}}",
                     MediaType.APPLICATION_JSON));
 
     Optional<RepoStatus> status = client.vcsStatus();
 
     assertThat(status).isPresent();
     assertThat(status.get().changeOf("dsl/Foo.java")).isPresent();
+    assertThat(status.get().sizes()).containsEntry("dsl/Foo.java", 123L);
   }
 
   @Test
@@ -224,6 +227,20 @@ class DslBuilderClientTest {
             .andRespond(withSuccess("{\"branch\":\"main\"}", MediaType.APPLICATION_JSON));
 
     assertThat(client.vcsBranch()).isEqualTo("main");
+  }
+
+  @Test
+  void workspaceReadsModeAndWorkTree() {
+    var client = client(circuitBreaker(5, 30, 3));
+    server.expect(requestTo("http://localhost:8091/api/dsl/workspace"))
+            .andRespond(withSuccess(
+                    "{\"mode\":\"WORKTREE\",\"workTree\":\"/var/lib/dsl-builder/wt\"}",
+                    MediaType.APPLICATION_JSON));
+
+    var info = client.workspace();
+
+    assertThat(info.mode()).isEqualTo("WORKTREE");
+    assertThat(info.workTree()).isEqualTo("/var/lib/dsl-builder/wt");
   }
 
   @Test

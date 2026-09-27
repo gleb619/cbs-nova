@@ -1,5 +1,5 @@
 import { mount } from '@vue/test-utils'
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import type { DraftsMetadata } from '../../types/drafts'
 import DraftMetadataCard from '../dsl/DraftMetadataCard.vue'
 
@@ -10,16 +10,32 @@ const METADATA: DraftsMetadata = {
   gitBranch: 'main',
   gitEnabled: true,
   statusCacheTtlSeconds: 5,
-  historyLimit: 20,
+  workspaceMode: 'SHARED',
 }
 
 const mountCard = (props: Record<string, unknown> = {}) =>
   mount(DraftMetadataCard, { props: { metadata: METADATA, ...props } })
 
 describe('DraftMetadataCard', () => {
+  beforeEach(() => {
+    window.localStorage.clear()
+  })
+
   it('renders the source path', () => {
     const wrapper = mountCard()
-    expect(wrapper.find('[data-testid="draft-metadata-card-path"]').text()).toBe('/workspace/dsl')
+    expect(wrapper.find('[data-testid="draft-metadata-card-path"]').text()).toBe(
+      '.../workspace/dsl',
+    )
+  })
+
+  it('renders the workspace mode', () => {
+    const wrapper = mountCard()
+    expect(wrapper.find('[data-testid="draft-metadata-card-mode"]').text()).toBe('SHARED')
+  })
+
+  it('hides the workspace mode row when workspaceMode is null', () => {
+    const wrapper = mountCard({ metadata: { ...METADATA, workspaceMode: null } })
+    expect(wrapper.find('[data-testid="draft-metadata-card-mode"]').exists()).toBe(false)
   })
 
   it('renders the draft count', () => {
@@ -62,9 +78,44 @@ describe('DraftMetadataCard', () => {
     expect(wrapper.find('[data-testid="draft-metadata-card-cache-ttl"]').text()).toBe('5s')
   })
 
-  it('renders the history limit', () => {
+  it('does not render a history limit row', () => {
     const wrapper = mountCard()
-    expect(wrapper.find('[data-testid="draft-metadata-card-history-limit"]').text()).toBe('20')
+    expect(wrapper.find('[data-testid="draft-metadata-card-history-limit"]').exists()).toBe(false)
+    expect(wrapper.text()).not.toContain('History limit')
+  })
+
+  it('shows the details by default', () => {
+    const wrapper = mountCard()
+    const details = wrapper.find('[data-testid="draft-metadata-card-details"]')
+    expect(wrapper.find('[data-testid="draft-metadata-card-toggle"]').attributes('aria-expanded')).toBe(
+      'true',
+    )
+    expect(details.attributes('style') ?? '').not.toContain('display: none')
+  })
+
+  it('hides the details when collapsed and shows them again when expanded', async () => {
+    const wrapper = mountCard()
+    const toggle = wrapper.find('[data-testid="draft-metadata-card-toggle"]')
+    const details = wrapper.find('[data-testid="draft-metadata-card-details"]')
+
+    await toggle.trigger('click')
+    expect(toggle.attributes('aria-expanded')).toBe('false')
+    expect(details.attributes('style')).toContain('display: none')
+
+    await toggle.trigger('click')
+    expect(toggle.attributes('aria-expanded')).toBe('true')
+    expect(details.attributes('style') ?? '').not.toContain('display: none')
+  })
+
+  it('persists the collapsed state across mounts', async () => {
+    const first = mountCard()
+    await first.find('[data-testid="draft-metadata-card-toggle"]').trigger('click')
+    first.unmount()
+
+    const second = mountCard()
+    expect(second.find('[data-testid="draft-metadata-card-details"]').attributes('style')).toContain(
+      'display: none',
+    )
   })
 
   it('shows the loading state when metadata is null and loading is true', () => {

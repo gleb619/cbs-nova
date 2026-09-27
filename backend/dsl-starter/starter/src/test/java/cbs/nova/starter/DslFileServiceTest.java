@@ -56,13 +56,12 @@ class DslFileServiceTest {
   @Test
   void delegatesReadFileToBuilder() {
     when(builderClient.readFile("x.java"))
-            .thenReturn(new FileContentResponse("x.java", "content", false, 123L));
+            .thenReturn(new FileContentResponse("x.java", "content", 123L));
 
     var response = service.readFile("x.java");
 
     assertThat(response.path()).isEqualTo("x.java");
     assertThat(response.content()).isEqualTo("content");
-    assertThat(response.pending()).isFalse();
     assertThat(response.crc32()).isEqualTo(123L);
     verify(builderClient).readFile("x.java");
   }

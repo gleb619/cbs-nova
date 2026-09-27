@@ -3,6 +3,7 @@ import type { useToast } from '@cbs/components/composables'
 export const BODY_EDITOR_TABS = [
   'structure',
   'code',
+  'docs',
   'preview',
   'explain',
   'hierarchy',

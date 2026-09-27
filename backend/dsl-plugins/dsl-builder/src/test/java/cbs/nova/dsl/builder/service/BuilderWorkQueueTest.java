@@ -31,6 +31,7 @@ class BuilderWorkQueueTest {
             List.of("dsl", "models"),
             "project/templates",
             null,
+            null,
             new DslBuilderProperties.Queue(capacity, workers),
             null,
             null,

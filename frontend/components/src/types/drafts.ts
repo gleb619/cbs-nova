@@ -5,5 +5,5 @@ export interface DraftsMetadata {
   gitBranch: string | null
   gitEnabled: boolean
   statusCacheTtlSeconds: number
-  historyLimit: number
+  workspaceMode: string | null
 }

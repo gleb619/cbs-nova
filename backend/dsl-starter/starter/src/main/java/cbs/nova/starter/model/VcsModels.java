@@ -22,6 +22,17 @@ public final class VcsModels {
 
   }
 
+  /**
+   * Status-only view of a single definition, returned by {@code GET /api/dsl/drafts/{name}}. File
+   * content is served by {@code GET /api/dsl/files/by-name/{name}} instead.
+   */
+  public record DraftDetail(
+          String name,
+          String type,
+          String status) {
+
+  }
+
   public record DraftResponse(
           String name,
           String status,
@@ -133,6 +144,17 @@ public final class VcsModels {
 
   }
 
+  /**
+   * dsl-builder workspace description from {@code GET /api/dsl/workspace}: the configured
+   * {@code mode} ({@code SHARED} or {@code WORKTREE}) and the actual {@code workTree} directory
+   * backing DSL file I/O on the builder host.
+   */
+  public record WorkspaceInfo(
+          String mode,
+          String workTree) {
+
+  }
+
   /** History entry per spec §3.3: {@code git log -- path}, newest-first. */
   public record LogEntry(
           String commitId,
@@ -149,19 +171,22 @@ public final class VcsModels {
    * @param draftCount
    *          number of DSL source files that currently have a git change (uncommitted draft)
    * @param sourcePath
-   *          configured DSL source root ({@code cbs.dsl.source-dir}), forward-slash separated;
-   *          empty when the source dir is not configured
+   *          the actual directory backing DSL file I/O — the dsl-builder workspace when the builder
+   *          is reachable, else the configured {@code cbs.dsl.source-dir}; forward-slash separated;
+   *          empty when neither is known
    * @param sizeMb
-   *          total size of the changed source files in MB, rounded to two decimal places;
-   *          {@code null} when sizes cannot be resolved (e.g. the builder is unavailable)
+   *          total size of the changed source files in MB, rounded to two decimal places; {@code
+   *          0.0} when there are no drafts; {@code null} when sizes cannot be resolved (e.g. the
+   *          builder is unavailable)
    * @param gitBranch
    *          name of the current git branch; {@code null} when git is disabled or no repo exists
    * @param gitEnabled
    *          whether git integration is enabled for the DSL workspace
    * @param statusCacheTtlSeconds
    *          configured git status cache TTL
-   * @param historyLimit
-   *          git history page size the {@code /api/dsl/drafts/{name}/history} endpoint uses
+   * @param workspaceMode
+   *          dsl-builder workspace mode ({@code SHARED} or {@code WORKTREE}) as reported by
+   *          {@code GET /api/dsl/workspace}; {@code null} when the builder is unreachable
    */
   public record DraftsMetadata(
           int draftCount,
@@ -170,7 +195,7 @@ public final class VcsModels {
           @JsonInclude(JsonInclude.Include.NON_NULL) String gitBranch,
           boolean gitEnabled,
           int statusCacheTtlSeconds,
-          int historyLimit) {
+          @JsonInclude(JsonInclude.Include.NON_NULL) String workspaceMode) {
 
   }
 

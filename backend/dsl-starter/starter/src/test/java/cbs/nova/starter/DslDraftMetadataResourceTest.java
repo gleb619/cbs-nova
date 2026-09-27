@@ -3,7 +3,6 @@ package cbs.nova.starter;
 import static cbs.nova.starter.BuilderClientTestSupport.providerOf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -14,8 +13,8 @@ import cbs.nova.starter.builder.DslBuilderClient;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.controller.DslDraftHandler;
 import cbs.nova.starter.controller.DslReloadHandler;
-import cbs.nova.starter.model.DslFileModels.FileEntry;
 import cbs.nova.starter.model.VcsModels.DraftsMetadata;
+import cbs.nova.starter.model.VcsModels.WorkspaceInfo;
 import cbs.nova.starter.service.DslDefinitionBundleService;
 import cbs.nova.starter.service.DslGitStatusResolver;
 import cbs.nova.starter.service.DslSourcePathResolver;
@@ -89,20 +88,44 @@ class DslDraftMetadataResourceTest {
                     new DslSourcePathResolver(repoProps), providerOf(client)),
             null, providerOf(client), null, null, null,
             null, providerOfBean(gitStatusResolver), null);
-    RepoStatus status = RepoStatus.of(repoRoot, new LinkedHashMap<>(Map.of(
-            "dsl/LoanDsl.java", ChangeType.MODIFIED,
-            "dsl/Other.java", ChangeType.UNTRACKED,
-            "outside/x.java", ChangeType.UNTRACKED)));
+    RepoStatus status = RepoStatus.of(repoRoot,
+            new LinkedHashMap<>(Map.of(
+                    "dsl/LoanDsl.java", ChangeType.MODIFIED,
+                    "dsl/Other.java", ChangeType.UNTRACKED,
+                    "outside/x.java", ChangeType.UNTRACKED)),
+            new LinkedHashMap<>(Map.<String, Long>of(
+                    "dsl/LoanDsl.java", 2L * 1024 * 1024,
+                    "dsl/Other.java", 1024L * 1024,
+                    "outside/x.java", 4096L)));
     when(gitStatusResolver.status(any())).thenReturn(Optional.of(status));
-    when(client.listFiles(isNull())).thenReturn(List.of(
-            new FileEntry("dsl/LoanDsl.java", 2L * 1024 * 1024, 0),
-            new FileEntry("dsl/Other.java", 1024 * 1024, 0)));
 
     DraftsMetadata body = entity(repoHandler.metadata(getRequest("/api/dsl/drafts/metadata")));
 
     assertThat(body.draftCount()).isEqualTo(2);
-    assertThat(body.sizeMb()).isNotNull();
-    assertThat(body.sizeMb()).isGreaterThan(0.0);
+    assertThat(body.sizeMb()).isEqualTo(3.0);
+  }
+
+  @Test
+  void reportsZeroSizeWhenThereAreNoDrafts() throws Exception {
+    when(gitStatusResolver.status(any()))
+            .thenReturn(Optional.of(RepoStatus.of(sourceDir, Map.of())));
+
+    DraftsMetadata body = entity(handler.metadata(getRequest("/api/dsl/drafts/metadata")));
+
+    assertThat(body.draftCount()).isZero();
+    assertThat(body.sizeMb()).isZero();
+  }
+
+  @Test
+  void sizeMbIsNullWhenStatusCarriesNoSizes() throws Exception {
+    when(gitStatusResolver.status(any()))
+            .thenReturn(Optional.of(RepoStatus.of(sourceDir,
+                    Map.of("dsl/FooDsl.java", ChangeType.MODIFIED))));
+
+    DraftsMetadata body = entity(handler.metadata(getRequest("/api/dsl/drafts/metadata")));
+
+    assertThat(body.draftCount()).isEqualTo(1);
+    assertThat(body.sizeMb()).isNull();
   }
 
   @Test
@@ -114,6 +137,41 @@ class DslDraftMetadataResourceTest {
     assertThat(body.sourcePath()).doesNotContain("\\");
     assertThat(body.sourcePath()).startsWith("/");
     assertThat(Path.of(body.sourcePath())).isAbsolute();
+  }
+
+  @Test
+  void sharedModeReportsBuilderWorkTreeAsSourcePath() throws Exception {
+    Path builderDir = Files.createDirectory(sourceDir.resolve("builder-shared"));
+    when(gitStatusResolver.status(any())).thenReturn(Optional.empty());
+    when(client.workspace()).thenReturn(new WorkspaceInfo("SHARED", builderDir.toString()));
+
+    DraftsMetadata body = entity(handler.metadata(getRequest("/api/dsl/drafts/metadata")));
+
+    assertThat(body.sourcePath()).isEqualTo(builderDir.toString().replace('\\', '/'));
+    assertThat(body.workspaceMode()).isEqualTo("SHARED");
+  }
+
+  @Test
+  void worktreeModeReportsBuilderWorkTreeAndMode() throws Exception {
+    Path worktree = Files.createTempDirectory("metadata-worktree-");
+    when(gitStatusResolver.status(any())).thenReturn(Optional.empty());
+    when(client.workspace()).thenReturn(new WorkspaceInfo("WORKTREE", worktree.toString()));
+
+    DraftsMetadata body = entity(handler.metadata(getRequest("/api/dsl/drafts/metadata")));
+
+    assertThat(body.sourcePath()).isEqualTo(worktree.toString().replace('\\', '/'));
+    assertThat(body.workspaceMode()).isEqualTo("WORKTREE");
+  }
+
+  @Test
+  void builderWorkspaceFailureFallsBackToConfiguredSourceDir() throws Exception {
+    when(gitStatusResolver.status(any())).thenReturn(Optional.empty());
+    when(client.workspace()).thenThrow(new RuntimeException("builder down"));
+
+    DraftsMetadata body = entity(handler.metadata(getRequest("/api/dsl/drafts/metadata")));
+
+    assertThat(body.sourcePath()).isEqualTo(sourceDir.toString().replace('\\', '/'));
+    assertThat(body.workspaceMode()).isNull();
   }
 
   @Test
@@ -158,12 +216,13 @@ class DslDraftMetadataResourceTest {
   }
 
   @Test
-  void historyLimitExposesSharedHistoryConstant() throws Exception {
+  void jsonDoesNotExposeHistoryLimit() throws Exception {
     when(gitStatusResolver.status(any())).thenReturn(Optional.empty());
 
     DraftsMetadata body = entity(handler.metadata(getRequest("/api/dsl/drafts/metadata")));
+    String json = mapper.writeValueAsString(body);
 
-    assertThat(body.historyLimit()).isEqualTo(DslDraftHandler.HISTORY_LIMIT);
+    assertThat(json).doesNotContain("historyLimit");
   }
 
   @Test

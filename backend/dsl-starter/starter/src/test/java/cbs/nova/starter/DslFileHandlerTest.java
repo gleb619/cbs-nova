@@ -60,7 +60,7 @@ class DslFileHandlerTest {
   void readByNameReturnsFileContentWhenFilenameResolved() throws Exception {
     registerProvider("LoanDisbursement", "LoanDisbursementDsl.java");
     when(fileService.readFile("LoanDisbursementDsl.java"))
-            .thenReturn(new FileContentResponse("LoanDisbursementDsl.java", "step A {}", false,
+            .thenReturn(new FileContentResponse("LoanDisbursementDsl.java", "step A {}",
                     FileContentResponse.crc32("step A {}")));
 
     ServerResponse response = handler.readByName(
@@ -105,7 +105,7 @@ class DslFileHandlerTest {
       registerProvider("InvoiceGeneration", "InvoiceGenerationDsl.java");
       when(fileService.readFile("dsl/InvoiceGenerationDsl.java"))
               .thenReturn(
-                      new FileContentResponse("dsl/InvoiceGenerationDsl.java", "step {}", false,
+                      new FileContentResponse("dsl/InvoiceGenerationDsl.java", "step {}",
                               FileContentResponse.crc32("step {}")));
 
       ServerResponse response = handler.readByName(
@@ -134,7 +134,7 @@ class DslFileHandlerTest {
       registerProvider("BatchProcessing", "src/dsl/BatchProcessingDsl.java");
       when(fileService.readFile("src/dsl/BatchProcessingDsl.java"))
               .thenReturn(
-                      new FileContentResponse("src/dsl/BatchProcessingDsl.java", "step {}", false,
+                      new FileContentResponse("src/dsl/BatchProcessingDsl.java", "step {}",
                               FileContentResponse.crc32("step {}")));
 
       ServerResponse response = handler.readByName(
