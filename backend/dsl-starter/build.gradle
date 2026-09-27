@@ -10,17 +10,14 @@ plugins {
 }
 
 apply from: "${rootDir}/../gradle/task-timer.gradle"
+apply from: "${rootDir}/../gradle/worktree-version.gradle"
 
 // Pin the catalog Lombok version across all Spring Boot-managed configurations.
 ext['lombok.version'] = libs.versions.lombok.get()
 
-// Central version lives in backend/gradle.properties.
-def parentProps = new Properties()
-file('../gradle.properties').withInputStream { parentProps.load(it) }
-
 allprojects {
   group = 'cbs.nova'
-  version = parentProps.getProperty('version', '0.0.1-SNAPSHOT')
+  version = cbsNovaVersion
 
   /*configurations.all {
     resolutionStrategy {

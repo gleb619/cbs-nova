@@ -60,6 +60,7 @@ node_modules
 .playwright-cli
 /.playwright-cli
 .worktrees/
+.worktree-version
 
 /examples/cbs-rules/
 /docs/results/*

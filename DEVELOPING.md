@@ -118,6 +118,39 @@ to your local `.gitignore`.)
   terminal or use `pkill -f 'starter-launcher:bootRun'` and
   `pkill -f 'pnpm dev'` to clean up manually.
 
+
+## Worktree builds and version suffixes
+
+`make task-start TASK_ID=T123` creates a linked git worktree on branch
+`feat/T123`.  The `worktree-seed` step writes an untracked, git-ignored
+`.worktree-version` marker at the worktree root containing the sanitized task
+suffix (e.g. `T123`).  You can also set `CBS_VERSION_SUFFIX=T123` to force a
+suffix without a marker.
+
+All Gradle builds read the base version from `backend/gradle.properties` and
+insert the suffix before `-SNAPSHOT`:
+
+```bash
+# main checkout
+0.0.1-SNAPSHOT
+
+# worktree / env override
+0.0.1-T123-SNAPSHOT
+```
+
+The shared resolver is applied by every build, so platform, plugins, starter,
+`app/server`, and `app/dsl` all publish/consume the same computed version.
+`publishToMavenLocal` in a worktree therefore writes to a separate Maven Local
+directory (`~/.m2/repository/cbs/nova/.../0.0.1-T123-SNAPSHOT`) and never
+overwrites the main `0.0.1-SNAPSHOT` artifacts.
+
+The frontend `app/ui/scripts/pack-local.sh` flow also honors `.worktree-version`:
+when the marker is present, packed tarballs are renamed from
+`cbs-*-0.0.0.tgz` to `cbs-*-0.0.0-T123.tgz` and `app/ui/package.json` is
+updated to reference the suffixed filenames.  The committed `version` fields in
+`frontend/*/package.json` stay `0.0.0`.
+
+
 ## Repo layout
 
 ```

@@ -4,8 +4,10 @@ plugins {
     alias(libs.plugins.spring.dm)
 }
 
+apply from: "${rootDir}/../../backend/gradle/worktree-version.gradle"
+
 group = 'cbs.nova'
-version = '0.0.1-SNAPSHOT'
+version = cbsNovaVersion
 
 repositories {
     mavenLocal()
@@ -21,6 +23,14 @@ dependencies {
     runtimeOnly libs.h2
 
     testImplementation libs.spring.boot.starter.test
+}
+
+configurations.all {
+    resolutionStrategy.eachDependency { details ->
+        if (details.requested.group == 'cbs.nova') {
+            details.useVersion cbsNovaVersion
+        }
+    }
 }
 
 java {

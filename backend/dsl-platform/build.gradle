@@ -5,14 +5,11 @@ plugins {
 }
 
 apply from: "${rootDir}/../gradle/task-timer.gradle"
-
-// Central version lives in backend/gradle.properties.
-def parentProps = new Properties()
-file('../gradle.properties').withInputStream { parentProps.load(it) }
+apply from: "${rootDir}/../gradle/worktree-version.gradle"
 
 allprojects {
   group = 'cbs.nova'
-  version = parentProps.getProperty('version', '0.0.1-SNAPSHOT')
+  version = cbsNovaVersion
 }
 
 subprojects {

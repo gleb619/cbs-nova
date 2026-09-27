@@ -4,8 +4,10 @@ plugins {
   alias(libs.plugins.cbs.nova.dsl)
 }
 
+apply from: "${rootDir}/../../backend/gradle/worktree-version.gradle"
+
 group = 'cbs.nova'
-version = '0.0.1-SNAPSHOT'
+version = cbsNovaVersion
 
 repositories {
   mavenLocal()
@@ -22,6 +24,14 @@ dependencies {
   testImplementation libs.junit.jupiter
   testImplementation libs.assertj
   testRuntimeOnly libs.junit.platform.launcher
+}
+
+configurations.all {
+  resolutionStrategy.eachDependency { details ->
+    if (details.requested.group == 'cbs.nova') {
+      details.useVersion cbsNovaVersion
+    }
+  }
 }
 
 dslCompile {

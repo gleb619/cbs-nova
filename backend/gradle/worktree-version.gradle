@@ -1,0 +1,82 @@
+// Shared version resolver for cbs-nova builds.
+//
+// Reads the base version from backend/gradle.properties, then checks for a
+// worktree-specific suffix in the CBS_VERSION_SUFFIX environment variable or
+// in a .worktree-version marker file searched upward from the build directory.
+//
+// When a suffix is present, the computed version becomes
+//   <base>-<suffix>-SNAPSHOT
+// (the suffix is inserted before the final -SNAPSHOT).  When no suffix is
+// present the base version is used unchanged, so the main checkout behaves
+// exactly as before.
+//
+// Apply this script once at the root of every Gradle build and use the
+// cbsNovaVersion extra property that it exposes.
+
+def cbsFindBaseVersionFile() {
+  def dir = file('.').toPath().toAbsolutePath().normalize().toFile()
+  while (dir != null) {
+    def candidate = new File(dir, 'backend/gradle.properties')
+    if (candidate.exists()) {
+      return candidate
+    }
+    def parent = dir.getParentFile()
+    if (parent == null || parent == dir) {
+      break
+    }
+    dir = parent
+  }
+  return null
+}
+
+def cbsFindWorktreeSuffix() {
+  def envSuffix = System.getenv('CBS_VERSION_SUFFIX')
+  if (envSuffix != null && !envSuffix.isBlank()) {
+    return envSuffix
+  }
+
+  def dir = file('.').toPath().toAbsolutePath().normalize().toFile()
+  while (dir != null) {
+    def marker = new File(dir, '.worktree-version')
+    if (marker.exists()) {
+      def text = marker.text.trim()
+      if (text) {
+        return text
+      }
+    }
+    def parent = dir.getParentFile()
+    if (parent == null || parent == dir) {
+      break
+    }
+    dir = parent
+  }
+  return ''
+}
+
+def cbsSanitizeSuffix(String suffix) {
+  return suffix.replaceAll(/[^A-Za-z0-9._-]/, '')
+}
+
+def baseVersionFile = cbsFindBaseVersionFile()
+def baseVersion = '0.0.1-SNAPSHOT'
+if (baseVersionFile != null) {
+  def props = new Properties()
+  baseVersionFile.withInputStream { props.load(it) }
+  baseVersion = props.getProperty('version', baseVersion)
+}
+
+def rawSuffix = cbsFindWorktreeSuffix()
+def suffix = cbsSanitizeSuffix(rawSuffix)
+
+def computedVersion = baseVersion
+if (suffix != null && !suffix.isEmpty()) {
+  if (baseVersion.endsWith('-SNAPSHOT')) {
+    def withoutSnapshot = baseVersion.substring(0, baseVersion.length() - '-SNAPSHOT'.length())
+    computedVersion = "${withoutSnapshot}-${suffix}-SNAPSHOT"
+  } else {
+    computedVersion = "${baseVersion}-${suffix}-SNAPSHOT"
+  }
+}
+
+ext.baseVersion = baseVersion
+ext.cbsNovaVersion = computedVersion

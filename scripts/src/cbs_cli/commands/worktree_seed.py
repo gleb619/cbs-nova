@@ -1,4 +1,5 @@
 import argparse
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -23,6 +24,7 @@ SEED_PATHS = [
 ]
 # Build output dirs: every module `build/` under these roots (incremental compile cache).
 BUILD_ROOTS = ["backend/dsl-platform", "backend/dsl-plugins", "backend/dsl-starter"]
+_MARKER_NAME = ".worktree-version"
 
 
 def build_dirs(src: Path) -> list[str]:
@@ -61,6 +63,57 @@ def seed(src_root: Path, dest_root: Path, extra: list[str] | None = None) -> lis
     return copied
 
 
+def _is_linked_worktree(dest: Path) -> bool:
+    """True when dest is a git linked worktree (its .git entry is a file, not a directory)."""
+    git_dir = dest / ".git"
+    return git_dir.is_file()
+
+
+def _sanitize_suffix(value: str) -> str:
+    """Keep only characters that are safe in Gradle/Java/npm version segments."""
+    cleaned = re.sub(r"[^A-Za-z0-9._-]", "", value)
+    return cleaned or "worktree"
+
+
+def _current_branch(dest: Path) -> str | None:
+    """Return the current branch name, or None if git is unavailable or HEAD is detached."""
+    if not shutil.which("git"):
+        return None
+    r = subprocess.run(
+        ["git", "-C", str(dest), "rev-parse", "--abbrev-ref", "HEAD"],
+        capture_output=True,
+        text=True,
+    )
+    if r.returncode != 0:
+        return None
+    branch = r.stdout.strip()
+    if not branch or branch == "HEAD":
+        return None
+    return branch
+
+
+def _derive_suffix(dest: Path) -> str:
+    """Derive a worktree version suffix from the branch or directory name."""
+    branch = _current_branch(dest)
+    if branch:
+        return branch.split("/")[-1]
+    return dest.name
+
+
+def write_worktree_version(dest: Path, override: str | None = None) -> Path | None:
+    """Write an untracked .worktree-version marker at the worktree root.
+
+    Returns the marker path, or None when dest is not a linked worktree.
+    """
+    if not _is_linked_worktree(dest):
+        return None
+    suffix = override if override is not None else _derive_suffix(dest)
+    suffix = _sanitize_suffix(suffix)
+    marker = dest / _MARKER_NAME
+    marker.write_text(suffix + "\n")
+    return marker
+
+
 class WorktreeSeedCommand:
     """Seed a new git worktree with git-ignored build prerequisites (gradle wrapper, node_modules, build/)."""
 
@@ -69,6 +122,7 @@ class WorktreeSeedCommand:
         parser.add_argument("dest", help="worktree directory to seed")
         parser.add_argument("--src", default=None, help="source checkout (default: repo root)")
         parser.add_argument("--extra", action="append", default=[], help="extra relative path to copy (repeatable)")
+        parser.add_argument("--version-suffix", default=None, help="override the worktree version suffix")
 
     def run(self, args: argparse.Namespace) -> int:
         dest = Path(args.dest).resolve()
@@ -83,6 +137,9 @@ class WorktreeSeedCommand:
         copied = seed(src, dest, args.extra)
         for rel in copied:
             Printer.ok(rel)
-        if not copied:
-            Printer.skip("nothing to copy")
+        marker = write_worktree_version(dest, args.version_suffix)
+        if marker:
+            Printer.ok(marker.relative_to(dest))
+        if not copied and not marker:
+            Printer.skip("nothing to do")
         return 0

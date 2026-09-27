@@ -2,8 +2,10 @@ plugins {
   id 'base'
 }
 
+apply from: 'gradle/worktree-version.gradle'
+
 group = 'cbs.nova'
-version = property('version') as String
+version = cbsNovaVersion
 
 // ---------------------------------------------------------------------------
 // Three independent Gradle builds connected through Maven Local.

@@ -1,4 +1,5 @@
 pluginManagement {
+  apply from: new File(settingsDir, '../../backend/gradle/worktree-version.gradle')
   repositories {
     mavenLocal()
     gradlePluginPortal()
@@ -7,7 +8,7 @@ pluginManagement {
   resolutionStrategy {
     eachPlugin {
       if (requested.id.id == 'cbs.nova.dsl') {
-        useModule("cbs.nova:dsl-gradle-plugin:${requested.version ?: '0.0.1-SNAPSHOT'}")
+        useModule("cbs.nova:dsl-gradle-plugin:${cbsNovaVersion}")
       }
     }
   }

@@ -1,16 +1,17 @@
 pluginManagement {
+  apply from: new File(settingsDir, '../gradle/worktree-version.gradle')
   repositories {
     mavenLocal()
     mavenCentral()
     gradlePluginPortal()
   }
-  /*resolutionStrategy {
+  resolutionStrategy {
     eachPlugin {
       if (requested.id.id == 'cbs.nova.dsl') {
-        useModule("cbs.nova:dsl-gradle-plugin:${requested.version ?: version}")
+        useModule("cbs.nova:dsl-gradle-plugin:${cbsNovaVersion}")
       }
     }
-  }*/
+  }
 }
 
 rootProject.name = 'cbs-nova-dsl-starter'
