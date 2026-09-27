@@ -13,7 +13,7 @@
 # project that resolves `cbs.nova:*` artifacts and the plugin from
 # `mavenLocal()`, so the repository must be seeded at image build time.
 # -----------------------------------------------------------------------------
-FROM gradle:9.4.1-jdk25
+FROM gradle:9.7.1-jdk25
 
 WORKDIR /build
 
