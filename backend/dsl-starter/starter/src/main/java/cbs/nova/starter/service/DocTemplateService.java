@@ -115,8 +115,9 @@ public class DocTemplateService {
   private static String serialize(Map<String, String> frontmatter, String body) {
     StringBuilder out = new StringBuilder();
     out.append(FENCE).append('\n');
-    frontmatter.forEach((String key, String value) -> out.append(key).append(": ").append(formatScalar(value))
-            .append('\n'));
+    frontmatter.forEach(
+            (String key, String value) -> out.append(key).append(": ").append(formatScalar(value))
+                    .append('\n'));
     out.append(FENCE).append('\n');
     String trimmedBody = stripTrailingNewlines(body);
     if (!trimmedBody.isEmpty()) {

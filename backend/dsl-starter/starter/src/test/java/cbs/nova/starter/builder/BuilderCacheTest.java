@@ -3,8 +3,6 @@ package cbs.nova.starter.builder;
 import static cbs.nova.starter.core.StarterConstants.CACHE_FILE_EXISTS_PREFIX;
 import static cbs.nova.starter.core.StarterConstants.CACHE_FILE_PREFIX;
 import static cbs.nova.starter.core.StarterConstants.CACHE_FILES_PREFIX;
-import static cbs.nova.starter.core.StarterConstants.CACHE_PENDING_COUNT_KEY;
-import static cbs.nova.starter.core.StarterConstants.CACHE_VCS_STATUS_KEY;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.vcs.RepoStatus;
@@ -34,11 +32,10 @@ class BuilderCacheTest {
   }
 
   @Test
-  void invalidateFilesDropsEveryFileEntryAndPendingCount() {
+  void invalidateFilesDropsEveryFileEntry() {
     cache.listFiles(null, () -> java.util.List.of());
     cache.readFile("dsl/A.java", () -> null);
     cache.fileExists("dsl/B.java", () -> true);
-    cache.pendingCount(() -> 3);
 
     cache.invalidateFiles();
 
@@ -47,8 +44,7 @@ class BuilderCacheTest {
               String s = key.toString();
               return s.startsWith(CACHE_FILES_PREFIX)
                       || s.startsWith(CACHE_FILE_PREFIX)
-                      || s.startsWith(CACHE_FILE_EXISTS_PREFIX)
-                      || s.equals(CACHE_PENDING_COUNT_KEY);
+                      || s.startsWith(CACHE_FILE_EXISTS_PREFIX);
             });
   }
 
@@ -56,31 +52,20 @@ class BuilderCacheTest {
   void invalidateVcsStatusDropsOnlyStatusEntry() {
     cache.vcsStatus(
             () -> Optional.of(RepoStatus.fromDirtyPaths(Path.of("/repo"), java.util.Set.of())));
-    cache.pendingCount(() -> 7);
+    cache.vcsLog("dsl/A.java", 20, () -> java.util.List.of());
 
     cache.invalidateVcsStatus();
 
     assertThat(backing.asMap().keySet())
-            .containsExactly(CACHE_PENDING_COUNT_KEY);
-  }
-
-  @Test
-  void invalidatePendingCountDropsOnlyCountEntry() {
-    cache.vcsStatus(
-            () -> Optional.of(RepoStatus.fromDirtyPaths(Path.of("/repo"), java.util.Set.of())));
-    cache.pendingCount(() -> 7);
-
-    cache.invalidatePendingCount();
-
+            .noneMatch(key -> key.toString().equals("vcsStatus"));
     assertThat(backing.asMap().keySet())
-            .containsExactly(CACHE_VCS_STATUS_KEY);
+            .anyMatch(key -> key.toString().startsWith("vcsLog:"));
   }
 
   @Test
   void clearDropsEverything() {
     cache.vcsStatus(
             () -> Optional.of(RepoStatus.fromDirtyPaths(Path.of("/repo"), java.util.Set.of())));
-    cache.pendingCount(() -> 3);
     cache.readFile("dsl/A.java", () -> null);
 
     cache.clear();
@@ -119,13 +104,14 @@ class BuilderCacheTest {
     cache.vcsLog("dsl/A.java", 20, () -> java.util.List.of());
     cache.vcsLog("dsl/B.java", 20, () -> java.util.List.of());
     cache.vcsShow("dsl/A.java", "abc123", () -> "class A {}");
-    cache.pendingCount(() -> 7);
+    cache.vcsStatus(
+            () -> Optional.of(RepoStatus.fromDirtyPaths(Path.of("/repo"), java.util.Set.of())));
 
     cache.invalidateVcsLog();
 
     assertThat(backing.asMap().keySet())
-            .noneMatch(key -> key.toString().startsWith("dsl:vcs-log:"));
+            .noneMatch(key -> key.toString().startsWith("vcsLog:"));
     assertThat(backing.asMap().keySet())
-            .contains(CACHE_PENDING_COUNT_KEY);
+            .contains(cbs.nova.starter.core.StarterConstants.CACHE_VCS_STATUS_KEY);
   }
 }

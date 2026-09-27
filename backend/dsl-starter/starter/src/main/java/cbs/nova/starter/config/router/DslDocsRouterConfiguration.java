@@ -76,10 +76,10 @@ public class DslDocsRouterConfiguration {
             .GET("/api/dsl/docs", docsHandler::list)
             .GET("/api/dsl/docs/by-name/{name}", docsHandler::readByName)
             .POST("/api/dsl/docs/by-name/{name}", docsHandler::writeByName)
-            .GET("/api/dsl/docs/{*path}", docsHandler::read)
             .POST("/api/dsl/docs/bulk", docsHandler::bulkWrite)
             .POST("/api/dsl/docs/flush", docsHandler::flush)
             .GET("/api/dsl/docs/status", docsHandler::status)
+            .GET("/api/dsl/docs/{*path}", docsHandler::read)
             .POST("/api/dsl/docs/{*path}", docsHandler::write)
             .build();
   }

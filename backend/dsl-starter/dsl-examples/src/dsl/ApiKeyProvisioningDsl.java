@@ -11,7 +11,7 @@ List<DslObject> define() {
       .execute(ctx -> {
         ApiKeyProvisioningIn in = ctx.body();
 
-        // token mode — 32-char URL-safe API key (192 bits entropy, per helper javadoc).
+        // token mode - 32-char URL-safe API key (192 bits entropy, per helper javadoc).
         var apiKeyVar = ctx.runHelper("secret",
             new SecretIn("token", 32, null));
         if (!apiKeyVar.isSuccess()) {
@@ -19,7 +19,7 @@ List<DslObject> define() {
         }
         String apiKey = apiKeyVar.as(SecretOut.class).result();
 
-        // bytes mode — 16-byte idempotency key, hex-encoded (128 bits).
+        // bytes mode - 16-byte idempotency key, hex-encoded (128 bits).
         var idempotencyVar = ctx.runHelper("secret",
             new SecretIn("bytes", 16, "hex"));
         if (!idempotencyVar.isSuccess()) {

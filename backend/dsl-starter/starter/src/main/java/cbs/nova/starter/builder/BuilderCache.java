@@ -2,12 +2,10 @@ package cbs.nova.starter.builder;
 
 import static cbs.nova.starter.core.StarterConstants.CACHE_DOC_EXISTS_PREFIX;
 import static cbs.nova.starter.core.StarterConstants.CACHE_DOC_PREFIX;
-import static cbs.nova.starter.core.StarterConstants.CACHE_DOCS_PENDING_COUNT_KEY;
 import static cbs.nova.starter.core.StarterConstants.CACHE_DOCS_PREFIX;
 import static cbs.nova.starter.core.StarterConstants.CACHE_FILE_EXISTS_PREFIX;
 import static cbs.nova.starter.core.StarterConstants.CACHE_FILE_PREFIX;
 import static cbs.nova.starter.core.StarterConstants.CACHE_FILES_PREFIX;
-import static cbs.nova.starter.core.StarterConstants.CACHE_PENDING_COUNT_KEY;
 import static cbs.nova.starter.core.StarterConstants.CACHE_VCS_BRANCH_KEY;
 import static cbs.nova.starter.core.StarterConstants.CACHE_VCS_LOG_PREFIX;
 import static cbs.nova.starter.core.StarterConstants.CACHE_VCS_SHOW_PREFIX;
@@ -53,10 +51,6 @@ public class BuilderCache {
     return get(CACHE_DOC_EXISTS_PREFIX + path, loader);
   }
 
-  public int docsPendingCount(Supplier<Integer> loader) {
-    return get(CACHE_DOCS_PENDING_COUNT_KEY, loader);
-  }
-
   public void invalidateDoc(String path) {
     cache.asMap().keySet().removeIf(key -> key.startsWith(CACHE_DOC_PREFIX + path)
             || key.startsWith(CACHE_DOC_EXISTS_PREFIX + path));
@@ -66,11 +60,6 @@ public class BuilderCache {
     invalidatePrefix(CACHE_DOCS_PREFIX);
     invalidatePrefix(CACHE_DOC_PREFIX);
     invalidatePrefix(CACHE_DOC_EXISTS_PREFIX);
-    cache.invalidate(CACHE_DOCS_PENDING_COUNT_KEY);
-  }
-
-  public int pendingCount(Supplier<Integer> loader) {
-    return get(CACHE_PENDING_COUNT_KEY, loader);
   }
 
   public Optional<RepoStatus> vcsStatus(Supplier<Optional<RepoStatus>> loader) {
@@ -104,15 +93,10 @@ public class BuilderCache {
     invalidatePrefix(CACHE_FILES_PREFIX);
     invalidatePrefix(CACHE_FILE_PREFIX);
     invalidatePrefix(CACHE_FILE_EXISTS_PREFIX);
-    cache.invalidate(CACHE_PENDING_COUNT_KEY);
   }
 
   public void invalidateVcsStatus() {
     cache.invalidate(CACHE_VCS_STATUS_KEY);
-  }
-
-  public void invalidatePendingCount() {
-    cache.invalidate(CACHE_PENDING_COUNT_KEY);
   }
 
   public void clear() {

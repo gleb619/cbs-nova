@@ -73,7 +73,6 @@ public class DslBuilderClient {
     execute(() -> doStageWrite(path, content));
     cache.invalidateFile(path);
     cache.invalidateVcsStatus();
-    cache.invalidatePendingCount();
   }
 
   public BulkWriteResult stageAll(List<FileContentRequest> files) {
@@ -91,7 +90,7 @@ public class DslBuilderClient {
   }
 
   public int pendingCount() {
-    return cache.pendingCount(() -> execute(this::doPendingCount));
+    return execute(this::doPendingCount);
   }
 
   public Optional<RepoStatus> vcsStatus() {

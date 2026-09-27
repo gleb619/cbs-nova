@@ -46,14 +46,12 @@ public class DslBuilderDocsClient {
     execute(() -> doStageDocWrite(path, content));
     cache.invalidateDoc(path);
     cache.invalidateVcsStatus();
-    cache.invalidatePendingCount();
   }
 
   public BulkWriteResult stageDocAll(List<FileContentRequest> files) {
     BulkWriteResult result = execute(() -> doStageDocAll(files));
     cache.invalidateDocs();
     cache.invalidateVcsStatus();
-    cache.invalidatePendingCount();
     return result;
   }
 
@@ -61,12 +59,11 @@ public class DslBuilderDocsClient {
     FlushResult result = execute(this::doFlushDocs);
     cache.invalidateDocs();
     cache.invalidateVcsStatus();
-    cache.invalidatePendingCount();
     return result;
   }
 
   public int docsPendingCount() {
-    return cache.docsPendingCount(() -> execute(this::doDocsPendingCount));
+    return execute(this::doDocsPendingCount);
   }
 
   private List<FileEntry> doListDocs(String prefix) {

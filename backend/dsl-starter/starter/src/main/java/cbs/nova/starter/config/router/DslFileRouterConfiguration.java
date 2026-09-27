@@ -77,10 +77,10 @@ public class DslFileRouterConfiguration {
             .GET("/api/dsl/files", fileHandler::list)
             .GET("/api/dsl/files/by-name/{name}", fileHandler::readByName)
             .POST("/api/dsl/files/by-name/{name}", fileHandler::writeByName)
-            .GET("/api/dsl/files/{*path}", fileHandler::read)
             .POST("/api/dsl/files/bulk", fileHandler::bulkWrite)
             .POST("/api/dsl/files/flush", fileHandler::flush)
             .GET("/api/dsl/files/status", fileHandler::status)
+            .GET("/api/dsl/files/{*path}", fileHandler::read)
             .POST("/api/dsl/files/{*path}", fileHandler::write)
             .build();
   }

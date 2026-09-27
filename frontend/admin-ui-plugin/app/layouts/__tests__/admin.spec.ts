@@ -142,6 +142,7 @@ describe('admin.vue auth affordance', () => {
 describe('admin.vue saved drafts widget', () => {
   beforeEach(() => {
     resetSavedDraftsState()
+    window.localStorage.clear()
     dslApi.listDrafts.mockReset()
     dslApi.listDrafts.mockResolvedValue([])
     dslApi.getDraftsMetadata.mockReset()
@@ -164,10 +165,15 @@ describe('admin.vue saved drafts widget', () => {
     return mountAdminLayout()
   }
 
+  const openPanel = async (wrapper: ReturnType<typeof mountLayout>) => {
+    await wrapper.find('[data-testid="dsl-saved-drafts-widget-details"]').trigger('click')
+    await flush()
+  }
+
   it('mounts the widget in the navbar widgets slot and auto-loads drafts', async () => {
     dslApi.listDrafts.mockResolvedValueOnce([
-      { name: 'alpha', type: 'Process', status: 'Draft', updatedAt: 1 },
-      { name: 'beta', type: 'Helper', status: 'Draft', updatedAt: 2 },
+      { name: 'alpha', type: 'Process', status: 'MODIFIED', updatedAt: 1 },
+      { name: 'beta', type: 'Helper', status: 'ADDED', updatedAt: 2 },
     ])
 
     const wrapper = mountLayout()
@@ -178,26 +184,45 @@ describe('admin.vue saved drafts widget', () => {
     expect(wrapper.find('[data-testid="dsl-saved-drafts-widget-count"]').text()).toBe('2')
   })
 
-  it('opens the drawer with the draft list when Details is pressed', async () => {
+  it('renders the git-client header with Fetch, Pull and Rebase actions', async () => {
+    const wrapper = mountLayout()
+    await flush()
+
+    for (const op of ['fetch', 'pull', 'rebase']) {
+      expect(wrapper.find(`[data-testid="dsl-saved-drafts-${op}"]`).exists()).toBe(true)
+    }
+  })
+
+  it('opens the panel with the changed files when the heading is pressed', async () => {
     dslApi.listDrafts.mockResolvedValueOnce([
-      { name: 'alpha', type: 'Process', status: 'Draft', updatedAt: 1 },
+      { name: 'alpha', type: 'Process', status: 'MODIFIED', updatedAt: 1 },
     ])
 
     const wrapper = mountLayout()
     await flush()
 
-    expect(wrapper.find('[data-testid="dsl-saved-drafts-drawer"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="dsl-saved-drafts-panel"]').exists()).toBe(false)
 
-    await wrapper.find('[data-testid="dsl-saved-drafts-widget-details"]').trigger('click')
-    await flush()
+    await openPanel(wrapper)
 
-    expect(wrapper.find('[data-testid="dsl-saved-drafts-drawer"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="dsl-saved-drafts-panel"]').exists()).toBe(true)
     const items = wrapper.findAll('[data-testid="dsl-saved-drafts-item"]')
     expect(items).toHaveLength(1)
     expect(items[0].text()).toContain('alpha')
+    expect(wrapper.find('[data-testid="dsl-saved-drafts-item-status"]').text()).toBe('Modified')
   })
 
-  it('loads and displays draft metadata when Details is opened', async () => {
+  it('renders the commit box in the panel footer', async () => {
+    const wrapper = mountLayout()
+    await flush()
+    await openPanel(wrapper)
+
+    expect(wrapper.find('[data-testid="dsl-saved-drafts-commit-message"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="dsl-saved-drafts-commit"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="dsl-saved-drafts-revert-all"]').exists()).toBe(true)
+  })
+
+  it('loads and displays draft metadata when the panel opens', async () => {
     dslApi.getDraftsMetadata.mockResolvedValueOnce({
       draftCount: 7,
       sourcePath: 'workspace/dsl',
@@ -209,8 +234,7 @@ describe('admin.vue saved drafts widget', () => {
 
     const wrapper = mountLayout()
     await flush()
-    await wrapper.find('[data-testid="dsl-saved-drafts-widget-details"]').trigger('click')
-    await flush()
+    await openPanel(wrapper)
 
     expect(dslApi.getDraftsMetadata).toHaveBeenCalledOnce()
     expect(wrapper.find('[data-testid="draft-metadata-card-count"]').text()).toBe('7')
@@ -220,14 +244,12 @@ describe('admin.vue saved drafts widget', () => {
 
   it('routes to the workbench with the draft in the query when nothing handles the pick', async () => {
     dslApi.listDrafts.mockResolvedValueOnce([
-      { name: 'alpha', type: 'Process', status: 'Draft', updatedAt: 1 },
+      { name: 'alpha', type: 'Process', status: 'MODIFIED', updatedAt: 1 },
     ])
 
     const wrapper = mountLayout()
     await flush()
-
-    await wrapper.find('[data-testid="dsl-saved-drafts-widget-details"]').trigger('click')
-    await flush()
+    await openPanel(wrapper)
 
     await wrapper.find('[data-testid="dsl-saved-drafts-item"]').trigger('click')
     await flush()
@@ -240,7 +262,7 @@ describe('admin.vue saved drafts widget', () => {
 
   it('lets a page registered in the layout slot take the pick instead of navigating', async () => {
     dslApi.listDrafts.mockResolvedValueOnce([
-      { name: 'alpha', type: 'Process', status: 'Draft', updatedAt: 1 },
+      { name: 'alpha', type: 'Process', status: 'MODIFIED', updatedAt: 1 },
     ])
 
     const onSelect = vi.fn()
@@ -258,8 +280,7 @@ describe('admin.vue saved drafts widget', () => {
 
     expect(wrapper.find('[data-testid="page-stub"]').exists()).toBe(true)
 
-    await wrapper.find('[data-testid="dsl-saved-drafts-widget-details"]').trigger('click')
-    await flush()
+    await openPanel(wrapper)
     await wrapper.find('[data-testid="dsl-saved-drafts-item"]').trigger('click')
     await flush()
 
@@ -267,7 +288,7 @@ describe('admin.vue saved drafts widget', () => {
     expect(navigateToMock).not.toHaveBeenCalled()
   })
 
-  it('surfaces a load failure on the badge and in the drawer', async () => {
+  it('surfaces a load failure on the badge and in the panel', async () => {
     dslApi.listDrafts.mockRejectedValueOnce(new Error('drafts unavailable'))
 
     const wrapper = mountLayout()
@@ -275,8 +296,7 @@ describe('admin.vue saved drafts widget', () => {
 
     expect(wrapper.find('[data-testid="dsl-saved-drafts-widget-count"]').text()).toBe('0')
 
-    await wrapper.find('[data-testid="dsl-saved-drafts-widget-details"]').trigger('click')
-    await flush()
+    await openPanel(wrapper)
 
     expect(wrapper.find('[data-testid="dsl-saved-drafts-drawer-error"]').text()).toContain(
       'drafts unavailable',
