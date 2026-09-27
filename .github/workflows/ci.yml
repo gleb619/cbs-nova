@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # fetch-depth 0 so the kanban guard can resolve the PR base / push-before ref.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -21,7 +21,7 @@ jobs:
       # backend/ has no settings.gradle — builds are 3 separate Gradle projects
       # (dsl-platform, dsl-plugins, dsl-starter). Root backend/gradlew is Gradle
       # 8.13 and fails under Java 25; use backend/dsl-platform/gradlew (9.4.1).
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '25'
@@ -39,7 +39,7 @@ jobs:
 
       - name: Upload test results
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: test-results
           path: backend/**/build/reports/tests/
@@ -47,13 +47,13 @@ jobs:
   build-frontend:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # No explicit version — pnpm/action-setup reads the packageManager field
       # (pnpm@9.0.0) from frontend/package.json.
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 20
           cache: pnpm
@@ -96,13 +96,13 @@ jobs:
   operator-portal:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Same pnpm/node setup as build-frontend — action-setup reads
       # packageManager (pnpm@9.0.0) from frontend/package.json.
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 20
           cache: pnpm
@@ -144,11 +144,11 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # make lint runs backend Spotless via backend/dsl-platform/gradlew, which
       # requires Java 25 and benefits from Gradle caching.
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '25'
@@ -156,9 +156,9 @@ jobs:
 
       # No explicit version — pnpm/action-setup reads the packageManager field
       # (pnpm@9.0.0) from frontend/package.json.
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 20
           cache: pnpm
@@ -176,12 +176,12 @@ jobs:
   dsl-plugins-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # dsl-plugins resolves cbs.nova:* from Maven Local (same as dsl-starter);
       # uses backend/dsl-platform/gradlew since backend/gradlew (8.13) fails
       # under Java 25.
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '25'
@@ -196,9 +196,9 @@ jobs:
     # off pip + the repo's own fixtures.
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.x'
 
@@ -220,12 +220,12 @@ jobs:
   integration-backend:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Same Java + Gradle pin as build-backend (Java 25; backend/gradlew 8.13
       # fails under Java 25, so we use the per-build backend/dsl-platform/gradlew
       # which is pinned to 9.4.1).
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '25'
@@ -252,7 +252,7 @@ jobs:
 
       - name: Upload integration test reports
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: integration-test-results
           path: backend/**/build/reports/tests/integrationTest/
@@ -268,7 +268,7 @@ jobs:
       # fetch-depth: 0 lets gitleaks scan the full branch history
       # instead of just HEAD; actions/checkout gives it a clean
       # single-ref repo, so git mode "just works" on CI runners.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
