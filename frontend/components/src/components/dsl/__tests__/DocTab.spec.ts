@@ -257,16 +257,14 @@ describe('DocTab', () => {
     expect(emitted).toContain('hello world')
   })
 
-  it('shows the dirty indicator and enables Save only after editing', async () => {
+  it('shows the dirty indicator after editing', async () => {
     wrapper = mountTab()
 
     expect(wrapper.find('[data-testid="doc-tab-dirty-indicator"]').exists()).toBe(false)
-    expect(wrapper.find('[data-testid="doc-tab-save"]').attributes('disabled')).toBeDefined()
 
     await wrapper.find('[data-testid="schema-field-name"]').setValue('Changed')
 
     expect(wrapper.find('[data-testid="doc-tab-dirty-indicator"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="doc-tab-save"]').attributes('disabled')).toBeUndefined()
   })
 
   it('emits save with the current doc when Save is clicked', async () => {

@@ -29,8 +29,11 @@ defineProps<{
       data-testid="draft-metadata-card-details"
     >
       <dt class="text-gray-500">Location</dt>
-      <dd class="truncate font-mono text-gray-300" data-testid="draft-metadata-card-path">
-        {{ metadata.sourcePath }}
+      <dd class="truncate font-mono text-gray-300 max-w-[150px] overflow-hidden flex justify-end" data-testid="draft-metadata-card-path"
+        :title="metadata.sourcePath">
+        <span class="whitespace-nowrap select-all">
+          ...{{ metadata.sourcePath }}
+        </span>
       </dd>
 
       <dt class="text-gray-500">Drafts</dt>

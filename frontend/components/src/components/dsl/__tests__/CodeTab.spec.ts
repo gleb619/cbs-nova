@@ -49,18 +49,16 @@ describe('CodeTab', () => {
     expect(wrapper.find('[data-testid="code-tab-toolbar"]').exists()).toBe(false)
   })
 
-  it('shows the dirty indicator and enables Save only after editing', async () => {
+  it('shows the dirty indicator after editing', async () => {
     wrapper = mountTab()
 
     expect(wrapper.find('[data-testid="code-tab-dirty-indicator"]').exists()).toBe(false)
-    expect(wrapper.find('[data-testid="code-tab-save"]').attributes('disabled')).toBeDefined()
 
     await wrapper.find('[data-testid="code-tab-textarea"]').setValue('changed')
 
     const indicator = wrapper.find('[data-testid="code-tab-dirty-indicator"]')
     expect(indicator.exists()).toBe(true)
     expect(indicator.text()).toContain('unsaved')
-    expect(wrapper.find('[data-testid="code-tab-save"]').attributes('disabled')).toBeUndefined()
   })
 
   it('emits save with the current code when Save is clicked', async () => {
@@ -263,12 +261,12 @@ describe('CodeTab', () => {
       expect(wrapper.emitted('save')).toEqual([['changed']])
     })
 
-    it('ignores Ctrl+S when there are no unsaved changes', async () => {
+    it('triggers save on Ctrl+S even when there are no unsaved changes', async () => {
       wrapper = mountTab()
 
       dispatchWindowKey({ key: 's', ctrlKey: true })
 
-      expect(wrapper.emitted('save')).toBeUndefined()
+      expect(wrapper.emitted('save')).toEqual([['initial']])
     })
 
     it('does not trigger hotkeys when readOnly', async () => {

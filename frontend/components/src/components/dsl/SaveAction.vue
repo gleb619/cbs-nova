@@ -44,12 +44,8 @@ const hasAutosave = computed(
 )
 
 function requestSave() {
-  if (!props.isDirty || props.busy) return
-  emit('save')
-}
-
-function requestRetry() {
-  // Retry always re-fires save — user explicitly asked to retry, ignore dirty gate.
+  // Manual save is always available — user decides when to save.
+  if (props.busy) return
   emit('save')
 }
 
@@ -88,8 +84,6 @@ onBeforeUnmount(() => {
   window.removeEventListener('mousedown', onClickOutside)
   window.removeEventListener('keydown', onKeydown)
 })
-
-const saveDisabled = computed(() => !props.isDirty || props.busy)
 
 const saveStatusClasses = computed(() => {
   switch (props.saveStatus) {
@@ -130,21 +124,6 @@ const saveStatusText = computed(() => {
       return props.lastSavedAt ? 'Saved' : ''
   }
 })
-
-const splitButtonBorder = computed(() =>
-  saveDisabled.value ? 'border-neutral-300' : 'border-blue-600',
-)
-const splitDivider = computed(() => (saveDisabled.value ? 'bg-neutral-300' : 'bg-blue-700'))
-const actionClasses = computed(() =>
-  saveDisabled.value
-    ? 'text-neutral-500 bg-neutral-100 cursor-not-allowed'
-    : 'text-white bg-blue-600 hover:bg-blue-700',
-)
-const chevronClasses = computed(() =>
-  saveDisabled.value || !hasAutosave.value
-    ? 'text-neutral-400 bg-neutral-100 cursor-not-allowed'
-    : 'text-white bg-blue-600 hover:bg-blue-700',
-)
 </script>
 
 <template>
@@ -171,7 +150,7 @@ const chevronClasses = computed(() =>
         type="button"
         class="ml-1 underline hover:no-underline"
         :data-testid="`${testidPrefix}-save-retry`"
-        @click="requestRetry"
+        @click="requestSave"
       >
         Retry
       </button>
@@ -187,29 +166,26 @@ const chevronClasses = computed(() =>
       <span>unsaved</span>
     </span>
     <div
-      class="inline-flex rounded overflow-hidden border"
-      :class="splitButtonBorder"
+      class="inline-flex rounded overflow-hidden border border-blue-600"
       :data-testid="`${testidPrefix}-save-split`"
     >
       <HotkeyTooltip :keys="saveShortcut">
         <button
           type="button"
-          class="px-3 py-1 text-xs font-medium"
-          :class="actionClasses"
-          :disabled="saveDisabled"
+          class="px-3 py-1 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
+          :disabled="busy"
           :data-testid="`${testidPrefix}-save`"
           @click="requestSave"
         >
           Save
         </button>
       </HotkeyTooltip>
-      <span v-if="hasAutosave" class="w-px" :class="splitDivider" aria-hidden="true"></span>
+      <span v-if="hasAutosave" class="w-px bg-blue-700" aria-hidden="true"></span>
       <button
         v-if="hasAutosave"
         type="button"
-        class="px-2 py-1 text-xs inline-flex items-center justify-center"
-        :class="chevronClasses"
-        :disabled="!hasAutosave"
+        class="px-2 py-1 text-xs inline-flex items-center justify-center text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
+        :disabled="busy"
         :aria-haspopup="'menu'"
         :aria-expanded="dropdownOpen ? 'true' : 'false'"
         :data-testid="`${testidPrefix}-save-dropdown-toggle`"

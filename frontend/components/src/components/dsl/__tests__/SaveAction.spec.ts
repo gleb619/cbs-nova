@@ -26,16 +26,16 @@ describe('SaveAction', () => {
     wrapper?.unmount()
   })
 
-  it('renders the Save button disabled when not dirty', () => {
+  it('renders the Save button always enabled (manual mode — user decides when)', () => {
     wrapper = mountAction()
 
     const btn = wrapper.find('[data-testid="sa-save"]')
     expect(btn.exists()).toBe(true)
-    expect(btn.attributes('disabled')).toBeDefined()
+    expect(btn.attributes('disabled')).toBeUndefined()
   })
 
-  it('renders the Save button enabled when dirty', async () => {
-    wrapper = mountAction({ isDirty: true })
+  it('keeps the Save button enabled when not dirty', async () => {
+    wrapper = mountAction({ isDirty: false })
 
     const btn = wrapper.find('[data-testid="sa-save"]')
     expect(btn.attributes('disabled')).toBeUndefined()
@@ -48,7 +48,7 @@ describe('SaveAction', () => {
     expect(wrapper.find('[data-testid="sa-save-dropdown"]').exists()).toBe(false)
   })
 
-  it('emits save when the Save button is clicked and dirty', async () => {
+  it('emits save when the Save button is clicked', async () => {
     wrapper = mountAction({ isDirty: true })
 
     await wrapper.find('[data-testid="sa-save"]').trigger('click')
@@ -56,12 +56,12 @@ describe('SaveAction', () => {
     expect(wrapper.emitted('save')).toHaveLength(1)
   })
 
-  it('does not emit save when not dirty', async () => {
+  it('emits save even when not dirty (manual mode — user controls when)', async () => {
     wrapper = mountAction({ isDirty: false })
 
     await wrapper.find('[data-testid="sa-save"]').trigger('click')
 
-    expect(wrapper.emitted('save')).toBeUndefined()
+    expect(wrapper.emitted('save')).toHaveLength(1)
   })
 
   it('does not emit save while busy', async () => {

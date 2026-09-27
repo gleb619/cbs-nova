@@ -109,7 +109,7 @@ function handleBlur() {
 }
 
 function handleGlobalSave() {
-  if (!props.readOnly && isDirty.value) requestSave()
+  if (!props.readOnly) requestSave()
 }
 
 function runRefresh() {
@@ -154,7 +154,7 @@ function handleHotkey(event: KeyboardEvent) {
   if (key === 's' && !event.shiftKey) {
     event.preventDefault()
     if (props.busy) return
-    if (isDirty.value) requestSave()
+    requestSave()
     return
   }
 

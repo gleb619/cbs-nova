@@ -112,7 +112,7 @@ function requestSave() {
 }
 
 function handleGlobalSave() {
-  if (!props.readOnly && !props.busy && isDirty.value) requestSave()
+  if (!props.readOnly && !props.busy) requestSave()
 }
 
 const isMac =
@@ -131,7 +131,7 @@ function handleHotkey(event: KeyboardEvent) {
   if (!mod || event.shiftKey || event.key.toLowerCase() !== 's') return
   if (isEditableTarget(event.target)) return
   event.preventDefault()
-  if (isDirty.value) requestSave()
+  requestSave()
 }
 
 onMounted(() => {
