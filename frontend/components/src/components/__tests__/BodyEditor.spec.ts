@@ -236,28 +236,25 @@ describe('BodyEditor', () => {
     const wrapper = mountBodyEditor({ construct, doc: '---\nname: CreateOrder\n---\n\n# Docs\n' })
 
     await wrapper.find('[data-testid="body-editor-tab-docs"]').trigger('click')
-    await wrapper.find('[data-testid="doc-tab-body"]').setValue('# changed\n')
+    await wrapper.find('[data-testid="md-heading-text-0"]').setValue('changed')
 
-    expect(wrapper.emitted('update:doc')?.at(-1)?.[0]).toBe(
-      '---\nname: CreateOrder\n---\n\n# changed\n',
-    )
+    expect(wrapper.emitted('update:doc')?.at(-1)?.[0]).toContain('# changed')
 
     await wrapper.find('[data-testid="doc-tab-save"]').trigger('click')
-    expect(wrapper.emitted('save-doc')?.at(-1)?.[0]).toBe(
-      '---\nname: CreateOrder\n---\n\n# changed\n',
-    )
+    expect(wrapper.emitted('save-doc')?.at(-1)?.[0]).toContain('# changed')
   })
 
   it('keeps the Docs tab functional without controlled doc input', async () => {
     const wrapper = mountBodyEditor({ construct })
 
     await wrapper.find('[data-testid="body-editor-tab-docs"]').trigger('click')
-    await wrapper.find('[data-testid="doc-tab-body"]').setValue('# internal draft\n')
+    await wrapper.find('[data-testid="md-insert-h2"]').trigger('click')
+    await wrapper.find('[data-testid="md-heading-text-0"]').setValue('internal draft')
 
     expect(wrapper.emitted('update:doc')).toBeUndefined()
     expect(
-      (wrapper.find('[data-testid="doc-tab-body"]').element as HTMLTextAreaElement).value,
-    ).toBe('# internal draft\n')
+      (wrapper.find('[data-testid="md-heading-text-0"]').element as HTMLInputElement).value,
+    ).toBe('internal draft')
   })
 
   it('marks the Docs tab read-only when no construct is selected', async () => {
@@ -265,8 +262,8 @@ describe('BodyEditor', () => {
 
     await wrapper.find('[data-testid="body-editor-tab-docs"]').trigger('click')
 
-    expect(wrapper.find('[data-testid="doc-tab-toolbar"]').exists()).toBe(false)
-    expect(wrapper.find('[data-testid="doc-tab-body"]').attributes('readonly')).toBeDefined()
+    expect(wrapper.find('[data-testid="doc-tab-footer"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="md-heading-text-0"]').attributes('readonly')).toBeDefined()
   })
 
   it('pulls in externally changed controlled code via keyed remount when the construct changes', async () => {

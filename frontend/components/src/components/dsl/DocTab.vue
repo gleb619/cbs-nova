@@ -1,9 +1,11 @@
 <script setup lang="ts">
+import { marked } from 'marked'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useCrc32 } from '../../composables/useCrc32'
 import { createNamespacedLocalStorageState } from '../../composables/useLocalStorageState'
 import type { JsonSchema } from '../../types/jsonSchema'
 import { parseMarkdownDoc, serializeMarkdownDoc } from '../../utils/markdownDoc'
+import MarkdownBodyEditor from './MarkdownBodyEditor.vue'
 import MonacoEditor from './MonacoEditor.vue'
 import SchemaForm from './SchemaForm.vue'
 
@@ -34,8 +36,13 @@ const { calculateCrc32 } = useCrc32()
 
 const localDoc = ref(props.doc)
 
-type DocMode = 'form' | 'raw'
-const DOC_MODES: readonly DocMode[] = ['form', 'raw']
+type DocMode = 'form' | 'raw' | 'view'
+const DOC_MODES: readonly DocMode[] = ['form', 'raw', 'view']
+const MODE_LABELS: Record<DocMode, string> = {
+  form: 'Form',
+  raw: 'Raw',
+  view: 'View',
+}
 
 const useDocTabStorage = createNamespacedLocalStorageState('cbs-nova:doc-tab')
 const mode = useDocTabStorage<DocMode>('mode', 'form', {
@@ -63,6 +70,11 @@ const frontmatterSchema: JsonSchema = {
 
 const parsed = computed(() => parseMarkdownDoc(localDoc.value))
 
+const renderedView = computed(() => {
+  const body = parsed.value.body || ''
+  return marked.parse(body, { async: false }) as string
+})
+
 function updateDoc(next: string) {
   localDoc.value = next
   emit('update:doc', next)
@@ -77,11 +89,11 @@ function updateFrontmatter(frontmatter: unknown) {
   )
 }
 
-function updateBody(event: Event) {
+function updateBody(next: string) {
   updateDoc(
     serializeMarkdownDoc({
       frontmatter: parsed.value.frontmatter,
-      body: (event.target as HTMLTextAreaElement).value,
+      body: next,
     }),
   )
 }
@@ -161,10 +173,80 @@ const saveStatusText = computed(() => {
 
 <template>
   <div class="flex flex-col h-full" data-testid="doc-tab">
+    <div class="flex-1 min-h-0 overflow-auto">
+      <div v-if="mode === 'form'" class="flex flex-col gap-4 p-3" data-testid="doc-tab-form">
+        <SchemaForm
+          :schema="frontmatterSchema"
+          :model-value="parsed.frontmatter"
+          :readonly="readOnly"
+          @update:model-value="updateFrontmatter"
+        />
+        <fieldset class="flex flex-col gap-1 border-0 p-0 m-0">
+          <legend class="text-xs text-ink-muted px-0">Body</legend>
+          <MarkdownBodyEditor :body="parsed.body" :read-only="readOnly" @update:body="updateBody" />
+        </fieldset>
+      </div>
+      <div v-if="mode === 'raw'" class="p-3 h-full min-h-[300px]" data-testid="doc-tab-raw">
+        <div
+          class="relative h-full min-h-[300px] overflow-hidden rounded border border-neutral-200 bg-white"
+        >
+          <MonacoEditor
+            :model-value="localDoc"
+            language="markdown"
+            :read-only="readOnly"
+            :placeholder="readOnly ? 'No documentation available' : 'Write documentation here...'"
+            @update:model-value="updateDoc"
+          />
+        </div>
+      </div>
+      <div
+        v-if="mode === 'view'"
+        class="p-6 h-full overflow-auto bg-white"
+        data-testid="doc-tab-view"
+      >
+        <article class="max-w-3xl mx-auto">
+          <header
+            v-if="parsed.frontmatter.name || parsed.frontmatter.description"
+            class="mb-6 pb-4 border-b border-neutral-200"
+            data-testid="doc-tab-view-header"
+          >
+            <h1
+              v-if="parsed.frontmatter.name"
+              class="text-2xl font-semibold text-neutral-900"
+              data-testid="doc-tab-view-name"
+            >
+              {{ parsed.frontmatter.name }}
+            </h1>
+            <p
+              v-if="parsed.frontmatter.description"
+              class="mt-1 text-sm text-neutral-600"
+              data-testid="doc-tab-view-description"
+            >
+              {{ parsed.frontmatter.description }}
+            </p>
+          </header>
+          <div
+            class="prose prose-sm max-w-none text-neutral-800"
+            data-testid="doc-tab-view-body"
+            v-html="renderedView"
+          />
+          <footer
+            v-if="!readOnly"
+            class="mt-6 pt-4 border-t border-neutral-200 text-xs text-neutral-500"
+            data-testid="doc-tab-view-footer"
+          >
+            <span>{{ parsed.body.split(/\s+/).filter(Boolean).length }} words</span>
+            <span class="mx-2">·</span>
+            <span>{{ parsed.body.length }} chars</span>
+          </footer>
+        </article>
+      </div>
+    </div>
+
     <div
       v-if="!readOnly"
-      class="flex flex-wrap items-center gap-2 px-3 py-1.5 border-b border-neutral-200 bg-white"
-      data-testid="doc-tab-toolbar"
+      class="flex flex-wrap items-center gap-2 px-3 py-1.5 border-t border-neutral-200 bg-white"
+      data-testid="doc-tab-footer"
     >
       <div class="flex items-center rounded border border-neutral-300 overflow-hidden">
         <button
@@ -179,7 +261,7 @@ const saveStatusText = computed(() => {
           :aria-pressed="mode === option"
           @click="mode = option"
         >
-          {{ option === 'form' ? 'Form' : 'Raw' }}
+          {{ MODE_LABELS[option] }}
         </button>
       </div>
       <button
@@ -222,41 +304,6 @@ const saveStatusText = computed(() => {
         <span aria-hidden="true" class="inline-block h-2 w-2 rounded-full bg-amber-500"></span>
         <span>unsaved changes</span>
       </span>
-    </div>
-    <div class="flex-1 min-h-0 overflow-auto">
-      <div v-if="mode === 'form'" class="flex flex-col gap-4 p-3" data-testid="doc-tab-form">
-        <SchemaForm
-          :schema="frontmatterSchema"
-          :model-value="parsed.frontmatter"
-          :readonly="readOnly"
-          @update:model-value="updateFrontmatter"
-        />
-        <div class="flex flex-col gap-1">
-          <label for="doc-tab-body" class="text-xs text-ink-muted">Body</label>
-          <textarea
-            id="doc-tab-body"
-            data-testid="doc-tab-body"
-            :value="parsed.body"
-            :readonly="readOnly"
-            rows="10"
-            class="w-full px-2 py-1 text-xs font-mono border border-line rounded-sm focus:outline-none focus:ring-1 focus:ring-accent-500 disabled:opacity-60 disabled:bg-surface"
-            @input="updateBody"
-          />
-        </div>
-      </div>
-      <div v-if="mode === 'raw'" class="p-3 h-full min-h-[300px]" data-testid="doc-tab-raw">
-        <div
-          class="relative h-full min-h-[300px] overflow-hidden rounded border border-neutral-200 bg-white"
-        >
-          <MonacoEditor
-            :model-value="localDoc"
-            language="markdown"
-            :read-only="readOnly"
-            :placeholder="readOnly ? 'No documentation available' : 'Write documentation here...'"
-            @update:model-value="updateDoc"
-          />
-        </div>
-      </div>
     </div>
   </div>
 </template>

@@ -30,7 +30,7 @@ export function parseMarkdownDoc(content: string): MarkdownDoc {
 }
 
 export function serializeMarkdownDoc(doc: MarkdownDoc): string {
-  const body = doc.body.replace(/\s+$/, '')
+  const body = doc.body.replace(/\n+$/, '')
   const entries = Object.entries(doc.frontmatter).filter(([, value]) => value !== undefined)
   if (entries.length === 0) {
     return body ? `${body}\n` : ''
