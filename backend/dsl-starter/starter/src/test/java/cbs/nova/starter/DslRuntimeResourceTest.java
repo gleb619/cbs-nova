@@ -35,7 +35,7 @@ import cbs.nova.starter.converter.DslRuntimeMapper;
 import cbs.nova.starter.logging.LoggingExecutionListener;
 import cbs.nova.starter.service.DslRuntimeService;
 import cbs.nova.starter.service.IdempotencyKeys;
-import cbs.nova.starter.service.IdempotentReplayException;
+import cbs.nova.starter.idempotency.IdempotentReplayException;
 import cbs.nova.starter.service.InputValidator;
 import cbs.nova.starter.web.DslPayloadSizeValidator;
 import com.github.benmanes.caffeine.cache.Caffeine;
