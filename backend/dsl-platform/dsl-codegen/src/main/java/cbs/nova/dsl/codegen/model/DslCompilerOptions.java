@@ -1,12 +1,10 @@
 package cbs.nova.dsl.codegen.model;
 
 import static cbs.nova.dsl.codegen.CompilerConstants.DEFAULT_BUILD_VERSION;
-import static cbs.nova.dsl.codegen.CompilerConstants.DEFAULT_LOG_LEVEL;
 
 import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
-import org.slf4j.event.Level;
 
 import java.io.IOException;
 import java.io.StringReader;
@@ -22,7 +20,6 @@ public record DslCompilerOptions(
         @NonNull String buildVersion,
         String targetPackage,
         String basePackage,
-        @Deprecated(forRemoval = true) @NonNull Level logLevel,
         String classpath,
         boolean useFileNameSubPackage,
         Path explainResourcesDir) {
@@ -46,7 +43,6 @@ public record DslCompilerOptions(
     var buildVersion = blankToNull(properties.getProperty("buildVersion"));
     var targetPackage = blankToNull(properties.getProperty("targetPackage"));
     var basePackage = blankToNull(properties.getProperty("basePackage"));
-    var logLevel = parseLogLevel(properties.getProperty("logLevel"));
     var classpath = blankToNull(properties.getProperty("classpath"));
     var useFileNameSubPackage = parseBooleanFlag(properties.getProperty("useFileNameSubPackage"));
     var explainResourcesDir = blankToNull(properties.getProperty("explainResourcesDir"));
@@ -61,7 +57,6 @@ public record DslCompilerOptions(
             buildVersion != null ? buildVersion : DEFAULT_BUILD_VERSION,
             targetPackage,
             basePackage,
-            logLevel,
             classpath,
             useFileNameSubPackage,
             explainDir);
@@ -82,18 +77,6 @@ public record DslCompilerOptions(
     }
     if (!PACKAGE_PATTERN.matcher(value).matches()) {
       throw new IllegalArgumentException("Invalid " + key + ": " + value);
-    }
-  }
-
-  private static @NonNull Level parseLogLevel(String value) {
-    var raw = blankToNull(value);
-    if (raw == null) {
-      return Level.valueOf(DEFAULT_LOG_LEVEL);
-    }
-    try {
-      return Level.valueOf(raw.toUpperCase());
-    } catch (IllegalArgumentException e) {
-      throw new IllegalArgumentException("Invalid log level: " + raw, e);
     }
   }
 

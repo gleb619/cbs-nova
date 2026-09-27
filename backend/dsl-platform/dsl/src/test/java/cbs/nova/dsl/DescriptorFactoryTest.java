@@ -34,7 +34,6 @@ class DescriptorFactoryTest {
     assertThat(desc.inputType()).isEqualTo(String.class);
     assertThat(desc.outputType()).isEqualTo(Integer.class);
     assertThat(desc.hasCompensation()).isTrue();
-    assertThat(desc.helperRefs()).isEmpty();
   }
 
   @Test

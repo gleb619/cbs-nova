@@ -3,8 +3,11 @@ package cbs.nova.dsl.codegen.task;
 import cbs.nova.dsl.codegen.DslSourceCompiler;
 import cbs.nova.dsl.codegen.SourceCompiler;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.event.Level;
 
 import java.io.IOException;
+
+import static cbs.nova.dsl.codegen.CompilerConstants.DEFAULT_LOG_LEVEL;
 
 @RequiredArgsConstructor
 public final class LoadSourcesTask implements CompileTask {
@@ -22,7 +25,7 @@ public final class LoadSourcesTask implements CompileTask {
     var sourceOptions = new SourceCompiler.CompileOptions(
             options.buildVersion(),
             options.targetPackage(),
-            options.logLevel(),
+            Level.valueOf(DEFAULT_LOG_LEVEL),
             options.classpath(),
             options.useFileNameSubPackage());
     return context.toBuilder()

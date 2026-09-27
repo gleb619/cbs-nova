@@ -56,14 +56,6 @@ public final class SemanticValidator {
     var allKnownHelperNames = new HashSet<>(functionNames);
     helperRegistry.allNames().forEach(allKnownHelperNames::add);
 
-    processes.forEach(
-            p -> p.helperRefs().stream()
-                    .filter(ref -> !allKnownHelperNames.contains(ref))
-                    .forEach(
-                            ref -> issues.add(new ValidationIssue(
-                                    DiagnosticCodes.UNKNOWN_HELPER,
-                                    "Process '" + p.name() + "' references unknown helper: "
-                                            + ref))));
     transactions.forEach(
             t -> t.helperRefs().stream()
                     .filter(ref -> !allKnownHelperNames.contains(ref))

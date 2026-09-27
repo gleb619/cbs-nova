@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.slf4j.event.Level;
 
 import java.nio.file.Path;
 import java.util.Properties;
@@ -25,7 +24,6 @@ class DslCompilerOptionsTest {
     props.setProperty("buildVersion", "v2");
     props.setProperty("targetPackage", "cbs.nova.dslexamples");
     props.setProperty("basePackage", "com.example.base");
-    props.setProperty("logLevel", "DEBUG");
     props.setProperty("classpath", "a.jar:b.jar");
     props.setProperty("useFileNameSubPackage", "false");
 
@@ -36,7 +34,6 @@ class DslCompilerOptionsTest {
     assertThat(options.buildVersion()).isEqualTo("v2");
     assertThat(options.targetPackage()).isEqualTo("cbs.nova.dslexamples");
     assertThat(options.basePackage()).isEqualTo("com.example.base");
-    assertThat(options.logLevel()).isEqualTo(Level.DEBUG);
     assertThat(options.classpath()).isEqualTo("a.jar:b.jar");
     assertThat(options.useFileNameSubPackage()).isFalse();
   }
@@ -54,7 +51,6 @@ class DslCompilerOptionsTest {
     assertThat(options.buildVersion()).isEqualTo("v1");
     assertThat(options.targetPackage()).isNull();
     assertThat(options.basePackage()).isNull();
-    assertThat(options.logLevel()).isEqualTo(Level.INFO);
     assertThat(options.classpath()).isNull();
     assertThat(options.useFileNameSubPackage()).isTrue();
     assertThat(options.explainResourcesDir()).isNull();
@@ -139,18 +135,6 @@ class DslCompilerOptionsTest {
     assertThatThrownBy(() -> DslCompilerOptions.fromProperties(props))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("outputDir");
-  }
-
-  @Test
-  void rejectsInvalidLogLevel() {
-    var props = new Properties();
-    props.setProperty("srcDir", tempDir.resolve("src").toString());
-    props.setProperty("outputDir", tempDir.resolve("out").toString());
-    props.setProperty("logLevel", "NOPE");
-
-    assertThatThrownBy(() -> DslCompilerOptions.fromProperties(props))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessageContaining("NOPE");
   }
 
   @Test
