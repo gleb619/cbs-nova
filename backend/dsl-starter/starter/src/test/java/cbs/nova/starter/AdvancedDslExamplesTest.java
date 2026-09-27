@@ -1,5 +1,15 @@
 package cbs.nova.starter;
 
+import cbs.nova.dslexamples.v1.DataIntegrityModels.DataIntegrityIn;
+import cbs.nova.dslexamples.v1.DataIntegrityModels.DataIntegrityOut;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Base64;
+import java.util.zip.GZIPInputStream;
+
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -326,6 +336,38 @@ class AdvancedDslExamplesTest {
     assertThat(out.extractedSpanId()).matches("[0-9a-f]{16}");
     assertThat(out.baggageValue()).isEqualTo("ORDER-42");
   }
+
+  @Test
+  void DataIntegrityPreviewCompressesHashesAndEncodesPayload() {
+    String payload = "{\"order\":\"42\",\"items\":[\"a\",\"b\"]}";
+    var input = new DataIntegrityIn(payload);
+    Context<DataIntegrityIn> ctx = SimpleContext.builder(input).mode(ExecutionMode.PREVIEW)
+            .build();
+
+    Result<?> result = GlobalManager.globalManager().runProcess("DataIntegrity", ctx);
+
+    assertThat(result.isSuccess()).as("cause: %s", result.cause()).isTrue();
+    DataIntegrityOut out = (DataIntegrityOut) result.value();
+
+    // SHA-256 hex digest is always 64 lowercase hex characters.
+    assertThat(out.digest()).matches("[0-9a-f]{64}");
+    assertThat(out.encodedPayload()).isNotBlank();
+
+    // The encoded payload is the base64-encoded gzip-compressed bytes.
+    String compressedBase64 = new String(
+            Base64.getDecoder().decode(out.encodedPayload()), StandardCharsets.UTF_8);
+    byte[] compressedBytes = Base64.getDecoder().decode(compressedBase64);
+    String recovered;
+    try (GZIPInputStream gzip = new GZIPInputStream(new ByteArrayInputStream(compressedBytes))) {
+      recovered = new String(gzip.readAllBytes(), StandardCharsets.UTF_8);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+    assertThat(recovered).isEqualTo(payload);
+
+    assertThat(out.digest()).isEqualTo(sha256Hex(compressedBase64));
+  }
+
   private static HelperInstanceResolver typedHelperResolver() {
     return helperClass -> {
       if (helperClass == ConditionalFailingHelper.class) {
@@ -490,4 +532,19 @@ class AdvancedDslExamplesTest {
       throw new IllegalStateException("Cannot instantiate helper " + helperClass.getName());
     };
   }
+
+  private static String sha256Hex(String value) {
+    try {
+      byte[] raw = MessageDigest.getInstance("SHA-256")
+              .digest(value.getBytes(StandardCharsets.UTF_8));
+      StringBuilder sb = new StringBuilder();
+      for (byte b : raw) {
+        sb.append(String.format("%02x", b));
+      }
+      return sb.toString();
+    } catch (NoSuchAlgorithmException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
 }
