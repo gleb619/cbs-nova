@@ -2,6 +2,8 @@ package cbs.nova.starter;
 
 import cbs.nova.dslexamples.v1.DataIntegrityModels.DataIntegrityIn;
 import cbs.nova.dslexamples.v1.DataIntegrityModels.DataIntegrityOut;
+import cbs.nova.dslexamples.v1.SafeTemplatingModels.SafeTemplatingIn;
+import cbs.nova.dslexamples.v1.SafeTemplatingModels.SafeTemplatingOut;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -71,6 +73,8 @@ class AdvancedDslExamplesTest {
   void loadCompactDsls() {
     GlobalManager.globalManager().resetForTests();
     DslConfig.dslConfig().helperInstanceResolver().replace(typedHelperResolver());
+    DslConfig.dslConfig().expressionEvaluator()
+            .replace(new cbs.nova.dsl.utils.MvelExpressionEvaluator());
     new DefinitionLoader().load(GlobalManager.globalManager());
     GlobalManager.globalManager().registerHelperResolvers();
   }
@@ -366,6 +370,26 @@ class AdvancedDslExamplesTest {
     assertThat(recovered).isEqualTo(payload);
 
     assertThat(out.digest()).isEqualTo(sha256Hex(compressedBase64));
+  }
+
+  @Test
+  void safeTemplatingPreviewDemonstratesInterpolateAndFormatMessageContrast() {
+    var order = java.util.Map.<String, Object>of("id", "42");
+    var input = new SafeTemplatingIn(order, "Hello {orderId}!");
+    Context<SafeTemplatingIn> ctx = SimpleContext.builder(input).mode(ExecutionMode.PREVIEW)
+            .build();
+
+    Result<?> result = GlobalManager.globalManager().runProcess("SafeTemplating", ctx);
+
+    assertThat(result.isSuccess()).as("cause: %s", result.cause()).isTrue();
+    SafeTemplatingOut out = (SafeTemplatingOut) result.value();
+
+    assertThat(out.nestedPathResult()).isEqualTo("Order #42 placed");
+    assertThat(out.defaultValueResult()).isEqualTo("Priority: standard");
+    assertThat(out.escapedLiteralResult()).isEqualTo("Raw token: ${order.total} (kept literal)");
+    assertThat(out.missingKeyResult()).isEqualTo("Coupon: ");
+    assertThat(out.resolvedKeys()).containsExactly("order.id");
+    assertThat(out.trustedGreeting()).isEqualTo("Hello 42!");
   }
 
   private static HelperInstanceResolver typedHelperResolver() {
