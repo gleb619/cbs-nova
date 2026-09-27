@@ -88,7 +88,14 @@ const emit = defineEmits<{
   'retry-structure': []
 }>()
 
-type BodyEditorTab = 'structure' | 'code' | 'docs' | 'preview' | 'explain' | 'hierarchy' | 'problems'
+type BodyEditorTab =
+  | 'structure'
+  | 'code'
+  | 'docs'
+  | 'preview'
+  | 'explain'
+  | 'hierarchy'
+  | 'problems'
 const BODY_EDITOR_TABS: readonly BodyEditorTab[] = [
   'structure',
   'code',

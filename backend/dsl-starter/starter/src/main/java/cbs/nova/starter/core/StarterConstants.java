@@ -411,6 +411,12 @@ public class StarterConstants {
 
   public static final String DSL_RELOAD_TEMP_PREFIX = "dsl-reload-";
 
+  // Build-version segment for reload compiles (DslReloadHandler): namespaces reloaded classes into
+  // <targetPackage>.reload so they never collide with bootstrap-compiled version packages on the
+  // starter classpath (parent-first classloading would otherwise shadow the reloaded definitions).
+
+  public static final String DSL_RELOAD_BUILD_VERSION = "reload";
+
   // JDBC dsl_api_keys columns (JdbcApiKeyRepository)
 
   public static final String DSL_API_KEY_COLUMNS = "id, label, key_hash, key_prefix, created_at, revoked_at, last_used_at";

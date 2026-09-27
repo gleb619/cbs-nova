@@ -220,7 +220,8 @@ public class DslReloadHandler {
     if (sources.isEmpty()) {
       return;
     }
-    var request = new CompileRequest(null, null, null, null, null, null, sources);
+    var request = new CompileRequest(StarterConstants.DSL_RELOAD_BUILD_VERSION,
+            dslProperties.targetPackage(), null, null, null, null, sources);
     CompileResult result = compileRemotely(builder, request);
     if (!result.success()) {
       throw new DslCompilationException("DSL compilation failed",

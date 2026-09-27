@@ -25,7 +25,6 @@ public final class HelperManager implements HelperRegistrar {
   @NonNull
   private final ObjectGuard objectGuard;
 
-
   @Override
   public void register(@NonNull String name, @NonNull Executable<?, ?> helper) {
     registry.registerHelper(name, helper);

@@ -99,10 +99,7 @@ describe('NotificationRuleList', () => {
 
   it('emits toggle with the rule id and inverted enabled state', async () => {
     const wrapper = mountList({
-      rules: [
-        rule({ id: 1, enabled: true }),
-        rule({ id: 2, enabled: false }),
-      ],
+      rules: [rule({ id: 1, enabled: true }), rule({ id: 2, enabled: false })],
     })
 
     const toggles = wrapper.findAll('[data-testid="notification-rule-toggle"]')
@@ -204,9 +201,9 @@ describe('NotificationRuleList', () => {
 
     await wrapper.find('[data-testid="notification-rule-delete"]').trigger('click')
 
-    expect(
-      wrapper.find('[data-testid="notification-rule-delete-confirm-group"]').exists(),
-    ).toBe(true)
+    expect(wrapper.find('[data-testid="notification-rule-delete-confirm-group"]').exists()).toBe(
+      true,
+    )
 
     await wrapper.find('[data-testid="notification-rule-delete-confirm"]').trigger('click')
 
@@ -220,8 +217,8 @@ describe('NotificationRuleList', () => {
     await wrapper.find('[data-testid="notification-rule-delete-cancel"]').trigger('click')
 
     expect(wrapper.emitted('delete')).toBeFalsy()
-    expect(
-      wrapper.find('[data-testid="notification-rule-delete-confirm-group"]').exists(),
-    ).toBe(false)
+    expect(wrapper.find('[data-testid="notification-rule-delete-confirm-group"]').exists()).toBe(
+      false,
+    )
   })
 })

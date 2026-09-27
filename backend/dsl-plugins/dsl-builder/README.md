@@ -20,7 +20,10 @@ requiring a local Gradle build setup.
 4. A Gradle build (`clean build` by default) runs via the Gradle Tooling API with an
    auto-detected Java home (see `cbs.dsl.builder.gradle-java-home` to override).
 5. On success the response contains the session `id` and the list of generated files.
-6. `GET /api/dsl/compile/{id}/download` streams `build/generated` as a zip.
+6. `GET /api/dsl/compile/{id}/download` streams the compiled build products as a zip:
+   `build/classes/java/main` (compiled classes, package layout) plus
+   `build/resources/main` (processed resources, e.g. the `META-INF/services` provider
+   descriptors). Generated `.java` sources stay in the session workspace.
 
 Sessions expire after `sessionTtl` (default 1h) and are cleaned up by a scheduled task.
 
@@ -48,7 +51,8 @@ Sessions expire after `sessionTtl` (default 1h) and are cleaned up by a schedule
 
 ### `GET /api/dsl/compile/{id}/download`
 
-Streams `application/zip` of the generated output. `404` for unknown/expired sessions.
+Streams `application/zip` of the compiled build products (classes + processed resources, see
+step 6 above). `404` for unknown/expired sessions.
 
 ## Configuration (`cbs.dsl.builder.*`)
 

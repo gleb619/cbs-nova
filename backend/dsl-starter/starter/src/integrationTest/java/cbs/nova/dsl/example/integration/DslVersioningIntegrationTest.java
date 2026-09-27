@@ -322,7 +322,12 @@ class DslVersioningIntegrationTest {
             .isTrue();
 
     Path v2Dir = Path.of("src/integrationTest/resources/dsl-versioning-v2");
-    var v2Props = DslProperties.builder().sourceDir(v2Dir.toString()).build();
+    // Same dslPackage the bootstrap compile of dsl-examples uses, so the reloaded definitions
+    // compile into a sibling of the bootstrap namespace (<pkg>.reload) instead of the builder's
+    // generated default package.
+    var v2Props = DslProperties.builder().sourceDir(v2Dir.toString())
+            .targetPackage("cbs.nova.dslexamples")
+            .build();
     // T601: reload compiles remotely in the dsl-builder Testcontainer built from the module
     // Dockerfile — no in-process javac fallback exists anymore (removed in T570), so a spy on
     // the real HTTP client proves the remote compile endpoints were exercised.

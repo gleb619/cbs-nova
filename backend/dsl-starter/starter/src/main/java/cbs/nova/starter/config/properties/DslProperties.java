@@ -29,6 +29,13 @@ public record DslProperties(
          * Relative values resolve against {@code sourceDir}; an absolute value is used as-is.
          */
         @DefaultValue(".dsl-workspace") String workbenchWorkspaceRoot,
+        /**
+         * DSL package the deployment compiles its DSL sources with — the reload-time equivalent of
+         * the {@code dslCompile.dslPackage} setting used by the bootstrap compile. Forwarded to the
+         * dsl-builder as {@code targetPackage} so model imports can be rewritten into the compile
+         * namespace. Unset (null) leaves the builder's generated default package in place.
+         */
+        String targetPackage,
         @DefaultValue("dsl-task-queue") String taskQueue,
         @Valid @DefaultValue Worker worker,
         @Valid @DefaultValue Reload reload,

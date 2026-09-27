@@ -101,7 +101,8 @@ class DslSourceCompilerTest {
 
     var outDir = Files.createTempDirectory("dsl-codegen-test-");
     var objects = compiler().compileAndLoad(srcDir, outDir,
-            new SourceCompiler.CompileOptions("demo", "cbs.nova.dsl.generated", Level.INFO, null, true));
+            new SourceCompiler.CompileOptions("demo", "cbs.nova.dsl.generated", Level.INFO, null,
+                    true));
 
     assertThat(objects).hasSize(1);
 
@@ -188,7 +189,8 @@ class DslSourceCompilerTest {
 
     var outDir = Files.createTempDirectory("dsl-codegen-test-");
     var objects = compiler().compileAndLoad(srcDir, outDir,
-            new SourceCompiler.CompileOptions("demo", "cbs.nova.dsl.generated", Level.INFO, null, true));
+            new SourceCompiler.CompileOptions("demo", "cbs.nova.dsl.generated", Level.INFO, null,
+                    true));
 
     assertThat(objects).hasSize(1);
     var expectedModel = outDir.resolve(
@@ -229,7 +231,8 @@ class DslSourceCompilerTest {
 
     var outDir = Files.createTempDirectory("dsl-codegen-test-");
     var objects = compiler().compileAndLoad(srcDir, outDir,
-            new SourceCompiler.CompileOptions("demo", "cbs.nova.dsl.generated", Level.INFO, null, true));
+            new SourceCompiler.CompileOptions("demo", "cbs.nova.dsl.generated", Level.INFO, null,
+                    true));
 
     assertThat(objects).hasSize(1);
   }
