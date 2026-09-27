@@ -4,8 +4,6 @@ import cbs.nova.starter.core.recorder.ExternalCallRecorder;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.RequiredArgsConstructor;
-import org.jspecify.annotations.NonNull;
-import org.jspecify.annotations.Nullable;
 
 import java.io.InputStream;
 import java.io.Reader;
@@ -41,7 +39,7 @@ public class RecordingPreparedStatement extends RecordingStatement implements Pr
 
   @Builder
   @RequiredArgsConstructor
-  private static final class ConstructorArgs {
+  static final class ConstructorArgs {
 
     private final PreparedStatement delegate;
     private final String sql;
@@ -49,13 +47,7 @@ public class RecordingPreparedStatement extends RecordingStatement implements Pr
     private final ExternalCallRecorder externalCallRecorder;
   }
 
-  // TODO: redo to only one ctor, that accept a ConstructorArgs only
-  public RecordingPreparedStatement(@NonNull PreparedStatement delegate, @Nullable String sql,
-          @NonNull String target, @NonNull ExternalCallRecorder externalCallRecorder) {
-    this(new ConstructorArgs(delegate, sql, target, externalCallRecorder));
-  }
-
-  private RecordingPreparedStatement(ConstructorArgs args) {
+  RecordingPreparedStatement(ConstructorArgs args) {
     super(args.delegate, args.sql, args.target, args.externalCallRecorder);
     this.delegate = args.delegate;
   }

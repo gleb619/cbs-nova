@@ -42,7 +42,8 @@ class FeatureFlagSourceTest {
   @Test
   void nullPropertiesMapsMeanNoFlags() {
     var empty = new PropertiesFeatureFlagSource(
-            new CbsDslManifestProperties(true, "classpath:piece-manifest.yaml"));
+            new CbsDslManifestProperties(true, "classpath:piece-manifest.yaml", null, null, null,
+                    null, null));
     assertThat(empty.isEnabled("anything", request)).isFalse();
   }
 }

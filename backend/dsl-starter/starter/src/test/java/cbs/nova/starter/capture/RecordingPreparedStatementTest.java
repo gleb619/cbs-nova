@@ -41,7 +41,9 @@ class RecordingPreparedStatementTest {
   }
 
   private PreparedStatement newPreparedStatement(String sql) {
-    return new RecordingPreparedStatement(delegate, sql, TARGET, externalCallRecorder);
+    return new RecordingPreparedStatement(
+            new RecordingPreparedStatement.ConstructorArgs(delegate, sql, TARGET,
+                    externalCallRecorder));
   }
 
   private Statement newStatement(String sql) {

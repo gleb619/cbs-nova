@@ -312,7 +312,8 @@ class PieceManifestServiceTest {
                 failMode: deny
             """);
     var service = new PieceManifestService(
-            new CbsDslManifestProperties(true, file.toUri().toString()),
+            new CbsDslManifestProperties(true, file.toUri().toString(), null, null, null, null,
+                    null),
             new DefaultResourceLoader(),
             AuditTestSupport.providerOf(audit.service()));
 
@@ -341,7 +342,8 @@ class PieceManifestServiceTest {
                 failMode: deny
             """);
     var service = new PieceManifestService(
-            new CbsDslManifestProperties(true, file.toUri().toString()),
+            new CbsDslManifestProperties(true, file.toUri().toString(), null, null, null, null,
+                    null),
             new DefaultResourceLoader(),
             AuditTestSupport.providerOf(audit.service()));
 
@@ -426,11 +428,13 @@ class PieceManifestServiceTest {
                 failMode: deny
             """);
     PieceCheckBlockRegistry registry = new PieceCheckBlockRegistry(
-            new CbsDslManifestProperties(true, "classpath:piece-manifest.yaml"),
+            new CbsDslManifestProperties(true, "classpath:piece-manifest.yaml", null, null, null,
+                    null, null),
             System::currentTimeMillis);
     registry.block("post-checked", "auth:alice", "invariant failed");
     var service = new PieceManifestService(
-            new CbsDslManifestProperties(true, file.toUri().toString()),
+            new CbsDslManifestProperties(true, file.toUri().toString(), null, null, null, null,
+                    null),
             new DefaultResourceLoader(),
             AuditTestSupport.emptyProvider(),
             new ObjectProvider<PieceCheckBlockRegistry>() {
@@ -457,7 +461,8 @@ class PieceManifestServiceTest {
   }
 
   private static PieceManifestService service(String path) {
-    return new PieceManifestService(new CbsDslManifestProperties(true, path),
+    return new PieceManifestService(
+            new CbsDslManifestProperties(true, path, null, null, null, null, null),
             new DefaultResourceLoader(), AuditTestSupport.emptyProvider());
   }
 
