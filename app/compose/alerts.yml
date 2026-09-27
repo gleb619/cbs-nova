@@ -26,7 +26,7 @@ groups:
       # exports count/sum/max only (no *_bucket series), so p95 via histogram_quantile is not possible
       # until percentile histograms are enabled on the timer (T403). Threshold (2s avg) must be tuned
       # to the observed baseline.
-      # A true preview timeout-rate alert needs an outcome-tagged preview counter; that metric does not exist yet.
+      # Outcome-rate alerting uses dsl.preview.outcome (see cbs-nova-preview-outcome below).
       - alert: CbsNovaPreviewLatencyP95
         expr: sum(rate(dsl_preview_duration_seconds_sum[5m])) / sum(rate(dsl_preview_duration_seconds_count[5m])) > 2
         for: 10m
@@ -35,6 +35,21 @@ groups:
         annotations:
           summary: "cbs-nova DSL preview p95 latency is high"
           description: "The 95th percentile DSL preview duration exceeded 2 seconds for 10 minutes. Tune the threshold to the observed baseline."
+
+  - name: cbs-nova-preview-outcome
+    rules:
+      # VERIFY series name against a booted app: curl -s :8090/actuator/prometheus | grep dsl_preview_outcome
+      - alert: CbsNovaPreviewErrorRate
+        expr: |
+          sum(rate(dsl_preview_outcome_total{outcome=~"error|timeout"}[5m]))
+          /
+          sum(rate(dsl_preview_outcome_total[5m])) > 0.10
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "cbs-nova DSL preview error rate is high"
+          description: "More than 10% of DSL previews finished with error or timeout over the last 5 minutes, sustained for 10 minutes."
 
   - name: cbs-nova-app-down
     rules:

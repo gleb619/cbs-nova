@@ -7,6 +7,7 @@ import cbs.nova.dsl.Result;
 import cbs.nova.dsl.helper.HelperInterceptor;
 import cbs.nova.dsl.logging.DryRunLoggingContext;
 import cbs.nova.starter.core.pipe.DslPipeContext;
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.core.pipe.DslPipeStage;
 import cbs.nova.starter.exception.PreviewTimeoutException;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -82,7 +83,9 @@ public final class DispatchStage implements DslPipeStage {
   private @NonNull Result<?> dispatchWithOptionalTimeout(@NonNull String name,
           @NonNull Context<?> ctx, @NonNull GlobalManager gm) {
     if (executor == null || timeout == null || timeout.isNegative() || timeout.isZero()) {
-      return dispatch(name, ctx, gm);
+      Result<?> result = dispatch(name, ctx, gm);
+      recordPreviewOutcome(result);
+      return result;
     }
 
     String runId = dryRunLoggingContext != null ? dryRunLoggingContext.currentRunId() : null;
@@ -99,18 +102,23 @@ public final class DispatchStage implements DslPipeStage {
       }
     });
     try {
-      return future.get(timeout.toMillis(), TimeUnit.MILLISECONDS);
+      Result<?> result = future.get(timeout.toMillis(), TimeUnit.MILLISECONDS);
+      recordPreviewOutcome(result);
+      return result;
     } catch (TimeoutException e) {
       future.cancel(true);
       if (meterRegistry != null) {
         meterRegistry.counter("dsl.preview.timeout").increment();
       }
+      recordPreviewOutcome("timeout");
       return Result.failure(new PreviewTimeoutException(name, timeout));
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
+      recordPreviewOutcome("error");
       return Result.failure(e);
     } catch (ExecutionException e) {
       Throwable cause = e.getCause() != null ? e.getCause() : e;
+      recordPreviewOutcome("error");
       return Result.failure(cause);
     }
   }
@@ -127,5 +135,16 @@ public final class DispatchStage implements DslPipeStage {
       return gm.runHelper(name, ctx);
     }
     return Result.failure(new IllegalArgumentException("No DSL entity registered: " + name));
+  }
+
+  private void recordPreviewOutcome(@NonNull Result<?> result) {
+    recordPreviewOutcome(result.isSuccess() ? "success" : "error");
+  }
+
+  private void recordPreviewOutcome(String outcome) {
+    if (meterRegistry != null) {
+      meterRegistry.counter(StarterConstants.PREVIEW_OUTCOME_COUNTER, "outcome", outcome)
+              .increment();
+    }
   }
 }

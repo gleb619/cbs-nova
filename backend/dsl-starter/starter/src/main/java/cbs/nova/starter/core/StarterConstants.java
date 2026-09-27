@@ -144,6 +144,7 @@ public class StarterConstants {
   public static final String CALL_COUNTER = "dsl.preview.calls";
   public static final String EXTERNAL_CALL_COUNTER = "dsl.preview.external.calls";
   public static final String DURATION_TIMER = "dsl.preview.duration";
+  public static final String PREVIEW_OUTCOME_COUNTER = "dsl.preview.outcome";
 
   // Maintenance task names
 

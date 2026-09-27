@@ -12,7 +12,12 @@ import cbs.nova.dsl.Result;
 import cbs.nova.dsl.helper.HelperInterceptor;
 import cbs.nova.dsl.helper.NoopHelperInterceptor;
 import cbs.nova.starter.core.pipe.DslPipeContext;
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.core.pipe.DslPipeStage;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import java.time.Duration;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ExecutorService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -137,6 +142,85 @@ class DispatchStageTest {
     @Override
     public Result<Object> execute(Context<Object> ctx) {
       return Result.success("real");
+    }
+  }
+
+  @Test
+  void outcomeCounterSuccessOnDirectDispatch() {
+    SimpleMeterRegistry registry = new SimpleMeterRegistry();
+    var stage = new DispatchStage(null, null, null, registry, null);
+
+    Context<?> ctx = SimpleContext.builder("body").mode(ExecutionMode.RUN).runId("run-outcome-ok")
+            .build();
+    DslPipeContext pipeContext = DslPipeContext.of("echo", ctx, ExecutionMode.RUN,
+            "run-outcome-ok");
+    DslPipeStage.Next next = c -> Result.success("downstream");
+
+    stage.execute(pipeContext, next);
+
+    assertThat(registry.counter(StarterConstants.PREVIEW_OUTCOME_COUNTER, "outcome", "success")
+            .count()).isEqualTo(1.0);
+    assertThat(
+            registry.counter(StarterConstants.PREVIEW_OUTCOME_COUNTER, "outcome", "error").count())
+            .isZero();
+  }
+
+  @Test
+  void outcomeCounterErrorOnUnknownEntity() {
+    SimpleMeterRegistry registry = new SimpleMeterRegistry();
+    var stage = new DispatchStage(null, null, null, registry, null);
+
+    Context<?> ctx = SimpleContext.builder("body").mode(ExecutionMode.RUN).runId("run-outcome-err")
+            .build();
+    DslPipeContext pipeContext = DslPipeContext.of("missing", ctx, ExecutionMode.RUN,
+            "run-outcome-err");
+    DslPipeStage.Next next = c -> Result.success("downstream");
+
+    stage.execute(pipeContext, next);
+
+    Result<?> dslResult = (Result<?>) pipeContext.getAttribute("dslResult");
+    assertThat(dslResult).isNotNull();
+    assertThat(dslResult.isSuccess()).isFalse();
+    assertThat(
+            registry.counter(StarterConstants.PREVIEW_OUTCOME_COUNTER, "outcome", "error").count())
+            .isEqualTo(1.0);
+    assertThat(registry.counter(StarterConstants.PREVIEW_OUTCOME_COUNTER, "outcome", "success")
+            .count()).isZero();
+  }
+
+  @Test
+  void outcomeCounterTimeoutOnSlowDispatch() {
+    SimpleMeterRegistry registry = new SimpleMeterRegistry();
+    GlobalManager.globalManager().registerHelper("snail", new SnailHelper());
+    ExecutorService executor = Executors.newFixedThreadPool(1);
+    try {
+      var stage = new DispatchStage(null, Duration.ofMillis(50), executor, registry, null);
+
+      Context<?> ctx = SimpleContext.builder("body").mode(ExecutionMode.RUN).runId("run-timeout")
+              .build();
+      DslPipeContext pipeContext = DslPipeContext.of("snail", ctx, ExecutionMode.RUN,
+              "run-timeout");
+      DslPipeStage.Next next = c -> Result.success("downstream");
+
+      stage.execute(pipeContext, next);
+
+      assertThat(registry.counter(StarterConstants.PREVIEW_OUTCOME_COUNTER, "outcome", "timeout")
+              .count()).isEqualTo(1.0);
+      assertThat(registry.counter("dsl.preview.timeout").count()).isEqualTo(1.0);
+    } finally {
+      executor.shutdownNow();
+    }
+  }
+
+  private static final class SnailHelper implements Executable<Object, Object> {
+    @Override
+    public Result<Object> execute(Context<Object> ctx) {
+      try {
+        Thread.sleep(5_000);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+      }
+      return Result.success("slow");
     }
   }
 }
