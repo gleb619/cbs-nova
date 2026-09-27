@@ -24,8 +24,6 @@ public final class DescriptorFactory {
             .inputType(inputType)
             .outputType(outputType)
             .hasCompensation(obj.compensationLogic() != null)
-            .helperRefs(List.of())
-            .transactionRefs(List.of())
             .signals(obj.signals())
             .build();
   }

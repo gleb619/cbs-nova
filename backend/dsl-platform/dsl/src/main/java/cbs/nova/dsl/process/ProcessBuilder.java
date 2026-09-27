@@ -214,8 +214,6 @@ public final class ProcessBuilder<I, O> implements ObjectBuilder<ProcessDslObjec
             .inputType(inputType)
             .outputType(outputType)
             .hasCompensation(hasCompensation)
-            .helperRefs(List.of())
-            .transactionRefs(List.of())
             .signals(signals)
             .build();
     return DslDescriptor.builder()

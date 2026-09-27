@@ -6,7 +6,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import cbs.nova.dsl.codegen.model.DslCompilerOptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.slf4j.event.Level;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -43,7 +42,6 @@ class DslCompilerTest {
             .outputDir(outDir)
             .buildVersion(DEFAULT_BUILD_VERSION)
             .targetPackage(null)
-            .logLevel(Level.INFO)
             .classpath(null)
             .useFileNameSubPackage(true)
             .build();
@@ -83,7 +81,6 @@ class DslCompilerTest {
             .outputDir(outDir)
             .buildVersion(DEFAULT_BUILD_VERSION)
             .targetPackage(null)
-            .logLevel(Level.INFO)
             .classpath(null)
             .useFileNameSubPackage(true)
             .build();
@@ -132,7 +129,6 @@ class DslCompilerTest {
             .outputDir(outDir)
             .buildVersion("abc1234")
             .targetPackage("cbs.nova.dsl.codegen.test")
-            .logLevel(Level.INFO)
             .classpath(null)
             .useFileNameSubPackage(true)
             .build();
@@ -184,7 +180,6 @@ class DslCompilerTest {
             .outputDir(outDir)
             .buildVersion(DEFAULT_BUILD_VERSION)
             .targetPackage(null)
-            .logLevel(Level.INFO)
             .classpath(null)
             .useFileNameSubPackage(true)
             .build();
@@ -225,7 +220,7 @@ class DslCompilerTest {
                     """);
 
     var options = new DslCompilerOptions(
-            srcDir, outDir, "v1", "cbs.nova.dsl.test", null, Level.INFO, null, false, null);
+            srcDir, outDir, "v1", "cbs.nova.dsl.test", null, null, false, null);
     DslCompiler.compile(options);
 
     var flatDir = outDir.resolve("cbs/nova/dsl/test/v1");

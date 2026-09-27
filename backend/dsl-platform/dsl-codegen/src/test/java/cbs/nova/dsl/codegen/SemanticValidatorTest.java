@@ -54,8 +54,6 @@ class SemanticValidatorTest {
             .taskQueue("q")
             .inputType(String.class)
             .outputType(String.class)
-            .helperRefs(List.of())
-            .transactionRefs(List.of())
             .build();
 
     var ex = catchThrowableOfType(
@@ -132,30 +130,6 @@ class SemanticValidatorTest {
   }
 
   @Test
-  void unknownHelperRefThrowsWithCodeAndUnchangedMessage() {
-    var p = ProcessDescriptor.builder()
-            .name("P")
-            .version("v1")
-            .taskQueue("P-queue")
-            .inputType(String.class)
-            .outputType(String.class)
-            .helperRefs(List.of("unknownHelper"))
-            .transactionRefs(List.of())
-            .build();
-
-    var ex = catchThrowableOfType(
-            ValidationException.class,
-            () -> new SemanticValidator().validate(
-                    List.of(p), List.of(), List.of(), emptyRegistry));
-
-    assertThat(ex).isNotNull();
-    assertThat(ex.errors()).anyMatch(e -> e.contains("unknownHelper"));
-    assertThat(ex.issues()).containsExactly(
-            new ValidationIssue(DiagnosticCodes.UNKNOWN_HELPER,
-                    "Process 'P' references unknown helper: unknownHelper"));
-  }
-
-  @Test
   void unknownTransactionHelperRefThrowsWithSameCode() {
     var t = TransactionDescriptor.builder()
             .name("T")
@@ -178,35 +152,33 @@ class SemanticValidatorTest {
 
   @Test
   void structuredIssuesExposeCodesIndependentlyOfMessages() {
-    var p = ProcessDescriptor.builder()
+    var t1 = TransactionDescriptor.builder()
             .name("Bad Name")
             .version("v1")
             .taskQueue("q")
             .inputType(String.class)
             .outputType(String.class)
             .helperRefs(List.of("h1", "h2"))
-            .transactionRefs(List.of())
             .build();
-    var p2 = ProcessDescriptor.builder()
+    var t2 = TransactionDescriptor.builder()
             .name("Bad Name")
             .version("v1")
             .taskQueue("q")
             .inputType(String.class)
             .outputType(String.class)
             .helperRefs(List.of())
-            .transactionRefs(List.of())
             .build();
 
     var ex = catchThrowableOfType(
             ValidationException.class,
             () -> new SemanticValidator().validate(
-                    List.of(p, p2), List.of(), List.of(), emptyRegistry));
+                    List.of(), List.of(t1, t2), List.of(), emptyRegistry));
 
     assertThat(ex.issues()).extracting(ValidationIssue::code)
             .contains(DiagnosticCodes.UNKNOWN_HELPER, DiagnosticCodes.DUPLICATE_NAME);
     assertThat(ex.issues()).extracting(ValidationIssue::message)
-            .contains("Process 'Bad Name' references unknown helper: h1",
-                    "Process 'Bad Name' references unknown helper: h2",
+            .contains("Transaction 'Bad Name' references unknown helper: h1",
+                    "Transaction 'Bad Name' references unknown helper: h2",
                     "Duplicate name: Bad Name");
   }
 
@@ -215,18 +187,17 @@ class SemanticValidatorTest {
     var registry = new DefaultHelperRegistry();
     registry.registerHelper("myHelper", ctx -> Result.success("x"));
 
-    var p = ProcessDescriptor.builder()
-            .name("P")
+    var t = TransactionDescriptor.builder()
+            .name("T")
             .version("v1")
-            .taskQueue("P-queue")
+            .taskQueue("T-queue")
             .inputType(String.class)
             .outputType(String.class)
             .helperRefs(List.of("myHelper"))
-            .transactionRefs(List.of())
             .build();
 
     assertThatCode(
-            () -> new SemanticValidator().validate(List.of(p), List.of(), List.of(), registry))
+            () -> new SemanticValidator().validate(List.of(), List.of(t), List.of(), registry))
             .doesNotThrowAnyException();
   }
 }

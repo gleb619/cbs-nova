@@ -16,8 +16,6 @@ public record ProcessDescriptor(
         @Nullable Class<?> inputType,
         @Nullable Class<?> outputType,
         boolean hasCompensation,
-        @Deprecated(forRemoval = true) @NonNull List<String> helperRefs,
-        @Deprecated(forRemoval = true) @NonNull List<String> transactionRefs,
         @NonNull List<SignalDescriptor> signals)
         implements
           ObjectDescriptor {
