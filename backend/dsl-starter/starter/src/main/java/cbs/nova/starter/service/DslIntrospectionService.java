@@ -27,6 +27,7 @@ import cbs.nova.starter.model.DslIntrospectionModels.DefinitionMetaDto;
 import cbs.nova.starter.model.DslIntrospectionModels.DefinitionStatus;
 import cbs.nova.starter.model.DslIntrospectionModels.ConstructBodyDto;
 import cbs.nova.starter.model.DslIntrospectionModels.ConstructSchemaDto;
+import cbs.nova.starter.model.DslIntrospectionModels.HelperCatalogEntry;
 import cbs.nova.starter.model.DslIntrospectionModels.ObjectSearchMode;
 import cbs.nova.starter.model.PageResponse;
 import cbs.nova.starter.model.DslIntrospectionModels.LogicInfoDto;
@@ -328,16 +329,17 @@ public class DslIntrospectionService {
     if (dslType != null && dslType != toDslType(type)) {
       return false;
     }
-    if (query == null || query.isBlank() || mode == ObjectSearchMode.ALL) {
+    if (query == null || query.isBlank()) {
       return true;
     }
     String term = query.toLowerCase(Locale.ROOT);
-    String candidate = (name + " " + type + " "
-            + (description == null ? "" : description) + " "
-            + (inputType == null ? "" : inputType) + " "
-            + (outputType == null ? "" : outputType))
-            .toLowerCase(Locale.ROOT);
-    return candidate.contains(term);
+    var entry = new HelperCatalogEntry(name, description, inputType, outputType);
+    return switch (mode) {
+      case ALL -> true;
+      case EXACT -> ObjectMatcher.exact().matches(term, entry);
+      case COSINE -> ObjectMatcher.cosine().matches(term, entry);
+      case FUZZY -> ObjectMatcher.fuzzy().matches(term, entry);
+    };
   }
 
   private static DslType toDslType(String type) {
