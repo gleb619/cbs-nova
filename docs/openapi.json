@@ -93,6 +93,30 @@
         },
         "type": "object"
       },
+      "CommitResult": {
+        "properties": {
+          "commitId": {
+            "type": "string"
+          },
+          "paths": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "pushError": {
+            "type": "string"
+          },
+          "pushed": {
+            "type": "boolean"
+          },
+          "timestampMillis": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
       "CompileDiagnostic": {
         "properties": {
           "code": {
@@ -242,8 +266,10 @@
           "status": {
             "enum": [
               "Published",
-              "Draft",
-              "Modified"
+              "Modified",
+              "Added",
+              "Deleted",
+              "Conflicting"
             ],
             "type": "string"
           },
@@ -464,6 +490,9 @@
           "completedAt": {
             "type": "string"
           },
+          "contentHash": {
+            "type": "string"
+          },
           "correlationId": {
             "type": "string"
           },
@@ -595,6 +624,28 @@
             "type": "string"
           },
           "name": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "FetchResult": {
+        "properties": {
+          "ahead": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "behind": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "branch": {
+            "type": "string"
+          },
+          "fetched": {
+            "type": "boolean"
+          },
+          "remoteHead": {
             "type": "string"
           }
         },
@@ -950,6 +1001,65 @@
         },
         "type": "object"
       },
+      "PullResult": {
+        "properties": {
+          "ahead": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "behind": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "branch": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "pulled": {
+            "type": "boolean"
+          },
+          "strategy": {
+            "type": "string"
+          },
+          "updatedFrom": {
+            "type": "string"
+          },
+          "updatedTo": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "RebaseResult": {
+        "properties": {
+          "ahead": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "behind": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "branch": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "rebased": {
+            "type": "boolean"
+          },
+          "updatedFrom": {
+            "type": "string"
+          },
+          "updatedTo": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "ServerResponse": {},
       "StepDto": {
         "properties": {
@@ -1083,7 +1193,7 @@
   "info": {
     "description": "REST contract for the cbs-nova DSL runtime: introspection, preview / run / explain, and reload of DSL definitions.",
     "title": "cbs-nova DSL API",
-    "version": "0.0.1-SNAPSHOT"
+    "version": "0.0.1-T699-SNAPSHOT"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -1373,7 +1483,7 @@
             "description": "Source directory not configured or not found"
           }
         },
-        "summary": "Export published (and optionally draft) definition metadata as a bundle",
+        "summary": "Export DSL source files as a bundle",
         "tags": [
           "DSL Admin"
         ]
@@ -1414,7 +1524,7 @@
             "description": "Source directory not configured or not found"
           }
         },
-        "summary": "Import a definition metadata bundle, snapshotting history and reloading DSL",
+        "summary": "Import a DSL source bundle, write files, reload DSL and commit",
         "tags": [
           "DSL Admin"
         ]
@@ -1555,6 +1665,371 @@
         ]
       }
     },
+    "/api/dsl/docs": {
+      "get": {
+        "operationId": "listDslDocs",
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerResponse"
+                }
+              }
+            },
+            "description": "Doc entries"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Source directory not configured"
+          }
+        },
+        "summary": "List DSL doc files",
+        "tags": [
+          "DSL Admin"
+        ]
+      }
+    },
+    "/api/dsl/docs/bulk": {
+      "post": {
+        "operationId": "bulkWriteDslDocs",
+        "responses": {
+          "202": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerResponse"
+                }
+              }
+            },
+            "description": "Bulk writes staged"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Source directory not configured"
+          }
+        },
+        "summary": "Stage many DSL doc writes",
+        "tags": [
+          "DSL Admin"
+        ]
+      }
+    },
+    "/api/dsl/docs/by-name/{name}": {
+      "get": {
+        "operationId": "readDslDocByName",
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerResponse"
+                }
+              }
+            },
+            "description": "Doc content"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid name"
+          },
+          "404": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerResponse"
+                }
+              }
+            },
+            "description": "No doc for this construct"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Source directory not configured"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bulkhead saturated"
+          }
+        },
+        "summary": "Read DSL doc markdown by construct name",
+        "tags": [
+          "DSL Admin"
+        ]
+      },
+      "post": {
+        "operationId": "writeDslDocByName",
+        "responses": {
+          "202": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerResponse"
+                }
+              }
+            },
+            "description": "Write staged"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid name or body"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Source directory not configured"
+          }
+        },
+        "summary": "Stage DSL doc markdown by construct name",
+        "tags": [
+          "DSL Admin"
+        ]
+      }
+    },
+    "/api/dsl/docs/exists/{path}": {
+      "get": {
+        "operationId": "dslDocExists",
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerResponse"
+                }
+              }
+            },
+            "description": "Existence flag"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid path"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Source directory not configured"
+          }
+        },
+        "summary": "Check whether a DSL doc exists",
+        "tags": [
+          "DSL Admin"
+        ]
+      }
+    },
+    "/api/dsl/docs/flush": {
+      "post": {
+        "operationId": "flushDslDocs",
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerResponse"
+                }
+              }
+            },
+            "description": "Flush result"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Source directory not configured"
+          }
+        },
+        "summary": "Flush staged DSL doc writes to disk",
+        "tags": [
+          "DSL Admin"
+        ]
+      }
+    },
+    "/api/dsl/docs/status": {
+      "get": {
+        "operationId": "dslDocsStatus",
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerResponse"
+                }
+              }
+            },
+            "description": "Pending count"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Source directory not configured"
+          }
+        },
+        "summary": "Pending doc write count",
+        "tags": [
+          "DSL Admin"
+        ]
+      }
+    },
+    "/api/dsl/docs/{path}": {
+      "get": {
+        "operationId": "readDslDoc",
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerResponse"
+                }
+              }
+            },
+            "description": "Doc content"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid path"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Source directory not configured"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bulkhead saturated"
+          }
+        },
+        "summary": "Read DSL doc markdown",
+        "tags": [
+          "DSL Admin"
+        ]
+      },
+      "post": {
+        "operationId": "writeDslDoc",
+        "responses": {
+          "202": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerResponse"
+                }
+              }
+            },
+            "description": "Write staged"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid path or body"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Source directory not configured"
+          }
+        },
+        "summary": "Stage DSL doc markdown",
+        "tags": [
+          "DSL Admin"
+        ]
+      }
+    },
     "/api/dsl/drafts": {
       "get": {
         "operationId": "listDrafts",
@@ -1570,25 +2045,25 @@
             "description": "List of draft summaries"
           }
         },
-        "summary": "List Workbench draft summaries from .workbench/drafts",
+        "summary": "List definitions whose source file has a git change",
         "tags": [
           "DSL Admin"
         ]
       }
     },
-    "/api/dsl/drafts/{name}": {
-      "delete": {
-        "operationId": "deleteDraft",
+    "/api/dsl/drafts/commit": {
+      "post": {
+        "operationId": "commitDrafts",
         "responses": {
           "200": {
             "content": {
-              "*/*": {
+              "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ServerResponse"
+                  "$ref": "#/components/schemas/CommitResult"
                 }
               }
             },
-            "description": "Draft deleted"
+            "description": "Batch commit result"
           },
           "400": {
             "content": {
@@ -1608,7 +2083,7 @@
                 }
               }
             },
-            "description": "Draft not found"
+            "description": "A listed definition has no source path"
           },
           "409": {
             "content": {
@@ -1618,10 +2093,165 @@
                 }
               }
             },
-            "description": "Source directory not configured or not found"
+            "description": "Builder not available, source directory not configured, or nothing to commit"
           }
         },
-        "summary": "Delete a Workbench draft construct",
+        "summary": "Commit the listed definitions' source paths as one atomic commit",
+        "tags": [
+          "DSL Admin"
+        ]
+      }
+    },
+    "/api/dsl/drafts/fetch": {
+      "post": {
+        "operationId": "fetchDraftsRepo",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FetchResult"
+                }
+              }
+            },
+            "description": "Fetch result with ahead/behind counts"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Builder not available, source directory not configured, or git remote missing"
+          }
+        },
+        "summary": "Fetch the configured git remote for the drafts workspace branch",
+        "tags": [
+          "DSL Admin"
+        ]
+      }
+    },
+    "/api/dsl/drafts/metadata": {
+      "get": {
+        "operationId": "getDraftsMetadata",
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerResponse"
+                }
+              }
+            },
+            "description": "Drafts metadata returned"
+          }
+        },
+        "summary": "Return workspace setup metadata for the drafts folder: number of git-changed source files, total size, current branch, and git/history config",
+        "tags": [
+          "DSL Admin"
+        ]
+      }
+    },
+    "/api/dsl/drafts/pull": {
+      "post": {
+        "operationId": "pullDraftsRepo",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PullResult"
+                }
+              }
+            },
+            "description": "Pull result; message carries conflict/abort details"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Builder not available, source directory not configured, or git remote missing"
+          }
+        },
+        "summary": "Pull the drafts workspace branch per the builder pull strategy",
+        "tags": [
+          "DSL Admin"
+        ]
+      }
+    },
+    "/api/dsl/drafts/rebase": {
+      "post": {
+        "operationId": "rebaseDraftsRepo",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RebaseResult"
+                }
+              }
+            },
+            "description": "Rebase result; message carries conflict/abort details"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Builder not available, source directory not configured, or git remote missing"
+          }
+        },
+        "summary": "Rebase the drafts workspace branch onto its upstream",
+        "tags": [
+          "DSL Admin"
+        ]
+      }
+    },
+    "/api/dsl/drafts/{name}": {
+      "delete": {
+        "operationId": "deleteDraft",
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerResponse"
+                }
+              }
+            },
+            "description": "Changes discarded"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Definition has no source path"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Builder not available or source directory not configured"
+          }
+        },
+        "summary": "Discard working-tree changes for a definition",
         "tags": [
           "DSL Admin"
         ]
@@ -1647,10 +2277,10 @@
                 }
               }
             },
-            "description": "Draft not found"
+            "description": "Definition has no source path"
           }
         },
-        "summary": "Read a single Workbench draft payload",
+        "summary": "Read the current DSL source file for a definition",
         "tags": [
           "DSL Admin"
         ]
@@ -1687,6 +2317,88 @@
         ]
       }
     },
+    "/api/dsl/drafts/{name}/commits": {
+      "get": {
+        "operationId": "listDraftCommits",
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerResponse"
+                }
+              }
+            },
+            "description": "List of commit entries"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Definition has no source path"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Builder not available or source directory not configured"
+          }
+        },
+        "summary": "List git commits for a definition's source path",
+        "tags": [
+          "DSL Admin"
+        ]
+      }
+    },
+    "/api/dsl/drafts/{name}/discard": {
+      "post": {
+        "operationId": "discardDraft",
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerResponse"
+                }
+              }
+            },
+            "description": "Changes discarded"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Definition has no source path"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Builder not available or source directory not configured"
+          }
+        },
+        "summary": "Discard working-tree changes for a definition",
+        "tags": [
+          "DSL Admin"
+        ]
+      }
+    },
     "/api/dsl/drafts/{name}/history": {
       "get": {
         "operationId": "listPublishHistory",
@@ -1701,6 +2413,16 @@
             },
             "description": "List of history entries"
           },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Definition has no source path"
+          },
           "409": {
             "content": {
               "application/json": {
@@ -1709,10 +2431,10 @@
                 }
               }
             },
-            "description": "Source directory not configured or not found"
+            "description": "Source directory not configured or git requires builder"
           }
         },
-        "summary": "List published metadata snapshots for a construct",
+        "summary": "List git commits for a definition's source path",
         "tags": [
           "DSL Admin"
         ]
@@ -1750,10 +2472,10 @@
                 }
               }
             },
-            "description": "Source directory not configured or not found"
+            "description": "Source directory not configured or git requires builder"
           }
         },
-        "summary": "Read a single published metadata snapshot's content",
+        "summary": "Read the DSL source file at a git commit",
         "tags": [
           "DSL Admin"
         ]
@@ -1771,7 +2493,7 @@
                 }
               }
             },
-            "description": "Line-level diff of entry vs published"
+            "description": "Line-level diff of entry vs current"
           },
           "404": {
             "content": {
@@ -1791,10 +2513,10 @@
                 }
               }
             },
-            "description": "Source directory not configured or not found"
+            "description": "Source directory not configured or git requires builder"
           }
         },
-        "summary": "Diff a published metadata snapshot against the current published definition",
+        "summary": "Diff a git commit against the current working-tree source",
         "tags": [
           "DSL Admin"
         ]
@@ -1832,20 +2554,10 @@
                 }
               }
             },
-            "description": "Source directory not configured or not found"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Reload failed"
+            "description": "Source directory not configured or git requires builder"
           }
         },
-        "summary": "Restore a published metadata snapshot and reload DSL",
+        "summary": "Restore a git commit's source into the working tree",
         "tags": [
           "DSL Admin"
         ]
@@ -1875,6 +2587,16 @@
             },
             "description": "Invalid request"
           },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Definition has no source path"
+          },
           "409": {
             "content": {
               "application/json": {
@@ -1883,7 +2605,7 @@
                 }
               }
             },
-            "description": "Source directory not configured or not found"
+            "description": "Source directory not configured or not found, or git requires builder"
           },
           "500": {
             "content": {
@@ -1896,7 +2618,7 @@
             "description": "Reload failed"
           }
         },
-        "summary": "Persist a Workbench construct as published and reload DSL",
+        "summary": "Write supplied source, reload DSL and commit the source file",
         "tags": [
           "DSL Admin"
         ]
@@ -1914,7 +2636,7 @@
                 }
               }
             },
-            "description": "Draft saved"
+            "description": "Source saved"
           },
           "400": {
             "content": {
@@ -1925,6 +2647,16 @@
               }
             },
             "description": "Invalid request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Definition has no source path"
           },
           "409": {
             "content": {
@@ -1937,7 +2669,7 @@
             "description": "Source directory not configured or not found"
           }
         },
-        "summary": "Persist a Workbench draft construct to disk",
+        "summary": "Write DSL source for a definition to the source file",
         "tags": [
           "DSL Admin"
         ]
