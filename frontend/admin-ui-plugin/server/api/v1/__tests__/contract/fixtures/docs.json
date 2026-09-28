@@ -1,0 +1,28 @@
+{
+  "index": [
+    {
+      "path": "guides/approval.md",
+      "sizeBytes": 1024,
+      "lastModifiedMillis": 1756831200000
+    },
+    {
+      "path": "guides/review.md",
+      "sizeBytes": 2048,
+      "lastModifiedMillis": 1756831300000
+    },
+    {
+      "path": "runbooks/incident-response.md",
+      "sizeBytes": 4096,
+      "lastModifiedMillis": 1756831400000
+    }
+  ],
+  "byName": {
+    "path": "docs/batch-processing.md",
+    "content": "# Batch\n\nEnd-to-end batch processing guide.",
+    "pending": false,
+    "crc32": 3828807989
+  },
+  "status": {
+    "pending": 0
+  }
+}

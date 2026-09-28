@@ -415,6 +415,11 @@ const expectedProxies: readonly ExpectedProxy[] = [
   },
   {
     method: 'POST',
+    backendPath: '/api/dsl/docs/{*path}',
+    bffPath: '/api/v1/dsl/docs/{...path}',
+  },
+  {
+    method: 'POST',
     backendPath: '/api/dsl/docs/bulk',
     bffPath: '/api/v1/dsl/docs/bulk',
   },
@@ -429,9 +434,39 @@ const expectedProxies: readonly ExpectedProxy[] = [
     bffPath: '/api/v1/dsl/docs/status',
   },
   {
+    method: 'GET',
+    backendPath: '/api/dsl/docs/{*path}',
+    bffPath: '/api/v1/dsl/docs/{path}',
+  },
+  {
     method: 'POST',
     backendPath: '/api/dsl/docs/{*path}',
-    bffPath: '/api/v1/dsl/docs/{...path}',
+    bffPath: '/api/v1/dsl/docs/{path}',
+  },
+  {
+    method: 'GET',
+    backendPath: '/api/dsl/docs/exists/{*path}',
+    bffPath: '/api/v1/dsl/docs/exists/{path}',
+  },
+  {
+    method: 'POST',
+    backendPath: '/api/dsl/drafts/fetch',
+    bffPath: '/api/v1/dsl/drafts/fetch',
+  },
+  {
+    method: 'POST',
+    backendPath: '/api/dsl/drafts/pull',
+    bffPath: '/api/v1/dsl/drafts/pull',
+  },
+  {
+    method: 'POST',
+    backendPath: '/api/dsl/drafts/rebase',
+    bffPath: '/api/v1/dsl/drafts/rebase',
+  },
+  {
+    method: 'POST',
+    backendPath: '/api/dsl/drafts/commit',
+    bffPath: '/api/v1/dsl/drafts/commit',
   },
   // ApiKeyAdminRouterConfiguration (T503)
   {
