@@ -4,7 +4,7 @@
 > For how to author and call helpers from DSL code, see the
 > [helpers authoring guide](dsl/helpers.md).
 
-53 helpers, sorted by name.
+54 helpers, sorted by name.
 
 | Name | Description | Input | Output |
 |---|---|---|---|
@@ -14,6 +14,7 @@
 | compensationTracker |  |  |  |
 | compression |  |  |  |
 | conditionalFailing |  |  |  |
+| cronParse |  | CronParseIn | CronParseOut |
 | currentTimestamp |  |  |  |
 | dateMath |  |  |  |
 | extractXml |  |  |  |
