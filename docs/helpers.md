@@ -4,17 +4,19 @@
 > For how to author and call helpers from DSL code, see the
 > [helpers authoring guide](dsl/helpers.md).
 
-54 helpers, sorted by name.
+58 helpers, sorted by name.
 
 | Name | Description | Input | Output |
 |---|---|---|---|
+| amqpPublish |  |  |  |
 | arithmetic |  |  |  |
 | backoff |  |  |  |
 | base64 |  |  |  |
+| caseConvert |  |  |  |
 | compensationTracker |  |  |  |
 | compression |  |  |  |
 | conditionalFailing |  |  |  |
-| cronParse |  | CronParseIn | CronParseOut |
+| cronParse |  |  |  |
 | currentTimestamp |  |  |  |
 | dateMath |  |  |  |
 | extractXml |  |  |  |
@@ -26,6 +28,7 @@
 | formatNumber |  |  |  |
 | formatYaml |  |  |  |
 | greetFn |  | Map | String |
+| groupRecords |  |  |  |
 | hex |  |  |  |
 | hmacSha256Sign |  |  |  |
 | hmacSha256Verify |  |  |  |
@@ -40,6 +43,7 @@
 | listOps |  |  |  |
 | mask |  |  |  |
 | math |  |  |  |
+| mergeRecords |  |  |  |
 | metric |  |  |  |
 | orderPricingFn |  | OrderIn | PricedOrder |
 | otel |  |  |  |
