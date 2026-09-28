@@ -617,6 +617,29 @@ milliseconds. Signed/negative durations are rejected in phase 1. Overflow past
 
 ---
 
+
+### Validate or preview a cron expression
+
+`cronParse` (`CronParseIn(expression, mode, after, count)`) validates a cron string or
+computes upcoming fire times using Spring's `CronExpression`.
+
+| Mode | Input | Output |
+|---|---|---|
+| `validate` | `expression` | `CronParseOut(valid = true)` on success; `Result.failure(...)` on invalid syntax |
+| `nextFire` | `expression`, optional `after` ISO instant, optional `count` | `CronParseOut(valid = true, timestamps = [...])` |
+
+Both the 5-field form (`min hour dom mon dow`) and the DST-safe 6-field form
+(`sec min hour dom mon dow`) are accepted. Fire times are returned as ISO-8601
+instant strings (`Z`-normalized UTC).
+
+```java
+CronParseOut next = ctx.runHelper("cronParse",
+        new CronParseIn("0 30 9 * * ?", "nextFire", "2024-06-01T00:00:00Z", 3))
+        .as(CronParseOut.class);
+List<String> fires = next.timestamps(); // ["2024-06-01T09:30:00Z", ...]
+```
+
+---
 ## Number formatting
 
 ### Format a numeric amount for display
