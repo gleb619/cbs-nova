@@ -256,6 +256,116 @@ jobs:
         with:
           name: integration-test-results
           path: backend/**/build/reports/tests/integrationTest/
+  # T700 — CI OpenAPI drift gate. Starts ephemeral Postgres + Temporal
+  # containers using the same images the T646 integrationTest suite spins
+  # up via Testcontainers, exports the env starter-launcher reads, publishes
+  # the platform to Maven Local, and runs `make openapi-check`. The fetch
+  # script boots the starter, waits for /actuator/health, and tears the JVM
+  # down, so no starter boot/health/cleanup logic is duplicated here.
+  # Containers are stopped in a final `if: always()` step.
+  # No `services:` block — the self-managed host/port wiring matches the
+  # defaults the launcher expects (localhost:5432 / localhost:7233).
+  openapi-drift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Same Java + Gradle pin as build-backend / integration-backend.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: gradle
+
+      # starter-launcher resolves cbs.nova:* from Maven Local.
+      - name: Publish platform to Maven Local
+        run: backend/dsl-platform/gradlew -p backend/dsl-platform publishToMavenLocal -x test --no-daemon
+
+      # The starter build applies the cbs.nova.dsl Gradle plugin, which is
+      # published from dsl-plugins (not dsl-platform).
+      - name: Publish Gradle plugin to Maven Local
+        run: backend/dsl-platform/gradlew -p backend/dsl-plugins :dsl-gradle-plugin:publishToMavenLocal -x test --no-daemon
+
+      # dsl-examples (pulled in by starter-launcher) resolves cbs.nova:starter
+      # from Maven Local.
+      - name: Publish starter to Maven Local
+        run: backend/dsl-platform/gradlew -p backend/dsl-starter --no-configuration-cache :starter:publishToMavenLocal -x test --no-daemon
+
+      - name: Start Postgres + Temporal containers
+        id: containers
+        run: |
+          set -euo pipefail
+          pg_cid=$(docker run --rm -d --name cbs-nova-openapi-pg -p 5432:5432 \
+            -e POSTGRES_USER=nova -e POSTGRES_PASSWORD=nova -e POSTGRES_DB=nova \
+            postgres:16)
+          temporal_cid=$(docker run --rm -d --name cbs-nova-openapi-temporal -p 7233:7233 \
+            -e DB=sqlite -e BIND_ON_IP=0.0.0.0 \
+            --entrypoint temporal \
+            temporalio/auto-setup:1.25.2 \
+            server start-dev --ip 0.0.0.0 --namespace default --db-filename /tmp/temporal.db)
+          # AMQP health indicator: the starter never reports UP without a broker.
+          rabbit_cid=$(docker run --rm -d --name cbs-nova-openapi-rabbit -p 5672:5672 \
+            rabbitmq:3)
+          echo "PG_CID=$pg_cid" >> "$GITHUB_ENV"
+          echo "TEMPORAL_CID=$temporal_cid" >> "$GITHUB_ENV"
+          echo "RABBIT_CID=$rabbit_cid" >> "$GITHUB_ENV"
+
+      - name: Wait for Postgres readiness
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 40); do
+            if docker exec "$PG_CID" pg_isready -U nova -d nova >/dev/null 2>&1; then
+              printf 'Postgres ready\n'
+              exit 0
+            fi
+            sleep 3
+          done
+          printf '[fail] Postgres not ready after ~120s\n' >&2
+          exit 1
+
+      - name: Wait for Temporal readiness
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 60); do
+            if docker exec "$TEMPORAL_CID" temporal operator cluster health 2>/dev/null | grep -q '"status":"healthy"'; then
+              printf 'Temporal ready\n'
+              exit 0
+            fi
+            sleep 3
+          done
+          printf '[fail] Temporal not healthy after ~180s\n' >&2
+          exit 1
+
+      - name: Wait for RabbitMQ readiness
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 40); do
+            if docker exec "$RABBIT_CID" rabbitmq-diagnostics -q ping >/dev/null 2>&1; then
+              printf 'RabbitMQ ready\n'
+              exit 0
+            fi
+            sleep 3
+          done
+          printf '[fail] RabbitMQ not ready after ~120s\n' >&2
+          exit 1
+
+      - name: Verify committed OpenAPI spec has no drift
+        env:
+          SERVER_PORT: 8090
+          MIN_OPENAPI_PATHS: 37
+          DATABASE_URL: jdbc:postgresql://localhost:5432/nova
+          DATABASE_USERNAME: nova
+          DATABASE_PASSWORD: nova
+          TEMPORAL_ADDRESS: localhost:7233
+        run: make openapi-check
+
+      - name: Stop containers
+        if: always()
+        run: |
+          set -euo pipefail
+          if [ -n "${TEMPORAL_CID:-}" ]; then docker stop "$TEMPORAL_CID" >/dev/null 2>&1 || true; fi
+          if [ -n "${PG_CID:-}" ]; then docker stop "$PG_CID" >/dev/null 2>&1 || true; fi
+          if [ -n "${RABBIT_CID:-}" ]; then docker stop "$RABBIT_CID" >/dev/null 2>&1 || true; fi
 
   secret-scan:
     # Pinned Docker image (zricethezav/gitleaks:v8.24.3) so the scan
