@@ -123,6 +123,19 @@ public class DslDocsHandler {
     }
   }
 
+  public ServerResponse exists(ServerRequest request) {
+    var dirCheck = ensureConfigured();
+    if (dirCheck.isError()) {
+      return dirCheck.response();
+    }
+    String path = pathVariable(request);
+    if (path == null || path.isBlank()) {
+      return badRequest("path is required");
+    }
+    boolean exists = docsService.docExists(path);
+    return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(exists);
+  }
+
   private ServerResponse doReadDoc(String path) throws IOException {
     try {
       FileContentResponse response = docsService.readDoc(path);

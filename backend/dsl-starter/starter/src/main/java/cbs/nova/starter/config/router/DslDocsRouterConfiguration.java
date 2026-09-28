@@ -41,6 +41,12 @@ public class DslDocsRouterConfiguration {
               @ApiResponse(responseCode = "400", description = "Invalid name or body", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
               @ApiResponse(responseCode = "409", description = "Source directory not configured", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
           })),
+      @RouterOperation(path = "/api/dsl/docs/exists/{*path}", beanClass = DslDocsHandler.class, beanMethod = "exists", method = RequestMethod.GET, operation = @Operation(operationId = "dslDocExists", summary = "Check whether a DSL doc exists", tags = {
+          "DSL Admin"}, responses = {
+              @ApiResponse(responseCode = "200", description = "Existence flag"),
+              @ApiResponse(responseCode = "400", description = "Invalid path", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+              @ApiResponse(responseCode = "409", description = "Source directory not configured", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+          })),
       @RouterOperation(path = "/api/dsl/docs/{*path}", beanClass = DslDocsHandler.class, beanMethod = "read", method = RequestMethod.GET, operation = @Operation(operationId = "readDslDoc", summary = "Read DSL doc markdown", tags = {
           "DSL Admin"}, responses = {
               @ApiResponse(responseCode = "200", description = "Doc content"),
@@ -79,6 +85,7 @@ public class DslDocsRouterConfiguration {
             .POST("/api/dsl/docs/bulk", docsHandler::bulkWrite)
             .POST("/api/dsl/docs/flush", docsHandler::flush)
             .GET("/api/dsl/docs/status", docsHandler::status)
+            .GET("/api/dsl/docs/exists/{*path}", docsHandler::exists)
             .GET("/api/dsl/docs/{*path}", docsHandler::read)
             .POST("/api/dsl/docs/{*path}", docsHandler::write)
             .build();
