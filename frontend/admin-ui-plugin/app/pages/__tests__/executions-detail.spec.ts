@@ -15,7 +15,7 @@ interface DetailHarness {
   cancelExecution: ReturnType<typeof vi.fn>
 }
 
-const { useExecutionsMock, useExecutionsApiMock, navigateTo } = vi.hoisted(() => {
+const { useExecutionsMock, useExecutionsApiMock, useDslApiMock, fetchDeclaredSignals: fetchDeclaredSignalsMock, navigateTo } = vi.hoisted(() => {
   const navigateToSpy = vi.fn()
   const useExecutionsMockFn = vi.fn(() => {
     const harness = (globalThis as unknown as { __detailHarness?: DetailHarness }).__detailHarness
@@ -28,9 +28,15 @@ const { useExecutionsMock, useExecutionsApiMock, navigateTo } = vi.hoisted(() =>
     cancel: vi.fn(async (id: string) => ({ id, status: 'Cancelled' })),
     getTransactions: vi.fn(async () => []),
   }))
+  const fetchDeclaredSignals = vi.fn(async () => [])
+  const useDslApiMockFn = vi.fn(() => ({
+    fetchDeclaredSignals,
+  }))
   return {
     useExecutionsMock: useExecutionsMockFn,
     useExecutionsApiMock: useExecutionsApiMockFn,
+    useDslApiMock: useDslApiMockFn,
+    fetchDeclaredSignals,
     navigateTo: navigateToSpy,
   }
 })
@@ -57,6 +63,10 @@ vi.mock('@cbs/admin-ui-plugin/composables/useExecutions', () => ({
 
 vi.mock('@cbs/admin-ui-plugin/composables/useExecutionsApi', () => ({
   useExecutionsApi: useExecutionsApiMock,
+}))
+
+vi.mock('@cbs/admin-ui-plugin/composables/useDslApi', () => ({
+  useDslApi: useDslApiMock,
 }))
 
 vi.mock('nuxt/app', () => ({
@@ -212,6 +222,8 @@ describe('executions/[id].vue page wiring', () => {
     harness.stopPolling.mockReset()
     harness.cancelExecution.mockReset()
     navigateTo.mockReset()
+    fetchDeclaredSignalsMock.mockReset()
+    fetchDeclaredSignalsMock.mockResolvedValue([])
     window.localStorage.clear()
     window.sessionStorage.clear()
   })
@@ -306,6 +318,113 @@ describe('executions/[id].vue page wiring', () => {
     await flush()
 
     expect(harness.stopPolling).toHaveBeenCalled()
+
+    wrapper.unmount()
+  })
+
+  // T722 — signal panel declared-name hints.
+
+  it('T722: renders a chip per declared signal with payloadType tooltip', async () => {
+    fetchDeclaredSignalsMock.mockResolvedValueOnce([
+      { name: 'approve', payloadType: 'java.lang.Boolean' },
+      { name: 'cancel', payloadType: 'cbs.nova.orders.CancelPayload' },
+    ])
+    harness.selectedExecution.value = detailExecution({ status: 'Running', entity: 'OnboardingDsl' })
+
+    const wrapper = mountPage()
+    await flush()
+
+    const panel = wrapper.find('[data-testid="signal-panel"]')
+    expect(panel.exists()).toBe(true)
+    const approve = panel.find('[data-testid="declared-signal-chip-approve"]')
+    const cancel = panel.find('[data-testid="declared-signal-chip-cancel"]')
+    expect(approve.exists()).toBe(true)
+    expect(approve.attributes('title')).toBe('Payload: java.lang.Boolean')
+    expect(cancel.exists()).toBe(true)
+    expect(cancel.attributes('title')).toBe('Payload: cbs.nova.orders.CancelPayload')
+
+    expect(fetchDeclaredSignalsMock).toHaveBeenCalledWith('Process', 'OnboardingDsl')
+
+    wrapper.unmount()
+  })
+
+  it('T722: clicking a chip writes the signal name into the input', async () => {
+    fetchDeclaredSignalsMock.mockResolvedValueOnce([
+      { name: 'approve', payloadType: null },
+    ])
+    harness.selectedExecution.value = detailExecution({ status: 'Running', entity: 'OnboardingDsl' })
+
+    const wrapper = mountPage()
+    await flush()
+
+    await wrapper.find('[data-testid="declared-signal-chip-approve"]').trigger('click')
+    await flush()
+
+    const input = wrapper.find('[data-testid="signal-name-input"]').element as HTMLInputElement
+    expect(input.value).toBe('approve')
+    // No warning when name matches a declared signal.
+    expect(wrapper.find('[data-testid="signal-unknown-warning"]').exists()).toBe(false)
+
+    wrapper.unmount()
+  })
+
+  it('T722: shows inline warning for an undeclared name but still allows send', async () => {
+    fetchDeclaredSignalsMock.mockResolvedValueOnce([
+      { name: 'approve', payloadType: null },
+    ])
+    const fetchMock = vi.fn(async () => ({ ok: true }))
+    ;(globalThis as unknown as { $fetch?: unknown }).$fetch = fetchMock
+    harness.selectedExecution.value = detailExecution({ status: 'Running', entity: 'OnboardingDsl' })
+
+    const wrapper = mountPage()
+    await flush()
+
+    const input = wrapper.find('[data-testid="signal-name-input"]')
+    await input.setValue('notDeclared')
+    await flush()
+
+    expect(wrapper.find('[data-testid="signal-unknown-warning"]').exists()).toBe(true)
+    const sendBtn = wrapper.findAll('button').find((b) => b.text() === 'Send signal')
+    expect(sendBtn).toBeDefined()
+    expect(sendBtn?.attributes('disabled')).toBeUndefined()
+
+    wrapper.unmount()
+  })
+
+  it('T722: no chips and no warning when introspection returns no signals', async () => {
+    fetchDeclaredSignalsMock.mockResolvedValueOnce([])
+    harness.selectedExecution.value = detailExecution({ status: 'Running', entity: 'OnboardingDsl' })
+
+    const wrapper = mountPage()
+    await flush()
+
+    const panel = wrapper.find('[data-testid="signal-panel"]')
+    expect(panel.exists()).toBe(true)
+    expect(panel.find('[data-testid="declared-signal-chips"]').exists()).toBe(false)
+    // Empty declared list = no warning even for arbitrary name.
+    const input = wrapper.find('[data-testid="signal-name-input"]')
+    await input.setValue('arbitrary')
+    await flush()
+    expect(wrapper.find('[data-testid="signal-unknown-warning"]').exists()).toBe(false)
+
+    wrapper.unmount()
+  })
+
+  it('T722: graceful no-op when entity or entityType is missing', async () => {
+    fetchDeclaredSignalsMock.mockResolvedValueOnce([])
+    harness.selectedExecution.value = detailExecution({
+      status: 'Running',
+      entity: '',
+      entityType: undefined,
+    })
+
+    const wrapper = mountPage()
+    await flush()
+
+    expect(fetchDeclaredSignalsMock).not.toHaveBeenCalled()
+    const panel = wrapper.find('[data-testid="signal-panel"]')
+    expect(panel.exists()).toBe(true)
+    expect(panel.find('[data-testid="declared-signal-chips"]').exists()).toBe(false)
 
     wrapper.unmount()
   })

@@ -3,6 +3,7 @@ import { useExecutions } from '@cbs/admin-ui-plugin/composables/useExecutions'
 import { useExecutionsApi } from '@cbs/admin-ui-plugin/composables/useExecutionsApi'
 import { resolveStalePollMs } from '@cbs/admin-ui-plugin/composables/useStalePollInterval'
 import { useTemporalLink } from '@cbs/admin-ui-plugin/composables/useTemporalLink'
+import { useDslApi } from '@cbs/admin-ui-plugin/composables/useDslApi'
 import {
   DslExecutionTimeline,
   ErrorBanner,
@@ -14,7 +15,7 @@ import {
 } from '@cbs/components'
 import { useLocalStorageState } from '@cbs/components/composables'
 import { navigateTo, useRoute } from 'nuxt/app'
-import { computed, onUnmounted, ref } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 import type { ExecutionMode, TransactionExecutionDto } from '~/types'
 import { stashRunAgain } from '../../utils/runAgainHandoff'
 
@@ -196,6 +197,49 @@ const signalError = ref<string | null>(null)
 const queryResult = ref<Record<string, unknown> | null>(null)
 const signalBusy = ref(false)
 const queryBusy = ref(false)
+
+// T722 — declared signal metadata for the run's definition, surfaced as
+// chips + datalist. Loaded on demand when the panel mounts (panel only
+// renders for Running runs anyway). When introspection is unavailable
+// (deleted definition, missing descriptor, 404, ...) the panel falls back
+// to free-text-only — the same UX as before T722.
+type DeclaredSignal = { name: string; payloadType: string | null }
+const declaredSignals = ref<DeclaredSignal[]>([])
+const declaredSignalsLoaded = ref(false)
+async function loadDeclaredSignals(entity: string | undefined, entityType: string | undefined) {
+  if (!entity || !entityType) {
+    declaredSignals.value = []
+    declaredSignalsLoaded.value = true
+    return
+  }
+  try {
+    const list = await useDslApi().fetchDeclaredSignals(entityType, entity)
+    declaredSignals.value = Array.isArray(list) ? list : []
+  } catch {
+    declaredSignals.value = []
+  } finally {
+    declaredSignalsLoaded.value = true
+  }
+}
+
+watch(
+  () => [selectedExecution.value?.entity, selectedExecution.value?.entityType],
+  ([entity, entityType]) => {
+    if (!isRunning.value) return
+    void loadDeclaredSignals(entity as string | undefined, entityType as string | undefined)
+  },
+  { immediate: true },
+)
+
+const declaredNames = computed(
+  () => new Set(declaredSignals.value.map((s) => s.name)),
+)
+const signalNameIsUnknown = computed(() => {
+  const trimmed = signalName.value.trim()
+  if (!trimmed) return false
+  if (!declaredSignalsLoaded.value || declaredSignals.value.length === 0) return false
+  return !declaredNames.value.has(trimmed)
+})
 
 async function sendSignal() {
   if (!selectedExecution.value?.id) return
@@ -390,8 +434,17 @@ onUnmounted(() => {
             v-model="signalName"
             type="text"
             placeholder="Signal name"
+            list="declared-signals-datalist"
             class="flex-1 px-3 py-2 text-sm border rounded border-neutral-300 focus:outline-none focus:ring-2 focus:ring-primary-300"
+            data-testid="signal-name-input"
           >
+          <datalist id="declared-signals-datalist">
+            <option
+              v-for="sig in declaredSignals"
+              :key="sig.name"
+              :value="sig.name"
+            />
+          </datalist>
           <button
             type="button"
             :disabled="!signalName || signalBusy"
@@ -401,6 +454,39 @@ onUnmounted(() => {
             {{ queryBusy ? 'Querying…' : 'Query state' }}
           </button>
         </div>
+        <div
+          v-if="declaredSignals.length > 0"
+          class="flex flex-wrap gap-1"
+          data-testid="declared-signal-chips"
+        >
+          <button
+            v-for="sig in declaredSignals"
+            :key="sig.name"
+            type="button"
+            :class="['px-2 py-0.5 text-xs rounded-full border transition-colors',
+                       signalName === sig.name
+                         ? 'border-primary-500 bg-primary-100 text-primary-800'
+                         : 'border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-100']"
+            :title="sig.payloadType ? `Payload: ${sig.payloadType}` : 'No payload'"
+            :data-testid="`declared-signal-chip-${sig.name}`"
+            @click="signalName = sig.name"
+          >
+            {{ sig.name }}
+            <span
+              v-if="sig.payloadType"
+              class="ml-1 text-[10px] text-ink-muted"
+            >·{{ sig.payloadType.split('.').pop() }}</span>
+          </button>
+        </div>
+        <p
+          v-if="signalNameIsUnknown"
+          class="text-xs text-warning-800"
+          data-testid="signal-unknown-warning"
+          role="status"
+        >
+          Undeclared name — this definition does not list "{{ signalName }}" as a signal.
+          Temporal will still accept it, but the workflow may ignore it.
+        </p>
         <textarea
           v-model="signalPayload"
           rows="3"

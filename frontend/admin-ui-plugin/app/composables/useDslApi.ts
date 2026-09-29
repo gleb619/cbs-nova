@@ -485,6 +485,60 @@ export function useDslApi() {
     }
   }
 
+  /**
+   * T722 — declared signal metadata for a definition, derived from the
+   * introspection endpoint. Returns `[]` when the definition is missing
+   * (404), has no signals, or the construct type is unknown. Callers must
+   * treat an empty result as "no hint available" — the operator can still
+   * type any signal name; Temporal accepts undeclared signals by design.
+   */
+  async function fetchDeclaredSignals(
+    type: string,
+    name: string,
+  ): Promise<Array<{ name: string; payloadType: string | null }>> {
+    const structure = await fetchObjectStructure(type, name)
+    if (!structure) return []
+    const names = new Map<string, string | null>()
+    let count = 0
+    for (const field of structure.fields) {
+      const m = /^signals\[(\d+)]\.name$/.exec(field.path ?? '')
+      if (!m) continue
+      count = Math.max(count, Number(m[1]) + 1)
+      names.set(String(field.value ?? ''), null)
+    }
+    for (const field of structure.fields) {
+      const m = /^signals\[(\d+)]\.payloadType$/.exec(field.path ?? '')
+      if (!m) continue
+      // Find which name corresponds to this index by walking fields in order.
+      const idx = Number(m[1])
+      let i = -1
+      let matchedName: string | null = null
+      for (const f of structure.fields) {
+        const nm = /^signals\[(\d+)]\.name$/.exec(f.path ?? '')
+        if (!nm) continue
+        i++
+        if (i === idx) {
+          matchedName = String(f.value ?? '')
+          break
+        }
+      }
+      if (matchedName !== null) names.set(matchedName, (field.value as string | null) ?? null)
+    }
+    void count
+    // Stable order: walk fields in source order to preserve declaration order.
+    const ordered: Array<{ name: string; payloadType: string | null }> = []
+    const seen = new Set<string>()
+    for (const field of structure.fields) {
+      const m = /^signals\[(\d+)]\.name$/.exec(field.path ?? '')
+      if (!m) continue
+      const n = String(field.value ?? '')
+      if (seen.has(n)) continue
+      seen.add(n)
+      ordered.push({ name: n, payloadType: names.get(n) ?? null })
+    }
+    return ordered
+  }
+
   async function fetchChangeRequests(params?: {
     definitionName?: string
     status?: string
@@ -655,6 +709,7 @@ export function useDslApi() {
     runDefinitionTests,
     fetchDiagnostics,
     fetchObjectStructure,
+    fetchDeclaredSignals,
     fetchWebhookDeliveries,
     fetchNotificationRules,
     createNotificationRule,
