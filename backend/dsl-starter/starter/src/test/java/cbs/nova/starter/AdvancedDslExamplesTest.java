@@ -44,6 +44,8 @@ import cbs.nova.dslexamples.v1.ScheduleWindowModels.ScheduleWindowIn;
 import cbs.nova.dslexamples.v1.ScheduleWindowModels.ScheduleWindowOut;
 import cbs.nova.dslexamples.v1.AuditTrailModels.AuditTrailIn;
 import cbs.nova.dslexamples.v1.AuditTrailModels.AuditTrailOut;
+import cbs.nova.dslexamples.v1.ContentSanitizeModels.ContentSanitizeIn;
+import cbs.nova.dslexamples.v1.ContentSanitizeModels.ContentSanitizeOut;
 import cbs.nova.dslexamples.v1.WebhookSignatureModels.WebhookSignatureIn;
 import cbs.nova.dslexamples.v1.WebhookSignatureModels.WebhookSignatureOut;
 import cbs.nova.dslexamples.v1.ApiKeyProvisioningModels.ApiKeyProvisioningIn;
@@ -448,6 +450,53 @@ class AdvancedDslExamplesTest {
   }
 
   @Test
+  void contentSanitizePreviewDecodesEscapesSlugsFormatsAndGroups() {
+    // form-encoded payload: "Hello World, world!" -> title, "<b>world</b>" -> body,
+    // "tom & jerry > 'top cat'" -> json, group key "category".
+    String title = "Hello World";
+    String body = "<b>world</b>";
+    String meta = "tom & jerry > 'top cat'";
+    var input = new ContentSanitizeIn(
+            urlEncodeForm(title),
+            urlEncodeForm(body),
+            urlEncodeForm(meta),
+            1_700_000_000_000L,
+            "category");
+    Context<ContentSanitizeIn> ctx = SimpleContext.builder(input).mode(ExecutionMode.PREVIEW)
+            .build();
+
+    Result<?> result = GlobalManager.globalManager().runProcess("ContentSanitize", ctx);
+
+    assertThat(result.isSuccess()).as("cause: %s", result.cause()).isTrue();
+    ContentSanitizeOut out = (ContentSanitizeOut) result.value();
+
+    // urlDecode (form=true): "+" -> " ", percent escapes recovered.
+    assertThat(out.decodedTitle()).isEqualTo(title);
+    assertThat(out.decodedBody()).isEqualTo(body);
+    assertThat(out.decodedMeta()).isEqualTo(meta);
+
+    // htmlEscape / xmlEscape on the five markup characters; both differ only on the apostrophe.
+    assertThat(out.htmlSafeBody()).isEqualTo("&lt;b&gt;world&lt;/b&gt;");
+    assertThat(out.xmlSafeMeta()).isEqualTo("tom &amp; jerry &gt; &apos;top cat&apos;");
+
+    // caseConvert (kebab): splits on non-alnum, lowercases, joins with '-'.
+    assertThat(out.kebabSlug()).isEqualTo("hello-world");
+
+    // formatDate (ISO_INSTANT, UTC) renders a Z-suffixed instant.
+    assertThat(out.isoTimestamp()).matches("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z");
+
+    // groupRecords on "category" places the single sanitized record under "news".
+    assertThat(out.grouped()).containsOnlyKeys("news");
+    assertThat(out.grouped().get("news")).hasSize(1);
+    java.util.Map<String, Object> only = out.grouped().get("news").get(0);
+    assertThat(only).containsEntry("title", title);
+    assertThat(only).containsEntry("slug", "hello-world");
+    assertThat(only).containsEntry("htmlBody", "&lt;b&gt;world&lt;/b&gt;");
+    assertThat(only).containsEntry("xmlMeta", "tom &amp; jerry &gt; &apos;top cat&apos;");
+    assertThat(only).containsEntry("category", "news");
+  }
+
+  @Test
   void dslConfigValidationPreviewParsesValidatesAndFormatsConfig() {
     String configYaml = "service: payment-gateway\n"
             + "version: 2.3.1\n"
@@ -609,6 +658,18 @@ class AdvancedDslExamplesTest {
       if (helperClass == UrlDecodeHelper.class) {
         return new UrlDecodeHelper();
       }
+      if (helperClass == HtmlEscapeHelper.class) {
+        return new HtmlEscapeHelper();
+      }
+      if (helperClass == XmlEscapeHelper.class) {
+        return new XmlEscapeHelper();
+      }
+      if (helperClass == CaseConvertHelper.class) {
+        return new CaseConvertHelper();
+      }
+      if (helperClass == GroupRecordsHelper.class) {
+        return new GroupRecordsHelper();
+      }
 
       if (helperClass == Sha256Helper.class) {
         return new Sha256Helper();
@@ -640,6 +701,10 @@ class AdvancedDslExamplesTest {
 
       throw new IllegalStateException("Cannot instantiate helper " + helperClass.getName());
     };
+  }
+
+  private static String urlEncodeForm(String value) {
+    return java.net.URLEncoder.encode(value, java.nio.charset.StandardCharsets.UTF_8);
   }
 
   private static String sha256Hex(String value) {
