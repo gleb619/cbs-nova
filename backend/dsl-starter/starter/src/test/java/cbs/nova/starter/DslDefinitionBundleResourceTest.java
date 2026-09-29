@@ -16,6 +16,7 @@ import cbs.nova.dsl.utils.DefinitionLoader;
 import cbs.nova.starter.builder.DslBuilderClient;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.controller.DslDraftHandler;
+import cbs.nova.starter.controller.DslDraftSupport;
 import cbs.nova.starter.controller.DslReloadHandler;
 import cbs.nova.starter.model.CompileModels.CompileResult;
 import cbs.nova.starter.model.VcsModels.CommitResult;
@@ -238,13 +239,15 @@ class DslDefinitionBundleResourceTest {
   }
 
   private DslDraftHandler handler(DslBuilderClient client) {
+    DslDraftSupport support = new DslDraftSupport(props,
+            providerOf(client), null, null, providerOfBean(sourcePathResolver));
     return new DslDraftHandler(props,
             new DslReloadHandler(props, new DefinitionLoader(), null, null, providerOf(client),
                     null, null, null),
             mapper, bundleService,
             null, providerOf(client), null, null, null,
             providerOfBean(sourcePathResolver), providerOfBean(gitStatusResolver),
-            providerOfBean(statusResolver));
+            providerOfBean(statusResolver), support);
   }
 
   private static ServerRequest getRequest(String path, Map<String, String> pathVariables) {

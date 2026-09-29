@@ -20,6 +20,7 @@ import cbs.nova.dsl.utils.DefinitionLoader;
 import cbs.nova.starter.builder.DslBuilderClient;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.controller.DslDraftHandler;
+import cbs.nova.starter.controller.DslDraftSupport;
 import cbs.nova.starter.controller.DslReloadHandler;
 import cbs.nova.starter.exception.BuilderApiException;
 import cbs.nova.starter.model.CompileModels.CompileRequest;
@@ -32,7 +33,6 @@ import cbs.nova.starter.model.VcsModels.CommitRequest;
 import cbs.nova.starter.model.VcsModels.CommitResult;
 import cbs.nova.starter.model.VcsModels.DefinitionBundle;
 import cbs.nova.starter.model.VcsModels.DefinitionBundleEntry;
-import cbs.nova.starter.model.VcsModels.DefinitionHistoryEntry;
 import cbs.nova.starter.model.VcsModels.DiscardRequest;
 import cbs.nova.starter.model.VcsModels.DiscardResult;
 import cbs.nova.starter.model.VcsModels.DraftDetail;
@@ -41,7 +41,6 @@ import cbs.nova.starter.model.VcsModels.DraftResponse;
 import cbs.nova.starter.model.VcsModels.DraftSummary;
 import cbs.nova.starter.model.VcsModels.ImportBundleResult;
 import cbs.nova.starter.model.VcsModels.ImportEntryResult;
-import cbs.nova.starter.model.VcsModels.LogEntry;
 import cbs.nova.starter.service.DslDefinitionBundleService;
 import cbs.nova.starter.service.DslDefinitionStatusResolver;
 import cbs.nova.starter.service.DslGitStatusResolver;
@@ -216,23 +215,6 @@ class DslDraftResourceTest {
   }
 
   @Test
-  void historyIsGitOnlyInBuilderMode() throws Exception {
-    when(sourcePathResolver.relativePath("foo")).thenReturn(Optional.of("dsl/FooDsl.java"));
-    when(client.vcsLog("dsl/FooDsl.java", 50)).thenReturn(List.of(
-            new LogEntry("abc123", 1L, "alice", "x")));
-
-    ServerResponse response = handler.history(getRequest("/api/dsl/drafts/foo/history",
-            Map.of("name", "foo")));
-
-    assertThat(response.statusCode().value()).isEqualTo(200);
-    @SuppressWarnings("unchecked")
-    List<DefinitionHistoryEntry> body = (List<DefinitionHistoryEntry>) ((EntityResponse<?>) response)
-            .entity();
-    assertThat(body).hasSize(1);
-    assertThat(body.get(0).timestamp()).isEqualTo("abc123");
-  }
-
-  @Test
   void publishWritesSourceThenCommits() throws Exception {
     Files.createDirectories(sourceDir.resolve("dsl"));
     registerProcess("foo");
@@ -382,13 +364,15 @@ class DslDraftResourceTest {
   }
 
   private DslDraftHandler handler(DslBuilderClient client) {
+    DslDraftSupport support = new DslDraftSupport(props,
+            providerOf(client), null, null, providerOfBean(sourcePathResolver));
     return new DslDraftHandler(props,
             new DslReloadHandler(props, new DefinitionLoader(), null, null,
                     providerOf(client), null, null, null),
             mapper, bundleService,
             null, providerOf(client), null, null, null,
             providerOfBean(sourcePathResolver), providerOfBean(gitStatusResolver),
-            providerOfBean(statusResolver));
+            providerOfBean(statusResolver), support);
   }
 
   private void registerProcess(String name) {

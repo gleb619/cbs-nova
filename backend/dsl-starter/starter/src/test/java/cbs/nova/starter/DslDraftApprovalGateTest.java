@@ -11,6 +11,7 @@ import cbs.nova.dsl.model.LoadResult;
 import cbs.nova.starter.builder.DslBuilderClient;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.controller.DslDraftHandler;
+import cbs.nova.starter.controller.DslDraftSupport;
 import cbs.nova.starter.controller.DslReloadHandler;
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.model.VcsModels.CommitRequest;
@@ -153,6 +154,9 @@ class DslDraftApprovalGateTest {
     DslDefinitionStatusResolver statusResolver = new DslDefinitionStatusResolver(
             props, gitStatusResolver, sourcePathResolver);
 
+    DslDraftSupport support = new DslDraftSupport(props,
+            providerOfClient, AuditTestSupport.providerOf(audit.service()),
+            null, providerOfBean(sourcePathResolver));
     return new DslDraftHandler(props,
             new DslReloadHandler(props, null, null, AuditTestSupport.providerOf(audit.service()),
                     providerOfClient, null, null, null),
@@ -161,7 +165,7 @@ class DslDraftApprovalGateTest {
                     providerOfClient),
             AuditTestSupport.providerOf(audit.service()), providerOfClient, null, null,
             roleResolverProvider(), providerOfBean(sourcePathResolver),
-            providerOfBean(gitStatusResolver), providerOfBean(statusResolver));
+            providerOfBean(gitStatusResolver), providerOfBean(statusResolver), support);
   }
 
   private static <T> ObjectProvider<T> providerOfBean(T bean) {

@@ -12,6 +12,7 @@ import cbs.nova.dsl.vcs.RepoStatus;
 import cbs.nova.starter.builder.DslBuilderClient;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.controller.DslDraftHandler;
+import cbs.nova.starter.controller.DslDraftSupport;
 import cbs.nova.starter.controller.DslReloadHandler;
 import cbs.nova.starter.model.VcsModels.DraftsMetadata;
 import cbs.nova.starter.model.VcsModels.WorkspaceInfo;
@@ -48,6 +49,8 @@ class DslDraftMetadataResourceTest {
   private DslGitStatusResolver gitStatusResolver;
   private final ObjectMapper mapper = new ObjectMapper();
 
+  private DslDraftSupport support;
+
   @BeforeEach
   void setUp() {
     client = mock(DslBuilderClient.class);
@@ -55,10 +58,11 @@ class DslDraftMetadataResourceTest {
     DslProperties props = DslProperties.builder().sourceDir(sourceDir.toString()).build();
     DslReloadHandler reloadHandler = new DslReloadHandler(props,
             new DefinitionLoader(), null, null, providerOf(client), null, null, null);
+    support = new DslDraftSupport(props, providerOf(client), null, null, null);
     handler = new DslDraftHandler(props, reloadHandler, mapper,
             bundleService(props),
             null, providerOf(client), null, null, null,
-            null, providerOfBean(gitStatusResolver), null);
+            null, providerOfBean(gitStatusResolver), null, support);
   }
 
   @Test
@@ -83,11 +87,12 @@ class DslDraftMetadataResourceTest {
     DslProperties repoProps = DslProperties.builder().sourceDir(sourceRoot.toString()).build();
     DslReloadHandler reloadHandler = new DslReloadHandler(repoProps,
             new DefinitionLoader(), null, null, providerOf(client), null, null, null);
+    support = new DslDraftSupport(repoProps, providerOf(client), null, null, null);
     DslDraftHandler repoHandler = new DslDraftHandler(repoProps, reloadHandler, mapper,
             new DslDefinitionBundleService(mapper, Optional.empty(), repoProps,
                     new DslSourcePathResolver(repoProps), providerOf(client)),
             null, providerOf(client), null, null, null,
-            null, providerOfBean(gitStatusResolver), null);
+            null, providerOfBean(gitStatusResolver), null, support);
     RepoStatus status = RepoStatus.of(repoRoot,
             new LinkedHashMap<>(Map.of(
                     "dsl/LoanDsl.java", ChangeType.MODIFIED,
@@ -204,10 +209,11 @@ class DslDraftMetadataResourceTest {
             .build();
     DslReloadHandler reloadHandler = new DslReloadHandler(customProps,
             new DefinitionLoader(), null, null, providerOf(client), null, null, null);
+    support = new DslDraftSupport(customProps, providerOf(client), null, null, null);
     DslDraftHandler customHandler = new DslDraftHandler(customProps, reloadHandler, mapper,
             bundleService(customProps),
             null, providerOf(client), null, null, null,
-            null, providerOfBean(gitStatusResolver), null);
+            null, providerOfBean(gitStatusResolver), null, support);
 
     DraftsMetadata body = entity(
             customHandler.metadata(getRequest("/api/dsl/drafts/metadata")));
@@ -231,10 +237,11 @@ class DslDraftMetadataResourceTest {
     DslProperties noDir = DslProperties.builder().sourceDir("").build();
     DslReloadHandler reloadHandler = new DslReloadHandler(noDir,
             new DefinitionLoader(), null, null, providerOf(client), null, null, null);
+    support = new DslDraftSupport(noDir, providerOf(client), null, null, null);
     DslDraftHandler unconfiguredHandler = new DslDraftHandler(noDir, reloadHandler, mapper,
             bundleService(noDir),
             null, providerOf(client), null, null, null,
-            null, providerOfBean(gitStatusResolver), null);
+            null, providerOfBean(gitStatusResolver), null, support);
 
     DraftsMetadata body = entity(
             unconfiguredHandler.metadata(getRequest("/api/dsl/drafts/metadata")));

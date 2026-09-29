@@ -1,6 +1,7 @@
 package cbs.nova.starter.config.router;
 
 import cbs.nova.starter.controller.DslDraftHandler;
+import cbs.nova.starter.controller.DslDraftHistoryHandler;
 import cbs.nova.starter.controller.DslDraftVcsHandler;
 import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.starter.model.PageResponse;
@@ -43,25 +44,25 @@ public class DslDraftRouterConfiguration {
               @ApiResponse(responseCode = "409", description = "Source directory not configured or not found, or git requires builder", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
               @ApiResponse(responseCode = "500", description = "Reload failed", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
           })),
-      @RouterOperation(path = "/api/dsl/drafts/{name}/history", beanClass = DslDraftHandler.class, beanMethod = "history", method = RequestMethod.GET, operation = @Operation(operationId = "listPublishHistory", summary = "List git commits for a definition's source path", tags = {
+      @RouterOperation(path = "/api/dsl/drafts/{name}/history", beanClass = DslDraftHistoryHandler.class, beanMethod = "history", method = RequestMethod.GET, operation = @Operation(operationId = "listPublishHistory", summary = "List git commits for a definition's source path", tags = {
           "DSL Admin"}, responses = {
               @ApiResponse(responseCode = "200", description = "List of history entries"),
               @ApiResponse(responseCode = "404", description = "Definition has no source path", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
               @ApiResponse(responseCode = "409", description = "Source directory not configured or git requires builder", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
           })),
-      @RouterOperation(path = "/api/dsl/drafts/{name}/history/{timestamp}", beanClass = DslDraftHandler.class, beanMethod = "historyEntry", method = RequestMethod.GET, operation = @Operation(operationId = "readPublishHistoryEntry", summary = "Read the DSL source file at a git commit", tags = {
+      @RouterOperation(path = "/api/dsl/drafts/{name}/history/{timestamp}", beanClass = DslDraftHistoryHandler.class, beanMethod = "historyEntry", method = RequestMethod.GET, operation = @Operation(operationId = "readPublishHistoryEntry", summary = "Read the DSL source file at a git commit", tags = {
           "DSL Admin"}, responses = {
               @ApiResponse(responseCode = "200", description = "History entry content"),
               @ApiResponse(responseCode = "404", description = "History entry not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
               @ApiResponse(responseCode = "409", description = "Source directory not configured or git requires builder", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
           })),
-      @RouterOperation(path = "/api/dsl/drafts/{name}/history/{timestamp}/diff", beanClass = DslDraftHandler.class, beanMethod = "historyDiff", method = RequestMethod.GET, operation = @Operation(operationId = "diffPublishHistoryEntry", summary = "Diff a git commit against the current working-tree source", tags = {
+      @RouterOperation(path = "/api/dsl/drafts/{name}/history/{timestamp}/diff", beanClass = DslDraftHistoryHandler.class, beanMethod = "historyDiff", method = RequestMethod.GET, operation = @Operation(operationId = "diffPublishHistoryEntry", summary = "Diff a git commit against the current working-tree source", tags = {
           "DSL Admin"}, responses = {
               @ApiResponse(responseCode = "200", description = "Line-level diff of entry vs current"),
               @ApiResponse(responseCode = "404", description = "History entry not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
               @ApiResponse(responseCode = "409", description = "Source directory not configured or git requires builder", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
           })),
-      @RouterOperation(path = "/api/dsl/drafts/{name}/history/{timestamp}/restore", beanClass = DslDraftHandler.class, beanMethod = "restore", method = RequestMethod.POST, operation = @Operation(operationId = "restorePublishHistory", summary = "Restore a git commit's source into the working tree", tags = {
+      @RouterOperation(path = "/api/dsl/drafts/{name}/history/{timestamp}/restore", beanClass = DslDraftHistoryHandler.class, beanMethod = "restore", method = RequestMethod.POST, operation = @Operation(operationId = "restorePublishHistory", summary = "Restore a git commit's source into the working tree", tags = {
           "DSL Admin"}, responses = {
               @ApiResponse(responseCode = "200", description = "Snapshot restored"),
               @ApiResponse(responseCode = "404", description = "History entry not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
@@ -73,7 +74,7 @@ public class DslDraftRouterConfiguration {
               @ApiResponse(responseCode = "404", description = "Definition has no source path", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
               @ApiResponse(responseCode = "409", description = "Builder not available or source directory not configured", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
           })),
-      @RouterOperation(path = "/api/dsl/drafts/{name}/commits", beanClass = DslDraftHandler.class, beanMethod = "commits", method = RequestMethod.GET, operation = @Operation(operationId = "listDraftCommits", summary = "List git commits for a definition's source path", tags = {
+      @RouterOperation(path = "/api/dsl/drafts/{name}/commits", beanClass = DslDraftHistoryHandler.class, beanMethod = "commits", method = RequestMethod.GET, operation = @Operation(operationId = "listDraftCommits", summary = "List git commits for a definition's source path", tags = {
           "DSL Admin"}, responses = {
               @ApiResponse(responseCode = "200", description = "List of commit entries"),
               @ApiResponse(responseCode = "404", description = "Definition has no source path", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
@@ -122,6 +123,7 @@ public class DslDraftRouterConfiguration {
           }))
   })
   RouterFunction<ServerResponse> dslDraftRouter(DslDraftHandler draftHandler,
+          DslDraftHistoryHandler historyHandler,
           DslDraftVcsHandler vcsHandler) {
     return RouterFunctions.route()
             .POST("/api/dsl/drafts/fetch", vcsHandler::fetch)
@@ -133,12 +135,12 @@ public class DslDraftRouterConfiguration {
             .GET("/api/dsl/drafts/{name}", draftHandler::read)
             .POST("/api/dsl/drafts/{name}/save", draftHandler::save)
             .POST("/api/dsl/drafts/{name}/publish", draftHandler::publish)
-            .GET("/api/dsl/drafts/{name}/history", draftHandler::history)
-            .GET("/api/dsl/drafts/{name}/history/{timestamp}", draftHandler::historyEntry)
-            .GET("/api/dsl/drafts/{name}/history/{timestamp}/diff", draftHandler::historyDiff)
-            .POST("/api/dsl/drafts/{name}/history/{timestamp}/restore", draftHandler::restore)
+            .GET("/api/dsl/drafts/{name}/history", historyHandler::history)
+            .GET("/api/dsl/drafts/{name}/history/{timestamp}", historyHandler::historyEntry)
+            .GET("/api/dsl/drafts/{name}/history/{timestamp}/diff", historyHandler::historyDiff)
+            .POST("/api/dsl/drafts/{name}/history/{timestamp}/restore", historyHandler::restore)
             .POST("/api/dsl/drafts/{name}/discard", draftHandler::discard)
-            .GET("/api/dsl/drafts/{name}/commits", draftHandler::commits)
+            .GET("/api/dsl/drafts/{name}/commits", historyHandler::commits)
             .DELETE("/api/dsl/drafts/{name}", draftHandler::delete)
             .build();
   }

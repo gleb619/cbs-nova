@@ -9,6 +9,7 @@ import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.config.router.DslDraftRouterConfiguration;
 import cbs.nova.starter.controller.BuilderApiErrorHandler;
 import cbs.nova.starter.controller.DslDraftHandler;
+import cbs.nova.starter.controller.DslDraftSupport;
 import cbs.nova.starter.controller.DslReloadHandler;
 import cbs.nova.starter.service.DslDefinitionBundleService;
 import cbs.nova.starter.service.DslSourcePathResolver;
@@ -87,6 +88,24 @@ class CbsDslPropertyPrefixTest {
     @Bean
     ObjectMapper objectMapper() {
       return new ObjectMapper();
+    }
+
+    @Bean
+    DslDraftSupport dslDraftSupport(DslProperties props,
+            org.springframework.beans.factory.ObjectProvider<DslSourcePathResolver> sourcePathResolverProvider) {
+      return new DslDraftSupport(props, dslBuilderClientProvider(), null, null,
+              sourcePathResolverProvider);
+    }
+
+    @Bean
+    org.springframework.beans.factory.ObjectProvider<DslSourcePathResolver> dslSourcePathResolverProvider(
+            DslSourcePathResolver resolver) {
+      return new org.springframework.beans.factory.ObjectProvider<>() {
+        @Override
+        public DslSourcePathResolver getIfAvailable() {
+          return resolver;
+        }
+      };
     }
 
     @Bean

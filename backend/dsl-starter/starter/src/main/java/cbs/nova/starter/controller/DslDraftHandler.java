@@ -1,53 +1,10 @@
 package cbs.nova.starter.controller;
 
 import java.util.Objects;
-import lombok.AllArgsConstructor;
 
-import cbs.nova.dsl.GlobalManager;
-import cbs.nova.dsl.model.LoadResult;
-import cbs.nova.dsl.exception.ValidationException;
-import cbs.nova.dsl.utils.LineDiff;
-import cbs.nova.dsl.vcs.RepoStatus;
-import cbs.nova.starter.builder.DslBuilderClient;
-import cbs.nova.starter.config.properties.DslProperties;
-import cbs.nova.starter.exception.BuilderApiException;
-import cbs.nova.starter.exception.DslCompilationException;
-import cbs.nova.starter.model.DslIntrospectionModels.DefinitionStatus;
-import cbs.nova.starter.model.VcsModels.CommitRequest;
-import cbs.nova.starter.model.VcsModels.CommitResult;
-import cbs.nova.starter.model.VcsModels.DefinitionBundle;
-import cbs.nova.starter.model.VcsModels.DefinitionHistoryEntry;
-import cbs.nova.starter.model.VcsModels.DiscardRequest;
-import cbs.nova.starter.model.VcsModels.DraftDetail;
-import cbs.nova.starter.model.VcsModels.DraftRequest;
-import cbs.nova.starter.model.VcsModels.DraftResponse;
-import cbs.nova.starter.model.VcsModels.DraftSummary;
-import cbs.nova.starter.model.VcsModels.DraftsMetadata;
-import cbs.nova.starter.model.VcsModels.HistoryDiffResponse;
-import cbs.nova.starter.model.VcsModels.ImportBundleResult;
-import cbs.nova.starter.model.VcsModels.ImportEntryResult;
-import cbs.nova.starter.model.VcsModels.LogEntry;
-import cbs.nova.starter.model.VcsModels.WorkspaceInfo;
-import cbs.nova.dsl.model.CompileDiagnostic;
-import cbs.nova.starter.model.CompileDiagnosticSource;
-import cbs.nova.starter.model.PageResponse;
-import cbs.nova.dsl.model.ErrorResponse;
-import cbs.nova.starter.security.Role;
-import cbs.nova.starter.security.RoleResolver;
-import cbs.nova.starter.service.DslAuditService;
-import cbs.nova.starter.persistence.CompileDiagnosticRecordRepository;
-import cbs.nova.starter.events.DomainEvent;
-import cbs.nova.starter.service.DomainEventPublisher;
-import cbs.nova.starter.core.StarterConstants;
-import cbs.nova.starter.service.CorrelationId;
-import cbs.nova.starter.service.DslDefinitionBundleService;
-import cbs.nova.starter.service.DslDefinitionStatusResolver;
-import cbs.nova.starter.service.DslGitStatusResolver;
-import cbs.nova.starter.service.DslSourcePathResolver;
-import tools.jackson.core.JacksonException;
 import jakarta.servlet.ServletException;
-import lombok.extern.slf4j.Slf4j;
-import org.jspecify.annotations.NonNull;
+import tools.jackson.core.JacksonException;
+
 import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -67,6 +24,44 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
+
+import cbs.nova.dsl.GlobalManager;
+import cbs.nova.dsl.exception.ValidationException;
+import cbs.nova.dsl.model.CompileDiagnostic;
+import cbs.nova.dsl.model.ErrorResponse;
+import cbs.nova.dsl.model.LoadResult;
+import cbs.nova.dsl.vcs.RepoStatus;
+import cbs.nova.starter.builder.DslBuilderClient;
+import cbs.nova.starter.config.properties.DslProperties;
+import cbs.nova.starter.core.StarterConstants;
+import cbs.nova.starter.events.DomainEvent;
+import cbs.nova.starter.exception.DslCompilationException;
+import cbs.nova.starter.model.CompileDiagnosticSource;
+import cbs.nova.starter.model.DslIntrospectionModels.DefinitionStatus;
+import cbs.nova.starter.model.PageResponse;
+import cbs.nova.starter.model.VcsModels.CommitRequest;
+import cbs.nova.starter.model.VcsModels.CommitResult;
+import cbs.nova.starter.model.VcsModels.DefinitionBundle;
+import cbs.nova.starter.model.VcsModels.DiscardRequest;
+import cbs.nova.starter.model.VcsModels.DraftDetail;
+import cbs.nova.starter.model.VcsModels.DraftRequest;
+import cbs.nova.starter.model.VcsModels.DraftResponse;
+import cbs.nova.starter.model.VcsModels.DraftSummary;
+import cbs.nova.starter.model.VcsModels.DraftsMetadata;
+import cbs.nova.starter.model.VcsModels.ImportBundleResult;
+import cbs.nova.starter.model.VcsModels.ImportEntryResult;
+import cbs.nova.starter.model.VcsModels.WorkspaceInfo;
+import cbs.nova.starter.persistence.CompileDiagnosticRecordRepository;
+import cbs.nova.starter.security.Role;
+import cbs.nova.starter.security.RoleResolver;
+import cbs.nova.starter.service.DomainEventPublisher;
+import cbs.nova.starter.service.DslAuditService;
+import cbs.nova.starter.service.DslDefinitionBundleService;
+import cbs.nova.starter.service.DslDefinitionStatusResolver;
+import cbs.nova.starter.service.DslGitStatusResolver;
+import cbs.nova.starter.service.DslSourcePathResolver;
+import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import tools.jackson.databind.ObjectMapper;
 
 @Slf4j
@@ -80,16 +75,6 @@ public class DslDraftHandler {
   static final String ACTION_DRAFT_BULK_WRITE = "DRAFT_BULK_WRITE";
   static final String ACTION_DRAFT_DISCARD = "DRAFT_DISCARD";
   static final String ACTION_DRAFT_COMMIT = "DEFINITION_PUBLISH_COMMIT";
-  static final String ACTION_DRAFT_RESTORE = "DRAFT_RESTORE";
-  static final String GIT_NOT_CONFIGURED_CODE = "GIT_NOT_CONFIGURED";
-  static final String GIT_REQUIRES_BUILDER_CODE = "GIT_REQUIRES_BUILDER";
-  /**
-   * Maximum entries returned by {@link #history(ServerRequest)}.
-   */
-  public static final int HISTORY_LIMIT = 50;
-  static final long HISTORY_SIZE_UNKNOWN = -1L;
-  static final String DEFAULT_LOG_LIMIT = "20";
-  static final int MAX_LOG_LIMIT = 200;
   static final String COMMIT_ERROR_DETAIL = "commitError";
 
   private final DslProperties dslProperties;
@@ -104,45 +89,46 @@ public class DslDraftHandler {
   private final ObjectProvider<DslSourcePathResolver> sourcePathResolverProvider;
   private final ObjectProvider<DslGitStatusResolver> gitStatusResolverProvider;
   private final ObjectProvider<DslDefinitionStatusResolver> statusResolverProvider;
+  private final DslDraftSupport support;
 
   public ServerResponse save(ServerRequest request) throws IOException {
     String name = request.pathVariable("name");
     DraftRequest body = parse(request);
     if (body == null || body.name() == null || body.name().isBlank()) {
-      audit(request, ACTION_DRAFT_WRITE, name, StarterConstants.OUTCOME_FAILURE,
+      support.audit(request, ACTION_DRAFT_WRITE, name, StarterConstants.OUTCOME_FAILURE,
               Map.of("error", "name is required"));
-      return error(HttpStatus.BAD_REQUEST,
+      return DslDraftSupport.error(HttpStatus.BAD_REQUEST,
               new ErrorResponse("INVALID_REQUEST", "name is required", name, null, null, null, null,
                       null, null));
     }
-    var sourcePath = resolveSourcePath(name);
+    var sourcePath = support.resolveSourcePath(name);
     if (sourcePath.isEmpty()) {
-      audit(request, ACTION_DRAFT_WRITE, name, StarterConstants.OUTCOME_FAILURE,
+      support.audit(request, ACTION_DRAFT_WRITE, name, StarterConstants.OUTCOME_FAILURE,
               Map.of("error", "no source path"));
-      return error(HttpStatus.NOT_FOUND,
+      return DslDraftSupport.error(HttpStatus.NOT_FOUND,
               new ErrorResponse("NOT_FOUND", "No source path for definition: " + name, name,
                       null, null, null, null, null, null));
     }
     if (body.source() == null || body.source().isBlank()) {
-      audit(request, ACTION_DRAFT_WRITE, name, StarterConstants.OUTCOME_FAILURE,
+      support.audit(request, ACTION_DRAFT_WRITE, name, StarterConstants.OUTCOME_FAILURE,
               Map.of("error", "source is required"));
-      return error(HttpStatus.BAD_REQUEST,
+      return DslDraftSupport.error(HttpStatus.BAD_REQUEST,
               new ErrorResponse("INVALID_REQUEST", "source is required", name, null, null, null,
                       null, null, null));
     }
     String path = sourcePath.get();
     try {
-      writeSource(path, body.source());
+      support.writeSource(path, body.source());
       DraftResponse saved = new DraftResponse(name, "Draft", path, false, LoadResult.empty(),
               null, null, System.currentTimeMillis(), null);
-      audit(request, ACTION_DRAFT_WRITE, name, StarterConstants.OUTCOME_SUCCESS,
+      support.audit(request, ACTION_DRAFT_WRITE, name, StarterConstants.OUTCOME_SUCCESS,
               Map.of("location", path));
-      publishEventBestEffort(new DomainEvent.DraftSaved(
-              name, body.version(), body.taskQueue(), null, correlationIdOf(request)));
+      support.publishEventBestEffort(new DomainEvent.DraftSaved(
+              name, body.version(), body.taskQueue(), null, support.correlationIdOf(request)));
       log.info("[DSL drafts] saved {} to {}", name, path);
       return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(saved);
     } catch (RuntimeException e) {
-      audit(request, ACTION_DRAFT_WRITE, name, StarterConstants.OUTCOME_FAILURE,
+      support.audit(request, ACTION_DRAFT_WRITE, name, StarterConstants.OUTCOME_FAILURE,
               Map.of("error", String.valueOf(e.getMessage())));
       throw e;
     }
@@ -152,16 +138,16 @@ public class DslDraftHandler {
     String name = request.pathVariable("name");
     DraftRequest body = parse(request);
     if (body == null || body.name() == null || body.name().isBlank()) {
-      audit(request, ACTION_DEFINITION_PUBLISH, name, StarterConstants.OUTCOME_FAILURE,
+      support.audit(request, ACTION_DEFINITION_PUBLISH, name, StarterConstants.OUTCOME_FAILURE,
               Map.of("error", "name is required"));
-      return error(HttpStatus.BAD_REQUEST,
+      return DslDraftSupport.error(HttpStatus.BAD_REQUEST,
               new ErrorResponse("INVALID_REQUEST", "name is required", name, null, null, null, null,
                       null, null));
     }
     if (dslProperties.approval().required() && !resolveRole(request).satisfies(Role.OPERATOR)) {
-      audit(request, ACTION_DEFINITION_PUBLISH, name, StarterConstants.OUTCOME_FAILURE,
+      support.audit(request, ACTION_DEFINITION_PUBLISH, name, StarterConstants.OUTCOME_FAILURE,
               Map.of("error", "publish requires approval"));
-      return error(HttpStatus.FORBIDDEN,
+      return DslDraftSupport.error(HttpStatus.FORBIDDEN,
               new ErrorResponse(StarterConstants.FORBIDDEN_CODE, "publish requires approval",
                       name, null, null, null, null, null, null));
     }
@@ -176,17 +162,17 @@ public class DslDraftHandler {
    */
   public ServerResponse publishPayload(ServerRequest request, String name, DraftRequest body)
           throws IOException {
-    var sourcePath = resolveSourcePath(name);
+    var sourcePath = support.resolveSourcePath(name);
     if (sourcePath.isEmpty()) {
-      audit(request, ACTION_DEFINITION_PUBLISH, name, StarterConstants.OUTCOME_FAILURE,
+      support.audit(request, ACTION_DEFINITION_PUBLISH, name, StarterConstants.OUTCOME_FAILURE,
               Map.of("error", "no source path"));
-      return error(HttpStatus.NOT_FOUND,
+      return DslDraftSupport.error(HttpStatus.NOT_FOUND,
               new ErrorResponse("NOT_FOUND", "No source path for definition: " + name, name,
                       null, null, null, null, null, null));
     }
     String path = sourcePath.get();
     if (body != null && body.source() != null && !body.source().isBlank()) {
-      writeSource(path, body.source());
+      support.writeSource(path, body.source());
       log.info("[DSL drafts] wrote supplied source for {} to {} before publishing", name, path);
     }
     DraftResponse response = finishPublish(name, path);
@@ -200,157 +186,20 @@ public class DslDraftHandler {
             : new DraftResponse(response.name(), response.status(), response.location(),
                     response.reloaded(), response.loadResult(), response.reloadError(),
                     response.diagnostics(), response.savedAt(), commitId);
-    audit(request, ACTION_DEFINITION_PUBLISH, name,
+    support.audit(request, ACTION_DEFINITION_PUBLISH, name,
             success ? StarterConstants.OUTCOME_SUCCESS : StarterConstants.OUTCOME_FAILURE,
             Map.of("location", path,
                     "reloaded", withCommit.reloaded(),
                     "commitId", String.valueOf(commitId),
                     "error", success ? "" : String.valueOf(withCommit.reloadError())));
-    publishEventBestEffort(new DomainEvent.DraftPublished(
+    support.publishEventBestEffort(new DomainEvent.DraftPublished(
             name, body != null ? body.version() : null,
             body != null ? body.taskQueue() : null,
             withCommit.reloaded(), withCommit.location(), null,
-            correlationIdOf(request)));
+            support.correlationIdOf(request)));
     return ServerResponse.ok()
             .contentType(MediaType.APPLICATION_JSON)
             .body(withCommit);
-  }
-
-  public ServerResponse history(ServerRequest request) {
-    String name = request.pathVariable("name");
-    var configured = ensureConfigured(name);
-    if (configured.isError()) {
-      return configured.response();
-    }
-    var sourcePath = resolveSourcePath(name);
-    if (sourcePath.isEmpty()) {
-      return error(HttpStatus.NOT_FOUND,
-              new ErrorResponse("NOT_FOUND", "No source path for definition: " + name, name,
-                      null, null, null, null, null, null));
-    }
-    var builder = builderClient();
-    if (builder == null) {
-      return gitRequiresBuilder();
-    }
-    String path = sourcePath.get();
-    List<LogEntry> entries = builder.vcsLog(path, HISTORY_LIMIT);
-    List<DefinitionHistoryEntry> history = entries.stream()
-            .map(e -> new DefinitionHistoryEntry(e.commitId(), e.timestampMillis(),
-                    HISTORY_SIZE_UNKNOWN, e.timestampMillis()))
-            .toList();
-    return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(history);
-  }
-
-  public ServerResponse historyEntry(ServerRequest request) throws IOException {
-    String name = request.pathVariable("name");
-    String timestamp = request.pathVariable("timestamp");
-    var configured = ensureConfigured(name);
-    if (configured.isError()) {
-      return configured.response();
-    }
-    var sourcePath = resolveSourcePath(name);
-    if (sourcePath.isEmpty()) {
-      return error(HttpStatus.NOT_FOUND,
-              new ErrorResponse("NOT_FOUND", "No source path for definition: " + name, name,
-                      null, null, null, null, null, null));
-    }
-    var builder = builderClient();
-    if (builder == null) {
-      return gitRequiresBuilder();
-    }
-    String path = sourcePath.get();
-    try {
-      String content = builder.vcsShow(path, timestamp);
-      DraftRequest response = new DraftRequest(
-              name,
-              typeOf(name),
-              "History",
-              null,
-              null,
-              content,
-              null);
-      return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(response);
-    } catch (BuilderApiException e) {
-      if (e.getStatusCode().value() == HttpStatus.NOT_FOUND.value()) {
-        return historyEntryNotFound(name, timestamp);
-      }
-      throw e;
-    }
-  }
-
-  public ServerResponse historyDiff(ServerRequest request) throws IOException {
-    String name = request.pathVariable("name");
-    String timestamp = request.pathVariable("timestamp");
-    var configured = ensureConfigured(name);
-    if (configured.isError()) {
-      return configured.response();
-    }
-    var sourcePath = resolveSourcePath(name);
-    if (sourcePath.isEmpty()) {
-      return error(HttpStatus.NOT_FOUND,
-              new ErrorResponse("NOT_FOUND", "No source path for definition: " + name, name,
-                      null, null, null, null, null, null));
-    }
-    var builder = builderClient();
-    if (builder == null) {
-      return gitRequiresBuilder();
-    }
-    String path = sourcePath.get();
-    try {
-      String before = builder.vcsShow(path, timestamp);
-      String after = readWorkingTreeSource(path);
-      LineDiff.Result result = LineDiff.diff(before, after, StarterConstants.DEFAULT_MAX_HUNKS,
-              StarterConstants.LINE_DIFF_CONTEXT_LINES);
-      return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON)
-              .body(new HistoryDiffResponse(name, timestamp, before, after, result.hunks(),
-                      result.truncated()));
-    } catch (BuilderApiException e) {
-      if (e.getStatusCode().value() == HttpStatus.NOT_FOUND.value()) {
-        return historyEntryNotFound(name, timestamp);
-      }
-      throw e;
-    }
-  }
-
-  public ServerResponse restore(ServerRequest request) throws IOException {
-    String name = request.pathVariable("name");
-    String timestamp = request.pathVariable("timestamp");
-    var configured = ensureConfigured(name);
-    if (configured.isError()) {
-      return configured.response();
-    }
-    var sourcePath = resolveSourcePath(name);
-    if (sourcePath.isEmpty()) {
-      return error(HttpStatus.NOT_FOUND,
-              new ErrorResponse("NOT_FOUND", "No source path for definition: " + name, name,
-                      null, null, null, null, null, null));
-    }
-    var builder = builderClient();
-    if (builder == null) {
-      return gitRequiresBuilder();
-    }
-    String path = sourcePath.get();
-    try {
-      String content = builder.vcsShow(path, timestamp);
-      writeSource(path, content);
-      DraftResponse response = new DraftResponse(name, "Draft", path, false,
-              LoadResult.empty(), null, null, System.currentTimeMillis(), null);
-      audit(request, ACTION_DRAFT_RESTORE, name, StarterConstants.OUTCOME_SUCCESS,
-              Map.of("location", path, "commitId", timestamp));
-      log.info("[DSL drafts] restored {} (path={}) from commit {}", name, path, timestamp);
-      return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(response);
-    } catch (BuilderApiException e) {
-      audit(request, ACTION_DRAFT_RESTORE, name, StarterConstants.OUTCOME_FAILURE,
-              Map.of("error", String.valueOf(e.getMessage())));
-      if (e.getStatusCode().value() == HttpStatus.NOT_FOUND.value()) {
-        return historyEntryNotFound(name, timestamp);
-      }
-      throw e;
-    } catch (RuntimeException e) {
-      audit(request, ACTION_DRAFT_RESTORE, name, StarterConstants.OUTCOME_FAILURE,
-              Map.of("error", String.valueOf(e.getMessage())));
-      throw e;
-    }
   }
 
   public ServerResponse delete(ServerRequest request) throws IOException {
@@ -363,7 +212,7 @@ public class DslDraftHandler {
     int pageSize = Pagination.clampLimit(limit);
     int skip = Pagination.clampOffset(offset);
 
-    var configured = ensureConfigured(null);
+    var configured = support.ensureConfigured(null);
     if (configured.isError()) {
       return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON)
               .body(new PageResponse<>(List.of(), 0L, skip, pageSize));
@@ -417,7 +266,7 @@ public class DslDraftHandler {
     String gitBranch = null;
     if (gitEnabled) {
       try {
-        DslBuilderClient client = builderClient();
+        DslBuilderClient client = support.builderClient();
         if (client != null) {
           gitBranch = client.vcsBranch();
         }
@@ -437,7 +286,7 @@ public class DslDraftHandler {
    * caller falls back to the starter's configured {@code cbs.dsl.source-dir}.
    */
   private @Nullable WorkspaceInfo workspaceInfoOrNull() {
-    DslBuilderClient client = builderClient();
+    DslBuilderClient client = support.builderClient();
     if (client == null) {
       return null;
     }
@@ -527,13 +376,13 @@ public class DslDraftHandler {
 
   public ServerResponse read(ServerRequest request) throws IOException {
     String name = request.pathVariable("name");
-    var configured = ensureConfigured(name);
+    var configured = support.ensureConfigured(name);
     if (configured.isError()) {
       return configured.response();
     }
-    var sourcePath = resolveSourcePath(name);
+    var sourcePath = support.resolveSourcePath(name);
     if (sourcePath.isEmpty()) {
-      return error(HttpStatus.NOT_FOUND,
+      return DslDraftSupport.error(HttpStatus.NOT_FOUND,
               new ErrorResponse("NOT_FOUND", "No source path for definition: " + name, name,
                       null, null, null, null, null, null));
     }
@@ -545,7 +394,7 @@ public class DslDraftHandler {
   }
 
   public ServerResponse exportBundle(ServerRequest request) {
-    var configured = ensureConfigured(null);
+    var configured = support.ensureConfigured(null);
     if (configured.isError()) {
       return configured.response();
     }
@@ -557,7 +406,7 @@ public class DslDraftHandler {
   }
 
   public ServerResponse importBundle(ServerRequest request) throws IOException {
-    var configured = ensureConfigured(null);
+    var configured = support.ensureConfigured(null);
     if (configured.isError()) {
       return configured.response();
     }
@@ -569,7 +418,7 @@ public class DslDraftHandler {
       bundle = objectMapper.readValue(body, DefinitionBundle.class);
     } catch (JacksonException e) {
       log.warn("[DSL bundle] failed to parse bundle: {}", e.getMessage());
-      return error(HttpStatus.BAD_REQUEST,
+      return DslDraftSupport.error(HttpStatus.BAD_REQUEST,
               new ErrorResponse("INVALID_REQUEST", "malformed bundle JSON", null, null, null,
                       null, null, null, null));
     } catch (ServletException e) {
@@ -581,13 +430,13 @@ public class DslDraftHandler {
       bundleService.verifyDigest(bundle);
     } catch (IllegalArgumentException e) {
       log.warn("[DSL bundle] validation failed: {}", e.getMessage());
-      return error(HttpStatus.BAD_REQUEST,
+      return DslDraftSupport.error(HttpStatus.BAD_REQUEST,
               new ErrorResponse("BAD_REQUEST", e.getMessage(), null, null, null, null, null, null,
                       null));
     }
 
     if (bundle.definitions().size() > StarterConstants.BUNDLE_MAX_DEFINITIONS) {
-      return error(HttpStatus.BAD_REQUEST,
+      return DslDraftSupport.error(HttpStatus.BAD_REQUEST,
               new ErrorResponse("BAD_REQUEST",
                       "Bundle exceeds " + StarterConstants.BUNDLE_MAX_DEFINITIONS
                               + " definitions",
@@ -608,16 +457,16 @@ public class DslDraftHandler {
     }
 
     List<ImportEntryResult> results = bundleService.applyToTarget(configured.path(), bundle);
-    flushFiles();
+    support.flushFiles();
 
     List<String> writtenPaths = results.stream()
             .filter(r -> "published".equals(r.outcome()))
             .map(ImportEntryResult::name)
-            .map(this::resolveSourcePath)
+            .map(support::resolveSourcePath)
             .flatMap(Optional::stream)
             .toList();
 
-    var builder = builderClient();
+    var builder = support.builderClient();
     boolean committed = false;
     if (builder != null && !writtenPaths.isEmpty()) {
       try {
@@ -639,31 +488,32 @@ public class DslDraftHandler {
     int failed = results.size() - published;
     ImportBundleResult result = new ImportBundleResult(false, outcome.reloaded(),
             published, failed, results, outcome.error(), outcome.diagnostics());
-    audit(request, ACTION_DRAFT_BULK_WRITE, bundleTarget(bundle), StarterConstants.OUTCOME_SUCCESS,
+    support.audit(request, ACTION_DRAFT_BULK_WRITE, bundleTarget(bundle),
+            StarterConstants.OUTCOME_SUCCESS,
             Map.of("count", results.size(), "committed", committed));
     return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(result);
   }
 
   public ServerResponse discard(ServerRequest request) throws IOException {
     String name = request.pathVariable("name");
-    var configured = ensureConfigured(name);
+    var configured = support.ensureConfigured(name);
     if (configured.isError()) {
       return configured.response();
     }
-    var sourcePath = resolveSourcePath(name);
+    var sourcePath = support.resolveSourcePath(name);
     if (sourcePath.isEmpty()) {
-      return error(HttpStatus.NOT_FOUND,
+      return DslDraftSupport.error(HttpStatus.NOT_FOUND,
               new ErrorResponse("NOT_FOUND", "No source path for definition: " + name, name,
                       null, null, null, null, null, null));
     }
-    var builder = builderClient();
+    var builder = support.builderClient();
     if (builder == null) {
-      return gitRequiresBuilder();
+      return support.gitRequiresBuilder();
     }
     String path = sourcePath.get();
     try {
       builder.discard(new DiscardRequest(List.of(path)));
-      audit(request, ACTION_DRAFT_DISCARD, name, StarterConstants.OUTCOME_SUCCESS,
+      support.audit(request, ACTION_DRAFT_DISCARD, name, StarterConstants.OUTCOME_SUCCESS,
               Map.of("location", path));
       log.info("[DSL drafts] discarded {} (path={})", name, path);
       return ServerResponse.ok()
@@ -671,37 +521,14 @@ public class DslDraftHandler {
               .body(new DraftResponse(name, "Discarded", path, false, LoadResult.empty(),
                       null, null, null, null));
     } catch (RuntimeException e) {
-      audit(request, ACTION_DRAFT_DISCARD, name, StarterConstants.OUTCOME_FAILURE,
+      support.audit(request, ACTION_DRAFT_DISCARD, name, StarterConstants.OUTCOME_FAILURE,
               Map.of("error", String.valueOf(e.getMessage())));
       throw e;
     }
   }
 
-  public ServerResponse commits(ServerRequest request) {
-    String name = request.pathVariable("name");
-    var configured = ensureConfigured(name);
-    if (configured.isError()) {
-      return configured.response();
-    }
-    var sourcePath = resolveSourcePath(name);
-    if (sourcePath.isEmpty()) {
-      return error(HttpStatus.NOT_FOUND,
-              new ErrorResponse("NOT_FOUND", "No source path for definition: " + name, name,
-                      null, null, null, null, null, null));
-    }
-    var builder = builderClient();
-    if (builder == null) {
-      return gitRequiresBuilder();
-    }
-    int limit = parseLimit(request);
-    String path = sourcePath.get();
-    List<LogEntry> entries = builder.vcsLog(path, limit);
-    log.info("[DSL drafts] listed {} commits for {} (path={})", entries.size(), name, path);
-    return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(entries);
-  }
-
   private @Nullable String commitIfDirty(ServerRequest request, String name) {
-    var sourcePath = resolveSourcePath(name);
+    var sourcePath = support.resolveSourcePath(name);
     if (sourcePath.isEmpty()) {
       log.debug("[DSL drafts] no source path for {} — skipping commit", name);
       return null;
@@ -714,7 +541,7 @@ public class DslDraftHandler {
       log.debug("[DSL drafts] source path {} is clean — no commit needed", path);
       return null;
     }
-    var builder = builderClient();
+    var builder = support.builderClient();
     if (builder == null) {
       log.debug("[DSL drafts] no builder for {} — skipping commit", name);
       return null;
@@ -734,11 +561,11 @@ public class DslDraftHandler {
       if (result.pushError() != null) {
         details.put("pushError", result.pushError());
       }
-      audit(request, ACTION_DRAFT_COMMIT, name, StarterConstants.OUTCOME_SUCCESS, details);
+      support.audit(request, ACTION_DRAFT_COMMIT, name, StarterConstants.OUTCOME_SUCCESS, details);
       return result.commitId();
     } catch (RuntimeException e) {
       log.warn("[DSL drafts] commit for {} (path={}) failed: {}", name, path, e.getMessage());
-      audit(request, ACTION_DRAFT_COMMIT, name, StarterConstants.OUTCOME_FAILURE,
+      support.audit(request, ACTION_DRAFT_COMMIT, name, StarterConstants.OUTCOME_FAILURE,
               Map.of(COMMIT_ERROR_DETAIL, String.valueOf(e.getMessage()),
                       "location", path));
       return null;
@@ -777,22 +604,8 @@ public class DslDraftHandler {
             null);
   }
 
-  private void writeSource(String relativePath, String content) {
-    var builder = requireBuilderClient();
-    builder.stageWrite(relativePath, content);
-    builder.flushFiles();
-  }
-
-  private String readWorkingTreeSource(String relativePath) {
-    return requireBuilderClient().readFile(relativePath).content();
-  }
-
-  private void flushFiles() {
-    requireBuilderClient().flushFiles();
-  }
-
   private Optional<DraftSummary> draftSummaryIfChanged(String name) {
-    Optional<String> path = resolveSourcePath(name);
+    Optional<String> path = support.resolveSourcePath(name);
     if (path.isEmpty()) {
       return Optional.empty();
     }
@@ -839,35 +652,6 @@ public class DslDraftHandler {
             .toList();
   }
 
-  private ServerResponse gitRequiresBuilder() {
-    return error(HttpStatus.CONFLICT,
-            new ErrorResponse(GIT_REQUIRES_BUILDER_CODE,
-                    "Git operations require the DSL builder to be configured", null, null, null,
-                    null, null, null, null));
-  }
-
-  private ServerResponse historyEntryNotFound(String name, String timestamp) {
-    return error(HttpStatus.NOT_FOUND,
-            new ErrorResponse("NOT_FOUND",
-                    "No publish history entry " + timestamp + " for " + name, name, null, null,
-                    null, null, null, null));
-  }
-
-  private @Nullable DslBuilderClient builderClient() {
-    if (builderClientProvider == null) {
-      return null;
-    }
-    return builderClientProvider.getIfAvailable();
-  }
-
-  private DslBuilderClient requireBuilderClient() {
-    var builder = builderClient();
-    if (builder == null) {
-      throw new IllegalStateException("DslBuilderClient is not available");
-    }
-    return builder;
-  }
-
   /**
    * Caller role for the T568 approval gate: the same shared {@link RoleResolver} the RBAC filter
    * uses (falling back to the default claim when no bean is available, e.g. in bare test contexts).
@@ -889,71 +673,12 @@ public class DslDraftHandler {
     return Optional.ofNullable(gitStatusResolverProvider.getIfAvailable());
   }
 
-  private Optional<String> resolveSourcePath(String name) {
-    if (sourcePathResolverProvider == null) {
-      return Optional.empty();
-    }
-    var resolver = sourcePathResolverProvider.getIfAvailable();
-    if (resolver == null) {
-      return Optional.empty();
-    }
-    return resolver.relativePath(name);
-  }
-
   private Path sourceDir() {
     String sourceDirProperty = dslProperties.sourceDir();
     if (sourceDirProperty == null || sourceDirProperty.isBlank()) {
       throw new IllegalStateException("cbs.dsl.source-dir is not configured");
     }
     return Path.of(sourceDirProperty);
-  }
-
-  private int parseLimit(ServerRequest request) {
-    try {
-      return request.param("limit")
-              .map(Integer::parseInt)
-              .map(v -> Math.max(1, Math.min(v, MAX_LOG_LIMIT)))
-              .orElse(Integer.parseInt(DEFAULT_LOG_LIMIT));
-    } catch (NumberFormatException e) {
-      return Integer.parseInt(DEFAULT_LOG_LIMIT);
-    }
-  }
-
-  private void audit(ServerRequest request, String action, String target, String outcome,
-          Object details) {
-    if (auditServiceProvider == null) {
-      return;
-    }
-    var auditService = auditServiceProvider.getIfAvailable();
-    if (auditService == null) {
-      return;
-    }
-    auditService.record(DslAuditService.currentActor(), action, target,
-            DslAuditService.correlationIdOf(request), outcome, details);
-  }
-
-  private void publishEventBestEffort(@NonNull DomainEvent event) {
-    var publisher = eventPublisherProvider == null
-            ? null
-            : eventPublisherProvider.getIfAvailable();
-    if (publisher == null) {
-      return;
-    }
-    try {
-      publisher.publish(event);
-    } catch (RuntimeException e) {
-      log.warn("[DSL events] best-effort publish of {} for aggregate {} failed: {}",
-              event.eventType(), event.aggregateId(), e.getMessage());
-    }
-  }
-
-  private @Nullable String correlationIdOf(@NonNull ServerRequest request) {
-    try {
-      return CorrelationId.validated(
-              request.headers().firstHeader(StarterConstants.CORRELATION_ID_HEADER));
-    } catch (IllegalArgumentException e) {
-      return null;
-    }
   }
 
   private void recordDiagnostics(CompileDiagnosticSource source, String definition,
@@ -1036,54 +761,4 @@ public class DslDraftHandler {
       return new ReloadOutcome(false, e.getMessage(), null);
     }
   }
-
-  private sealed interface PathResult {
-
-    Path path();
-
-    default boolean isError() {
-      return false;
-    }
-
-    default ServerResponse response() {
-      throw new IllegalStateException("not an error result");
-    }
-
-    record Ok(Path path) implements PathResult {
-    }
-
-    record Err(ServerResponse response) implements PathResult {
-
-      @Override
-      public Path path() {
-        throw new IllegalStateException("not a path");
-      }
-
-      @Override
-      public boolean isError() {
-        return true;
-      }
-    }
-  }
-
-  private PathResult ensureConfigured(String name) {
-    var sourceDirProperty = dslProperties.sourceDir();
-    if (sourceDirProperty == null || sourceDirProperty.isBlank()) {
-      return new PathResult.Err(error(HttpStatus.CONFLICT,
-              new ErrorResponse("NOT_CONFIGURED", "cbs.dsl.source-dir is not configured", name,
-                      null, null, null, null, null, null)));
-    }
-    Path dir = Path.of(sourceDirProperty);
-    if (!Files.isDirectory(dir)) {
-      return new PathResult.Err(error(HttpStatus.CONFLICT,
-              new ErrorResponse("NOT_FOUND", "Source directory does not exist: " + dir, name, null,
-                      null, null, null, null, null)));
-    }
-    return new PathResult.Ok(dir);
-  }
-
-  private static ServerResponse error(HttpStatus status, ErrorResponse body) {
-    return ServerResponse.status(status).body(body);
-  }
-
 }
