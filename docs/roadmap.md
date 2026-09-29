@@ -300,7 +300,7 @@ Candidate post-Epic-7 directions. Each is sketched only at a high level; no fake
    lifecycle, and diagnostics recipes, backed by verified curl examples and pinned to the live API
    shapes.
 
-5. **Manifest-driven everything.** Finish migrating the remaining hardcoded RBAC route rules and
+5. **Manifest-driven everything.** ~~Finish migrating the remaining hardcoded RBAC route rules~~ (T728) and
    ad-hoc audit calls into manifest pieces, then enable object-level enforcement by default.
 
 ---

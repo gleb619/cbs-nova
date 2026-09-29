@@ -17,7 +17,8 @@ public record Piece(
         List<PostCheck> postCheck,
         String failMode,
         ObjectAllow allow,
-        ObjectDeny deny) {
+        ObjectDeny deny,
+        List<String> roles) {
 
   @Builder
   @RequiredArgsConstructor
@@ -30,11 +31,12 @@ public record Piece(
     private final String failMode;
     private final ObjectAllow allow;
     private final ObjectDeny deny;
+    private final List<String> roles;
   }
 
   public Piece {
     ConstructorArgs args = new ConstructorArgs(id, target, preCheck, postCheck, failMode, allow,
-            deny);
+            deny, roles);
     id = Objects.requireNonNull(args.id, "id required");
     target = Objects.requireNonNull(args.target, "target required");
     preCheck = args.preCheck == null ? List.of() : List.copyOf(args.preCheck);
@@ -42,6 +44,7 @@ public record Piece(
     failMode = args.failMode == null ? "deny" : args.failMode;
     allow = args.allow == null ? new ObjectAllow(null, null, null) : args.allow;
     deny = args.deny == null ? new ObjectDeny(null, null, null) : args.deny;
+    roles = args.roles == null ? List.of() : List.copyOf(args.roles);
   }
 
   public Piece(
@@ -50,6 +53,17 @@ public record Piece(
           List<PreCheck> preCheck,
           List<PostCheck> postCheck,
           String failMode) {
-    this(id, target, preCheck, postCheck, failMode, null, null);
+    this(id, target, preCheck, postCheck, failMode, null, null, List.of());
+  }
+
+  public Piece(
+          String id,
+          Target target,
+          List<PreCheck> preCheck,
+          List<PostCheck> postCheck,
+          String failMode,
+          ObjectAllow allow,
+          ObjectDeny deny) {
+    this(id, target, preCheck, postCheck, failMode, allow, deny, List.of());
   }
 }

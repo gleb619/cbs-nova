@@ -2,14 +2,17 @@ package cbs.nova.starter.security;
 
 import cbs.nova.starter.config.RbacFilterConfiguration;
 import cbs.nova.starter.core.StarterConstants;
+import cbs.nova.starter.model.Piece;
 import cbs.nova.dsl.model.ErrorResponse;
+import cbs.nova.starter.service.PieceManifestService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.List;
+import java.util.Comparator;
 import java.util.Locale;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpMethod;
@@ -31,8 +34,9 @@ import tools.jackson.databind.ObjectMapper;
  * <p>
  * On every {@code /api/**} request the filter:
  * <ol>
- * <li>Computes the {@link Role} required for {@code (path, method)} using
- * {@link #requiredRole}.</li>
+ * <li>Computes the {@link Role} required for {@code (path, method)} by looking up the first
+ * matching API piece in the loaded manifest and taking the lowest-ranked role from its
+ * {@code roles} list.</li>
  * <li>Resolves the caller's role via {@link RoleResolver}.</li>
  * <li>If the caller's role satisfies the required role, the request is forwarded to the chain.</li>
  * <li>Otherwise the filter writes a 403 response with an {@link ErrorResponse} body
@@ -41,50 +45,17 @@ import tools.jackson.databind.ObjectMapper;
  * </ol>
  *
  * <p>
- * Fail-closed: when an {@code /api/**} mutating route does not match any rule the filter requires
- * {@link Role#OPERATOR} and emits a WARN log so the missing rule can be diagnosed. Reads always
- * fall back to {@link Role#VIEWER}.
+ * Fail-closed: when an {@code /api/**} mutating route does not match any manifest piece (or the
+ * matched piece has no {@code roles}) the filter requires {@link Role#OPERATOR} and emits a WARN
+ * log so the missing rule can be diagnosed. Reads always fall back to {@link Role#VIEWER}.
  */
 @Slf4j
 @RequiredArgsConstructor
 public final class RbacAuthorizationFilter extends OncePerRequestFilter {
 
-  private static final List<RouteRule> RULES = List.of(
-          // --- RUNNER: run / preview / explain / cancel / signals ---
-          new RouteRule(HttpMethod.POST, "/api/dsl/signals/**", Role.RUNNER),
-          new RouteRule(HttpMethod.POST, "/api/dsl/preview/**", Role.RUNNER),
-          new RouteRule(HttpMethod.POST, "/api/dsl/run/**", Role.RUNNER),
-          new RouteRule(HttpMethod.POST, "/api/dsl/explain/**", Role.RUNNER),
-          new RouteRule(HttpMethod.POST, "/api/executions/*/cancel", Role.RUNNER),
-          // --- AUTHOR: draft writes / publish / reload / file staging / bundle
-          // import ---
-          new RouteRule(HttpMethod.POST, "/api/dsl/reload", Role.AUTHOR),
-          new RouteRule(HttpMethod.POST, "/api/dsl/manifest/reload", Role.AUTHOR),
-          new RouteRule(HttpMethod.POST, "/api/dsl/drafts/*/save", Role.AUTHOR),
-          new RouteRule(HttpMethod.POST, "/api/dsl/drafts/*/publish", Role.AUTHOR),
-          new RouteRule(HttpMethod.POST, "/api/dsl/drafts/*/history/*/restore", Role.AUTHOR),
-          new RouteRule(HttpMethod.DELETE, "/api/dsl/drafts/*", Role.AUTHOR),
-          // --- AUTHOR: change-request approval gate (T568) ---
-          new RouteRule(HttpMethod.POST, "/api/dsl/drafts/*/change-request", Role.AUTHOR),
-          new RouteRule(HttpMethod.GET, "/api/dsl/change-requests", Role.VIEWER),
-          new RouteRule(HttpMethod.POST, "/api/dsl/change-requests/*/approve", Role.AUTHOR),
-          new RouteRule(HttpMethod.POST, "/api/dsl/change-requests/*/reject", Role.AUTHOR),
-          new RouteRule(HttpMethod.POST, "/api/dsl/files/**", Role.AUTHOR),
-          new RouteRule(HttpMethod.POST, "/api/dsl/definitions/import", Role.AUTHOR),
-          // --- OPERATOR: environment promotion (T569) ---
-          new RouteRule(HttpMethod.POST, "/api/dsl/promote", Role.OPERATOR),
-          new RouteRule(HttpMethod.POST, "/api/dsl/promote/**", Role.OPERATOR),
-          // --- OPERATOR: schedule CRUD ---
-          new RouteRule(HttpMethod.POST, "/api/dsl/schedules", Role.OPERATOR),
-          new RouteRule(HttpMethod.DELETE, "/api/dsl/schedules/*", Role.OPERATOR),
-          new RouteRule(HttpMethod.POST, "/api/dsl/schedules/*/pause", Role.OPERATOR),
-          new RouteRule(HttpMethod.POST, "/api/dsl/schedules/*/resume", Role.OPERATOR),
-          // --- OPERATOR: rotatable API-key admin surface (T410) ---
-          new RouteRule(HttpMethod.POST, "/api/dsl/auth/keys", Role.OPERATOR),
-          new RouteRule(HttpMethod.DELETE, "/api/dsl/auth/keys/*", Role.OPERATOR));
-
   private final RoleResolver roleResolver;
   private final ObjectMapper objectMapper;
+  private final PieceManifestService manifestService;
   private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
   @Override
@@ -120,10 +91,18 @@ public final class RbacAuthorizationFilter extends OncePerRequestFilter {
             ? ""
             : request.getMethod().toUpperCase(Locale.ROOT);
     String path = request.getRequestURI();
-    for (RouteRule rule : RULES) {
-      if (rule.matches(method, path, pathMatcher)) {
-        return rule.required();
+    Optional<Piece> matched = manifestService.findByRoute(method, path);
+    if (matched.isPresent()) {
+      Piece piece = matched.get();
+      if (!piece.roles().isEmpty()) {
+        return piece.roles().stream()
+                .map(r -> Role.valueOf(r.toUpperCase(Locale.ROOT)))
+                .min(Comparator.comparingInt(Role::rank))
+                .orElseThrow(() -> new IllegalStateException(
+                        "piece '" + piece.id() + "' has empty roles after validation"));
       }
+      log.warn("manifest piece '{}' matches {} {} but has no roles — defaulting to strict",
+              piece.id(), method, path);
     }
     if (HttpMethod.GET.matches(method) || HttpMethod.HEAD.matches(method)
             || HttpMethod.OPTIONS.matches(method)) {
@@ -132,12 +111,5 @@ public final class RbacAuthorizationFilter extends OncePerRequestFilter {
     log.warn("no RBAC rule for {} {} — defaulting to OPERATOR (strict) — add a rule explicitly",
             method, path);
     return Role.OPERATOR;
-  }
-
-  private record RouteRule(HttpMethod method, String pattern, Role required) {
-
-    boolean matches(String methodUpper, String path, AntPathMatcher matcher) {
-      return method.name().equals(methodUpper) && matcher.match(pattern, path);
-    }
   }
 }

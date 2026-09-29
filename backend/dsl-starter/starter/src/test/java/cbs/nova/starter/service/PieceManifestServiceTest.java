@@ -41,9 +41,14 @@ class PieceManifestServiceTest {
     assertThat(reload.get().failMode()).isEqualTo("deny");
 
     List<Piece> apiPieces = service.byTarget(new Target.ApiTarget("POST /api/dsl/reload"));
-    assertThat(apiPieces).hasSize(5).extracting(Piece::id)
-            .containsExactlyInAnyOrder("dsl-reload", "execution-cancel", "vhs-tape-delete",
-                    "vhs-tape-replay", "dsl-signal-send");
+    assertThat(apiPieces).hasSize(26).extracting(Piece::id)
+            .containsExactlyInAnyOrder("dsl-signal-send", "dsl-preview", "dsl-run", "dsl-explain",
+                    "execution-cancel", "dsl-reload", "dsl-manifest-reload", "draft-save",
+                    "draft-publish", "draft-history-restore", "draft-delete",
+                    "draft-change-request", "change-request-list", "change-request-approve",
+                    "change-request-reject", "file-write", "definition-import", "dsl-promote",
+                    "schedule-create", "schedule-delete", "schedule-pause", "schedule-resume",
+                    "api-key-create", "api-key-revoke", "vhs-tape-delete", "vhs-tape-replay");
 
     assertThat(service.findByRoute("POST", "/api/dsl/reload")).isPresent()
             .hasValueSatisfying(p -> assertThat(p.id()).isEqualTo("dsl-reload"));
@@ -85,6 +90,7 @@ class PieceManifestServiceTest {
                 target:
                   type: api
                   route: POST /api/x
+                roles: [author]
                 preCheck:
                   - type: wizardry
                 postCheck: []
@@ -104,6 +110,7 @@ class PieceManifestServiceTest {
                 target:
                   type: api
                   route: POST /api/x
+                roles: [author]
                 preCheck: []
                 postCheck:
                   - type: spell
@@ -123,6 +130,7 @@ class PieceManifestServiceTest {
                 target:
                   type: api
                   route: POST /api/a
+                roles: [author]
                 preCheck: []
                 postCheck: []
                 failMode: deny
@@ -130,6 +138,7 @@ class PieceManifestServiceTest {
                 target:
                   type: api
                   route: POST /api/b
+                roles: [author]
                 preCheck: []
                 postCheck: []
                 failMode: deny
@@ -162,6 +171,7 @@ class PieceManifestServiceTest {
                 target:
                   type: api
                   route: POST /api/keep
+                roles: [author]
                 preCheck: []
                 postCheck: []
                 failMode: deny
@@ -175,6 +185,7 @@ class PieceManifestServiceTest {
                 target:
                   type: api
                   route: POST /api/bad
+                roles: [author]
                 preCheck:
                   - type: unknown-check
                 postCheck: []
@@ -194,6 +205,7 @@ class PieceManifestServiceTest {
                 target:
                   type: api
                   route: POST /api/first
+                roles: [author]
                 preCheck: []
                 postCheck: []
                 failMode: deny
@@ -206,6 +218,7 @@ class PieceManifestServiceTest {
                 target:
                   type: api
                   route: POST /api/second
+                roles: [author]
                 preCheck: []
                 postCheck: []
                 failMode: deny
@@ -233,6 +246,7 @@ class PieceManifestServiceTest {
                 target:
                   type: api
                   route: POST /api/stable
+                roles: [author]
                 preCheck: []
                 postCheck: []
                 failMode: deny
@@ -275,6 +289,7 @@ class PieceManifestServiceTest {
                   target:
                     type: api
                     route: POST /api/one
+                  roles: [author]
                   preCheck: []
                   postCheck: []
                   failMode: deny
@@ -282,6 +297,7 @@ class PieceManifestServiceTest {
                   target:
                     type: api
                     route: POST /api/two
+                  roles: [author]
                   preCheck: []
                   postCheck: []
                   failMode: deny
@@ -307,6 +323,7 @@ class PieceManifestServiceTest {
                 target:
                   type: api
                   route: POST /api/audited
+                roles: [author]
                 preCheck: []
                 postCheck: []
                 failMode: deny
@@ -337,6 +354,7 @@ class PieceManifestServiceTest {
                 target:
                   type: api
                   route: POST /api/good
+                roles: [author]
                 preCheck: []
                 postCheck: []
                 failMode: deny
@@ -353,6 +371,7 @@ class PieceManifestServiceTest {
                 target:
                   type: api
                   route: POST /api/bad
+                roles: [author]
                 preCheck:
                   - type: bad-check
                 postCheck: []
@@ -376,6 +395,7 @@ class PieceManifestServiceTest {
                 target:
                   type: api
                   route: POST /api/post-checked
+                roles: [author]
                 preCheck: []
                 postCheck:
                   - type: audit-write
@@ -401,6 +421,7 @@ class PieceManifestServiceTest {
                 target:
                   type: api
                   route: POST /api/post-checked
+                roles: [author]
                 preCheck: []
                 postCheck:
                   - type: notify
@@ -423,6 +444,7 @@ class PieceManifestServiceTest {
                 target:
                   type: api
                   route: POST /api/post-checked
+                roles: [author]
                 preCheck: []
                 postCheck: []
                 failMode: deny
@@ -458,6 +480,61 @@ class PieceManifestServiceTest {
 
     assertThat(response.statusCode().value()).isEqualTo(200);
     assertThat(registry.isBlocked("post-checked", "auth:alice")).isFalse();
+  }
+
+  @Test
+  void unknownRoleNameFailsFastWithPieceIdAndField() throws IOException {
+    Path file = writeManifest("""
+            pieces:
+              - id: bad-role
+                target:
+                  type: api
+                  route: POST /api/bad-role
+                roles: [wizard]
+                preCheck: []
+                postCheck: []
+                failMode: deny
+            """);
+    assertThatThrownBy(() -> service(file.toUri().toString()))
+            .isInstanceOf(PieceManifestValidationException.class)
+            .hasMessageContaining("bad-role")
+            .hasMessageContaining("roles")
+            .hasMessageContaining("unknown role 'wizard'");
+  }
+
+  @Test
+  void apiTargetMissingRolesFailsFastAtStartup() throws IOException {
+    Path file = writeManifest("""
+            pieces:
+              - id: no-role
+                target:
+                  type: api
+                  route: POST /api/no-role
+                preCheck: []
+                postCheck: []
+                failMode: deny
+            """);
+    assertThatThrownBy(() -> service(file.toUri().toString()))
+            .isInstanceOf(PieceManifestValidationException.class)
+            .hasMessageContaining("no-role")
+            .hasMessageContaining("roles")
+            .hasMessageContaining("api-target piece must declare roles");
+  }
+
+  @Test
+  void nonApiTargetMissingRolesIsAllowed() throws IOException {
+    Path file = writeManifest("""
+            pieces:
+              - id: button-piece
+                target:
+                  type: button
+                  uiKey: test-btn
+                preCheck: []
+                postCheck: []
+                failMode: deny
+            """);
+    var service = service(file.toUri().toString());
+    assertThat(service.find("button-piece")).isPresent();
   }
 
   private static PieceManifestService service(String path) {

@@ -1,8 +1,71 @@
 pieces:
+  # --- RUNNER: run / preview / explain / signals / execution cancel ---
+  - id: dsl-signal-send
+    target:
+      type: api
+      route: POST /api/dsl/signals/**
+    roles: [runner]
+    preCheck:
+      - type: role
+        anyOf: [runner, admin]
+      - type: rate-class
+        class: run-mutations
+    postCheck:
+      - type: audit-write
+        action: SIGNAL_SENT
+    failMode: deny
+
+  - id: dsl-preview
+    target:
+      type: api
+      route: POST /api/dsl/preview/**
+    roles: [runner]
+    preCheck:
+      - type: role
+        anyOf: [runner, admin]
+    failMode: deny
+
+  - id: dsl-run
+    target:
+      type: api
+      route: POST /api/dsl/run/**
+    roles: [runner]
+    preCheck:
+      - type: role
+        anyOf: [runner, admin]
+    failMode: deny
+
+  - id: dsl-explain
+    target:
+      type: api
+      route: POST /api/dsl/explain/**
+    roles: [runner]
+    preCheck:
+      - type: role
+        anyOf: [runner, admin]
+    failMode: deny
+
+  - id: execution-cancel
+    target:
+      type: api
+      route: POST /api/executions/*/cancel
+    roles: [runner]
+    preCheck:
+      - type: role
+        anyOf: [runner, admin]
+      - type: rate-class
+        class: run-mutations
+    postCheck:
+      - type: audit-write
+        action: RUN_CANCEL
+    failMode: deny
+
+  # --- AUTHOR: reload / manifest reload / draft authoring / change requests / file writes / import ---
   - id: dsl-reload
     target:
       type: api
       route: POST /api/dsl/reload
+    roles: [author]
     preCheck:
       - type: role
         anyOf: [author, operator, admin]
@@ -15,20 +78,219 @@ pieces:
         channel: workbench
     failMode: deny
 
-  - id: execution-cancel
+  - id: dsl-manifest-reload
     target:
       type: api
-      route: POST /api/executions/*/cancel
+      route: POST /api/dsl/manifest/reload
+    roles: [author]
     preCheck:
       - type: role
-        anyOf: [runner, admin]
+        anyOf: [author, operator, admin]
+    failMode: deny
+
+  - id: draft-save
+    target:
+      type: api
+      route: POST /api/dsl/drafts/*/save
+    roles: [author]
+    preCheck:
+      - type: role
+        anyOf: [author, operator, admin]
+    failMode: deny
+
+  - id: draft-publish
+    target:
+      type: api
+      route: POST /api/dsl/drafts/*/publish
+    roles: [author]
+    preCheck:
+      - type: role
+        anyOf: [author, operator, admin]
+    failMode: deny
+
+  - id: draft-history-restore
+    target:
+      type: api
+      route: POST /api/dsl/drafts/*/history/*/restore
+    roles: [author]
+    preCheck:
+      - type: role
+        anyOf: [author, operator, admin]
+    failMode: deny
+
+  - id: draft-delete
+    target:
+      type: api
+      route: DELETE /api/dsl/drafts/*
+    roles: [author]
+    preCheck:
+      - type: role
+        anyOf: [author, operator, admin]
+    failMode: deny
+
+  - id: draft-change-request
+    target:
+      type: api
+      route: POST /api/dsl/drafts/*/change-request
+    roles: [author]
+    preCheck:
+      - type: role
+        anyOf: [author, operator, admin]
+    failMode: deny
+
+  - id: change-request-list
+    target:
+      type: api
+      route: GET /api/dsl/change-requests
+    roles: [viewer]
+    preCheck:
+      - type: role
+        anyOf: [viewer, admin]
+    failMode: deny
+
+  - id: change-request-approve
+    target:
+      type: api
+      route: POST /api/dsl/change-requests/*/approve
+    roles: [author]
+    preCheck:
+      - type: role
+        anyOf: [author, operator, admin]
+    failMode: deny
+
+  - id: change-request-reject
+    target:
+      type: api
+      route: POST /api/dsl/change-requests/*/reject
+    roles: [author]
+    preCheck:
+      - type: role
+        anyOf: [author, operator, admin]
+    failMode: deny
+
+  - id: file-write
+    target:
+      type: api
+      route: POST /api/dsl/files/**
+    roles: [author]
+    preCheck:
+      - type: role
+        anyOf: [author, operator, admin]
+    failMode: deny
+
+  - id: definition-import
+    target:
+      type: api
+      route: POST /api/dsl/definitions/import
+    roles: [author]
+    preCheck:
+      - type: role
+        anyOf: [author, operator, admin]
+    failMode: deny
+
+  # --- OPERATOR: environment promotion / schedule admin / API-key admin ---
+  - id: dsl-promote
+    target:
+      type: api
+      route: POST /api/dsl/promote
+    roles: [operator]
+    preCheck:
+      - type: role
+        anyOf: [operator, admin]
+    failMode: deny
+
+  - id: schedule-create
+    target:
+      type: api
+      route: POST /api/dsl/schedules
+    roles: [operator]
+    preCheck:
+      - type: role
+        anyOf: [operator, admin]
+    failMode: deny
+
+  - id: schedule-delete
+    target:
+      type: api
+      route: DELETE /api/dsl/schedules/*
+    roles: [operator]
+    preCheck:
+      - type: role
+        anyOf: [operator, admin]
+    failMode: deny
+
+  - id: schedule-pause
+    target:
+      type: api
+      route: POST /api/dsl/schedules/*/pause
+    roles: [operator]
+    preCheck:
+      - type: role
+        anyOf: [operator, admin]
+    failMode: deny
+
+  - id: schedule-resume
+    target:
+      type: api
+      route: POST /api/dsl/schedules/*/resume
+    roles: [operator]
+    preCheck:
+      - type: role
+        anyOf: [operator, admin]
+    failMode: deny
+
+  - id: api-key-create
+    target:
+      type: api
+      route: POST /api/dsl/auth/keys
+    roles: [operator]
+    preCheck:
+      - type: role
+        anyOf: [operator, admin]
+    failMode: deny
+
+  - id: api-key-revoke
+    target:
+      type: api
+      route: DELETE /api/dsl/auth/keys/*
+    roles: [operator]
+    preCheck:
+      - type: role
+        anyOf: [operator, admin]
+    failMode: deny
+
+  # --- VHS tape management (separate RBAC profile) ---
+  - id: vhs-tape-delete
+    target:
+      type: api
+      route: DELETE /api/v1/vhs/tapes/{runId}
+    roles: [operator]
+    preCheck:
+      - type: role
+        anyOf: [operator, admin]
+      - type: rate-class
+        class: control-plane
+    postCheck:
+      - type: audit-write
+        action: VHS_TAPE_DELETE
+    failMode: deny
+
+  - id: vhs-tape-replay
+    target:
+      type: api
+      route: POST /api/v1/vhs/tapes/{runId}/replay
+    roles: [operator]
+    preCheck:
+      - type: role
+        anyOf: [operator, admin]
       - type: rate-class
         class: run-mutations
     postCheck:
       - type: audit-write
-        action: RUN_CANCEL
+        action: VHS_TAPE_REPLAY
     failMode: deny
 
+  # --- Frontend workbench buttons ---
   - id: workbench-publish
     target:
       type: button
@@ -52,6 +314,7 @@ pieces:
         anyOf: [author, operator, admin]
     failMode: deny
 
+  # --- Object-level capability enforcement examples ---
   - id: preview-sandbox-helper
     target:
       type: object
@@ -64,44 +327,3 @@ pieces:
       - type: invariant-assert
         description: preview helper returned only sandbox-safe types
     failMode: audit-only
-
-  - id: vhs-tape-delete
-    target:
-      type: api
-      route: DELETE /api/v1/vhs/tapes/{runId}
-    preCheck:
-      - type: role
-        anyOf: [operator, admin]
-      - type: rate-class
-        class: control-plane
-    postCheck:
-      - type: audit-write
-        action: VHS_TAPE_DELETE
-    failMode: deny
-
-  - id: vhs-tape-replay
-    target:
-      type: api
-      route: POST /api/v1/vhs/tapes/{runId}/replay
-    preCheck:
-      - type: role
-        anyOf: [operator, admin]
-      - type: rate-class
-        class: run-mutations
-    postCheck:
-      - type: audit-write
-        action: VHS_TAPE_REPLAY
-    failMode: deny
-  - id: dsl-signal-send
-    target:
-      type: api
-      route: POST /api/dsl/signals/{runId}
-    preCheck:
-      - type: role
-        anyOf: [runner, admin]
-      - type: rate-class
-        class: run-mutations
-    postCheck:
-      - type: audit-write
-        action: SIGNAL_SENT
-    failMode: deny

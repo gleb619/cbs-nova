@@ -147,6 +147,8 @@ Spring beans. See [Runtime Engine](dsl/runtime.md#helper-and-spring-integration)
 The starter layers three independent, opt-in guards on the DSL REST surface. All three are off by default, so a plain starter behaves exactly like the historical anonymous implementation until an operator turns a knob.
 
 - **API-key filter** — `cbs.nova.starter.web.ApiKeyAuthFilter` is opt-in: `ApiKeyAuthFilterConfiguration` only registers the filter beans for `/api/*` when `cbs.dsl.auth.enabled=true`. When enabled and `cbs.dsl.auth.api-key` is a non-blank string, every request must carry the exact value in the `X-Api-Key` header; otherwise the filter returns `401 UNAUTHORIZED` with a JSON `ErrorResponse`. With `enabled=false` (the default) the filter beans are not created and `/api/*` is anonymous. To prevent the silent-disablement footgun — api-key configured but `enabled` left at its default — a startup WARN fires from `ApiKeyAuthMisconfigurationWarning` whenever `api-key` is non-blank while `enabled=false`.
+- **RBAC filter** — `cbs.nova.starter.security.RbacAuthorizationFilter` (registered by `RbacFilterConfiguration`) is opt-in for `/api/*` when `cbs.dsl.auth.rbac.enabled=true`. The required role for a request is resolved from the API-target piece in the loaded manifest (`PieceManifestService.findByRoute(method, path)`), taking the lowest-ranked role declared in `piece.roles`. Validation rejects unknown role names and requires every `api`-target piece to declare at least one role. Unmatched `GET`/`HEAD`/`OPTIONS` routes default to `Role.VIEWER`; unmatched mutating routes default to `Role.OPERATOR` (strict fail-closed) and log a WARN. Service-to-service API-key callers are mapped to `Role.ADMIN` by `RoleResolver`, so an API key satisfies every route.
+
 - **Rate limiting** — `cbs.security.ratelimit.*` (class `CbsSecurityRateLimitProperties`, filter `cbs.nova.starter.web.RateLimitFilter`) defaults to disabled. Setting `cbs.security.ratelimit.enabled=true` turns on an in-memory token-bucket limiter keyed by client IP (`X-Forwarded-For` first hop, falling back to remote address). Defaults are capacity `20` and refill `5.0` tokens per second. Only mutating routes are limited: `POST /api/dsl/run/**`, `POST /api/dsl/preview/**`, `POST /api/dsl/explain/**`, `POST /api/dsl/reload`, `POST /api/dsl/drafts/*/save`, `POST /api/dsl/drafts/*/publish`, `DELETE /api/dsl/drafts/*`, and `POST /api/executions/*/cancel`. The list is `RateLimitFilter.RULES` — Hierarchy (`POST /api/dsl/hierarchy/**`) is **not** currently limited. All `GET` routes and actuator paths are exempt. A rejected request receives `429 Too Many Requests` with a `Retry-After` header.
 - **OIDC / JWT resource-server** — `cbs.security.oidc.enabled` (class `CbsSecurityOidcProperties`, default `false`) switches from the permissive filter chain to a JWT resource-server. When enabled, the default `protectedPaths` (`/api/dsl/**` and `/api/executions/**`) require a valid `Authorization: Bearer <jwt>`; the default `permitAllPaths` (`/actuator/health/**`) stay anonymous, as do the springdoc/OpenAPI endpoints. The JWT decoder itself is bootstrapped by Spring Boot from `spring.security.oauth2.resourceserver.jwt.issuer-uri` (the compose stack points it at the Keycloak realm described in `app/compose/auth.yml`).
 - **httpCall SSRF guard** — the `httpCall` helper validates every outbound URL before a request is built (`cbs.nova.starter.security.OutboundUrlValidator`, config `cbs.dsl.helper.http-call`): a scheme allowlist (`allowed-schemes`, default `["https", "http"]`), a default-on private-address block (`block-private-addresses`, default `true` — rejects loopback / link-local / site-local / any-local / multicast targets such as cloud-metadata endpoints), and an optional host allowlist (`allowed-hosts`, exact or `*.suffix`). The default-on address block is a **behaviour change**: DSLs calling internal hosts now fail until the flag is relaxed or the host is allowlisted. Redirect-following (`NORMAL`/`ALWAYS`) re-validates the final URI post-hoc but cannot prevent a followed redirect to a blocked address (TOCTOU) — use `NEVER` for untrusted targets. Details: [`helpers.md`](dsl/helpers.md#outbound-url-validation-ssrf-guard).
@@ -159,6 +161,8 @@ Request filtering order (lower numeric order runs first):
 
 ```
 API-key filter (Ordered.HIGHEST_PRECEDENCE + 1)
+    ↓
+RBAC filter (Ordered.HIGHEST_PRECEDENCE + 2)
     ↓
 Rate-limit filter (Ordered.HIGHEST_PRECEDENCE + 2)
     ↓
@@ -332,13 +336,13 @@ When the schedule fires, Temporal starts the workflow on the descriptor's task q
 The schedule surface sits under `/api/*`, so:
 
 - **API-key filter** (`ApiKeyAuthFilterConfiguration` → `/api/*`) gates the route when `cbs.dsl.auth.enabled=true`; missing/invalid `X-Api-Key` → `401 UNAUTHORIZED`. With `enabled=false` (default) the filter is not registered and the route is anonymous.
-- **RBAC filter** (`RbacFilterConfiguration` → `/api/*`) gates the route when `cbs.dsl.auth.rbac.enabled=true`. From `RbacAuthorizationFilter.RULES`:
-  - `POST /api/dsl/schedules` → requires `Role.OPERATOR`.
-  - `DELETE /api/dsl/schedules/*` → requires `Role.OPERATOR`.
-  - `POST /api/dsl/schedules/*/pause` → requires `Role.OPERATOR`.
-  - `POST /api/dsl/schedules/*/resume` → requires `Role.OPERATOR`.
-  - `GET /api/dsl/schedules` → defaults to `Role.VIEWER` (no explicit rule; reads always default to `VIEWER` per `requiredRole`).
-  - Service-to-service API-key callers are mapped to `Role.ADMIN` by `RoleResolver`, so an API key satisfies every schedule route regardless of the explicit rule.
+- **RBAC filter** (`RbacFilterConfiguration` → `/api/*`) gates the route when `cbs.dsl.auth.rbac.enabled=true`. The schedule pieces in `app/dsl/src/main/resources/piece-manifest.yaml` declare the required roles:
+  - `schedule-create` (`POST /api/dsl/schedules`) → `Role.OPERATOR`.
+  - `schedule-delete` (`DELETE /api/dsl/schedules/*`) → `Role.OPERATOR`.
+  - `schedule-pause` (`POST /api/dsl/schedules/*/pause`) → `Role.OPERATOR`.
+  - `schedule-resume` (`POST /api/dsl/schedules/*/resume`) → `Role.OPERATOR`.
+  - `GET /api/dsl/schedules` → defaults to `Role.VIEWER` (no matching API piece; reads always default to `VIEWER` per `requiredRole`).
+  - Service-to-service API-key callers are mapped to `Role.ADMIN` by `RoleResolver`, so an API key satisfies every schedule route regardless of the manifest role.
 - **OIDC / JWT resource-server** (`cbs.security.oidc.enabled=true`) requires a valid JWT on the same `/api/dsl/**` path; RBAC then resolves the role from the configured claim (default `roles`, with `scope` / `scp` fallback for OIDC-standard conventions).
 
 #### Temporal ScheduleSpec cron format
@@ -463,7 +467,7 @@ Traced from [`DslSignalService`](../backend/dsl-starter/starter/src/main/java/cb
 The signal/query surface sits under `/api/*`, so:
 
 - **API-key filter** (`ApiKeyAuthFilterConfiguration` → `/api/*`) gates the route when `cbs.dsl.auth.enabled=true`; missing/invalid `X-Api-Key` → `401 UNAUTHORIZED`. With `enabled=false` (default) the filter is not registered and the routes are anonymous.
-- **RBAC filter** (`RbacAuthorizationFilter` → `/api/*`) — the explicit rule for signals is `POST /api/dsl/signals/**` → `Role.RUNNER` ([`RbacAuthorizationFilter.java:52`](../backend/dsl-starter/starter/src/main/java/cbs/nova/starter/security/RbacAuthorizationFilter.java)). The query route `GET /api/dsl/queries/**` has no explicit rule and falls through to the documented read-default of `Role.VIEWER` ([`RbacAuthorizationFilter.java:131`](../backend/dsl-starter/starter/src/main/java/cbs/nova/starter/security/RbacAuthorizationFilter.java)). Service-to-service API-key callers are mapped to `Role.ADMIN` by `RoleResolver`, so an API key satisfies the send route and the query route regardless.
+- **RBAC filter** (`RbacAuthorizationFilter` → `/api/*`) — the signal piece (`dsl-signal-send`, `POST /api/dsl/signals/**`) declares `roles: [runner]`, so the filter requires `Role.RUNNER`. The query route `GET /api/dsl/queries/**` has no matching API piece and falls through to the documented read-default of `Role.VIEWER`. Service-to-service API-key callers are mapped to `Role.ADMIN` by `RoleResolver`, so an API key satisfies the send route and the query route regardless of the manifest role.
 - **OIDC / JWT resource-server** (`cbs.security.oidc.enabled=true`) requires a valid JWT on the same `/api/dsl/**` path; RBAC then resolves the role from the configured claim (default `roles`).
 
 The signal route is **not** in `RateLimitFilter.RULES` — send is not currently rate-limited. The query route is a read, so all rate-limit exceptions cover it.

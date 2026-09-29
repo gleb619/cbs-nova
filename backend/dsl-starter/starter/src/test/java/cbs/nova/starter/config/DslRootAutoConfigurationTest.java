@@ -56,7 +56,8 @@ class DslRootAutoConfigurationTest {
                       ManifestObjectGuardConfiguration.class.getName(),
                       VhsConfiguration.class.getName(),
                       "cbs.nova.starter.config.router.NotificationRouterConfiguration",
-                      "cbs.nova.starter.config.router.ChangeRequestRouterConfiguration");
+                      "cbs.nova.starter.config.router.ChangeRequestRouterConfiguration",
+                      RbacFilterConfiguration.class.getName());
     }
   }
 

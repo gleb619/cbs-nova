@@ -333,6 +333,7 @@ public class PieceManifestService {
 
     List<PreCheck> preChecks = parsePreChecks(raw.get("preCheck"), id);
     List<PostCheck> postChecks = parsePostChecks(raw.get("postCheck"), id);
+    List<String> roles = parseRoles(raw.get("roles"), id, target);
 
     String failMode = raw.get("failMode") instanceof String s ? s : "deny";
     if (!VALID_FAIL_MODES.contains(failMode)) {
@@ -343,7 +344,35 @@ public class PieceManifestService {
     ObjectAllow allow = parseObjectAllow(raw.get("allow"), id);
     ObjectDeny deny = parseObjectDeny(raw.get("deny"), id);
 
-    return new Piece(id, target, preChecks, postChecks, failMode, allow, deny);
+    return new Piece(id, target, preChecks, postChecks, failMode, allow, deny, roles);
+  }
+
+  @SuppressWarnings("unchecked")
+  private List<String> parseRoles(Object raw, String pieceId, Target target) {
+    if (raw == null) {
+      if (target instanceof Target.ApiTarget) {
+        throw entryError(pieceId, "roles", "api-target piece must declare roles");
+      }
+      return List.of();
+    }
+    if (!(raw instanceof List<?> list)) {
+      throw entryError(pieceId, "roles", "roles must be an array of role names");
+    }
+    List<String> roles = new ArrayList<>();
+    for (Object role : list) {
+      if (!(role instanceof String rs)) {
+        throw entryError(pieceId, "roles", "role names must be strings");
+      }
+      String lower = rs.toLowerCase(Locale.ROOT);
+      if (!VALID_ROLES.contains(lower)) {
+        throw entryError(pieceId, "roles", "unknown role '" + rs + "'");
+      }
+      roles.add(lower);
+    }
+    if (target instanceof Target.ApiTarget && roles.isEmpty()) {
+      throw entryError(pieceId, "roles", "api-target piece must declare at least one role");
+    }
+    return List.copyOf(roles);
   }
 
   private Target parseTarget(Map<String, Object> raw, String pieceId) {

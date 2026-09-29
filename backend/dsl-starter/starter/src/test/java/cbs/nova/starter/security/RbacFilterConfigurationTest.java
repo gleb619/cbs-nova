@@ -4,6 +4,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.starter.config.RbacFilterConfiguration;
 import cbs.nova.starter.config.properties.DslProperties;
+import cbs.nova.starter.config.properties.CbsDslManifestProperties;
+import cbs.nova.starter.service.DslAuditService;
+import cbs.nova.starter.service.PieceCheckBlockRegistry;
+import cbs.nova.starter.service.PieceManifestService;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.core.io.DefaultResourceLoader;
+import org.springframework.core.io.ResourceLoader;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
@@ -88,12 +95,27 @@ class RbacFilterConfigurationTest {
   }
 
   @Configuration
-  @EnableConfigurationProperties(DslProperties.class)
+  @EnableConfigurationProperties({DslProperties.class, CbsDslManifestProperties.class})
   static class DslPropertiesConfiguration {
 
     @Bean
     ObjectMapper objectMapper() {
       return JsonMapper.builder().build();
     }
+    @Bean
+    ResourceLoader resourceLoader() {
+      return new DefaultResourceLoader();
+    }
+
+    @Bean
+    PieceManifestService pieceManifestService(
+            CbsDslManifestProperties properties,
+            ResourceLoader resourceLoader,
+            ObjectProvider<DslAuditService> auditServiceProvider,
+            ObjectProvider<PieceCheckBlockRegistry> blockRegistryProvider) {
+      return new PieceManifestService(properties, resourceLoader, auditServiceProvider,
+              blockRegistryProvider);
+    }
+
   }
 }

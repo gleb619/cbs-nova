@@ -136,7 +136,7 @@ class PieceManifestCoverageTest {
           "POST /api/dsl/drafts/rebase");
 
   private static final Pattern ROUTE_INVOCATION = Pattern.compile(
-          "\\.(?:POST|PUT|DELETE)\\(\\s*\"([^\"]+)\"");
+          "\\.(?:GET|POST|PUT|DELETE)\\(\\s*\"([^\"]+)\"");
   private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
 
   @Test
@@ -194,13 +194,11 @@ class PieceManifestCoverageTest {
         while (matcher.find()) {
           String path = matcher.group(1);
           int before = matcher.start();
-          // Recover the method token from the matched invocation (.POST / .PUT / .DELETE).
+          // Recover the method token from the matched invocation (.GET / .POST / .PUT / .DELETE).
           int dot = source.lastIndexOf('.', before);
           int paren = source.indexOf('(', dot);
           String method = source.substring(dot + 1, paren).toUpperCase(Locale.ROOT);
-          if (Set.of("POST", "PUT", "DELETE").contains(method)) {
-            routes.add(method + " " + path);
-          }
+          routes.add(method + " " + path);
         }
       }
     }
@@ -234,7 +232,13 @@ class PieceManifestCoverageTest {
     List<Route> manifest = manifestRoutes.stream().map(Route::parse).toList();
     List<String> missing = new ArrayList<>();
     Map<String, String> diagnoses = new LinkedHashMap<>();
-    for (String routerRoute : routerRoutes) {
+    List<String> mutatingRouterRoutes = routerRoutes.stream()
+            .filter(r -> {
+              String method = r.substring(0, r.indexOf(' '));
+              return Set.of("POST", "PUT", "DELETE").contains(method);
+            })
+            .toList();
+    for (String routerRoute : mutatingRouterRoutes) {
       if (ALLOWED_UNGUARDED.contains(routerRoute)) {
         continue;
       }

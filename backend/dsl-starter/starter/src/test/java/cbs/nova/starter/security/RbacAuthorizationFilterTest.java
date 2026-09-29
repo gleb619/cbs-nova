@@ -22,6 +22,13 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
 
+import cbs.nova.starter.config.properties.CbsDslManifestProperties;
+import cbs.nova.starter.service.PieceManifestService;
+import java.nio.file.Path;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.core.io.DefaultResourceLoader;
+import org.springframework.core.io.ResourceLoader;
+import cbs.nova.starter.service.DslAuditService;
 /**
  * Full (route, method) x role matrix for {@link RbacAuthorizationFilter}.
  *
@@ -42,7 +49,7 @@ class RbacAuthorizationFilterTest {
   void setUp() {
     objectMapper = JsonMapper.builder().build();
     filter = new RbacAuthorizationFilter(new RoleResolver(StarterConstants.DEFAULT_CLAIM_NAME),
-            objectMapper);
+            objectMapper, manifestService());
   }
 
   @AfterEach
@@ -287,6 +294,32 @@ class RbacAuthorizationFilterTest {
   }
 
   // --- helpers ----------------------------------------------------------------
+
+  private static PieceManifestService manifestService() {
+    Path repo = Path.of("").toAbsolutePath().normalize().getParent().getParent().getParent();
+    String manifestUri = repo.resolve("app/dsl/src/main/resources/piece-manifest.yaml")
+            .toUri().toString();
+    CbsDslManifestProperties properties = new CbsDslManifestProperties(true, manifestUri, null,
+            null, null, null, null);
+    ResourceLoader resourceLoader = new DefaultResourceLoader();
+    ObjectProvider<DslAuditService> auditProvider = new ObjectProvider<>() {
+      @Override
+      public DslAuditService getIfAvailable() {
+        return null;
+      }
+
+      @Override
+      public DslAuditService getIfUnique() {
+        return null;
+      }
+
+      @Override
+      public DslAuditService getObject() {
+        throw new IllegalStateException("no DslAuditService in this test context");
+      }
+    };
+    return new PieceManifestService(properties, resourceLoader, auditProvider);
+  }
 
   private MockHttpServletResponse invoke(String method, String path) throws Exception {
     MockHttpServletRequest request = new MockHttpServletRequest(method, path);
