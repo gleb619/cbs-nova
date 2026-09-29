@@ -37,6 +37,11 @@ jobs:
       - name: Starter tests
         run: backend/dsl-platform/gradlew -p backend/dsl-starter :starter:test --no-daemon
 
+      # T703: dsl-examples is the showcase catalog (README points users at it) but had
+      # no CI coverage. Compiles all 36 example DSLs + runs the generated-artifact smoke test.
+      - name: DSL examples compile and smoke test
+        run: backend/dsl-platform/gradlew -p backend/dsl-starter :dsl-examples:test --no-daemon
+
       - name: Upload test results
         if: failure()
         uses: actions/upload-artifact@v4

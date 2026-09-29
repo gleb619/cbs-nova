@@ -20,6 +20,16 @@ dependencies {
   annotationProcessor libs.avaje.jsonb.generator
 
   dslCompiler libs.avaje.jsonb.generator
+
+  testImplementation libs.junit.jupiter
+  testImplementation libs.assertj
+  testRuntimeOnly libs.junit.platform.launcher
+}
+
+// T703: the smoke test asserts on the DSL compiler's generated sources, so the
+// generator must run before the test task, not just before compileJava.
+tasks.named('test') {
+  dependsOn 'compileDsl'
 }
 
 dslCompile {
