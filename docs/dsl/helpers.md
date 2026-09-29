@@ -18,6 +18,26 @@ Recipes are grouped by **what you are trying to do**, not by helper name.
 
 ---
 
+## Searching the helper catalog
+
+The machine-readable catalog (`GET /api/dsl/helpers`, and the unified
+`GET /api/dsl/objects/search`) accepts a `mode` query parameter that picks how the `query`
+text is matched against each entry's `name + description + inputType + outputType`. Modes are
+matched case-insensitively; an absent or unrecognized `mode` defaults to `exact`. The admin UI's
+helper catalog panel (`HelperCatalog.vue`) exposes the same three modes in a dropdown.
+
+| Mode | Semantics |
+|---|---|
+| `exact` (default) | Case-insensitive substring match. Fast and predictable — use it when you know (part of) the helper name, e.g. `sha256`, `formatDate`. |
+| `cosine` | Token-based cosine similarity over the entry text (camelCase boundaries are split into tokens, e.g. `formatDate` → `format date`). An entry matches when similarity ≥ **0.5**. Prefer it for multi-word, "what should I use" queries — `"hash payload"` ranks `sha256`/`hmacSha256Sign` even though the exact strings don't contain the query. |
+| `fuzzy` | Per-token Levenshtein edit distance: a query token matches a candidate token when the edit distance is within roughly a quarter of the token length (clamped to `1`–`3` edits). Prefer it for misspelled or approximate single-word lookups, e.g. `formateDate` still finds `formatDate`. It is the loosest mode — expect false positives on short tokens. |
+
+A blank `query` returns every entry regardless of `mode`. The `type` query parameter
+(`process`/`transaction`/`helper`/`function`) can additionally restrict which entity kinds are
+searched.
+
+---
+
 ## Identity & idempotency
 
 ### Generate a sortable, unique key

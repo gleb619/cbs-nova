@@ -200,7 +200,11 @@ The `usePreviewDiff` composable (the backing logic for `PreviewDiffView`) delega
 - a `hasActiveFilters` computed flag.
 
 The backend endpoint searches across processes, transactions, helpers, and functions and returns
-`{name, type, description, inputType, outputType}`.
+`{name, type, description, inputType, outputType}`. The search text is matched via the `mode`
+query parameter (`exact` substring by default; `cosine` token-similarity ≥ 0.5; `fuzzy`
+per-token Levenshtein within 1–3 edits) — `HelperCatalog.vue` exposes all three as a dropdown
+that defaults to `exact`. See [`dsl/helpers.md`](dsl/helpers.md) → *Searching the helper
+catalog* for mode semantics.
 
 `DslHelperSearchPanel` result rows are actionable (T400): click or `Enter` inserts a
 `ctx.runHelper("<name>", new <InputType>()).as(<OutputType>.class)` reference at the Monaco cursor
