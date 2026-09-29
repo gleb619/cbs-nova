@@ -125,3 +125,33 @@ groups:
         annotations:
           summary: "cbs-nova run-success SLO is burning its error budget slowly"
           description: "Over the last 6h and 30m, more than 6x the 28d error budget of the run-success SLO (target 99.0%, see docs/slo.md) is being burned — the budget would exhaust in ~5 days at this rate. Open a reliability ticket; no page."
+
+  # T714 — authoring-health alert group.
+  #
+  # Pre-check (T708 lesson: dsl_change_request, dsl_definition_tests, dsl_compile_diagnostics are
+  # JDBC/database tables in this codebase, not Micrometer metrics). Verified by grepping
+  # backend/dsl-starter/starter/src/main for Counter.builder/Timer.builder/Gauge.builder and
+  # meterRegistry.counter/timer/gauge registrations referencing compile/diagnostic/definition/test
+  # meter names: NONE exist. The only authoring-adjacent meters in scope are piece-related
+  # (dsl.piece.postcheck.total/failed, dsl.piece.object.denied) and none of them is a compile-
+  # diagnostics error-volume or definition-test failure rate.
+  #
+  # Therefore no alert exprs are emitted in this group — PromQL against non-existent series would
+  # be inert rules (always "no data") and worse than no rule, because a green board would mask
+  # the absence of real telemetry. The group is kept as the documented home for future authoring
+  # alerts once meters are introduced (T714 follow-up: register dsl.compile.diagnostics and
+  # dsl.definition.test counters in the compile pipeline / definition-test runner, then add
+  # alert exprs here under the conventions of cbs-nova-run-errors).
+  #
+  # Skip-by-design:
+  # - dsl_piece_object_denied (OBJECT_GUARD_DENIED_COUNTER = "dsl.piece.object.denied"):
+  #   ManifestObjectGuard ships default-off (cbs.dsl.manifest.object-enforcement.enabled=false,
+  #   see ManifestObjectGuardConfiguration javadoc). With the guard inert the counter never
+  #   increments — alerting would be permanently firing-or-noisy depending on how the rule
+  #   handles absent series. No rule until the flag is enabled by default (T549 follow-up).
+  # - change-request stall: dsl_change_request is a JDBC table with no `updated_at` or last-
+  #   activity timestamp exposed as a Micrometer gauge. Stuck-state semantics ("no transitions
+  #   in N minutes") need either a synthetic gauge or a custom collector; out of scope for
+  #   this rule file. Tracked separately.
+  - name: cbs-nova-authoring-health
+    rules: []
