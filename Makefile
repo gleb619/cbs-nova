@@ -143,7 +143,7 @@ typecheck: ## Typecheck the frontend packages
 	@cd frontend && pnpm typecheck
 
 .PHONY: lint
-lint: ## Run all lint/format checks (backend Spotless + frontend Biome + kanban check); non-zero exit on any failure
+lint: ## Run all lint/format checks (backend Spotless + frontend Biome + kanban + docs-links); non-zero exit on any failure
 	@python3 $(SCRIPT) lint all
 
 # Aggregate test target — runs backend (dsl-platform + dsl-starter) and frontend suites.
@@ -182,6 +182,10 @@ lint-backend: ## Backend format check (spotlessCheck on dsl-platform, dsl-starte
 .PHONY: lint-frontend
 lint-frontend: ## Frontend lint (Biome)
 	@python3 $(SCRIPT) lint-frontend
+
+.PHONY: lint-docs-links
+lint-docs-links: ## Check docs/**/*.md for broken relative markdown links (skips docs/plans/, docs/adr/, fenced code)
+	@python3 $(SCRIPT) lint-docs-links
 
 .PHONY: lint-kanban
 # Append-only guard: `make lint-kanban` runs check mode; `python3 scripts/cbs_cli.py lint-kanban --base <ref>`

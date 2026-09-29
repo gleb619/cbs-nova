@@ -6,8 +6,8 @@ compiler turns them into production-ready Temporal classes at build time.
 
 This document is the high-level backend companion to [architecture.md](architecture.md) and
 [architecture-ui.md](architecture-ui.md). Implementation details live in [docs/dsl/](dsl/). The
-rationale behind foundational calls (Temporal, the helper SPI) is recorded in [docs/adr/](adr/).
-The platform baseline (Spring Boot 4 / Jackson 3 / Java 25) is recorded in [ADR 0005](adr/0005-platform-baseline-spring-boot-4-jackson-3.md).
+rationale behind foundational calls (Temporal, the helper SPI) was recorded in `docs/adr/` (since removed in commit c88753e6; rationale lives in the git history of this document).
+The platform baseline (Spring Boot 4 / Jackson 3 / Java 25) was recorded in `ADR 0005` (since removed; see git history).
 
 ## What the DSL is for
 
@@ -47,7 +47,7 @@ See [Hierarchy Mode](dsl/hierarchy-mode.md), [Explain Mode](dsl/explain-mode.md)
 [Preview Mode (dry-run)](dsl/preview-mode.md), and [Runtime Engine](dsl/runtime.md#operational-modes).
 For the architectural rationale, alternatives considered, and the mechanism behind the modes
 (`DslRuntime`, pipes, `DispatchStage`, `HelperInterceptor` / `FakeHelperInterceptor`, capture
-`BeanPostProcessor`s), see [ADR 0004](adr/0004-preview-dry-run-explain-modes.md).
+`BeanPostProcessor`s); see `ADR 0004` in the git history (removed in c88753e6).
 
 ## High-level architecture
 
@@ -260,7 +260,7 @@ The starter ships a thin REST CRUD surface over [Temporal Schedules](https://doc
 
 #### What it is
 
-REST CRUD over Temporal Schedules, registered by [`DslScheduleRouterConfiguration`](../../backend/dsl-starter/starter/src/main/java/cbs/nova/starter/config/router/DslScheduleRouterConfiguration.java) and handled by [`DslScheduleHandler`](../../backend/dsl-starter/starter/src/main/java/cbs/nova/starter/controller/DslScheduleHandler.java) + [`DslScheduleService`](../../backend/dsl-starter/starter/src/main/java/cbs/nova/starter/service/DslScheduleService.java). The whole router is `@ConditionalOnBean(ScheduleClient.class)`, so the routes vanish in non-Temporal deployments — Temporal-gated surface, by design.
+REST CRUD over Temporal Schedules, registered by [`DslScheduleRouterConfiguration`](../backend/dsl-starter/starter/src/main/java/cbs/nova/starter/config/router/DslScheduleRouterConfiguration.java) and handled by [`DslScheduleHandler`](../backend/dsl-starter/starter/src/main/java/cbs/nova/starter/controller/DslScheduleHandler.java) + [`DslScheduleService`](../backend/dsl-starter/starter/src/main/java/cbs/nova/starter/service/DslScheduleService.java). The whole router is `@ConditionalOnBean(ScheduleClient.class)`, so the routes vanish in non-Temporal deployments — Temporal-gated surface, by design.
 
 #### Exact routes
 
@@ -276,11 +276,11 @@ Sourced from `DslScheduleRouterConfiguration`:
 
 `ScheduleSummary.paused` is read from the live `ScheduleDescription` state on every `list()` call, so it reflects the current Temporal schedule state rather than a stale local flag.
 
-The BFF exposes matching proxies under [`frontend/admin-ui-plugin/server/api/v1/dsl/schedules/`](../../frontend/admin-ui-plugin/server/api/v1/dsl/schedules/) (`index.get.ts`, `index.post.ts`, `[definition].delete.ts`); curl against `http://localhost:3000/api/v1/dsl/schedules*` reaches the same backend. See the recipe in the runbook: [Schedule a definition](runbook.md#schedule-a-definition).
+The BFF used to expose matching proxies under `frontend/admin-ui-plugin/server/api/v1/dsl/schedules/` (deleted in commit fe2f34d0 — T561 openapi-driven BFF proxy manifest); clients now reach the backend directly at `http://localhost:8090/api/dsl/schedules*` or route via the runbook recipe: [Schedule a definition](runbook.md#schedule-a-definition).
 
 #### Request / response shapes
 
-From [`ScheduleModels`](../../backend/dsl-starter/starter/src/main/java/cbs/nova/starter/model/ScheduleModels.java):
+From [`ScheduleModels`](../backend/dsl-starter/starter/src/main/java/cbs/nova/starter/model/ScheduleModels.java):
 
 ```java
 public record CreateScheduleRequest(

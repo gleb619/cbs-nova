@@ -8,6 +8,7 @@ from .commands.doctor import DoctorCommand
 from .commands.format import FormatCommand
 from .commands.helpers_doc import HelpersDocCommand
 from .commands.lint import LintCommand
+from .commands.lint_docs_links import LintDocsLinksCommand
 from .commands.lint_kanban import LintKanbanCommand
 from .commands.loadtest import LoadtestCommand
 from .commands.openapi_diff import OpenApiDiffCommand
@@ -61,6 +62,10 @@ class CLI:
         subparsers.add_parser("lint-frontend", help="Run frontend Biome lint").set_defaults(
             handler=LintCommand, scope="frontend"
         )
+
+        p = subparsers.add_parser("lint-docs-links", help="Check docs/**/*.md for broken relative links")
+        LintDocsLinksCommand.register(p)
+        p.set_defaults(handler=LintDocsLinksCommand)
 
         p = subparsers.add_parser(
             "lint-kanban",

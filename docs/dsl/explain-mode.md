@@ -190,5 +190,5 @@ mode** is a read-only documentation layer on top of the hierarchy graph that nev
 - [Preview Mode](preview-mode.md) — the execution machinery (pipe/stage chain, `CallNode` AST,
   `ExecutionTreeStage`) Explain's traversal reuses.
 - [Runtime Engine](runtime.md) — `DslRuntime`, `GlobalManager`, and the mode-agnostic REST surface.
-- [ADR 0004 — Preview, dry-run, and Explain execution modes](../adr/0004-preview-dry-run-explain-modes.md)
+- `ADR 0004` — Preview, dry-run, and Explain execution modes (since removed in commit c88753e6; see git history)
 - [Authoring DSL Flows](authoring.md) — `dslRuntime.explain(...)` call shape.

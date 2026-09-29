@@ -296,7 +296,7 @@ grep -iE "helper|GeneratedHelper|ServiceLoader" <app-log> | tail -30
 **Hypotheses.**
 1. Stale build — the `misc-codegen` annotation processor didn't run, so
    `GeneratedHelperInstanceResolver` / `GeneratedHelperResolver` don't include the helper. A
-   clean rebuild is required (see [ADR 0002](adr/0002-helper-spi.md) — there is **no reflection
+   clean rebuild is required (see `ADR 0002` — Helper SPI, since removed in commit c88753e6; see git history — there is **no reflection
    fallback**).
 2. The helper jar / DSL module isn't on the app classpath (SPI file not found).
 3. `@SpringHelper` helper: its Spring bean failed to construct (missing dependency bean) — check
@@ -527,9 +527,9 @@ curl -sS http://localhost:8000/api/0/organizations/default/issues/ \
 
 Attach a Temporal Schedule to a published DSL definition so the engine fires it on a cron and
 each fire produces a fresh `dsl_runs` row. Backed by
-[`DslScheduleService`](../../backend/dsl-starter/starter/src/main/java/cbs/nova/starter/service/DslScheduleService.java)
+[`DslScheduleService`](../backend/dsl-starter/starter/src/main/java/cbs/nova/starter/service/DslScheduleService.java)
 via the routes registered in
-[`DslScheduleRouterConfiguration`](../../backend/dsl-starter/starter/src/main/java/cbs/nova/starter/config/router/DslScheduleRouterConfiguration.java);
+[`DslScheduleRouterConfiguration`](../backend/dsl-starter/starter/src/main/java/cbs/nova/starter/config/router/DslScheduleRouterConfiguration.java);
 architecture detail in [§ Scheduling](architecture-backend.md#scheduling).
 
 Use the BFF paths (`/api/v1/dsl/schedules*`) so the browser's `X-Api-Key` / JWT / RBAC posture

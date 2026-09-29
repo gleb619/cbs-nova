@@ -10,7 +10,7 @@ covers authoring whole DSL *definitions* (the Java source in `dsl-examples/`), t
   side-effect classification is the **helper catalog** exposed at `GET /api/dsl/helpers`
   (proxied by the admin UI). This page is the human companion to that catalog.
 - Why helpers are wired through a generated SPI rather than reflection:
-  [`../adr/0002-helper-spi.md`](../adr/0002-helper-spi.md). Where they sit in the runtime:
+  `ADR 0002` — Helper SPI (since removed in commit c88753e6; see git history). Where they sit in the runtime:
   [`../architecture-backend.md`](../architecture-backend.md) → *Runtime layers* and
   [`runtime.md`](runtime.md#helper-and-spring-integration).
 

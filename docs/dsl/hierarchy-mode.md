@@ -175,5 +175,5 @@ Hierarchy → Explain → Preview
 - [Preview Mode](preview-mode.md) — the execution machinery (pipes, stages, `CallNode` AST) that
   hierarchy reuses.
 - [Runtime Engine](runtime.md) — `DslRuntime`, `GlobalManager`, and the mode-agnostic REST surface.
-- [ADR 0004 — Preview, dry-run, and Explain execution modes](../adr/0004-preview-dry-run-explain-modes.md)
+- `ADR 0004` — Preview, dry-run, and Explain execution modes (since removed in commit c88753e6; see git history)
 - `docs/plans/hierarchy-mode-refactoring.md` — implementation plan for the rename and split.
