@@ -47,7 +47,7 @@ schema-driven; contract drift fails the build.
 
 ## Epic 2 — Security & access management
 
-**Status: Done (supply-chain CI wiring deferred).**
+**Status: Done.**
 
 **Shipped summary.** Role model (`Role`, `RoleResolver`) and `RbacAuthorizationFilter` enforce
 per-route RBAC (T408). A `production` Spring profile sets secure defaults for API key, rate
@@ -58,8 +58,10 @@ keeping `InMemoryRateLimitStore` as the dev fallback. BFF OIDC session hardening
 idle/absolute timeouts, rotate-on-refresh, and reuse detection. DSL execution sandboxing is built
 once as the object-level piece guard (`ManifestObjectGuard`, T552).
 
-**Deferred.** SBOM artifacts (`:cyclonedxBom`) and the CVE gate (`make cve-scan` / T414) exist as
-local `Makefile` targets but are **not yet wired into the default CI workflow** (`.github/workflows/ci.yml`).
+**Supply chain (T717).** SBOM artifacts (`:cyclonedxBom`) and the CVE gate (`make cve-scan` /
+`:starter-launcher:dependencyCheckAnalyze`) are wired into `.github/workflows/ci.yml` as the
+`supply-chain` job. The CVE scan runs with `continue-on-error: true` so NVD feed latency
+never gates a PR merge; the JSON/HTML report is still uploaded for triage.
 
 **Problem.** Three independent opt-in guards (API-key filter, in-memory rate limiter, OIDC
 resource-server), all off by default. No authorization model beyond "authenticated": any valid JWT

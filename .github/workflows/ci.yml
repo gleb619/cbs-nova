@@ -372,6 +372,56 @@ jobs:
           if [ -n "${PG_CID:-}" ]; then docker stop "$PG_CID" >/dev/null 2>&1 || true; fi
           if [ -n "${RABBIT_CID:-}" ]; then docker stop "$RABBIT_CID" >/dev/null 2>&1 || true; fi
 
+  # T717 — supply-chain artifacts (SBOM + CVE scan). The CycloneDX aggregate
+  # SBOM runs unconditionally (fast, offline). The OWASP dependency-check
+  # step uses `continue-on-error: true` so NVD feed latency (or a brand-new
+  # CVE finding) does not gate merges on the per-PR path; the
+  # `if: always()` on the upload step ensures the report still ships for
+  # triage when the soft gate trips.
+  supply-chain:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Same Java + Gradle pin as build-backend (Java 25; backend/gradlew 8.13
+      # fails under Java 25, so we use the per-build backend/dsl-platform/gradlew
+      # pinned to 9.4.1).
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: gradle
+
+      # CycloneDX Aggregate SBOM (`:cyclonedxBom`) emits
+      # backend/dsl-starter/build/reports/cyclonedx/aggregate-bom.json.
+      # See backend/dsl-starter/build.gradle:76 for the task configuration.
+      - name: Generate CycloneDX aggregate SBOM
+        run: backend/dsl-platform/gradlew -p backend/dsl-starter :cyclonedxBom --no-daemon --console=plain
+
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-cyclonedx
+          path: backend/dsl-starter/build/reports/cyclonedx/aggregate-bom.json
+
+      # OWASP dependency-check is bound to :starter-launcher (the deployable
+      # Spring Boot runtime; CVE baseline at docs/security/cve-baseline.xml).
+      # The Gradle task itself has `failOnError = false` and short NVD
+      # timeouts (see backend/dsl-starter/starter-launcher/build.gradle), and
+      # this step additionally carries `continue-on-error: true` so that NVD
+      # feed latency never gates a PR merge — the dependency-check JSON/HTML
+      # report is still uploaded below via `if: always()` for offline triage.
+      - name: Run OWASP dependency-check (CVE scan)
+        continue-on-error: true
+        run: backend/dsl-platform/gradlew -p backend/dsl-starter :starter-launcher:dependencyCheckAnalyze --no-daemon --console=plain
+
+      - name: Upload dependency-check report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-check-report
+          path: backend/dsl-starter/starter-launcher/build/reports/dependency-check/
+
   secret-scan:
     # Pinned Docker image (zricethezav/gitleaks:v8.24.3) so the scan
     # reproduces bit-for-bit against the exact version we validate

@@ -89,8 +89,9 @@ openapi: ## Regenerate docs/openapi.json from the live /v3/api-docs (needs Postg
 	printf '    [ok]   backend stopped, docs/openapi.json regenerated\n'
 
 # NOT wired into `make test` — needs a Postgres-backed bootRun. Opt-in mirror
-# of `make cve-scan` (T414). Detects drift between the committed docs/openapi.json
-# and a freshly fetched spec without ever writing docs/openapi.json.
+# of the supply-chain security gates (`make sbom`, `make cve-scan`, T717).
+# Detects drift between the committed docs/openapi.json and a freshly
+# fetched spec without ever writing docs/openapi.json.
 .PHONY: openapi-check
 openapi-check: ## Fail if docs/openapi.json drifts from live /v3/api-docs (classifier: scripts/openapi-diff.py)
 	@set -euo pipefail; \
@@ -107,6 +108,26 @@ openapi-check: ## Fail if docs/openapi.json drifts from live /v3/api-docs (class
 	printf '\n==> Classifier (scripts/openapi-diff.py):\n'; \
 	python3 scripts/openapi-diff.py docs/openapi.json "$$TMP"
 
+
+# -----------------------------------------------------------------------------
+# Supply-chain artifacts (T717). Wired into `.github/workflows/ci.yml` as the
+# `supply-chain` job. Both targets are explicit opt-in (not in `make test`):
+# they need network (NVD feed) and emit on-disk artifacts.
+# -----------------------------------------------------------------------------
+
+.PHONY: sbom
+sbom: ## Generate CycloneDX aggregate SBOM and copy to build/sbom/backend.cdx.json
+	@set -euo pipefail; \
+	backend/dsl-platform/gradlew -p backend/dsl-starter :cyclonedxBom --no-daemon --console=plain; \
+	mkdir -p build/sbom; \
+	cp backend/dsl-starter/build/reports/cyclonedx/aggregate-bom.json build/sbom/backend.cdx.json; \
+	printf '    [ok]   SBOM written to build/sbom/backend.cdx.json\n'
+
+.PHONY: cve-scan
+cve-scan: ## Run OWASP dependency-check on starter-launcher with docs/security/cve-baseline.xml
+	@set -euo pipefail; \
+	backend/dsl-platform/gradlew -p backend/dsl-starter :starter-launcher:dependencyCheckAnalyze --no-daemon --console=plain; \
+	printf '    [ok]   dependency-check report under backend/dsl-starter/starter-launcher/build/reports/dependency-check/\n'
 
 .PHONY: helpers-doc
 helpers-doc: ## Regenerate docs/helpers.md from the live helpers catalog (needs the stack running)
