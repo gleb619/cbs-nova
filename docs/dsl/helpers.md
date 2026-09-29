@@ -723,6 +723,28 @@ JsonExtractOut orderId = ctx.runHelper("jsonExtract",
 if (orderId.present()) { /* use orderId.value() */ }
 ```
 
+### Compare two JSON documents with `jsonDiff`
+
+`jsonDiff` (`JsonDiffIn(left, right)`) walks two JSON-encoded strings in parallel and returns a
+flat change list plus an `identical` flag — no side effect, safe in Preview mode. Each entry
+(`JsonDiffOut.Change`) has a `path` (same `$.a.b[0].c` notation as `jsonExtract`/`schemaValidate`),
+an `op` of `"added"`, `"removed"`, or `"changed"`, and the corresponding `left`/`right` values.
+
+```java
+JsonDiffOut diff = ctx.runHelper("jsonDiff",
+        new JsonDiffIn(previousConfigJson, currentConfigJson))
+        .as(JsonDiffOut.class);
+
+if (!diff.identical()) {
+    for (JsonDiffOut.Change change : diff.changes()) {
+        // change.path(), change.op(), change.left(), change.right()
+    }
+}
+```
+
+Pairs well with `similarity` for fuzzy version comparison, and with `validateJson` when asserting
+that only expected paths changed between two fetched configs.
+
 ### Validate an outbound payload with `validateJson`
 
 `validateJson` (`ValidateJsonIn(payload, schema)`) checks a JSON string against a JSON Schema
