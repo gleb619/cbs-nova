@@ -19,6 +19,7 @@ vi.mock('h3', async (importOriginal) => {
   return {
     ...actual,
     getQuery: (_event: unknown) => queryValue,
+    getRouterParam: (_event: unknown, name: string) => name,
   }
 })
 
@@ -36,6 +37,7 @@ const draftsFixture = loadFixture('drafts.json')
 const executionsFixture = loadFixture('executions.json')
 const executionsStatsFixture = loadFixture('executions-stats.json')
 const schedulesFixture = loadFixture('schedules.json')
+const docsFixture = loadFixture('docs.json')
 
 // Import handlers after mocks are hoisted.
 const workingSetHandler = (await import('../dsl/working-set.get')).default
@@ -43,6 +45,9 @@ const draftsHandler = (await import('../generated/routes/dsl/drafts.get')).defau
 const executionsHandler = (await import('../executions/index.get')).default
 const executionsStatsHandler = (await import('../generated/routes/executions/stats.get')).default
 const schedulesHandler = (await import('../generated/routes/dsl/schedules.get')).default
+const docsIndexHandler = (await import('../dsl/docs/index.get')).default
+const docsByNameHandler = (await import('../dsl/docs/by-name/[name].get')).default
+const docsStatusHandler = (await import('../dsl/docs/status.get')).default
 
 type RouteCase = {
   /** Fixture filename under contract/fixtures/. */
@@ -91,6 +96,27 @@ const routes: RouteCase[] = [
     name: 'GET /api/v1/dsl/schedules',
     handler: schedulesHandler,
     fixture: schedulesFixture,
+    deltas: [],
+  },
+  {
+    fixtureName: 'docs.json',
+    name: 'GET /api/v1/dsl/docs',
+    handler: docsIndexHandler,
+    fixture: (docsFixture as { index: unknown }).index,
+    deltas: [],
+  },
+  {
+    fixtureName: 'docs.json',
+    name: 'GET /api/v1/dsl/docs/by-name/[name]',
+    handler: docsByNameHandler,
+    fixture: (docsFixture as { byName: unknown }).byName,
+    deltas: [],
+  },
+  {
+    fixtureName: 'docs.json',
+    name: 'GET /api/v1/dsl/docs/status',
+    handler: docsStatusHandler,
+    fixture: (docsFixture as { status: unknown }).status,
     deltas: [],
   },
 ]
