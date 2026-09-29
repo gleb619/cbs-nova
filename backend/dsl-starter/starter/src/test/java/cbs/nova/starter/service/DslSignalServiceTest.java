@@ -16,13 +16,29 @@ import cbs.nova.dsl.history.DslRunStatus;
 import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.process.SignalDescriptor;
 import cbs.nova.dsl.repository.InMemoryDslRunRepository;
+import cbs.nova.starter.AuditTestSupport;
+import cbs.nova.starter.config.properties.CbsDslManifestProperties;
+import cbs.nova.starter.core.StarterConstants;
+import cbs.nova.starter.model.DslAudit;
+import cbs.nova.starter.model.InvariantContext;
+import cbs.nova.starter.model.Piece;
+import cbs.nova.starter.model.PostCheck;
+import cbs.nova.starter.model.Target;
+import cbs.nova.starter.persistence.DslAuditSearchResult;
+import cbs.nova.starter.service.check.AuditWriteHook;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowNotFoundException;
 import io.temporal.client.WorkflowStub;
+import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 class DslSignalServiceTest {
 
@@ -177,6 +193,71 @@ class DslSignalServiceTest {
                     .build(),
             "LoanDisbursement",
             null);
+  }
+
+  // --- T721: SIGNAL_SENT manifest audit row ------------------------------------------
+
+  @AfterEach
+  void clearSecurityContext() {
+    SecurityContextHolder.clearContext();
+  }
+
+  @Test
+  void manifestSignalSendAuditRecordsSignalSentRowWhenPipelineFires() {
+    AuditTestSupport.Harness audit = AuditTestSupport.h2();
+    Piece piece = signalSendManifestPiece();
+    PieceCheckPipeline pipeline = new PieceCheckPipeline(Runnable::run,
+            List.of(new AuditWriteHook(AuditTestSupport.providerOf(audit.service()))),
+            new PieceCheckBlockRegistry(manifestProperties(), System::currentTimeMillis),
+            AuditTestSupport.providerOf(audit.service()), null);
+    authenticateAsRunner("alice");
+
+    pipeline.onSuccess(piece, "auth:alice", "alice", "rid-1", signalSendContext());
+
+    DslAuditSearchResult result = audit.service().search("SIGNAL_SENT", 0, 10);
+    assertThat(result.total()).isEqualTo(1);
+    DslAudit row = result.items().get(0);
+    assertThat(row.action()).isEqualTo("SIGNAL_SENT");
+    assertThat(row.target()).isEqualTo("dsl-signal-send");
+    assertThat(row.outcome()).isEqualTo(StarterConstants.OUTCOME_SUCCESS);
+    assertThat(row.actor()).isEqualTo("alice");
+    assertThat(row.correlationId()).isEqualTo("rid-1");
+    assertThat(row.detailsJson()).contains("\"route\":\"POST /api/dsl/signals/run-1\"");
+  }
+
+  @Test
+  void manifestSignalSendAuditRecordsNoRowWhenPostCheckPipelineIsNotInvoked() {
+    // PieceGuardFilter.proceedAndTriggerPostChecks skips the post-check dispatch when the
+    // handler returns status >= 400 (T672 UNKNOWN_SIGNAL → 400, NOT_FOUND → 404,
+    // NOT_RUNNING → 409), so the audit-write hook never fires for failed sends.
+    AuditTestSupport.Harness audit = AuditTestSupport.h2();
+
+    DslAuditSearchResult result = audit.service().search("SIGNAL_SENT", 0, 10);
+    assertThat(result.total()).isZero();
+  }
+
+  private static Piece signalSendManifestPiece() {
+    return new Piece("dsl-signal-send",
+            new Target.ApiTarget("POST /api/dsl/signals/{runId}"), List.of(),
+            List.of(new PostCheck.AuditWriteCheck("SIGNAL_SENT")), "deny");
+  }
+
+  private static InvariantContext signalSendContext() {
+    return new InvariantContext("dsl-signal-send", "RUNNER", "POST",
+            "/api/dsl/signals/run-1", 200);
+  }
+
+  private static CbsDslManifestProperties manifestProperties() {
+    return new CbsDslManifestProperties(true, "classpath:piece-manifest.yaml", null, null,
+            new CbsDslManifestProperties.PostCheck(2, Duration.ofMinutes(30), "principal"));
+  }
+
+  private static void authenticateAsRunner(String principal) {
+    SecurityContextHolder.getContext().setAuthentication(
+            new UsernamePasswordAuthenticationToken(
+                    principal,
+                    "n/a",
+                    List.of(new SimpleGrantedAuthority("ROLE_RUNNER"))));
   }
 
   private static DslRun running(String runId) {
