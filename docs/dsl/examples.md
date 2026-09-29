@@ -21,7 +21,7 @@ backend/dsl-starter/dsl-examples/src/
 │   ├── PricingFunctionsDsl.java
 │   ├── SimpleGreetingDsl.java
 │   ├── SimpleValidationDsl.java
-│   └── ... (run `ls backend/dsl-starter/dsl-examples/src/dsl/` for the current set — 27 files)
+│   └── ... (run `ls backend/dsl-starter/dsl-examples/src/dsl/` for the current set — 42 files)
 └── models/                   # Typed records (@Json / Avaje Jsonb) shared by the DSL sources
     └── ... (one `*Models.java` per process/transaction that declares typed I/O)
 ```
@@ -886,3 +886,377 @@ signing secret, `wrongSecret` = a different secret, `tamperedPayload` =
 `validTamperedPayload` = `false`, and `validWrongSecret` = `false`. The shared secret is
 never echoed in the process output — only the derived signature header and the boolean
 verification results leave the workflow.
+
+## Minimal process shape with `SampleProcessDsl`
+
+The smallest possible example: no helpers, no typed models, `String` in and `String` out. Use it
+as the reference for what a compact DSL source must contain (a `define()` returning
+`List<DslObject>`, no `package`/`public`).
+
+See `backend/dsl-starter/dsl-examples/src/dsl/SampleProcessDsl.java`:
+
+```java
+List<DslObject> define() {
+  return Dsl.process("SampleProcess")
+      .input(String.class)
+      .output(String.class)
+      .execute(ctx -> Result.success("Hello from DSL: " + ctx.body()))
+      .buildList();
+}
+```
+
+## Parameter-only process and `MapOutput` with `SimpleOrderDsl`
+
+Shows the parameters-only input shape (no `.input(...)` type — the body is a
+`MapOutput` parameter bag) plus `ctx.runId()` for log correlation and a
+compensation block.
+
+See `backend/dsl-starter/dsl-examples/src/dsl/SimpleOrderDsl.java`:
+
+```java
+Dsl.process("SimpleOrder")
+    .parameters(reg -> reg.string("orderId"))
+    .execute(ctx -> {
+      var params = ctx.body();
+      return Result.success(MapOutput.of(
+          "orderId", params.values().get("orderId"),
+          "message", "Order " + params.values().get("orderId")
+              + " confirmed (runId=" + ctx.runId() + ")"));
+    })
+    .compensation((ctx, history) ->
+        ctx.log("compensating SimpleOrder: " + ctx.error().getMessage()))
+    .buildList();
+```
+
+## Awaiting a signal with `SignalProbeDsl`
+
+Demonstrates `.signal("approval", Map.class)` declaration plus `ctx.awaitSignal(...)` inside the
+execute body — the process blocks until an external signal named `approval` arrives, then reads
+fields off the signal payload.
+
+See `backend/dsl-starter/dsl-examples/src/dsl/SignalProbeDsl.java`:
+
+```java
+Dsl.process("SignalProbe")
+    .input(String.class)
+    .output(String.class)
+    .signal("approval", Map.class)
+    .execute(ctx -> {
+      @SuppressWarnings("unchecked")
+      Map<String, Object> approval = ctx.awaitSignal("approval", Map.class);
+      boolean approved = Boolean.TRUE.equals(approval.get("approved"));
+      String reviewer = String.valueOf(approval.getOrDefault("reviewer", "unknown"));
+      return Result.success("approved=" + approved + ":" + reviewer + ":" + ctx.body());
+    })
+    .buildList();
+```
+
+Covered end-to-end by `SignalProbeDslIntegrationTest`.
+
+## Pinning a DSL version with `VersionProbeDsl`
+
+Shows `.version("v1")`, which pins the definition so an in-flight workflow keeps running the
+originally loaded DSL after the registry is reloaded with a newer definition. The `fileLatch`
+helper bridges the reload boundary so a test can hold one execution open while swapping the
+registry.
+
+See `backend/dsl-starter/dsl-examples/src/dsl/VersionProbeDsl.java`:
+
+```java
+Dsl.process("VersionProbe")
+    .input(VersionProbeIn.class)
+    .output(VersionProbeOut.class)
+    .version("v1")
+    .execute(ctx -> {
+      String lockFile = "lock-" + ctx.runId();
+      String releaseFile = "release-" + ctx.runId();
+      var latch = ctx.runHelper("fileLatch",
+          new FileLatchIn(lockFile, releaseFile, in.payload()));
+      ...
+      return Result.success(new VersionProbeOut("v1:" + out.payload()));
+    })
+    .buildList();
+```
+
+Covered by `DslVersioningIntegrationTest`.
+
+## Publishing to RabbitMQ with `AmqpPublishDsl`
+
+Publishes a JSON payload to an exchange via the `amqpPublish` helper and returns the routing key
+and the publish timestamp. Shows the `isSuccess()` / `cause()` / `as(...)` guard pattern around a
+single helper call.
+
+See `backend/dsl-starter/dsl-examples/src/dsl/AmqpPublishDsl.java`:
+
+```java
+var published = ctx.runHelper("amqpPublish",
+    new AmqpPublishIn(in.exchange(), in.routingKey(), in.payload()));
+if (!published.isSuccess()) {
+  return Result.failure(published.cause());
+}
+AmqpPublishOut out = published.as(AmqpPublishOut.class);
+return Result.success(new PublishOut(out.routingKey(), out.timestamp()));
+```
+
+## Extracting XML by XPath with `XmlExtractDsl`
+
+Uses `extractXml` twice against the same SOAP-ish envelope: one XPath that always matches and one
+that is expected not to, so the `present` flag distinguishes "matched empty" from "no match".
+
+See `backend/dsl-starter/dsl-examples/src/dsl/XmlExtractDsl.java`:
+
+```java
+var primary = ctx.runHelper("extractXml",
+    new XmlExtractIn(xml, in.primaryXpath()));     // present = true
+var optional = ctx.runHelper("extractXml",
+    new XmlExtractIn(xml, in.optionalXpath()));   // present = false, value = null
+```
+
+## Filtering, sorting and projecting records with `RecordOpsDsl`
+
+A three-step record pipeline: `filterRecords` narrows a mixed catalog by field/value, `sortRecords`
+orders the survivors by a different numeric field, and `pick` projects each row down to the output
+keys.
+
+See `backend/dsl-starter/dsl-examples/src/dsl/RecordOpsDsl.java`:
+
+```java
+var filtered = ctx.runHelper("filterRecords",
+    new FilterRecordsIn(records, "category", in.category()));
+var sorted = ctx.runHelper("sortRecords",
+    new SortRecordsIn(filtered.as(FilterRecordsOut.class).matched(),
+        "amount", in.ascending(), null, null));
+for (Map<String, Object> row : sorted.as(SortRecordsOut.class).records()) {
+  projected.add(ctx.runHelper("pick", new PickIn(row, in.pickKeys(), "pick"))
+      .as(PickOut.class).result());
+}
+```
+
+## Plucking, de-duplicating and tallying with `ListOpsDsl`
+
+Three `listOps` modes over an inline record set: `pluck` projects one field's values in record
+order, `distinct` de-duplicates preserving first-seen order, and `countBy` tallies records per
+field value.
+
+See `backend/dsl-starter/dsl-examples/src/dsl/ListOpsDsl.java`:
+
+```java
+var plucked = ctx.runHelper("listOps",
+    new ListOpsIn("pluck", records, null, null, in.categoryField(), null));
+var distinct = ctx.runHelper("listOps",
+    new ListOpsIn("distinct", null, categories, null, null, null));
+var counted = ctx.runHelper("listOps",
+    new ListOpsIn("countBy", records, null, null, in.countField(), null));
+```
+
+## Chaining helpers with JSON-path extraction in `HelperPipelineDsl`
+
+Shows the record → aggregate → render chain: `filterRecords` selects matching rows, plain Java
+streams pull the numeric field out, `arithmetic` sums the list, `formatMessage` renders a message
+from the result, and `ctx.asJsonValue(...)` walks a dotted path through the input JSON (including
+array indices) to extract a leaf value.
+
+See `backend/dsl-starter/dsl-examples/src/dsl/HelperPipelineDsl.java`:
+
+```java
+var filtered = ctx.runHelper("filterRecords",
+    new FilterRecordsIn(in.records(), in.filterField(), in.filterValue()));
+List<Number> amounts = matched.stream().map(r -> (Number) r.get("amount")).toList();
+var summed = ctx.runHelper("arithmetic",
+    new ArithmeticIn(null, null, amounts, null, null, null, null, null, null));
+var rendered = ctx.runHelper("formatMessage",
+    new FormatMessageIn(in.messageTemplate(),
+        Map.of("count", matched.size(), "total", summed.as(ArithmeticOut.class).sum())));
+
+JsonValue extracted = ctx.asJsonValue(in.payloadJson());
+for (String segment : in.extractPath().split("\\.")) { /* get(segment) or get(index) */ }
+```
+
+## Compressing, hashing and encoding with `DataIntegrityDsl`
+
+A transport-integrity pipeline: `compression` (gzip) shrinks the payload, `sha256` hashes the
+compressed bytes as hex, and `base64` encodes the same compressed payload for transport. The output
+carries both the digest and the encoded payload so a receiver can verify before decoding.
+
+See `backend/dsl-starter/dsl-examples/src/dsl/DataIntegrityDsl.java`:
+
+```java
+var compressedVar = ctx.runHelper("compression",
+    new CompressionIn("gzip", in.payload(), null));
+String compressed = compressedVar.as(CompressionOut.class).result();
+String digest = ctx.runHelper("sha256", new Sha256In(compressed, "hex"))
+    .as(Sha256Out.class).result();
+String encodedPayload = ctx.runHelper("base64", new Base64In(compressed, "encode", false))
+    .as(Base64Out.class).result();
+```
+
+## Composing a saga in `OrderSagaDsl`
+
+The canonical two-step saga: two `Dsl.transaction(...)` definitions (`reserveInventory`,
+`chargePayment`), each with its own single-argument compensation, invoked from a process via
+`ctx.runTransaction(...)` with a success check after every step and a process-level compensation
+that logs the failure.
+
+See `backend/dsl-starter/dsl-examples/src/dsl/OrderSagaDsl.java`:
+
+```java
+var inventoryTx = Dsl.transaction("reserveInventory")
+    .input(OrderSagaIn.class)
+    .output(InventoryReservation.class)
+    .startToCloseTimeout(Duration.ofSeconds(10))
+    .execute(ctx -> Result.success(
+        new InventoryReservation(in.orderId(), in.quantity())))
+    .compensation(ctx -> {
+      ctx.log("compensating reserveInventory");
+      return Result.success("inventory released");
+    })
+    .build();
+// ... chargePayment analogous ...
+var inv = ctx.runTransaction("reserveInventory", in);
+if (!inv.isSuccess()) {
+  return Result.failure(inv.cause());
+}
+```
+
+## Nested transaction compensation in `NestedCompensationDsl`
+
+Three transactions (`ncStep1`, `ncStep2`, `ncStep3`) where only the third fails. Each transaction
+declares its own compensation, so the failure in step 3 shows both levels rolling back: the failing
+transaction's compensation and the process-level compensation.
+
+See `backend/dsl-starter/dsl-examples/src/dsl/NestedCompensationDsl.java`:
+
+```java
+var step3 = Dsl.transaction("ncStep3")
+    .input(NestedCompensationIn.class)
+    .output(String.class)
+    .startToCloseTimeout(Duration.ofSeconds(5))
+    .execute(ctx -> Result.failure(new RuntimeException("step3 deliberately failed")))
+    .compensation(ctx -> {
+      ctx.log("ncStep3 compensated");
+      return Result.success("ok");
+    })
+    .build();
+// process: runTransaction ncStep1, ncStep2, then ncStep3 -> failure propagates
+```
+
+Note the single-argument `.compensation(ctx -> ...)` form used by transactions versus the
+two-argument `.compensation((ctx, history) -> ...)` form used by processes.
+
+## Validating JSON payloads with `SchemaValidationDsl`
+
+Three `schemaValidate` calls over one schema: a valid payload, an invalid payload collecting every
+error, and a fail-fast payload that stops at the first violation. The output exposes the error count
+plus the first error's `field()` and `message()` for both failure modes.
+
+See `backend/dsl-starter/dsl-examples/src/dsl/SchemaValidationDsl.java`:
+
+```java
+var valid = ctx.runHelper("schemaValidate",
+    new SchemaValidateIn(in.validPayload(), in.schema(), null));
+var invalid = ctx.runHelper("schemaValidate",
+    new SchemaValidateIn(in.invalidPayload(), in.schema(), null));      // all errors
+var failFast = ctx.runHelper("schemaValidate",
+    new SchemaValidateIn(in.failFastPayload(), in.schema(), in.failFast())); // first error only
+```
+
+## Validating a YAML config blob with `ConfigValidationDsl`
+
+Round-trips a config blob through `parseYaml` → `formatYaml` (canonical block-style YAML), schema-
+checks it with `validateJson`, then applies field-level helpers: `regex` to assert the version is a
+semver triple, `parseDate` to normalize an embedded release date to ISO-8601, and `formatNumber` to
+render a numeric threshold. A schema violation fails the process with the collected errors.
+
+See `backend/dsl-starter/dsl-examples/src/dsl/ConfigValidationDsl.java`:
+
+```java
+Map<String, Object> config = ctx.runHelper("parseYaml", new ParseYamlIn(in.configYaml()))
+    .as(ParseYamlOut.class).data();
+String canonicalYaml = ctx.runHelper("formatYaml", new FormatYamlIn(config))
+    .as(FormatYamlOut.class).yaml();
+String payload = io.avaje.jsonb.Jsonb.builder().build().type(Object.class).toJson(config);
+var validatedOut = ctx.runHelper("validateJson",
+    new ValidateJsonIn(payload, in.schema())).as(ValidateJsonOut.class);
+if (!validatedOut.valid()) {
+  return Result.failure(new IllegalStateException(
+      "config failed schema validation: " + validatedOut.errors()));
+}
+var versionCheck = ctx.runHelper("regex",
+    new RegexIn("match", "^\\d+\\.\\d+\\.\\d+$", String.valueOf(config.get("version")),
+        null, null, null));
+```
+
+## Sanitizing inbound content with `ContentSanitizeDsl`
+
+The inbound-content sanitization set: `urlDecode` the form-encoded fields, `htmlEscape` text bound
+for HTML insertion, `xmlEscape` text bound for XML, `caseConvert` a title into a kebab slug,
+`formatDate` a raw epoch-millis timestamp into an ISO-8601 UTC instant, and `groupRecords` the
+sanitized items by a caller-chosen key.
+
+See `backend/dsl-starter/dsl-examples/src/dsl/ContentSanitizeDsl.java`:
+
+```java
+String title = ctx.runHelper("urlDecode",
+    new UrlDecodeIn(in.encodedTitle(), "UTF-8", true)).as(UrlDecodeOut.class).result();
+String htmlSafeBody = ctx.runHelper("htmlEscape", new HtmlEscapeIn(body))
+    .as(HtmlEscapeOut.class).result();
+String xmlSafeMeta = ctx.runHelper("xmlEscape", new XmlEscapeIn(meta))
+    .as(XmlEscapeOut.class).result();
+String kebabSlug = ctx.runHelper("caseConvert", new CaseConvertIn(title, "kebab"))
+    .as(CaseConvertOut.class).result();
+String isoTimestamp = ctx.runHelper("formatDate",
+    new FormatDateIn(Long.toString(in.rawTimestampMillis()), "ISO_INSTANT", "UTC"))
+    .as(FormatDateOut.class).formatted();
+Map<Object, List<Map<String, Object>>> groups = ctx.runHelper("groupRecords",
+    new GroupRecordsIn(sanitized, in.groupByField())).as(GroupRecordsOut.class).groups();
+```
+
+## Safe placeholder substitution with `SafeTemplatingDsl`
+
+Contrasts the two templating helpers. `interpolate` is the safe choice for anything that could come
+from configuration or user input: it supports nested-path lookups (`${order.id}`), inline defaults
+(`${order.priority:-standard}`), escaping (`$${order.total}` stays literal), and an `onMissing`
+policy (`"empty"`) that keeps a missing key from failing the process. `formatMessage` evaluates
+SpEL and is a code-execution surface — safe here only because the template is an operator-authored
+constant baked into the DSL source.
+
+See `backend/dsl-starter/dsl-examples/src/dsl/SafeTemplatingDsl.java`:
+
+```java
+Map<String, Object> params = Map.of("order", in.order());
+var nested = ctx.runHelper("interpolate",
+    new InterpolateIn("Order #${order.id} placed", params, null));
+var withDefault = ctx.runHelper("interpolate",
+    new InterpolateIn("Priority: ${order.priority:-standard}", params, null));
+var escaped = ctx.runHelper("interpolate",
+    new InterpolateIn("Raw token: $${order.total} (kept literal)", params, null));
+var missing = ctx.runHelper("interpolate",
+    new InterpolateIn("Coupon: ${order.couponCode}", params, "empty"));
+var formatted = ctx.runHelper("formatMessage",
+    new FormatMessageIn(in.greetingTemplate(), Map.of("orderId", in.order().get("id"))));
+```
+
+## Exercising OpenTelemetry with `DistributedTracingDsl`
+
+Walks the seven `otel` modes: `span` (start, returns the traceparent), `addEvent`,
+`setBaggage` / `getBaggage` (local baggage), `injectContext` / `extractContext` over a simulated
+HTTP carrier, and `endSpan`. Note that helper-initiated spans are independent top-level spans — the
+helper does not thread ambient OTel context between invocations, so there is no parent-child
+chaining across the calls.
+
+See `backend/dsl-starter/dsl-examples/src/dsl/DistributedTracingDsl.java`:
+
+```java
+var spanResult = ctx.runHelper("otel", new OtelIn(
+    "span", "distributed-trace-example", null, null, null, null, null, null, null, null));
+String traceparent = (String) spanResult.as(OtelOut.class).result();
+ctx.runHelper("otel", new OtelIn("addEvent", null, null, traceparent, null, null,
+    "example.event", null, null, null));
+ctx.runHelper("otel", new OtelIn("setBaggage", null, null, null, null, null, null,
+    "businessKey", in.businessKey(), null));
+Map<String, String> outbound = Map.of("traceparent", traceparent);
+ctx.runHelper("otel", new OtelIn("injectContext", null, null, null, null, null, null,
+    null, null, outbound));
+ctx.runHelper("otel", new OtelIn("endSpan", null, null, traceparent, "OK", null, null,
+    null, null, null));
+```
