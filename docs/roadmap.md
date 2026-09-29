@@ -40,8 +40,8 @@ schema-driven; contract drift fails the build.
 | Contract enforcement | Promote T335 BFF↔backend contract tests into a required CI gate. Add schema-diff check: a breaking change to a backend DTO fails CI unless the OpenAPI version bumps. |
 | Error envelope unification | Single `ErrorResponse` shape across run/preview/explain/executions/drafts. BFF passes it through verbatim; frontend has one error renderer (`ErrorsTab`). |
 | Header & correlation plumbing | Formalize the pass-through allowlist (`Authorization`, `X-Api-Key`, `X-Request-Id`, `traceparent`, `Idempotency-Key`, `X-Correlation-Id`) as shared config, not a literal list in `proxyToBackend`. Propagate `traceparent` end-to-end (browser → BFF → backend → DSL execution). |
-| Streaming / long-poll | Replace `useStalePolling` fixed-interval polling with SSE or long-poll from the BFF for run status and dry-run logs. |
-| Pagination convention | One `{items, total, offset, limit}` envelope for every list endpoint (executions, drafts, definitions, schedules). |
+| Streaming / long-poll | **Done.** `ExecutionSseController` / `DryRunLogSseController` ship SSE; consumed by `useExecutionEvents` / `useDryRunLogStream`. No remaining `useStalePolling` cutover tracked here. |
+| Pagination convention <a id="pagination-convention"></a> | **Done.** `{items, total, offset, limit}` (`PageResponse<>`) envelope is the canonical shape across executions / drafts / definitions / schedules. |
 
 ---
 
@@ -156,7 +156,7 @@ failures self-describing.
 
 ## Epic 5 — Authoring experience & DSL lifecycle
 
-**Status: Done (true version history, cookbook, content hash deferred).**
+**Status: Done (construct version history with diff/rollback deferred; helpers cookbook deferred).**
 
 **Shipped summary.** Drafts are persisted server-side with git-backed metadata (`DslDraftHandler`,
 `DslDraftGitResourceTest`). The two-person publish approval gate (T568) is implemented via
@@ -165,13 +165,21 @@ promotion (T569) reuses the bundle export/import machinery and is exposed on the
 Author-defined test cases are stored and run through `DslDefinitionTestService` / `DslDefinitionTestHandler`.
 Workbench editor depth includes schema-aware helper completion (`useMonacoHelperCompletion`, T362),
 construct scaffold completion (`useMonacoConstructCompletion`, T510), helper insert-at-cursor (T400),
-and inline compile diagnostics (T396).
+and inline compile diagnostics (T396). Two-hash definition attribution (T492 + T648) is live on
+every `dsl_runs` row — descriptor-identity `definition_hash` plus content-identity `content_hash`
+(sha256 over the canonicalized reload source snapshot, computed once at publish/reload and
+exposed alongside it as `ExecutionDto.definitionHash` / `ExecutionDto.contentHash`; see
+[`architecture-backend.md`](architecture-backend.md) for the full semantics). Codegen provenance
+(T649) stamps every generated `Process*` / `Transaction*` class with `@DslGenerated(generator,
+timestamp, javaVersion, user, dslPlatformVersion, dslBuildInfo, dslGitInfo)`, sourcing build id
+from env (`DSL_BUILD_INFO` / `CI_BUILD_ID` / `BUILD_NUMBER` / `GITHUB_RUN_ID`, falling back to
+`"local"`) and git identity from env (`GIT_COMMIT_SHORT` / `GIT_COMMIT`, falling back to
+`git rev-parse --short HEAD` and finally `"unknown"`).
 
 **Deferred.**
 - First-class construct version history with diff/rollback beyond descriptor-identity attribution (T492
-  phase 1 shipped the identity hash; full version history is open).
+  phase 1 + T648 phase 2 ship the two-hash attribution; full version history is open).
 - In-editor DSL helpers cookbook (T334) is not implemented.
-- True content hash at publish/reload (T648) remains in Backlog.
 
 **Problem.** DSL edits go through drafts → publish → `reload`, but versioning is coarse ("every
 instance runs on the version it started with" is a runtime guarantee, not an authoring feature).
@@ -282,9 +290,9 @@ Candidate post-Epic-7 directions. Each is sketched only at a high level; no fake
 2. **Runtime control-plane UX.** Polish signal/query interactions, run cancellation flows, and
    execution-timeline deep-linking so operators can drive live workflows without leaving the admin UI.
 
-3. **Authoring fidelity.** Land the helpers cookbook (T334), true DSL content hash at publish/reload
-   (T648), and first-class construct version history with diff/rollback to close the remaining Epic 5
-   gaps.
+3. **Authoring fidelity.** Land the helpers cookbook (T334) and first-class construct version
+   history with diff/rollback to close the remaining Epic 5 gaps. The content-hash attribution
+   (T648) and codegen build/git provenance (T649) already shipped.
 
 4. **Operator runbooks as code.** Expand runbook coverage for webhook delivery triage, VHS tape
    lifecycle, and diagnostics recipes, backed by verified curl examples and pinned to the live API

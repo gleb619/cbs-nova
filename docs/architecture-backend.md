@@ -268,7 +268,7 @@ Sourced from `DslScheduleRouterConfiguration`:
 
 | Verb | Path | Handler | Purpose |
 |---|---|---|---|
-| `GET` | `/api/dsl/schedules` | `DslScheduleHandler.list` | List schedules created by this service (ids prefixed `sched-`). Paginated via `?limit=&offset=`; envelope is `PageResponse<ScheduleSummary>` (see [roadmap § Epic 1 / pagination convention](roadmap.md)). |
+| `GET` | `/api/dsl/schedules` | `DslScheduleHandler.list` | List schedules created by this service (ids prefixed `sched-`). Paginated via `?limit=&offset=`; envelope is `PageResponse<ScheduleSummary>` (see [roadmap § Epic 1 / pagination convention](roadmap.md#pagination-convention)). |
 | `POST` | `/api/dsl/schedules` | `DslScheduleHandler.create` | Create a schedule that fires the definition's workflow on the given cron. Returns `201` with `CreateScheduleResponse{scheduleId, definition, cron}` or `400` / `404` / `409` (see `RouterOperation` annotations). |
 | `DELETE` | `/api/dsl/schedules/{definition}` | `DslScheduleHandler.delete` | Delete the schedule for `{definition}`. Idempotent: `200 {deleted:true}` whether the schedule existed or not. |
 | `POST` | `/api/dsl/schedules/{definition}/pause` | `DslScheduleHandler.pause` | Pause the schedule for `{definition}`. Optional `reason` body field is forwarded to Temporal; returns `200 {paused:true}`. |
@@ -359,7 +359,26 @@ The schedule surface sits under `/api/*`, so:
 - **Audit is best-effort.** `DslScheduleHandler.audit(...)` swallows the absence of a `DslAuditService` bean (no DataSource). A schedule create/delete against an unaudited deployment will succeed but leave no `dsl_audit` row.
 - **`DslTemporalProcessRequest.runId` payload field is `"scheduled"`.** This is a payload marker carried into the workflow body, not the `dsl_runs.run_id` (which is freshly generated per fire by `contextFactory.generateRunId()`). It's a name collision with the run-id concept and may confuse anyone reading generated workflow code.
 
-Definition-version attribution (T492): migration `V1__init.sql` adds a nullable `definition_hash` column, stamped at run submission (`RunDefinitionHash`, called from `TemporalDslProcessService.startProcess`) and exposed as `ExecutionDto.definitionHash`. **This is DESCRIPTOR identity, not full logic identity** — it is the same sha256 over the Jackson-serialized `DslDescriptor` (taskQueue / version / timeouts) that the preview cache keys on, so two functionally different definitions with the same descriptor collide. It is null for historical rows and for runs whose descriptor cannot be resolved (never a run failure). A true content hash computed at publish/reload time is a planned Epic 5 follow-up.
+Definition-version attribution (T492, T648, T649): the `dsl_runs` table carries two complementary identity columns, both nullable and stamped at run submission (never a run failure).
+
+- `definition_hash` (T492): **DESCRIPTOR identity** — the same sha256 over the Jackson-serialized `DslDescriptor` (taskQueue / version / timeouts) that the preview cache keys on. Stamped by `RunDefinitionHash.of(processName)` from `TemporalDslProcessService.startProcess`. Two functionally different definitions with the same descriptor collide. Stored as `DslRun.definitionHash` (column `definition_hash VARCHAR(64)`), exposed as `ExecutionDto.definitionHash`. Null for historical rows and for runs whose descriptor cannot be resolved.
+- `content_hash` (T648): **CONTENT identity** — sha256 (64-char lowercase hex) over the canonicalized reload/publish source snapshot: a `TreeMap<path, content>` over every `.java` DSL source file under `cbs.dsl.source-dir`, joined as `path\ncontent\n…`. Computed **once** at publish/reload by `DefinitionContentHash.publish(sources, candidate)`, invoked from `DslReloadHandler.doReload` immediately after `GlobalManager.globalManager().replaceGlobalManager(candidate)` (so the cache never points at a registry that failed to stage) and *before* the preview cache flush. Failures are logged-and-swallowed: hashing must never break a reload. The hash is cached in a static `ConcurrentMap<name + '\n' + version, hash>`; run submission reads it via `DefinitionContentHash.of(processName)`, also never throws (returns `null` on miss — runs before the first reload, definitions never loaded via the reload path, or unresolvable names). Stored as `DslRun.contentHash` (column `content_hash VARCHAR(64)`, added by migration V12 on Postgres / appended to `V1__init.sql` on h2), exposed as `ExecutionDto.contentHash`.
+
+Together `definition_hash` + `content_hash` give attribution along two dimensions: `definition_hash` captures the runtime contract the run executed under, `content_hash` captures the exact source snapshot published. A change to the definition *logic* (helper body, transaction step) flips `content_hash` while leaving `definition_hash` intact when the descriptor is unchanged — useful for pinpointing source drift across reloads.
+
+**Preview-cache implications.** `PreviewResultCache` keys are still the descriptor hash, so the content hash does **not** segment the preview cache directly. After a reload, `DslReloadHandler.doReload` calls `PreviewResultCache.clear()` immediately after `DefinitionContentHash.publish(...)` so the next preview recomputes against the freshly swapped registry; the per-hash `PreviewResultCache.invalidateByDslHash(...)` is retained for future per-construct invalidation (e.g. workbench publish of a single process) but is not used by the global reload path today.
+
+**`@DslGenerated` build/git metadata (T649).** Codegen stamps every generated `Process*` / `Transaction*` class with `@DslGenerated(...)` (see [`DslGenerated.java`](../backend/dsl-platform/dsl-api/src/main/java/cbs/nova/dsl/annotation/DslGenerated.java)) alongside the JDK `@Generated`. The annotation carries seven string fields:
+
+- `generator` — fully qualified name of the generator class that emitted the source (e.g. `cbs.nova.dsl.codegen.generator.ProcessCodeGenerator`).
+- `timestamp` — `Instant.now()` ISO-8601 string at codegen time.
+- `javaVersion` — `System.getProperty("java.version")`, falls back to `"unknown"`.
+- `user` — `System.getProperty("user.name")`, falls back to `"unknown"`.
+- `dslPlatformVersion` — read from the `cbs-nova-dsl-codegen.properties` classpath resource (key `dslPlatformVersion`); returns `"unknown"` if the resource is missing, blank, or holds the unexpanded `${dslPlatformVersion}` token.
+- `dslBuildInfo` — first non-blank value among the env vars `DSL_BUILD_INFO`, `CI_BUILD_ID`, `BUILD_NUMBER`, `GITHUB_RUN_ID`; falls back to the literal `"local"`.
+- `dslGitInfo` — first non-blank value among `GIT_COMMIT_SHORT`, `GIT_COMMIT`; on miss falls back to `git rev-parse --short HEAD` invoked via `ProcessBuilder`, finally `"unknown"` on any failure (non-zero exit, blank output, missing `git`).
+
+All values are Java-string-escaped before emission (`GeneratorMetadata.annotation()`). The `@DslGenerated` retention is `SOURCE`, so the annotation is not retained at runtime — it surfaces only as a codegen provenance breadcrumb visible in the generated source and during compilation/jar introspection.
 
 See [Starter Configuration Reference](dsl/configuration.md) for the full key tables, and
 [Operator Incident Runbook](runbook.md) for first-response playbooks (Temporal disconnect,
