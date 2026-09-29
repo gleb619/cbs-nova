@@ -59,6 +59,7 @@ import java.util.stream.Stream;
 public class DslScheduleService {
 
   private static final Pattern DEFINITION_NAME_PATTERN = Pattern.compile("^[A-Za-z0-9._-]{1,120}$");
+  private static final Pattern SUFFIX_PATTERN = Pattern.compile("^[a-z0-9-]{1,32}$");
   private static final String DEFAULT_PAUSE_REASON = "Paused via DSL schedule API";
   private static final String DEFAULT_RESUME_REASON = "Resumed via DSL schedule API";
 
@@ -72,6 +73,15 @@ public class DslScheduleService {
   private final Duration catchupWindow;
 
   /**
+   * Separator between definition and suffix in a suffixed schedule id. Chosen because it cannot
+   * appear in a definition name ({@link #DEFINITION_NAME_PATTERN} allows only
+   * {@code [A-Za-z0-9._-]}) nor in a validated suffix ({@link #SUFFIX_PATTERN}), so the
+   * reverse-parse in {@link #definitionForScheduleId(String)} is unambiguous. Temporal validates
+   * schedule ids only for UTF-8 and length, so {@code ~} is accepted server-side.
+   */
+  static final String SCHEDULE_ID_SEPARATOR = "~";
+
+  /**
    * Returns the schedule id we use for a given definition name.
    *
    * <p>
@@ -79,11 +89,43 @@ public class DslScheduleService {
    * Temporal schedule id without escaping surprises.
    */
   public @NonNull String scheduleIdFor(@NonNull String definition) {
+    return scheduleIdFor(definition, null);
+  }
+
+  /**
+   * Returns the schedule id for a definition, appending {@code ~<suffix>} when a suffix is given so
+   * multiple schedules can coexist for one definition. A {@code null} or blank suffix yields the
+   * bare {@code sched-<definition>} id, byte-identical to the historical behavior.
+   */
+  public @NonNull String scheduleIdFor(@NonNull String definition, @Nullable String suffix) {
     if (!DEFINITION_NAME_PATTERN.matcher(definition).matches()) {
       throw new IllegalArgumentException(
               "Invalid definition name: must match " + DEFINITION_NAME_PATTERN.pattern());
     }
-    return SCHEDULE_PREFIX + definition;
+    if (suffix == null || suffix.isBlank()) {
+      return SCHEDULE_PREFIX + definition;
+    }
+    if (!SUFFIX_PATTERN.matcher(suffix).matches()) {
+      throw new IllegalArgumentException(
+              "Invalid suffix: must match " + SUFFIX_PATTERN.pattern());
+    }
+    return SCHEDULE_PREFIX + definition + SCHEDULE_ID_SEPARATOR + suffix;
+  }
+
+  /**
+   * Reverse of {@link #scheduleIdFor(String, String)}: strips the {@code sched-} prefix and, for
+   * suffixed ids, everything from the {@value #SCHEDULE_ID_SEPARATOR} separator on. The separator
+   * cannot occur inside a definition name, so both bare and suffixed ids round-trip. Unknown shapes
+   * fall back to the historical whole-rest behavior.
+   */
+  static @NonNull String definitionForScheduleId(@NonNull String scheduleId) {
+    String rest = scheduleId.substring(SCHEDULE_PREFIX.length());
+    int separator = rest.indexOf(SCHEDULE_ID_SEPARATOR);
+    if (separator <= 0) {
+      return rest;
+    }
+    String definition = rest.substring(0, separator);
+    return DEFINITION_NAME_PATTERN.matcher(definition).matches() ? definition : rest;
   }
 
   /**
@@ -112,7 +154,7 @@ public class DslScheduleService {
     }
 
     Object input = request.input() != null ? request.input() : Map.of();
-    String scheduleId = scheduleIdFor(definition);
+    String scheduleId = scheduleIdFor(definition, request.suffix());
 
     ScheduleActionStartWorkflow action = ScheduleActionStartWorkflow.newBuilder()
             .setWorkflowType(descriptor.temporalInterface())
@@ -263,7 +305,7 @@ public class DslScheduleService {
     ScheduleSpec spec = description.getSchedule().getSpec();
     ScheduleInfo info = description.getInfo();
     String cron = spec.getCronExpressions().isEmpty() ? "" : spec.getCronExpressions().get(0);
-    String definition = scheduleId.substring(SCHEDULE_PREFIX.length());
+    String definition = definitionForScheduleId(scheduleId);
     String nextRunAt = firstInstant(info.getNextActionTimes());
     return new ScheduleSummary(
             scheduleId,

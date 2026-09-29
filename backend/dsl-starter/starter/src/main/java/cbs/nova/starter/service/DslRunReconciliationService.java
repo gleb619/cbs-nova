@@ -200,8 +200,7 @@ public class DslRunReconciliationService {
   }
 
   private void backfillSchedule(@NonNull ScheduleListDescription schedule) {
-    String processName = schedule.getScheduleId()
-            .substring(StarterConstants.SCHEDULE_PREFIX.length());
+    String processName = DslScheduleService.definitionForScheduleId(schedule.getScheduleId());
     if (processName.isBlank()) {
       return;
     }

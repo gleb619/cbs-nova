@@ -83,6 +83,144 @@ class DslScheduleServiceTest {
             .hasMessageContaining("Invalid definition name");
   }
 
+  // ----- T734: schedule id suffix --------------------------------------------
+
+  @Test
+  void scheduleIdForWithSuffixAppendsSeparatorAndSuffix() {
+    assertThat(service.scheduleIdFor("LoanDisbursement", "nightly"))
+            .isEqualTo("sched-LoanDisbursement~nightly");
+    assertThat(service.scheduleIdFor("My.Proc-1", "a-b-9"))
+            .isEqualTo("sched-My.Proc-1~a-b-9");
+  }
+
+  @Test
+  void scheduleIdForWithNullOrBlankSuffixStaysBare() {
+    assertThat(service.scheduleIdFor("LoanDisbursement", null))
+            .isEqualTo("sched-LoanDisbursement");
+    assertThat(service.scheduleIdFor("LoanDisbursement", "   "))
+            .isEqualTo("sched-LoanDisbursement");
+  }
+
+  @Test
+  void scheduleIdForRejectsInvalidSuffix() {
+    for (String suffix : new String[]{"Bad", "a_b", "a b", "a/b", "~x", "a~b",
+        "x".repeat(33)}) {
+      assertThatThrownBy(() -> service.scheduleIdFor("LoanDisbursement", suffix))
+              .isInstanceOf(IllegalArgumentException.class)
+              .hasMessageContaining("Invalid suffix");
+    }
+  }
+
+  @Test
+  void definitionForScheduleIdRoundTripsBareAndSuffixed() {
+    assertThat(DslScheduleService.definitionForScheduleId("sched-LoanDisbursement"))
+            .isEqualTo("LoanDisbursement");
+    assertThat(DslScheduleService.definitionForScheduleId("sched-LoanDisbursement~nightly"))
+            .isEqualTo("LoanDisbursement");
+    assertThat(DslScheduleService.definitionForScheduleId("sched-My.Proc-1~a-b"))
+            .isEqualTo("My.Proc-1");
+    assertThat(DslScheduleService.definitionForScheduleId(
+            service.scheduleIdFor("My.Proc-1", "a-b")))
+            .isEqualTo("My.Proc-1");
+  }
+
+  @Test
+  void createWithSuffixUsesSuffixedScheduleId() {
+    when(scheduleClient.createSchedule(eq("sched-LoanDisbursement~nightly"), any(Schedule.class),
+            any(ScheduleOptions.class)))
+            .thenReturn(handle);
+
+    var response = service.create(new CreateScheduleRequest("LoanDisbursement", "0 9 * * *",
+            "UTC", null, null, "nightly"));
+
+    assertThat(response.scheduleId()).isEqualTo("sched-LoanDisbursement~nightly");
+    assertThat(response.definition()).isEqualTo("LoanDisbursement");
+    verify(scheduleClient).createSchedule(eq("sched-LoanDisbursement~nightly"), any(Schedule.class),
+            any(ScheduleOptions.class));
+  }
+
+  @Test
+  void createThrowsScheduleConflictWhenSuffixedScheduleAlreadyRunning() {
+    when(scheduleClient.createSchedule(eq("sched-LoanDisbursement~nightly"), any(), any()))
+            .thenThrow(
+                    new ScheduleAlreadyRunningException(new RuntimeException("already running")));
+
+    assertThatThrownBy(() -> service.create(new CreateScheduleRequest("LoanDisbursement",
+            "0 9 * * *", "UTC", null, null, "nightly")))
+            .isInstanceOf(ScheduleConflictException.class)
+            .hasMessageContaining("Schedule already exists: sched-LoanDisbursement~nightly");
+  }
+
+  @Test
+  void createThrowsIllegalArgumentForInvalidSuffixBeforeCallingTemporal() {
+    assertThatThrownBy(() -> service.create(new CreateScheduleRequest("LoanDisbursement",
+            "0 9 * * *", "UTC", null, null, "BAD_SUFFIX")))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("Invalid suffix");
+    verify(scheduleClient, never()).createSchedule(any(), any(), any());
+  }
+
+  @Test
+  void bareAndSuffixedSchedulesCoexistForOneDefinition() {
+    when(scheduleClient.createSchedule(eq("sched-LoanDisbursement"), any(), any()))
+            .thenReturn(handle);
+    when(scheduleClient.createSchedule(eq("sched-LoanDisbursement~nightly"), any(), any()))
+            .thenReturn(handle);
+
+    var bare = service.create(
+            new CreateScheduleRequest("LoanDisbursement", "0 9 * * *", "UTC", null, null));
+    var suffixed = service.create(new CreateScheduleRequest("LoanDisbursement", "0 18 * * *",
+            "UTC", null, null, "nightly"));
+
+    assertThat(bare.scheduleId()).isEqualTo("sched-LoanDisbursement");
+    assertThat(suffixed.scheduleId()).isEqualTo("sched-LoanDisbursement~nightly");
+
+    ScheduleListDescription bareListed = mock(ScheduleListDescription.class);
+    when(bareListed.getScheduleId()).thenReturn("sched-LoanDisbursement");
+    ScheduleListDescription suffixedListed = mock(ScheduleListDescription.class);
+    when(suffixedListed.getScheduleId()).thenReturn("sched-LoanDisbursement~nightly");
+    when(scheduleClient.listSchedules())
+            .thenReturn(Stream.of(bareListed, suffixedListed));
+
+    ScheduleHandle bareHandle = mock(ScheduleHandle.class);
+    ScheduleDescription bareDescription = description("sched-LoanDisbursement", "0 9 * * *",
+            "UTC", null, false);
+    when(bareHandle.describe()).thenReturn(bareDescription);
+    ScheduleHandle suffixedHandle = mock(ScheduleHandle.class);
+    ScheduleDescription suffixedDescription = description("sched-LoanDisbursement~nightly",
+            "0 18 * * *", "UTC", null, false);
+    when(suffixedHandle.describe()).thenReturn(suffixedDescription);
+    when(scheduleClient.getHandle("sched-LoanDisbursement")).thenReturn(bareHandle);
+    when(scheduleClient.getHandle("sched-LoanDisbursement~nightly")).thenReturn(suffixedHandle);
+
+    List<ScheduleSummary> result = service.list();
+
+    assertThat(result).hasSize(2);
+    assertThat(result.get(0).scheduleId()).isEqualTo("sched-LoanDisbursement");
+    assertThat(result.get(0).definition()).isEqualTo("LoanDisbursement");
+    assertThat(result.get(1).scheduleId()).isEqualTo("sched-LoanDisbursement~nightly");
+    assertThat(result.get(1).definition()).isEqualTo("LoanDisbursement");
+  }
+
+  @Test
+  void listMapsSuffixedScheduleIdToBareDefinition() {
+    ScheduleListDescription ours = mock(ScheduleListDescription.class);
+    when(ours.getScheduleId()).thenReturn("sched-My.Proc-1~daily");
+    when(scheduleClient.listSchedules()).thenReturn(Stream.of(ours));
+
+    ScheduleHandle suffixedHandle = mock(ScheduleHandle.class);
+    ScheduleDescription suffixedDescription = description("sched-My.Proc-1~daily", "0 9 * * *",
+            "UTC", null, false);
+    when(suffixedHandle.describe()).thenReturn(suffixedDescription);
+    when(scheduleClient.getHandle("sched-My.Proc-1~daily")).thenReturn(suffixedHandle);
+
+    List<ScheduleSummary> result = service.list();
+
+    assertThat(result).hasSize(1);
+    assertThat(result.get(0).scheduleId()).isEqualTo("sched-My.Proc-1~daily");
+    assertThat(result.get(0).definition()).isEqualTo("My.Proc-1");
+  }
+
   @Test
   void createSucceedsForPublishedDefinitionAndValidCron() {
     when(scheduleClient.createSchedule(eq("sched-LoanDisbursement"), any(Schedule.class),

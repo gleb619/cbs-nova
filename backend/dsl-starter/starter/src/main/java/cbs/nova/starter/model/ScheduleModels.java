@@ -12,7 +12,13 @@ public final class ScheduleModels {
           String cron,
           @Nullable String timezone,
           @Nullable Object input,
-          @Nullable String note) {
+          @Nullable String note,
+          @Nullable String suffix) {
+
+    public CreateScheduleRequest(String definition, String cron, @Nullable String timezone,
+            @Nullable Object input, @Nullable String note) {
+      this(definition, cron, timezone, input, note, null);
+    }
   }
 
   public record ScheduleActionRequest(
