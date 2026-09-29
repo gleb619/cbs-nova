@@ -43,7 +43,7 @@ public class ByNamePathResolver {
 
   private final DslBuilderProperties properties;
   private final FileService fileService;
-  //TODO: refactor to a caffeine, hardcode is forbidden
+  // TODO: refactor to a caffeine, hardcode is forbidden
   private final Map<String, CachedPath> sourcePaths = new ConcurrentHashMap<>();
   private final Map<String, CachedPath> docPaths = new ConcurrentHashMap<>();
 

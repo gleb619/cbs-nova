@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.jgit.api.AddCommand;
 import org.eclipse.jgit.api.CommitCommand;
@@ -61,6 +62,7 @@ import org.springframework.stereotype.Component;
  */
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class WorkspaceGitService {
 
   private final DslBuilderProperties properties;
@@ -68,21 +70,9 @@ public class WorkspaceGitService {
   private final Supplier<GitStatusService> gitStatusProvider;
 
   @Autowired
-  @Deprecated(forRemoval = true)
-  // TODO: repalce ctor with a lombok's one
   public WorkspaceGitService(DslBuilderProperties properties, WorkspaceService workspaceService,
           ObjectProvider<GitStatusService> gitStatusProvider) {
     this(properties, workspaceService, gitStatusProvider::getIfAvailable);
-  }
-
-  /** Test seam: pass in a fixed supplier so unit tests do not need the Spring context. */
-  @Deprecated(forRemoval = true)
-  // TODO: repalce ctor with a lombok's one
-  WorkspaceGitService(DslBuilderProperties properties, WorkspaceService workspaceService,
-          Supplier<GitStatusService> gitStatusProvider) {
-    this.properties = properties;
-    this.workspaceService = workspaceService;
-    this.gitStatusProvider = gitStatusProvider;
   }
 
   /**

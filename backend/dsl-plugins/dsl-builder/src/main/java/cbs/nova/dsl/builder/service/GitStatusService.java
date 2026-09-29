@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.Status;
@@ -25,6 +26,7 @@ import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class GitStatusService {
 
   private final DslBuilderProperties properties;
@@ -32,18 +34,8 @@ public class GitStatusService {
   private final ConcurrentHashMap<Path, Snapshot> cache = new ConcurrentHashMap<>();
 
   @Autowired
-  @Deprecated(forRemoval = true)
-  // TODO: repalce ctor with a lombok's one
   public GitStatusService(DslBuilderProperties properties) {
     this(properties, Clock.systemUTC());
-  }
-
-  // Test seam: deterministic clock for TTL cache assertions. Behavior-preserving.
-  @Deprecated(forRemoval = true)
-  // TODO: repalce ctor with a lombok's one
-  GitStatusService(DslBuilderProperties properties, Clock clock) {
-    this.properties = properties;
-    this.clock = clock;
   }
 
   /**
