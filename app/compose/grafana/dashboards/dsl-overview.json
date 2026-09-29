@@ -282,6 +282,287 @@
           "interval": ""
         }
       ]
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Preview outcome rate by outcome",
+      "description": "DSL preview outcomes per second, split by outcome tag (dsl.preview.outcome counter, T660; outcome in {success, error, timeout}).",
+      "datasource": { "type": "prometheus", "uid": "cbs-nova-prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 29 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 15,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "none" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "cbs-nova-prometheus" },
+          "expr": "sum by (outcome) (rate(dsl_preview_outcome_total[5m]))",
+          "range": true,
+          "interval": ""
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "Object-denial rate by type",
+      "description": "Object-level capability denials per second, split by object type (dsl.piece.object.denied counter, T552 object guard; tag=type).",
+      "datasource": { "type": "prometheus", "uid": "cbs-nova-prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 29 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 15,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "none" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "cbs-nova-prometheus" },
+          "expr": "sum by (type) (rate(dsl_piece_object_denied_total[5m]))",
+          "range": true,
+          "interval": ""
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Piece postcheck total / failed",
+      "description": "Piece postcheck hook invocations per second, total vs failed (dsl.piece.postcheck.total / dsl.piece.postcheck.failed counters, split by hook tag).",
+      "datasource": { "type": "prometheus", "uid": "cbs-nova-prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 37 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 15,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "none" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "cbs-nova-prometheus" },
+          "expr": "sum by (hook) (rate(dsl_piece_postcheck_total_total[5m]))",
+          "legendFormat": "total · {{hook}}",
+          "range": true,
+          "interval": ""
+        },
+        {
+          "refId": "B",
+          "datasource": { "type": "prometheus", "uid": "cbs-nova-prometheus" },
+          "expr": "sum by (hook) (rate(dsl_piece_postcheck_failed_total[5m]))",
+          "legendFormat": "failed · {{hook}}",
+          "range": true,
+          "interval": ""
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Run cancel + sweep activity",
+      "description": "Run cancellation and stale-sweep activity (dsl.run.cancel, dsl.run.sweep.stale, dsl.run.sweep.inspected counters).",
+      "datasource": { "type": "prometheus", "uid": "cbs-nova-prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 37 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 15,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "none" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "cbs-nova-prometheus" },
+          "expr": "sum(rate(dsl_run_cancel_total[5m]))",
+          "legendFormat": "cancel/s",
+          "range": true,
+          "interval": ""
+        },
+        {
+          "refId": "B",
+          "datasource": { "type": "prometheus", "uid": "cbs-nova-prometheus" },
+          "expr": "sum(rate(dsl_run_sweep_inspected_total[5m]))",
+          "legendFormat": "sweep inspected/s",
+          "range": true,
+          "interval": ""
+        },
+        {
+          "refId": "C",
+          "datasource": { "type": "prometheus", "uid": "cbs-nova-prometheus" },
+          "expr": "sum(rate(dsl_run_sweep_stale_total[5m]))",
+          "legendFormat": "sweep stale/s",
+          "range": true,
+          "interval": ""
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "Preview external calls / run reconciliation",
+      "description": "DSL preview external-call recordings per second (dsl.preview.external.calls) and run reconciliation inspected vs resolved (dsl.run.reconciliation.{inspected,resolved}).",
+      "datasource": { "type": "prometheus", "uid": "cbs-nova-prometheus" },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 45 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 15,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "none" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "cbs-nova-prometheus" },
+          "expr": "sum(rate(dsl_preview_external_calls_total[5m]))",
+          "legendFormat": "preview external calls/s",
+          "range": true,
+          "interval": ""
+        },
+        {
+          "refId": "B",
+          "datasource": { "type": "prometheus", "uid": "cbs-nova-prometheus" },
+          "expr": "sum(rate(dsl_run_reconciliation_inspected_total[5m]))",
+          "legendFormat": "reconcile inspected/s",
+          "range": true,
+          "interval": ""
+        },
+        {
+          "refId": "C",
+          "datasource": { "type": "prometheus", "uid": "cbs-nova-prometheus" },
+          "expr": "sum(rate(dsl_run_reconciliation_resolved_total[5m]))",
+          "legendFormat": "reconcile resolved/s",
+          "range": true,
+          "interval": ""
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "Maintenance task duration (max by task)",
+      "description": "Max duration of unified maintenance task runs, split by task tag (dsl.maintenance.task.duration timer).",
+      "datasource": { "type": "prometheus", "uid": "cbs-nova-prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 53 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 15,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "none" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "cbs-nova-prometheus" },
+          "expr": "max by (task) (dsl_maintenance_task_duration_seconds_max)",
+          "range": true,
+          "interval": ""
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "type": "timeseries",
+      "title": "Maintenance task purge rate by task",
+      "description": "Rows purged per second by unified maintenance task, split by task tag (dsl.maintenance.task.purged counter).",
+      "datasource": { "type": "prometheus", "uid": "cbs-nova-prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 53 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 15,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "none" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "cbs-nova-prometheus" },
+          "expr": "sum by (task) (rate(dsl_maintenance_task_purged_total[5m]))",
+          "range": true,
+          "interval": ""
+        }
+      ]
     }
   ]
 }
