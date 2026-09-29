@@ -5,6 +5,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.dsl.utils.DefinitionLoader;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.config.HelperInstanceResolverConfig;
@@ -68,7 +69,7 @@ class HttpResilienceDslIntegrationTest {
 
   private static final String TASK_QUEUE = "http-resilience-queue";
   private static final DockerImageName TEMPORAL_IMAGE = DockerImageName
-          .parse("temporalio/auto-setup:1.25.2");
+          .parse(StarterConstants.TEMPORAL_TESTCONTAINERS_IMAGE);
   private static final DockerImageName POSTGRES_IMAGE = DockerImageName.parse("postgres:16");
 
   private static final Network NETWORK = Network.newNetwork();

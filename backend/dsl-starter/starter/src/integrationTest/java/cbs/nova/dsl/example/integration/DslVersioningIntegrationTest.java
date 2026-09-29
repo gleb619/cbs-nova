@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.config.HelperInstanceResolverConfig;
 import cbs.nova.dsl.utils.DefinitionLoader;
 import cbs.nova.dsl.GeneratedClassProvider;
@@ -75,7 +76,7 @@ class DslVersioningIntegrationTest {
   private static final Path LATCH_DIR = Path
           .of(System.getProperty("java.io.tmpdir"), "cbs-nova-versioning-latch");
   private static final DockerImageName TEMPORAL_IMAGE = DockerImageName
-          .parse("temporalio/auto-setup:1.25.2");
+          .parse(StarterConstants.TEMPORAL_TESTCONTAINERS_IMAGE);
   private static final DockerImageName POSTGRES_IMAGE = DockerImageName.parse("postgres:16");
 
   // T601: the dsl-builder module is built from its module Dockerfile (the same one used by the

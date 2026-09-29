@@ -9,6 +9,11 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class StarterConstants {
 
+  // Temporal server image for Testcontainers integration tests. Must match the pinned
+  // temporalio/auto-setup version in app/compose/orchestration.yml — bump both together so
+  // CI proves compatibility with the Temporal actually deployed.
+  public static final String TEMPORAL_TESTCONTAINERS_IMAGE = "temporalio/auto-setup:1.29.7";
+
   // Context attribute keys
 
   public static final String DSL_RESULT_ATTRIBUTE = "dslResult";

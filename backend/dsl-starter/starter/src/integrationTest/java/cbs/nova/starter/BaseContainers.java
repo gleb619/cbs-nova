@@ -1,5 +1,7 @@
 package cbs.nova.starter;
 
+import cbs.nova.starter.core.StarterConstants;
+
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.ContainerLaunchException;
@@ -19,7 +21,7 @@ public abstract class BaseContainers {
 
   private static GenericContainer<?> newTemporalContainer() {
     return new GenericContainer<>(
-            DockerImageName.parse("temporalio/auto-setup:1.25.2"))
+            DockerImageName.parse(StarterConstants.TEMPORAL_TESTCONTAINERS_IMAGE))
             .withExposedPorts(7233)
             .withEnv("DB", "sqlite")
             .withEnv("BIND_ON_IP", "0.0.0.0")

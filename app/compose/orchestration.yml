@@ -3,6 +3,9 @@
 
 services:
   temporal:
+    # Keep this pin in sync with StarterConstants.TEMPORAL_TESTCONTAINERS_IMAGE
+    # (backend/dsl-starter starter module) — the Testcontainers ITs must exercise
+    # the same server version that is deployed here.
     image: temporalio/auto-setup:1.29.7
     ports:
       - "7233:7233"

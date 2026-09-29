@@ -46,7 +46,7 @@ class DslRunCancellationIntegrationTest {
 
   @Container
   private static final GenericContainer<?> TEMPORAL = new GenericContainer<>(
-          DockerImageName.parse("temporalio/auto-setup:1.25.2"))
+          DockerImageName.parse(StarterConstants.TEMPORAL_TESTCONTAINERS_IMAGE))
           .withExposedPorts(7233)
           .withEnv("DB", "sqlite")
           .withEnv("BIND_ON_IP", "0.0.0.0")

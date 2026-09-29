@@ -65,7 +65,7 @@ class UnreliableApiDslIntegrationTest {
 
   private static final String TASK_QUEUE = "unreliable-api-queue";
   private static final DockerImageName TEMPORAL_IMAGE = DockerImageName
-          .parse("temporalio/auto-setup:1.25.2");
+          .parse(StarterConstants.TEMPORAL_TESTCONTAINERS_IMAGE);
   private static final DockerImageName POSTGRES_IMAGE = DockerImageName.parse("postgres:16");
 
   private static final Network NETWORK = Network.newNetwork();

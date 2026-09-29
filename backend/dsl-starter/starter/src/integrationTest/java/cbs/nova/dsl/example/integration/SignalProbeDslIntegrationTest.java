@@ -2,6 +2,7 @@ package cbs.nova.dsl.example.integration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.dsl.utils.DefinitionLoader;
 import cbs.nova.dsl.GeneratedClassProvider;
 import cbs.nova.dsl.GlobalManager;
@@ -43,7 +44,7 @@ class SignalProbeDslIntegrationTest {
 
   private static final String TASK_QUEUE = "SignalProbe-queue";
   private static final DockerImageName TEMPORAL_IMAGE = DockerImageName
-          .parse("temporalio/auto-setup:1.25.2");
+          .parse(StarterConstants.TEMPORAL_TESTCONTAINERS_IMAGE);
   private static final DockerImageName POSTGRES_IMAGE = DockerImageName.parse("postgres:16");
 
   private static final Network NETWORK = Network.newNetwork();

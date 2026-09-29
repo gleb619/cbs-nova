@@ -217,7 +217,7 @@ jobs:
   # Testcontainers (Postgres + Temporal-sqlite-dev + Keycloak). No external
   # services block: starter/src/integrationTest/.../BaseContainers.java spins
   # its own GenericContainer<PostgreSQLContainer> and
-  # GenericContainer<temporalio/auto-setup:1.25.2 (sqlite dev mode)>, and
+  # GenericContainer<temporalio/auto-setup:1.29.7 (sqlite dev mode)>, and
   # starter/src/integrationTest/resources/application.yml only needs the
   # default `TEMPORAL_ADDRESS:127.0.0.1:7233` placeholder (overridden at
   # runtime via @DynamicPropertySource). Adding GHA service containers would
@@ -243,7 +243,7 @@ jobs:
       - name: Publish platform to Maven Local
         run: backend/dsl-platform/gradlew -p backend/dsl-platform publishToMavenLocal -x test --no-daemon
 
-      # integrationTest pulls postgres:16, temporalio/auto-setup:1.25.2 and
+      # integrationTest pulls postgres:16, temporalio/auto-setup:1.29.7 and
       # quay.io/keycloak/keycloak:22.0.0 via Testcontainers from Docker Hub.
       # ubuntu-latest runners ship Docker preinstalled; no explicit
       # services: block — adding one would shadow the Testcontainers-managed
@@ -306,7 +306,7 @@ jobs:
           temporal_cid=$(docker run --rm -d --name cbs-nova-openapi-temporal -p 7233:7233 \
             -e DB=sqlite -e BIND_ON_IP=0.0.0.0 \
             --entrypoint temporal \
-            temporalio/auto-setup:1.25.2 \
+            temporalio/auto-setup:1.29.7 \
             server start-dev --ip 0.0.0.0 --namespace default --db-filename /tmp/temporal.db)
           # AMQP health indicator: the starter never reports UP without a broker.
           rabbit_cid=$(docker run --rm -d --name cbs-nova-openapi-rabbit -p 5672:5672 \
