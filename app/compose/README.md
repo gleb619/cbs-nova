@@ -13,6 +13,7 @@ This directory contains the split Compose domain files used by `../docker-compos
 | `app.yml` | CBS Nova Spring Boot application |
 | `gitea.yml` | Gitea git hosting (uses shared Postgres) |
 | `observability.yml` | Grafana, Loki, Jaeger, Prometheus, OpenTelemetry Collector |
+| `rabbitmq.yml` | RabbitMQ broker (AMQP `5672`, management UI `15672`) for the `amqpPublish` @Helper demo |
 
 ## Run everything
 
@@ -55,6 +56,8 @@ the table below).
 | Gitea | http://localhost:3001 |
 | Loki | http://localhost:3100 |
 | Postgres | localhost:5432 |
+| RabbitMQ AMQP | localhost:5672 |
+| RabbitMQ management UI | http://localhost:15672 |
 
 ## Observability wiring
 
@@ -189,3 +192,33 @@ for the exact path patterns.
 | `GITEA_DISABLE_REGISTRATION` | `false` | Gitea user registration |
 | `GITEA_REQUIRE_SIGNIN_VIEW` | `false` | Gitea require sign-in to view |
 | `TRACING_SAMPLING` | `1.0` | Spring tracing sampling probability |
+| `RABBITMQ_USER` | `guest` | RabbitMQ default user (matches `spring.rabbitmq.username`) |
+| `RABBITMQ_PASSWORD` | `guest` | RabbitMQ default password (matches `spring.rabbitmq.password`) |
+
+## RabbitMQ (opt-in broker for `amqpPublish`)
+
+The `amqpPublish` @Helper (`backend/dsl-starter/.../helper/AmqpPublishHelper.java`) publishes
+through the host Spring app's `AmqpTemplate` bean. Spring Boot auto-configures `AmqpTemplate`
+only when `spring-boot-starter-amqp` is on the runtime classpath AND a broker is reachable at
+`spring.rabbitmq.host:spring.rabbitmq.port` (defaults `localhost:5672`, user/pass `guest/guest`).
+
+The starter-launcher (`backend/dsl-starter/starter-launcher`) ships `spring-boot-starter-amqp`
+on the implementation classpath, so the bean is created — but inside the Compose network the
+`localhost` default won't resolve the broker. To point the Spring app at the local RabbitMQ
+service, add the following to `app/compose/app.yml` under `spring-app.environment`:
+
+```yaml
+SPRING_RABBITMQ_HOST: rabbitmq
+SPRING_RABBITMQ_PORT: "5672"
+SPRING_RABBITMQ_USERNAME: "${RABBITMQ_USER:-guest}"
+SPRING_RABBITMQ_PASSWORD: "${RABBITMQ_PASSWORD:-guest}"
+```
+
+The `exchange` and `routingKey` arguments to `amqpPublish` are passed through unchanged from the
+helper input — no defaults. Declare an exchange on the broker (e.g. `cbs.nova.events.exchange`
+via the management UI at `http://localhost:15672`) before invoking `AmqpPublishDsl`, or wire a
+queue + binding first.
+
+If the broker is down or the bean is missing, `amqpPublish` returns
+`Result.failure("amqpPublish: AmqpTemplate bean is not available; RabbitMQ is not configured")`
+— the rest of the DSL stays unaffected.

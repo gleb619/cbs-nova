@@ -11,3 +11,4 @@ include:
   - path: ./compose/dsl-builder.yml
   - path: ./compose/gitea.yml
   - path: ./compose/observability.yml
+  - path: ./compose/rabbitmq.yml

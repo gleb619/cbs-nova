@@ -12,6 +12,7 @@ This module ships the curated example DSLs for the cbs-nova platform. Each `.jav
 
 | Example | Definitions | Helpers / DSL features | Scenario | Tests |
 |---------|-------------|------------------------|----------|-------|
+| [`AmqpPublishDsl`](src/dsl/AmqpPublishDsl.java) | `AmqpPublish` | `amqpPublish` (exchange, routingKey, JSON payload) | Publish a JSON payload to a RabbitMQ exchange and echo the routing key plus publish timestamp. | No dedicated DSL-level test; `AmqpPublishHelperTest` covers the helper. |
 | [`ApiKeyProvisioningDsl`](src/dsl/ApiKeyProvisioningDsl.java) | `ApiKeyProvisioning` | `secret` (token + bytes) | Provision a cryptographic API key and an idempotency key. | `AdvancedDslExamplesTest.apiKeyProvisioningPreviewProducesCryptographicKeys` |
 | [`AuditTrailDsl`](src/dsl/AuditTrailDsl.java) | `AuditTrail` | `currentTimestamp` (UTC + zone) | Stamp an audit record with both UTC and timezone-aware timestamps. | `AdvancedDslExamplesTest.auditTrailPreviewStampsUtcAndZoneAwareTimestamps` |
 | [`BatchProcessingDsl`](src/dsl/BatchProcessingDsl.java) | `BatchProcessing` | `explainVia`, plain Java reduction | Sum a batch of items and produce a readable summary. | `IntermediateDslExamplesTest.batchProcessingPreviewSumsAndSummarizes`, `DslExamplesEndToEndTest.generatedDslWorkflowExecutesThroughTemporal`, `BatchProcessingDslIntegrationTest.runsBatchProcessingDslThroughServiceApi` |

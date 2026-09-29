@@ -1,0 +1,41 @@
+# RabbitMQ broker for the local DSL demo stack.
+#
+# Opt-in: the `amqpPublish` @Helper (`backend/dsl-starter/.../helper/AmqpPublishHelper.java`)
+# uses the host application's existing Spring `AmqpTemplate` bean, which is only auto-configured
+# when `spring-boot-starter-amqp` is on the runtime classpath AND a broker is reachable.
+# Without this service, `amqpPublish` returns a clean failure
+# ("amqpPublish: AmqpTemplate bean is not available; RabbitMQ is not configured"),
+# so other helpers keep working — the service is safe to leave un-started.
+#
+# Pin policy: keep this in sync with the Testcontainers image used by
+# `backend/dsl-starter/starter/src/test/java/cbs/nova/starter/events/mq/MqDomainEventSinkIntegrationTest.java`
+# (`rabbitmq:3.13-management`) so local-dev matches what the IT exercises.
+
+services:
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    restart: unless-stopped
+    environment:
+      # Local-demo defaults only — override via SPRING_RABBITMQ_* env vars on the
+      # Spring app container when pointing it at this broker.
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+    ports:
+      # AMQP — what `spring.rabbitmq.host` / `spring.rabbitmq.port` connect to.
+      - "5672:5672"
+      # Management UI — http://localhost:15672 (guest/guest by default).
+      - "15672:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      # `rabbitmq-diagnostics ping` succeeds once the broker is accepting AMQP
+      # connections; the management plugin is part of this image, so the binary
+      # is available. start_period tolerates the first-boot schema/cookie setup.
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
+volumes:
+  rabbitmq-data:
