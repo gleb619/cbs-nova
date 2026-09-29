@@ -34,7 +34,8 @@ public record DslBuilderProperties(
         List<String> allowedRepoSchemes,
         @DefaultValue("false") boolean allowPlainHttpRepo,
         List<String> allowedRepoHosts,
-        @DefaultValue Docs docs) {
+        @DefaultValue Docs docs,
+        @DefaultValue PathCache pathCache) {
 
   public DslBuilderProperties {
     workspaceMode = workspaceMode == null ? WorkspaceMode.SHARED : workspaceMode;
@@ -61,6 +62,7 @@ public record DslBuilderProperties(
             : List.copyOf(allowedRepoSchemes);
     allowedRepoHosts = allowedRepoHosts == null ? List.of() : List.copyOf(allowedRepoHosts);
     docs = docs == null ? new Docs("docs") : docs;
+    pathCache = pathCache == null ? new PathCache(1000, 3600L) : pathCache;
   }
 
   /**
@@ -72,7 +74,7 @@ public record DslBuilderProperties(
             null, "0.0.1-SNAPSHOT", "1.27.0", "4.0.4", "v1", List.of("clean", "build"),
             List.of("dsl", "models"), "project/templates", null, WorkspaceMode.SHARED,
             null, null, null, null,
-            new Bundles(1, 200), 8, 25, 200, null, null, null, false, null, null);
+            new Bundles(1, 200), 8, 25, 200, null, null, null, false, null, null, null);
   }
 
   public DslBuilderProperties withQueue(Queue queue) {
@@ -81,7 +83,7 @@ public record DslBuilderProperties(
             sourceFolders, templatesDir, sourceDir, workspaceMode, queue, files, git, fileBuffer,
             bundles,
             gradleJavaMin, gradleJavaMax, buildLogMaxLines, jdkSearchPaths, jdkHomeEnvVar,
-            allowedRepoSchemes, allowPlainHttpRepo, allowedRepoHosts, docs);
+            allowedRepoSchemes, allowPlainHttpRepo, allowedRepoHosts, docs, pathCache);
   }
 
   public DslBuilderProperties withFiles(Files files) {
@@ -90,7 +92,7 @@ public record DslBuilderProperties(
             sourceFolders, templatesDir, sourceDir, workspaceMode, queue, files, git, fileBuffer,
             bundles,
             gradleJavaMin, gradleJavaMax, buildLogMaxLines, jdkSearchPaths, jdkHomeEnvVar,
-            allowedRepoSchemes, allowPlainHttpRepo, allowedRepoHosts, docs);
+            allowedRepoSchemes, allowPlainHttpRepo, allowedRepoHosts, docs, pathCache);
   }
 
   public DslBuilderProperties withGit(Git git) {
@@ -99,7 +101,7 @@ public record DslBuilderProperties(
             sourceFolders, templatesDir, sourceDir, workspaceMode, queue, files, git, fileBuffer,
             bundles,
             gradleJavaMin, gradleJavaMax, buildLogMaxLines, jdkSearchPaths, jdkHomeEnvVar,
-            allowedRepoSchemes, allowPlainHttpRepo, allowedRepoHosts, docs);
+            allowedRepoSchemes, allowPlainHttpRepo, allowedRepoHosts, docs, pathCache);
   }
 
   public DslBuilderProperties withFileBuffer(FileBuffer fileBuffer) {
@@ -108,7 +110,16 @@ public record DslBuilderProperties(
             sourceFolders, templatesDir, sourceDir, workspaceMode, queue, files, git, fileBuffer,
             bundles,
             gradleJavaMin, gradleJavaMax, buildLogMaxLines, jdkSearchPaths, jdkHomeEnvVar,
-            allowedRepoSchemes, allowPlainHttpRepo, allowedRepoHosts, docs);
+            allowedRepoSchemes, allowPlainHttpRepo, allowedRepoHosts, docs, pathCache);
+  }
+
+  public DslBuilderProperties withPathCache(PathCache pathCache) {
+    return new DslBuilderProperties(workspaceDir, cleanupInterval, sessionTtl, gradleJavaHome,
+            dslVersion, temporalVersion, springBootVersion, defaultBuildVersion, buildTasks,
+            sourceFolders, templatesDir, sourceDir, workspaceMode, queue, files, git, fileBuffer,
+            bundles,
+            gradleJavaMin, gradleJavaMax, buildLogMaxLines, jdkSearchPaths, jdkHomeEnvVar,
+            allowedRepoSchemes, allowPlainHttpRepo, allowedRepoHosts, docs, pathCache);
   }
 
   public record Queue(
@@ -147,6 +158,17 @@ public record DslBuilderProperties(
   }
 
   public record FileBuffer(
+          @DefaultValue("1000") int maxEntries,
+          @DefaultValue("3600") long expireAfterWriteSeconds) {
+  }
+
+  /**
+   * Bounded cache knobs for the by-name path resolver. Mirrors the {@link FileBuffer} shape so the
+   * resolver stays aligned with the staged-write cache: enough headroom for typical workspaces (a
+   * few hundred DSL constructs + models), short enough TTL that stale entries cannot outlive a
+   * reasonable edit session.
+   */
+  public record PathCache(
           @DefaultValue("1000") int maxEntries,
           @DefaultValue("3600") long expireAfterWriteSeconds) {
   }

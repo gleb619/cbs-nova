@@ -61,6 +61,7 @@ class WorkspaceControllerTest {
               null,
               false,
               null,
+              null,
               null);
     }
   }

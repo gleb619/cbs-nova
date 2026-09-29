@@ -65,6 +65,7 @@ class FileServiceTest {
             null,
             false,
             null,
+            null,
             null);
   }
 
@@ -155,6 +156,7 @@ class FileServiceTest {
               null,
               null,
               false,
+              null,
               null,
               null));
     }

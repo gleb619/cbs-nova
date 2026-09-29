@@ -92,6 +92,7 @@ class DocsControllerTest {
               null,
               false,
               null,
+              null,
               null);
     }
   }

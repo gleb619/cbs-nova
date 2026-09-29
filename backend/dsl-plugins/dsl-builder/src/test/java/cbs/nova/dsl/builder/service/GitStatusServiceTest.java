@@ -359,6 +359,7 @@ class GitStatusServiceTest {
             null,
             false,
             null,
+            null,
             null);
     return new GitStatusService(properties, clock);
   }

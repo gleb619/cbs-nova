@@ -166,6 +166,7 @@ class FileBufferTest {
             null,
             false,
             null,
+            null,
             null);
     Cache<String, String> cache = BuilderServiceConfiguration.pendingCache(properties, ticker);
     return new Harness(new FileBuffer(cache), cache);

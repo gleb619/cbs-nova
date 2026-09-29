@@ -89,6 +89,7 @@ class FileControllerTest {
               null,
               false,
               null,
+              null,
               null);
     }
   }

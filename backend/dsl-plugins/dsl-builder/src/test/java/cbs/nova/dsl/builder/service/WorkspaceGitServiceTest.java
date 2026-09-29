@@ -869,6 +869,7 @@ class WorkspaceGitServiceTest {
             null,
             false,
             null,
+            null,
             null);
   }
 

@@ -3,14 +3,14 @@ package cbs.nova.dsl.builder.service;
 import cbs.nova.dsl.builder.config.DslBuilderProperties;
 import cbs.nova.dsl.builder.model.DslFileModels.FileEntry;
 import cbs.nova.dsl.utils.Strings;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 /**
@@ -27,11 +27,11 @@ import org.springframework.stereotype.Service;
  *
  * <p>
  * Reads and existence checks go through {@link FileService} so buffer-staged (not yet flushed)
- * content is respected. Scan results are cached per name and invalidated whenever the staged buffer
- * changes (any stage or flush).
+ * content is respected. Scan results are cached per name in bounded Caffeine caches
+ * ({@code sourcePaths}, {@code docPaths}); each entry carries its buffer version, so a stage or
+ * flush forces the next resolve to re-scan.
  */
 @Service
-@RequiredArgsConstructor
 public class ByNamePathResolver {
 
   private static final String DSL_FILE_SUFFIX = "Dsl.java";
@@ -43,9 +43,28 @@ public class ByNamePathResolver {
 
   private final DslBuilderProperties properties;
   private final FileService fileService;
-  // TODO: refactor to a caffeine, hardcode is forbidden
-  private final Map<String, CachedPath> sourcePaths = new ConcurrentHashMap<>();
-  private final Map<String, CachedPath> docPaths = new ConcurrentHashMap<>();
+  private final Cache<String, CachedPath> sourcePaths;
+  private final Cache<String, CachedPath> docPaths;
+
+  public ByNamePathResolver(DslBuilderProperties properties, FileService fileService) {
+    this.properties = properties;
+    this.fileService = fileService;
+    Caffeine<Object, Object> builder = pathCacheBuilder(properties.pathCache());
+    this.sourcePaths = builder.<String, CachedPath>build();
+    this.docPaths = builder.<String, CachedPath>build();
+  }
+
+  /**
+   * Visible for testing: rebuild the caches with knobs supplied via the pathCache config so a test
+   * can drive a fake ticker or shrink the bound to inspect eviction.
+   */
+  static Caffeine<Object, Object> pathCacheBuilder(DslBuilderProperties.PathCache pathCache) {
+    int maxEntries = Math.max(1, pathCache.maxEntries());
+    long ttlSeconds = Math.max(1L, pathCache.expireAfterWriteSeconds());
+    return Caffeine.newBuilder()
+            .maximumSize(maxEntries)
+            .expireAfterWrite(Duration.ofSeconds(ttlSeconds));
+  }
 
   /**
    * @param name
@@ -128,10 +147,10 @@ public class ByNamePathResolver {
     }
   }
 
-  private Optional<String> cached(Map<String, CachedPath> cache, String name,
+  private Optional<String> cached(Cache<String, CachedPath> cache, String name,
           Supplier<Optional<String>> resolution) {
     long bufferVersion = fileService.bufferVersion();
-    CachedPath cached = cache.get(name);
+    CachedPath cached = cache.getIfPresent(name);
     if (cached != null && cached.bufferVersion() == bufferVersion) {
       return cached.path();
     }

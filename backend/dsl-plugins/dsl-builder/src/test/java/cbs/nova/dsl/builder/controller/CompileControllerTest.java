@@ -90,6 +90,7 @@ class CompileControllerTest {
               null,
               false,
               null,
+              null,
               null);
     }
   }

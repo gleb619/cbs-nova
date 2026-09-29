@@ -139,6 +139,7 @@ class WorkspaceServiceTest {
             null,
             false,
             null,
+            null,
             null);
   }
 }

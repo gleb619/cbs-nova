@@ -99,6 +99,7 @@ class VcsControllerTest {
               null,
               false,
               null,
+              null,
               null);
     }
   }

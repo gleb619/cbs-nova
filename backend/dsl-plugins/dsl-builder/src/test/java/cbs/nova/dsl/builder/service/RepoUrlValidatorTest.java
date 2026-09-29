@@ -51,6 +51,7 @@ class RepoUrlValidatorTest {
             allowedRepoSchemes,
             allowPlainHttpRepo,
             allowedRepoHosts,
+            null,
             null);
   }
 
