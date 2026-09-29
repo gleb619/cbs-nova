@@ -13,7 +13,7 @@ import {
   ExecutionsExecutionTrace,
   selectTransaction,
 } from '@cbs/components'
-import { useLocalStorageState } from '@cbs/components/composables'
+import { useLivePollingPreference } from '@cbs/admin-ui-plugin/composables/useLivePollingPreference'
 import { navigateTo, useRoute } from 'nuxt/app'
 import { computed, onUnmounted, ref, watch } from 'vue'
 import type { ExecutionMode, TransactionExecutionDto } from '~/types'
@@ -58,30 +58,18 @@ const visibleTab = computed<DetailTab>(() =>
 // on a Running execution still gets live updates, but it is now pausable
 // and remembered. The interval defaults to the shared resolved stalePollMs.
 const defaultPollMs = resolveStalePollMs()
-const isLivePollingEnabled = useLocalStorageState('executions.detail.livePolling.enabled', true)
-const livePollingIntervalMs = useLocalStorageState(
-  'executions.detail.livePolling.intervalMs',
-  defaultPollMs,
-)
+const { enabled: isLivePollingEnabled, intervalMs: livePollingIntervalMs, onToggle: onToggleLivePolling, onIntervalChange: onLivePollingIntervalChange } =
+  useLivePollingPreference({
+    storagePrefix: 'executions.detail.livePolling',
+    defaultIntervalMs: defaultPollMs,
+    defaultEnabled: true,
+    isActive: () => selectedExecution.value?.status === 'Running',
+    start: (intervalMs) => startPolling(id.value, intervalMs),
+    stop: () => stopPolling(),
+  })
 
 await loadDetail(id.value)
 if (selectedExecution.value?.status === 'Running' && isLivePollingEnabled.value) {
-  startPolling(id.value, livePollingIntervalMs.value)
-}
-
-function onToggleLivePolling(enabled: boolean) {
-  isLivePollingEnabled.value = enabled
-  if (enabled && selectedExecution.value?.status === 'Running') {
-    startPolling(id.value, livePollingIntervalMs.value)
-  } else {
-    stopPolling()
-  }
-}
-
-function onLivePollingIntervalChange() {
-  if (!isLivePollingEnabled.value) return
-  if (selectedExecution.value?.status !== 'Running') return
-  stopPolling()
   startPolling(id.value, livePollingIntervalMs.value)
 }
 

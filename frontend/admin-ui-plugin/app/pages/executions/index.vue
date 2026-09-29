@@ -6,7 +6,7 @@ import {
   ExecutionsExecutionFilters,
   ExecutionsExecutionList,
 } from '@cbs/components'
-import { useLocalStorageState } from '@cbs/components/composables'
+import { useLivePollingPreference } from '@cbs/admin-ui-plugin/composables/useLivePollingPreference'
 import { navigateTo, useRuntimeConfig } from 'nuxt/app'
 import { computed, onMounted, ref } from 'vue'
 
@@ -39,24 +39,15 @@ function resolveStalePollMs(): number {
 }
 
 const defaultPollMs = resolveStalePollMs()
-const isPollingEnabled = useLocalStorageState('executions.livePolling.enabled', false)
-const pollingIntervalMs = useLocalStorageState('executions.livePolling.intervalMs', defaultPollMs)
-
-function restartListPolling() {
-  stopListPolling()
-  startListPolling(pollingIntervalMs.value)
-}
-
-function onTogglePolling(enabled: boolean) {
-  isPollingEnabled.value = enabled
-  if (enabled) startListPolling(pollingIntervalMs.value)
-  else stopListPolling()
-}
-
-function onIntervalChange() {
-  if (!isPollingEnabled.value) return
-  restartListPolling()
-}
+const { enabled: isPollingEnabled, intervalMs: pollingIntervalMs, onToggle: onTogglePolling, onIntervalChange } =
+  useLivePollingPreference({
+    storagePrefix: 'executions.livePolling',
+    defaultIntervalMs: defaultPollMs,
+    defaultEnabled: false,
+    isActive: () => true,
+    start: startListPolling,
+    stop: stopListPolling,
+  })
 
 onMounted(() => {
   if (isPollingEnabled.value) startListPolling(pollingIntervalMs.value)
