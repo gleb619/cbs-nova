@@ -15,6 +15,7 @@ import cbs.nova.dsl.history.DslRunRepository;
 import cbs.nova.dsl.history.DslRunStatus;
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.events.DomainEvent;
+import cbs.nova.starter.metric.RunDurationMetricsCollector;
 import cbs.nova.starter.sse.ExecutionStatusEventPublisher;
 import cbs.nova.starter.service.DslRunCancellationService.Outcome;
 import cbs.nova.starter.webhook.WebhookDispatcher;
@@ -339,12 +340,7 @@ public class TemporalDslProcessService {
     if (duration.isNegative()) {
       duration = Duration.ZERO;
     }
-    Timer.builder(StarterConstants.RUN_DURATION_TIMER)
-            .description("Duration of a production DSL run")
-            .tag(StarterConstants.PROCESS_NAME_TAG, safe)
-            .tag(StarterConstants.STATUS_TAG, status)
-            .register(meterRegistry)
-            .record(duration);
+    new RunDurationMetricsCollector(meterRegistry).record(safe, status, duration);
     meterRegistry.counter(StarterConstants.RUN_COUNT_COUNTER,
             StarterConstants.PROCESS_NAME_TAG, safe,
             StarterConstants.STATUS_TAG, status).increment();

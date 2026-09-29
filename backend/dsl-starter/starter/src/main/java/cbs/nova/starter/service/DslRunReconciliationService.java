@@ -7,6 +7,7 @@ import cbs.nova.dsl.history.DslRun;
 import cbs.nova.dsl.history.DslRunRepository;
 import cbs.nova.dsl.history.DslRunStatus;
 import cbs.nova.starter.core.StarterConstants;
+import cbs.nova.starter.metric.RunDurationMetricsCollector;
 import cbs.nova.starter.sse.ExecutionStatusEventPublisher;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.temporal.api.enums.v1.WorkflowExecutionStatus;
@@ -196,6 +197,8 @@ public class DslRunReconciliationService {
       meterRegistry.counter(StarterConstants.RESOLVED_COUNTER,
               PROCESS_NAME_TAG, safeProcessName(run.processName()),
               STATUS_TAG, status.name()).increment();
+      new RunDurationMetricsCollector(meterRegistry).record(
+              run.processName(), status.name(), Duration.between(run.startedAt(), finishedAt));
       publishStatusChanged(run.runId(), status.name());
       log.info("Reconciled run {} to status {}", run.runId(), status.name());
     }

@@ -359,11 +359,10 @@ class TemporalDslProcessServiceTest {
               StarterConstants.STATUS_TAG, DslRunStatus.STALE.name(),
               StarterConstants.PROCESS_NAME_TAG,
               StarterConstants.UNKNOWN_PROCESS).count()).isEqualTo(1.0);
-      assertThat(meterRegistry.timer(
-              StarterConstants.RUN_DURATION_TIMER,
-              StarterConstants.STATUS_TAG, DslRunStatus.STALE.name(),
-              StarterConstants.PROCESS_NAME_TAG,
-              StarterConstants.UNKNOWN_PROCESS).count()).isEqualTo(1L);
+      assertThat(meterRegistry.get(StarterConstants.RUN_DURATION_TIMER)
+              .tags(StarterConstants.STATUS_TAG, DslRunStatus.STALE.name(),
+                      StarterConstants.PROCESS_NAME_TAG, StarterConstants.UNKNOWN_PROCESS)
+              .timer().count()).isEqualTo(1L);
       assertThat(meterRegistry.counter(
               StarterConstants.SWEEP_STALE_COUNTER,
               StarterConstants.PROCESS_NAME_TAG,
@@ -675,10 +674,10 @@ class TemporalDslProcessServiceTest {
             StarterConstants.PROCESS_NAME_TAG, "Ok",
             StarterConstants.STATUS_TAG, DslRunStatus.COMPLETED.name()).count())
             .isEqualTo(1.0);
-    assertThat(meterRegistry.timer(
-            StarterConstants.RUN_DURATION_TIMER,
-            StarterConstants.PROCESS_NAME_TAG, "Ok",
-            StarterConstants.STATUS_TAG, DslRunStatus.COMPLETED.name()).count())
+    assertThat(meterRegistry.get(StarterConstants.RUN_DURATION_TIMER)
+            .tags(StarterConstants.PROCESS_NAME_TAG, "Ok", StarterConstants.STATUS_TAG,
+                    DslRunStatus.COMPLETED.name())
+            .timer().count())
             .isEqualTo(1L);
   }
 
@@ -698,10 +697,10 @@ class TemporalDslProcessServiceTest {
             StarterConstants.PROCESS_NAME_TAG, StarterConstants.UNKNOWN_PROCESS,
             StarterConstants.STATUS_TAG, DslRunStatus.FAILED.name()).count())
             .isEqualTo(1.0);
-    assertThat(meterRegistry.timer(
-            StarterConstants.RUN_DURATION_TIMER,
-            StarterConstants.PROCESS_NAME_TAG, StarterConstants.UNKNOWN_PROCESS,
-            StarterConstants.STATUS_TAG, DslRunStatus.FAILED.name()).count())
+    assertThat(meterRegistry.get(StarterConstants.RUN_DURATION_TIMER)
+            .tags(StarterConstants.PROCESS_NAME_TAG, StarterConstants.UNKNOWN_PROCESS,
+                    StarterConstants.STATUS_TAG, DslRunStatus.FAILED.name())
+            .timer().count())
             .isEqualTo(1L);
   }
 
@@ -806,10 +805,12 @@ class TemporalDslProcessServiceTest {
             StarterConstants.RUN_COUNT_COUNTER,
             StarterConstants.STATUS_TAG, DslRunStatus.CANCELLED.name(),
             StarterConstants.PROCESS_NAME_TAG, "Loan").count()).isEqualTo(1.0);
-    assertThat(meterRegistry.timer(
-            StarterConstants.RUN_DURATION_TIMER,
-            StarterConstants.STATUS_TAG, DslRunStatus.CANCELLED.name(),
-            StarterConstants.PROCESS_NAME_TAG, "Loan").count()).isEqualTo(1L);
+    assertThat(
+            meterRegistry.get(StarterConstants.RUN_DURATION_TIMER)
+                    .tags(StarterConstants.STATUS_TAG, DslRunStatus.CANCELLED.name(),
+                            StarterConstants.PROCESS_NAME_TAG, "Loan")
+                    .timer().count())
+            .isEqualTo(1L);
   }
 
   @Test

@@ -120,7 +120,7 @@ subscribe to; pluggable notification sinks.
 
 ## Epic 4 — Observability, diagnostics & operability
 
-**Status: Done (latency SLO histograms / burn-rate alerts deferred).**
+**Status: Done.**
 
 **Shipped summary.** Grafana dashboard `dsl-overview.json` is provisioned through
 `app/compose/grafana` (T481). End-to-end tracing is default-on in the compose stack and propagated

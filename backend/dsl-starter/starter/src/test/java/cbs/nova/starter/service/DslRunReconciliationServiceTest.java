@@ -146,6 +146,11 @@ class DslRunReconciliationServiceTest {
             DslRunReconciliationService.PROCESS_NAME_TAG, "LoanDisbursement",
             DslRunReconciliationService.STATUS_TAG, DslRunStatus.STALE.name()).count())
             .isEqualTo(1);
+    assertThat(meterRegistry.get(StarterConstants.RUN_DURATION_TIMER)
+            .tags(StarterConstants.PROCESS_NAME_TAG, "LoanDisbursement",
+                    StarterConstants.STATUS_TAG, DslRunStatus.STALE.name())
+            .timer().count())
+            .isEqualTo(1L);
   }
 
   @Test
@@ -260,6 +265,11 @@ class DslRunReconciliationServiceTest {
             DslRunReconciliationService.PROCESS_NAME_TAG, "LoanDisbursement",
             DslRunReconciliationService.STATUS_TAG, dslStatus.name()).count())
             .isEqualTo(1);
+    assertThat(meterRegistry.get(StarterConstants.RUN_DURATION_TIMER)
+            .tags(StarterConstants.PROCESS_NAME_TAG, "LoanDisbursement",
+                    StarterConstants.STATUS_TAG, dslStatus.name())
+            .timer().count())
+            .isEqualTo(1L);
   }
 
   private static WorkflowExecutionDescription description(

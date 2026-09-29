@@ -22,19 +22,17 @@ groups:
 
   - name: cbs-nova-preview-latency
     rules:
-      # VERIFIED against a booted app (T481): dsl.preview.duration is a plain Micrometer Timer — it
-      # exports count/sum/max only (no *_bucket series), so p95 via histogram_quantile is not possible
-      # until percentile histograms are enabled on the timer (T403). Threshold (2s avg) must be tuned
-      # to the observed baseline.
-      # Outcome-rate alerting uses dsl.preview.outcome (see cbs-nova-preview-outcome below).
+      # T720: dsl.preview.duration now publishes percentile histograms (see MetricsStage), so the
+      # _bucket series exist and this alert is a true histogram_quantile p95. Target = p95 ≤ 2s
+      # (SLO 3, docs/slo.md); threshold is a starting value — revisit after 28d of real data.
       - alert: CbsNovaPreviewLatencyP95
-        expr: sum(rate(dsl_preview_duration_seconds_sum[5m])) / sum(rate(dsl_preview_duration_seconds_count[5m])) > 2
+        expr: histogram_quantile(0.95, sum by (le) (rate(dsl_preview_duration_seconds_bucket[5m]))) > 2
         for: 10m
         labels:
           severity: warning
         annotations:
           summary: "cbs-nova DSL preview p95 latency is high"
-          description: "The 95th percentile DSL preview duration exceeded 2 seconds for 10 minutes. Tune the threshold to the observed baseline."
+          description: "The 95th percentile DSL preview duration exceeded 2 seconds for 10 minutes. Target is a starting value — revisit against 28 days of real baseline data."
 
   - name: cbs-nova-preview-outcome
     rules:
@@ -126,6 +124,116 @@ groups:
           summary: "cbs-nova run-success SLO is burning its error budget slowly"
           description: "Over the last 6h and 30m, more than 6x the 28d error budget of the run-success SLO (target 99.0%, see docs/slo.md) is being burned — the budget would exhaust in ~5 days at this rate. Open a reliability ticket; no page."
 
+  # T720 — multi-window burn-rate alerts for latency SLOs.
+  #
+  # Budget math:
+  #   SLO 2 (run duration): p95 ≤ 60 s ⇒ 5% of runs may exceed the target ⇒ error budget = 0.05.
+  #   SLO 3 (preview latency): p95 ≤ 2 s ⇒ 5% may exceed the target ⇒ error budget = 0.05.
+  #   Fast burn threshold = 14.4 × 0.05 = 0.72.
+  #   Slow burn threshold = 6 × 0.05 = 0.30.
+  #
+  # These are starting values with no observed baseline; re-tune after 28 days of bucket data.
+  # The numerator is the share of requests whose duration is within SLO; the complement is the
+  # bad-request rate. Both windows must exceed the threshold to avoid single-spike pages.
+  - name: cbs-nova-run-duration-slo-burn-rate
+    rules:
+      - alert: CbsNovaSloRunDurationFastBurn
+        expr: |
+          (
+            1 - (
+              sum(rate(dsl_run_duration_seconds_bucket{le="60"}[1h]))
+              /
+              sum(rate(dsl_run_duration_seconds_bucket{le="+Inf"}[1h]))
+            )
+          ) > (14.4 * 0.05)
+          and
+          (
+            1 - (
+              sum(rate(dsl_run_duration_seconds_bucket{le="60"}[5m]))
+              /
+              sum(rate(dsl_run_duration_seconds_bucket{le="+Inf"}[5m]))
+            )
+          ) > (14.4 * 0.05)
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "cbs-nova run-duration SLO is burning its error budget fast"
+          description: "Over the last 1h and 5m, more than 14.4x the 28d error budget of the run-duration SLO (p95 ≤ 60s, budget 5%, see docs/slo.md SLO 2) is being burned — the budget would exhaust in ~2 days at this rate. Page the on-call."
+
+      - alert: CbsNovaSloRunDurationSlowBurn
+        expr: |
+          (
+            1 - (
+              sum(rate(dsl_run_duration_seconds_bucket{le="60"}[6h]))
+              /
+              sum(rate(dsl_run_duration_seconds_bucket{le="+Inf"}[6h]))
+            )
+          ) > (6 * 0.05)
+          and
+          (
+            1 - (
+              sum(rate(dsl_run_duration_seconds_bucket{le="60"}[30m]))
+              /
+              sum(rate(dsl_run_duration_seconds_bucket{le="+Inf"}[30m]))
+            )
+          ) > (6 * 0.05)
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "cbs-nova run-duration SLO is burning its error budget slowly"
+          description: "Over the last 6h and 30m, more than 6x the 28d error budget of the run-duration SLO (p95 ≤ 60s, budget 5%, see docs/slo.md SLO 2) is being burned — the budget would exhaust in ~5 days at this rate. Open a reliability ticket; no page."
+
+  - name: cbs-nova-preview-latency-slo-burn-rate
+    rules:
+      - alert: CbsNovaSloPreviewLatencyFastBurn
+        expr: |
+          (
+            1 - (
+              sum(rate(dsl_preview_duration_seconds_bucket{le="2"}[1h]))
+              /
+              sum(rate(dsl_preview_duration_seconds_bucket{le="+Inf"}[1h]))
+            )
+          ) > (14.4 * 0.05)
+          and
+          (
+            1 - (
+              sum(rate(dsl_preview_duration_seconds_bucket{le="2"}[5m]))
+              /
+              sum(rate(dsl_preview_duration_seconds_bucket{le="+Inf"}[5m]))
+            )
+          ) > (14.4 * 0.05)
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "cbs-nova preview-latency SLO is burning its error budget fast"
+          description: "Over the last 1h and 5m, more than 14.4x the 28d error budget of the preview-latency SLO (p95 ≤ 2s, budget 5%, see docs/slo.md SLO 3) is being burned — the budget would exhaust in ~2 days at this rate. Page the on-call."
+
+      - alert: CbsNovaSloPreviewLatencySlowBurn
+        expr: |
+          (
+            1 - (
+              sum(rate(dsl_preview_duration_seconds_bucket{le="2"}[6h]))
+              /
+              sum(rate(dsl_preview_duration_seconds_bucket{le="+Inf"}[6h]))
+            )
+          ) > (6 * 0.05)
+          and
+          (
+            1 - (
+              sum(rate(dsl_preview_duration_seconds_bucket{le="2"}[30m]))
+              /
+              sum(rate(dsl_preview_duration_seconds_bucket{le="+Inf"}[30m]))
+            )
+          ) > (6 * 0.05)
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "cbs-nova preview-latency SLO is burning its error budget slowly"
+          description: "Over the last 6h and 30m, more than 6x the 28d error budget of the preview-latency SLO (p95 ≤ 2s, budget 5%, see docs/slo.md SLO 3) is being burned — the budget would exhaust in ~5 days at this rate. Open a reliability ticket; no page."
   # T714 — authoring-health alert group.
   #
   # Pre-check (T708 lesson: dsl_change_request, dsl_definition_tests, dsl_compile_diagnostics are

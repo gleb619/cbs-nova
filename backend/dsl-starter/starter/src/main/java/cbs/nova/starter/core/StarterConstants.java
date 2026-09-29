@@ -76,6 +76,9 @@ public class StarterConstants {
   public static final String TRANSACTIONS_PURGED_COUNTER = "dsl.run.transactions.purged";
   public static final String RUN_DURATION_TIMER = "dsl.run.duration";
   public static final String RUN_COUNT_COUNTER = "dsl.run.count";
+  public static final String OUTCOME_TAG = "outcome";
+  public static final String OUTCOME_OK = "ok";
+  public static final String OUTCOME_ERROR = "error";
   public static final String CANCEL_COUNTER = "dsl.run.cancel";
   public static final String SWEEP_STALE_COUNTER = "dsl.run.sweep.stale";
   public static final String SWEEP_INSPECTED_COUNTER = "dsl.run.sweep.inspected";

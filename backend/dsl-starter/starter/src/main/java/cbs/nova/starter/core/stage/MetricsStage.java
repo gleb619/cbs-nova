@@ -17,6 +17,7 @@ import io.micrometer.core.instrument.Timer;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -42,6 +43,8 @@ public final class MetricsStage implements DslPipeStage {
       PreviewMetricsSnapshot snapshot = collector.stop();
       sample.stop(Timer.builder(StarterConstants.DURATION_TIMER)
               .description("Duration of a preview or explain run")
+              .publishPercentileHistogram(true)
+              .serviceLevelObjectives(Duration.ofSeconds(2))
               .tag("mode", context.mode().name())
               .tag("process", context.name())
               .register(meterRegistry));
