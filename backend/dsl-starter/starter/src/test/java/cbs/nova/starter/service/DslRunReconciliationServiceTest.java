@@ -23,6 +23,11 @@ import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowExecutionDescription;
 import io.temporal.client.WorkflowNotFoundException;
 import io.temporal.client.WorkflowStub;
+import io.temporal.client.schedules.ScheduleActionExecutionStartWorkflow;
+import io.temporal.client.schedules.ScheduleActionResult;
+import io.temporal.client.schedules.ScheduleClient;
+import io.temporal.client.schedules.ScheduleListDescription;
+import io.temporal.client.schedules.ScheduleListInfo;
 import io.temporal.common.converter.DataConverter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,6 +38,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.stream.Stream;
 import org.mockito.ArgumentMatchers;
 
 class DslRunReconciliationServiceTest {
@@ -238,6 +244,143 @@ class DslRunReconciliationServiceTest {
             ArgumentMatchers.anyLong(),
             ArgumentMatchers.anyLong(),
             ArgumentMatchers.any());
+  }
+
+  // --- T726: schedule-fired runs are backfilled into dsl_runs -------------------------------
+
+  private final ScheduleClient scheduleClient = mock(ScheduleClient.class);
+
+  private final DslRunReconciliationService backfillingService = new DslRunReconciliationService(
+          repository,
+          workflowClient,
+          meterRegistry,
+          SCAN_INTERVAL,
+          GRACE_PERIOD,
+          BATCH_SIZE,
+          executor,
+          FIXED,
+          scheduleClient);
+
+  @Test
+  void scheduleFiredRunIsBackfilledAndVisibleInExecutionsSearch() {
+    ScheduleListDescription schedule = scheduleWithFiredRun(
+            "sched-LoanDisbursement",
+            "sched-LoanDisbursement-2026-08-28T11:00:00Z",
+            NOW.minusSeconds(600));
+    when(scheduleClient.listSchedules()).thenReturn(Stream.of(schedule));
+
+    backfillingService.reconcileOnce();
+
+    DslRun run = repository
+            .findByRunId("sched-LoanDisbursement-2026-08-28T11:00:00Z")
+            .orElseThrow();
+    assertThat(run.processName()).isEqualTo("LoanDisbursement");
+    assertThat(run.status()).isEqualTo(DslRunStatus.RUNNING.name());
+    assertThat(run.triggeredBy()).isEqualTo(StarterConstants.SCHEDULE_TRIGGERED_BY);
+    assertThat(run.startedAt()).isEqualTo(NOW.minusSeconds(600));
+    assertThat(run.correlationId()).isNull();
+    // Same query shape DslExecutionsHandler (GET /api/executions) issues.
+    assertThat(repository.search("LoanDisbursement", null, null, null, 0, 10)
+            .items())
+            .extracting(DslRun::runId)
+            .containsExactly("sched-LoanDisbursement-2026-08-28T11:00:00Z");
+    assertThat(meterRegistry.counter(StarterConstants.BACKFILLED_COUNTER,
+            DslRunReconciliationService.PROCESS_NAME_TAG, "LoanDisbursement").count())
+            .isEqualTo(1);
+  }
+
+  @Test
+  void backfilledRunOutsideGracePeriodReachesTerminalViaExistingSweep() {
+    ScheduleListDescription schedule = scheduleWithFiredRun(
+            "sched-LoanDisbursement",
+            "sched-LoanDisbursement-2026-08-28T10:00:00Z",
+            NOW.minusSeconds(1200));
+    when(scheduleClient.listSchedules()).thenReturn(Stream.of(schedule));
+    when(stub.describe()).thenReturn(
+            description(WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_COMPLETED, NOW));
+
+    backfillingService.reconcileOnce();
+
+    DslRun run = repository
+            .findByRunId("sched-LoanDisbursement-2026-08-28T10:00:00Z")
+            .orElseThrow();
+    assertThat(run.status()).isEqualTo(DslRunStatus.COMPLETED.name());
+    assertThat(run.finishedAt()).isEqualTo(NOW);
+    assertThat(run.triggeredBy()).isEqualTo(StarterConstants.SCHEDULE_TRIGGERED_BY);
+  }
+
+  @Test
+  void backfillIsIdempotentAcrossPasses() {
+    ScheduleListDescription first = scheduleWithFiredRun(
+            "sched-LoanDisbursement",
+            "sched-LoanDisbursement-2026-08-28T11:00:00Z",
+            NOW.minusSeconds(600));
+    ScheduleListDescription second = scheduleWithFiredRun(
+            "sched-LoanDisbursement",
+            "sched-LoanDisbursement-2026-08-28T11:00:00Z",
+            NOW.minusSeconds(600));
+    when(scheduleClient.listSchedules())
+            .thenReturn(Stream.of(first))
+            .thenReturn(Stream.of(second));
+
+    backfillingService.reconcileOnce();
+    backfillingService.reconcileOnce();
+
+    assertThat(repository.findByProcessName("LoanDisbursement")).hasSize(1);
+    assertThat(meterRegistry.counter(StarterConstants.BACKFILLED_COUNTER,
+            DslRunReconciliationService.PROCESS_NAME_TAG, "LoanDisbursement").count())
+            .isEqualTo(1);
+  }
+
+  @Test
+  void nonScheduleSchedulesAndNonWorkflowActionsAreIgnored() {
+    ScheduleListDescription other = mock(ScheduleListDescription.class);
+    when(other.getScheduleId()).thenReturn("foreign-schedule");
+    ScheduleListDescription noInfo = mock(ScheduleListDescription.class);
+    when(noInfo.getScheduleId()).thenReturn("sched-NoInfo");
+    when(noInfo.getInfo()).thenReturn(null);
+    when(scheduleClient.listSchedules()).thenReturn(Stream.of(other, noInfo));
+
+    backfillingService.reconcileOnce();
+
+    assertThat(repository.knownProcessNames()).isEmpty();
+  }
+
+  @Test
+  void backfillFailureDoesNotBreakStuckRunSweep() {
+    repository.save(runningOld("run-old"));
+    when(scheduleClient.listSchedules())
+            .thenThrow(new RuntimeException("Temporal unavailable"));
+    when(stub.describe()).thenReturn(
+            description(WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_COMPLETED, NOW));
+
+    backfillingService.reconcileOnce();
+
+    assertThat(repository.findByRunId("run-old").orElseThrow().status())
+            .isEqualTo(DslRunStatus.COMPLETED.name());
+  }
+
+  @Test
+  void backfillIsNoopWhenScheduleClientAbsent() {
+    repository.save(runningOld("run-old"));
+
+    service.reconcileOnce();
+
+    assertThat(repository.findByProcessName("LoanDisbursement")).hasSize(1);
+  }
+
+  private static ScheduleListDescription scheduleWithFiredRun(
+          String scheduleId, String workflowId, Instant startedAt) {
+    ScheduleListInfo info = mock(ScheduleListInfo.class);
+    when(info.getRecentActions()).thenReturn(List.of(
+            new ScheduleActionResult(
+                    startedAt,
+                    startedAt,
+                    new ScheduleActionExecutionStartWorkflow(workflowId, "run-id-1"))));
+    ScheduleListDescription schedule = mock(ScheduleListDescription.class);
+    when(schedule.getScheduleId()).thenReturn(scheduleId);
+    when(schedule.getInfo()).thenReturn(info);
+    return schedule;
   }
 
   private void assertReconciledTo(

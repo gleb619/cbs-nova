@@ -683,11 +683,28 @@ The schedule routes and beans only load when a Temporal `ScheduleClient` bean is
 Temporal is not configured the endpoints are not registered and requests to them receive a 404 at
 the router level.
 
-**Deferred follow-up:**
+**Schedule-fired runs and `dsl_runs` history (T726):**
 
-Runs launched by a schedule currently execute the workflow directly and are visible in the Temporal
-UI, but do **not** yet appear in `/api/executions` (`dsl_runs` history integration). History
-attribution with `triggeredBy=schedule` is a planned follow-up.
+Runs launched by a schedule execute the workflow directly (they never pass through
+`TemporalDslProcessService.startProcess`), so the `dsl_runs` insert on the API path does not fire
+for them. Instead, `DslRunReconciliationService` backfills them: on every reconciliation pass it
+lists schedules, reads each schedule's recent actions from Temporal, and inserts a `RUNNING`
+`dsl_runs` row for every schedule-fired workflow that has no row yet. The existing reconciliation
+sweep then drives that row to its terminal state exactly like an API-triggered row.
+
+- The row's `run_id` is the Temporal Workflow id (`<scheduleId>-<scheduled-time>`), `process_name`
+  is the schedule's definition, `started_at` comes from the schedule action, and `triggered_by`
+  is `"schedule"` (a schedule fire has no authenticated principal — `RunIdentityResolver` only
+  runs on the API path).
+- `correlation_id` is `NULL` (a schedule fire carries no client correlation id) and `input` is
+  recorded as `{}` (the schedule input payload is not reachable from schedule metadata).
+- **Eventual consistency:** the row appears in `GET /api/executions` within roughly one
+  reconciliation interval (`cbs.runs.reconciliation.scan-interval`, default 5m) and reaches its
+  terminal state after the workflow closes plus the grace period. The backfill rides the existing
+  opt-in `cbs.runs.reconciliation.enabled` switch (default off).
+- **Window limitation:** only schedule executions still present in Temporal's recent-actions buffer
+  are backfilled; very high-frequency schedules can evict older actions between passes, leaving
+  those fires without rows.
 
 ## Run-completion webhooks
 

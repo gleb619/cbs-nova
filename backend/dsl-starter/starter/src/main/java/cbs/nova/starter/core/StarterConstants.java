@@ -116,6 +116,7 @@ public class StarterConstants {
 
   public static final String INSPECTED_COUNTER = "dsl.run.reconciliation.inspected";
   public static final String RESOLVED_COUNTER = "dsl.run.reconciliation.resolved";
+  public static final String BACKFILLED_COUNTER = "dsl.run.reconciliation.backfilled";
 
   // JDBC capture
 
@@ -280,6 +281,13 @@ public class StarterConstants {
 
   public static final String SCHEDULE_PREFIX = "sched-";
   public static final String DEFAULT_TIMEZONE = "UTC";
+
+  /**
+   * {@code dsl_runs.triggered_by} value for runs started by a schedule fire (T726). Chosen over the
+   * creating principal on purpose: {@code RunIdentityResolver} runs on the API path only and cannot
+   * see a principal from a Temporal worker thread.
+   */
+  public static final String SCHEDULE_TRIGGERED_BY = "schedule";
 
   // Worker shutdown grace (DslWorkerConfiguration)
 

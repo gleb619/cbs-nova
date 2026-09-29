@@ -3,6 +3,7 @@ package cbs.nova.starter.service;
 import static cbs.nova.starter.core.StarterConstants.SERVICE_SHUTDOWN_JOIN;
 import static cbs.nova.starter.core.StarterConstants.UNKNOWN_PROCESS;
 
+import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.history.DslRun;
 import cbs.nova.dsl.history.DslRunRepository;
 import cbs.nova.dsl.history.DslRunStatus;
@@ -15,7 +16,11 @@ import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowExecutionDescription;
 import io.temporal.client.WorkflowNotFoundException;
 import io.temporal.client.WorkflowStub;
-import lombok.RequiredArgsConstructor;
+import io.temporal.client.schedules.ScheduleActionExecutionStartWorkflow;
+import io.temporal.client.schedules.ScheduleActionResult;
+import io.temporal.client.schedules.ScheduleClient;
+import io.temporal.client.schedules.ScheduleListDescription;
+import io.temporal.client.schedules.ScheduleListInfo;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -23,12 +28,14 @@ import org.jspecify.annotations.Nullable;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import org.springframework.beans.factory.annotation.Autowired;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Stream;
 
 /**
  * Scheduled reconciliation that asks Temporal for the real outcome of stuck {@code RUNNING}
@@ -39,9 +46,16 @@ import java.util.concurrent.atomic.AtomicReference;
  * {@link TemporalDslProcessService}: when Temporal cannot answer (for example because the workflow
  * was already reaped) the row is still eventually marked {@link DslRunStatus#STALE} by the
  * healthcheck sweep.
+ *
+ * <p>
+ * T726: schedule-fired runs never pass through {@code TemporalDslProcessService.startProcess} (the
+ * schedule action starts the workflow directly), so they have no {@code dsl_runs} row. When a
+ * {@link ScheduleClient} is available, each pass also backfills rows for schedule executions still
+ * visible in the schedules' recent-actions buffers: the row is inserted as {@code RUNNING} and is
+ * then driven to its terminal state by the existing per-run sweep above — one write path, no
+ * divergence. This is eventually consistent (lag = {@code scanInterval}); see docs/dsl/runtime.md.
  */
 @Slf4j
-@RequiredArgsConstructor
 public class DslRunReconciliationService {
 
   static final String PROCESS_NAME_TAG = "processName";
@@ -56,7 +70,42 @@ public class DslRunReconciliationService {
   private final int batchSize;
   private final ScheduledExecutorService schedulingExecutor;
   private final Clock clock;
+  private final @Nullable ScheduleClient scheduleClient;
   private @Nullable ExecutionStatusEventPublisher statusPublisher;
+
+  public DslRunReconciliationService(
+          DslRunRepository runRepository,
+          WorkflowClient workflowClient,
+          MeterRegistry meterRegistry,
+          Duration scanInterval,
+          Duration gracePeriod,
+          int batchSize,
+          ScheduledExecutorService schedulingExecutor,
+          Clock clock) {
+    this(runRepository, workflowClient, meterRegistry, scanInterval, gracePeriod, batchSize,
+            schedulingExecutor, clock, null);
+  }
+
+  public DslRunReconciliationService(
+          DslRunRepository runRepository,
+          WorkflowClient workflowClient,
+          MeterRegistry meterRegistry,
+          Duration scanInterval,
+          Duration gracePeriod,
+          int batchSize,
+          ScheduledExecutorService schedulingExecutor,
+          Clock clock,
+          @Nullable ScheduleClient scheduleClient) {
+    this.runRepository = runRepository;
+    this.workflowClient = workflowClient;
+    this.meterRegistry = meterRegistry;
+    this.scanInterval = scanInterval;
+    this.gracePeriod = gracePeriod;
+    this.batchSize = batchSize;
+    this.schedulingExecutor = schedulingExecutor;
+    this.clock = clock;
+    this.scheduleClient = scheduleClient;
+  }
 
   private final AtomicReference<ScheduledFuture<?>> handle = new AtomicReference<>();
   private final AtomicBoolean started = new AtomicBoolean(false);
@@ -112,6 +161,7 @@ public class DslRunReconciliationService {
    * invoke it; existing tests in {@code cbs.nova.starter.service} retain the same access.
    */
   public void reconcileOnce() {
+    backfillScheduleRunsSafely();
     Instant cutoff = clock.instant().minus(gracePeriod);
     runRepository.knownProcessNames().stream()
             .flatMap(processName -> runRepository.findByProcessName(processName).stream())
@@ -119,6 +169,91 @@ public class DslRunReconciliationService {
             .filter(run -> run.startedAt().isBefore(cutoff))
             .limit(batchSize)
             .forEach(this::reconcileRun);
+  }
+
+  /**
+   * T726: best-effort backfill of {@code dsl_runs} rows for schedule-fired workflows. Never throws
+   * into the stuck-run sweep; a failure here only defers history capture to the next pass.
+   */
+  private void backfillScheduleRunsSafely() {
+    try {
+      backfillScheduleRuns();
+    } catch (Exception ex) {
+      log.warn("dsl_runs schedule-run backfill pass failed: {}", ex.getMessage(), ex);
+    }
+  }
+
+  private void backfillScheduleRuns() {
+    if (scheduleClient == null) {
+      return;
+    }
+    List<ScheduleListDescription> schedules;
+    try (Stream<ScheduleListDescription> stream = scheduleClient.listSchedules()) {
+      schedules = stream
+              .filter(schedule -> schedule.getScheduleId() != null
+                      && schedule.getScheduleId().startsWith(StarterConstants.SCHEDULE_PREFIX))
+              .toList();
+    }
+    for (ScheduleListDescription schedule : schedules) {
+      backfillSchedule(schedule);
+    }
+  }
+
+  private void backfillSchedule(@NonNull ScheduleListDescription schedule) {
+    String processName = schedule.getScheduleId()
+            .substring(StarterConstants.SCHEDULE_PREFIX.length());
+    if (processName.isBlank()) {
+      return;
+    }
+    ScheduleListInfo info = schedule.getInfo();
+    if (info == null) {
+      return;
+    }
+    for (ScheduleActionResult action : info.getRecentActions()) {
+      try {
+        backfillAction(processName, action);
+      } catch (Exception ex) {
+        log.warn("dsl_runs backfill failed for schedule {}: {}",
+                schedule.getScheduleId(), ex.getMessage(), ex);
+      }
+    }
+  }
+
+  private void backfillAction(@NonNull String processName, @NonNull ScheduleActionResult action) {
+    if (!(action.getAction() instanceof ScheduleActionExecutionStartWorkflow start)
+            || start.getWorkflowId() == null
+            || start.getWorkflowId().isBlank()) {
+      return;
+    }
+    String workflowId = start.getWorkflowId();
+    if (runRepository.findByRunId(workflowId).isPresent()) {
+      return;
+    }
+    Instant startedAt = action.getStartedAt() != null ? action.getStartedAt() : clock.instant();
+    DslRun scheduled = DslRun.builder()
+            .runId(workflowId)
+            .processName(processName)
+            .status(DslRunStatus.RUNNING.name())
+            // The schedule input payload is not reachable from schedule metadata; the row records
+            // an empty object rather than guessing.
+            .input(EMPTY_OUTPUT_JSON)
+            .output(EMPTY_OUTPUT_JSON)
+            .error(null)
+            .startedAt(startedAt)
+            .finishedAt(StarterConstants.NOT_FINISHED_AT)
+            .executionMode(ExecutionMode.RUN.name())
+            .triggeredBy(StarterConstants.SCHEDULE_TRIGGERED_BY)
+            // A schedule fire carries no client correlation id.
+            .correlationId(null)
+            .definitionHash(RunDefinitionHash.of(processName))
+            .contentHash(DefinitionContentHash.of(processName))
+            .build();
+    runRepository.save(scheduled);
+    meterRegistry.counter(StarterConstants.BACKFILLED_COUNTER,
+            PROCESS_NAME_TAG, safeProcessName(processName)).increment();
+    publishStatusChanged(workflowId, DslRunStatus.RUNNING.name());
+    log.info("Backfilled dsl_runs row {} for schedule-fired run of process {}",
+            workflowId, processName);
   }
 
   private void reconcileRun(@NonNull DslRun run) {

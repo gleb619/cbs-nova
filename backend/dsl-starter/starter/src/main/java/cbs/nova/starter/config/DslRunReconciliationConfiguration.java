@@ -5,6 +5,8 @@ import cbs.nova.starter.config.properties.DslRunReconciliationProperties;
 import cbs.nova.starter.service.DslRunReconciliationService;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.temporal.client.WorkflowClient;
+import io.temporal.client.schedules.ScheduleClient;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -41,6 +43,7 @@ public class DslRunReconciliationConfiguration {
           WorkflowClient workflowClient,
           MeterRegistry meterRegistry,
           DslRunReconciliationProperties properties,
+          ObjectProvider<ScheduleClient> scheduleClientProvider,
           @Qualifier("cbsNovaDslRunReconciliationExecutor") ScheduledExecutorService executor) {
     return new DslRunReconciliationService(
             runRepository,
@@ -50,7 +53,8 @@ public class DslRunReconciliationConfiguration {
             properties.getGracePeriod(),
             properties.getBatchSize(),
             executor,
-            Clock.systemUTC());
+            Clock.systemUTC(),
+            scheduleClientProvider.getIfAvailable());
   }
 
   @Bean
