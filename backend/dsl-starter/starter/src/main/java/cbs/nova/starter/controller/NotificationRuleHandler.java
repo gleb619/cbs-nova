@@ -18,6 +18,7 @@ import cbs.nova.starter.notification.NotificationRuleService;
 import cbs.nova.starter.persistence.NotificationRuleFiringRepository;
 import cbs.nova.starter.persistence.NotificationRuleFiringSearchResult;
 import cbs.nova.starter.persistence.NotificationRuleSearchResult;
+import cbs.nova.starter.service.DslAuditService;
 import cbs.nova.starter.webhook.WebhookDispatcher;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -32,6 +33,7 @@ import java.util.Map;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.servlet.function.ServerRequest;
@@ -46,15 +48,27 @@ import tools.jackson.core.JacksonException;
  *
  * <p>
  * Secrets are write-only: {@link #redact} nulls {@code action.secret} on every response.
+ *
+ * <p>
+ * Audit: mutating endpoints ({@code create}, {@code update}, {@code delete}, {@code setEnabled})
+ * write {@code NOTIFICATION_RULE_*} rows via {@link DslAuditService} (T776). Recorded details carry
+ * only the {@code id}, {@code name} and {@code enabled} flag of the rule — the {@code url} and
+ * {@code secret} of any action are never logged.
  */
 @Tag(name = "Notifications", description = "Notification rules engine (T565)")
 @RequiredArgsConstructor
 public class NotificationRuleHandler {
 
+  static final String ACTION_NOTIFICATION_RULE_CREATE = "NOTIFICATION_RULE_CREATE";
+  static final String ACTION_NOTIFICATION_RULE_UPDATE = "NOTIFICATION_RULE_UPDATE";
+  static final String ACTION_NOTIFICATION_RULE_DELETE = "NOTIFICATION_RULE_DELETE";
+  static final String ACTION_NOTIFICATION_RULE_TOGGLE = "NOTIFICATION_RULE_TOGGLE";
+
   private final NotificationRuleService ruleService;
   private final NotificationRuleEngine ruleEngine;
   private final NotificationRuleFiringRepository firingRepository;
   private final Optional<WebhookDispatcher> webhookDispatcher;
+  private final ObjectProvider<DslAuditService> auditServiceProvider;
 
   @Operation(summary = "List notification rules, match order (priority desc)")
   @ApiResponse(responseCode = "200", content = @Content(mediaType = "application/json", schema = @Schema(implementation = PageResponse.class)))
@@ -74,7 +88,27 @@ public class NotificationRuleHandler {
   @Operation(summary = "Create a notification rule")
   @ApiResponse(responseCode = "201", description = "Rule created")
   public ServerResponse create(ServerRequest request) throws ServletException, IOException {
-    NotificationRuleDto created = toDto(ruleService.create(parseRuleBody(request)));
+    NotificationRuleDto body;
+    try {
+      body = parseRuleBody(request);
+    } catch (IllegalArgumentException e) {
+      audit(request, ACTION_NOTIFICATION_RULE_CREATE, "-", StarterConstants.OUTCOME_FAILURE,
+              Map.of("error", e.getMessage()));
+      throw e;
+    }
+    NotificationRuleEntity entity;
+    try {
+      entity = ruleService.create(body);
+    } catch (IllegalArgumentException e) {
+      audit(request, ACTION_NOTIFICATION_RULE_CREATE, "-", StarterConstants.OUTCOME_FAILURE,
+              Map.of("error", e.getMessage()));
+      throw e;
+    }
+    NotificationRuleDto created = toDto(entity);
+    audit(request, ACTION_NOTIFICATION_RULE_CREATE, String.valueOf(created.id()),
+            StarterConstants.OUTCOME_SUCCESS,
+            Map.of("id", created.id(), "name", created.name(),
+                    "enabled", created.enabled()));
     return ServerResponse.status(HttpStatus.CREATED)
             .contentType(MediaType.APPLICATION_JSON)
             .body(created);
@@ -96,23 +130,63 @@ public class NotificationRuleHandler {
   @ApiResponse(responseCode = "200", description = "The updated rule")
   @ApiResponse(responseCode = "404", description = "No rule with the given id", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
   public ServerResponse update(ServerRequest request) throws ServletException, IOException {
-    long id = Long.parseLong(request.pathVariable("id"));
-    NotificationRuleDto body = parseRuleBody(request);
-    return ruleService.update(id, body)
-            .map(rule -> ServerResponse.ok()
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(toDto(rule)))
-            .orElseGet(() -> notFound(id));
+    long id;
+    try {
+      id = Long.parseLong(request.pathVariable("id"));
+    } catch (NumberFormatException e) {
+      audit(request, ACTION_NOTIFICATION_RULE_UPDATE, request.pathVariable("id"),
+              StarterConstants.OUTCOME_FAILURE, Map.of("error", "id must be a long"));
+      throw new IllegalArgumentException("id must be a long", e);
+    }
+    NotificationRuleDto body;
+    try {
+      body = parseRuleBody(request);
+    } catch (IllegalArgumentException e) {
+      audit(request, ACTION_NOTIFICATION_RULE_UPDATE, String.valueOf(id),
+              StarterConstants.OUTCOME_FAILURE, Map.of("error", e.getMessage()));
+      throw e;
+    }
+    Optional<NotificationRuleEntity> result;
+    try {
+      result = ruleService.update(id, body);
+    } catch (IllegalArgumentException e) {
+      audit(request, ACTION_NOTIFICATION_RULE_UPDATE, String.valueOf(id),
+              StarterConstants.OUTCOME_FAILURE, Map.of("error", e.getMessage()));
+      throw e;
+    }
+    if (result.isEmpty()) {
+      audit(request, ACTION_NOTIFICATION_RULE_UPDATE, String.valueOf(id),
+              StarterConstants.OUTCOME_FAILURE, Map.of("error", "not_found"));
+      return notFound(id);
+    }
+    NotificationRuleDto updated = toDto(result.get());
+    audit(request, ACTION_NOTIFICATION_RULE_UPDATE, String.valueOf(id),
+            StarterConstants.OUTCOME_SUCCESS,
+            Map.of("id", id, "name", updated.name(), "enabled", updated.enabled()));
+    return ServerResponse.ok()
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(updated);
   }
 
   @Operation(summary = "Delete a notification rule")
   @ApiResponse(responseCode = "204", description = "Rule deleted")
   @ApiResponse(responseCode = "404", description = "No rule with the given id", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
   public ServerResponse delete(ServerRequest request) {
-    long id = Long.parseLong(request.pathVariable("id"));
+    long id;
+    try {
+      id = Long.parseLong(request.pathVariable("id"));
+    } catch (NumberFormatException e) {
+      audit(request, ACTION_NOTIFICATION_RULE_DELETE, request.pathVariable("id"),
+              StarterConstants.OUTCOME_FAILURE, Map.of("error", "id must be a long"));
+      throw new IllegalArgumentException("id must be a long", e);
+    }
     if (!ruleService.delete(id)) {
+      audit(request, ACTION_NOTIFICATION_RULE_DELETE, String.valueOf(id),
+              StarterConstants.OUTCOME_FAILURE, Map.of("error", "not_found"));
       return notFound(id);
     }
+    audit(request, ACTION_NOTIFICATION_RULE_DELETE, String.valueOf(id),
+            StarterConstants.OUTCOME_SUCCESS, Map.of("id", id));
     return ServerResponse.noContent().build();
   }
 
@@ -120,18 +194,35 @@ public class NotificationRuleHandler {
   @ApiResponse(responseCode = "200", description = "The updated rule")
   @ApiResponse(responseCode = "404", description = "No rule with the given id", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
   public ServerResponse setEnabled(ServerRequest request) throws ServletException, IOException {
-    long id = Long.parseLong(request.pathVariable("id"));
+    long id;
+    try {
+      id = Long.parseLong(request.pathVariable("id"));
+    } catch (NumberFormatException e) {
+      audit(request, ACTION_NOTIFICATION_RULE_TOGGLE, request.pathVariable("id"),
+              StarterConstants.OUTCOME_FAILURE, Map.of("error", "id must be a long"));
+      throw new IllegalArgumentException("id must be a long", e);
+    }
     ToggleEnabledRequest body;
     try {
       body = request.body(ToggleEnabledRequest.class);
     } catch (JacksonException | IllegalStateException ex) {
+      audit(request, ACTION_NOTIFICATION_RULE_TOGGLE, String.valueOf(id),
+              StarterConstants.OUTCOME_FAILURE, Map.of("error", "malformed body"));
       throw new IllegalArgumentException("malformed JSON body: " + ex.getMessage(), ex);
     }
-    return ruleService.setEnabled(id, body.enabled())
-            .map(rule -> ServerResponse.ok()
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(toDto(rule)))
-            .orElseGet(() -> notFound(id));
+    var result = ruleService.setEnabled(id, body.enabled());
+    if (result.isEmpty()) {
+      audit(request, ACTION_NOTIFICATION_RULE_TOGGLE, String.valueOf(id),
+              StarterConstants.OUTCOME_FAILURE, Map.of("error", "not_found"));
+      return notFound(id);
+    }
+    NotificationRuleDto rule = toDto(result.get());
+    audit(request, ACTION_NOTIFICATION_RULE_TOGGLE, String.valueOf(id),
+            StarterConstants.OUTCOME_SUCCESS,
+            Map.of("id", id, "name", rule.name(), "enabled", rule.enabled()));
+    return ServerResponse.ok()
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(rule);
   }
 
   @Operation(summary = "List available notification channel types")
@@ -259,6 +350,19 @@ public class NotificationRuleHandler {
             .contentType(MediaType.APPLICATION_JSON)
             .body(new ErrorResponse("NOT_FOUND", "Notification rule not found: " + id, null,
                     null, null, null, null, null, null));
+  }
+
+  private void audit(ServerRequest request, String action, String target, String outcome,
+          Object details) {
+    if (auditServiceProvider == null) {
+      return;
+    }
+    var auditService = auditServiceProvider.getIfAvailable();
+    if (auditService == null) {
+      return;
+    }
+    auditService.record(DslAuditService.currentActor(), action, target,
+            DslAuditService.correlationIdOf(request), outcome, details);
   }
 
 }

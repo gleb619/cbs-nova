@@ -4,6 +4,7 @@ import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.starter.controller.Pagination;
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.model.PageResponse;
+import cbs.nova.starter.service.DslAuditService;
 import cbs.nova.starter.vhs.loadtest.VhsLoadTest;
 import cbs.nova.starter.vhs.loadtest.VhsLoadTestException;
 import cbs.nova.starter.vhs.loadtest.VhsLoadTestReport;
@@ -23,6 +24,7 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.servlet.function.ServerRequest;
@@ -37,6 +39,13 @@ import tools.jackson.databind.ObjectMapper;
  * Exposes list, download, delete and replay operations for recorded tapes. Registered as a
  * {@code RouterFunction} bean by
  * {@link cbs.nova.starter.config.router.VhsManagementRouterConfiguration}.
+ *
+ * <p>
+ * Audit: destructive / fan-out mutations ({@code delete}, {@code replay}, {@code loadtest}) write
+ * {@code VHS_TAPE_*} rows via {@link DslAuditService} (T776). The recorded {@code target} is the
+ * tape {@code runId} (or {@code "-"} when the body parses without one); details only ever carry
+ * publicly safe fields ({@code runId}, {@code replayRunId}, {@code target}, {@code concurrency},
+ * etc.) and never the replayed event payloads themselves.
  */
 @Slf4j
 @AllArgsConstructor
@@ -44,10 +53,15 @@ public class VhsManagementHandler {
 
   static final String CONTENT_TYPE_X_JSONL = "application/x-jsonl";
 
+  static final String ACTION_VHS_TAPE_DELETE = "VHS_TAPE_DELETE";
+  static final String ACTION_VHS_TAPE_REPLAY = "VHS_TAPE_REPLAY";
+  static final String ACTION_VHS_LOAD_TEST = "VHS_LOAD_TEST";
+
   private final VhsManagementService service;
   @Nullable
   private final VhsLoadTest loadTest;
   private final ObjectMapper objectMapper;
+  private final ObjectProvider<DslAuditService> auditServiceProvider;
 
   @NonNull
   public ServerResponse list(ServerRequest request) {
@@ -91,6 +105,12 @@ public class VhsManagementHandler {
   public ServerResponse delete(ServerRequest request) {
     String runId = request.pathVariable("runId");
     boolean deleted = service.deleteTape(runId);
+    String outcome = deleted ? StarterConstants.OUTCOME_SUCCESS : StarterConstants.OUTCOME_FAILURE;
+    String errorMessage = deleted ? null : "tape_not_found";
+    Map<String, Object> details = deleted
+            ? Map.of("runId", runId)
+            : Map.of("runId", runId, "error", errorMessage);
+    audit(request, ACTION_VHS_TAPE_DELETE, runId, outcome, details);
     return ServerResponse.ok()
             .contentType(MediaType.APPLICATION_JSON)
             .body(Map.of("deleted", deleted));
@@ -106,12 +126,20 @@ public class VhsManagementHandler {
 
     Optional<ReplayRunResponse> response = service.startReplay(runId, body);
     if (response.isEmpty()) {
+      audit(request, ACTION_VHS_TAPE_REPLAY, runId, StarterConstants.OUTCOME_FAILURE,
+              Map.of("runId", runId, "error", "replay_unavailable"));
       return ServerResponse.status(HttpStatus.SERVICE_UNAVAILABLE)
               .contentType(MediaType.APPLICATION_JSON)
               .body(Map.of("error", "VHS replay is not enabled"));
     }
     ReplayRunResponse r = response.get();
     HttpStatus status = "accepted".equals(r.status()) ? HttpStatus.ACCEPTED : HttpStatus.OK;
+    String outcome = "accepted".equals(r.status())
+            ? StarterConstants.OUTCOME_SUCCESS
+            : StarterConstants.OUTCOME_FAILURE;
+    audit(request, ACTION_VHS_TAPE_REPLAY, runId, outcome,
+            Map.of("runId", runId, "replayRunId", r.replayRunId(), "target",
+                    String.valueOf(r.target()), "status", String.valueOf(r.status())));
     return ServerResponse.status(status)
             .contentType(MediaType.APPLICATION_JSON)
             .body(r);
@@ -120,6 +148,8 @@ public class VhsManagementHandler {
   @NonNull
   public ServerResponse loadtest(ServerRequest request) throws IOException {
     if (loadTest == null) {
+      audit(request, ACTION_VHS_LOAD_TEST, "-", StarterConstants.OUTCOME_FAILURE,
+              Map.of("error", "loadtest_disabled"));
       return ServerResponse.status(HttpStatus.SERVICE_UNAVAILABLE)
               .contentType(MediaType.APPLICATION_JSON)
               .body(Map.of("error",
@@ -142,11 +172,16 @@ public class VhsManagementHandler {
 
     try {
       VhsLoadTestReport report = loadTest.run(tapes, target, speed, concurrency, duration);
+      audit(request, ACTION_VHS_LOAD_TEST, "-", StarterConstants.OUTCOME_SUCCESS,
+              Map.of("target", target, "concurrency", concurrency, "duration", duration,
+                      "tapesLoaded", report.tapesLoaded()));
       return ServerResponse.ok()
               .contentType(MediaType.APPLICATION_JSON)
               .body(report);
     } catch (VhsLoadTestException ex) {
       log.warn("[VHS load-test] failed: {}", ex.getMessage());
+      audit(request, ACTION_VHS_LOAD_TEST, "-", StarterConstants.OUTCOME_FAILURE,
+              Map.of("target", target, "error", String.valueOf(ex.getMessage())));
       return ServerResponse.status(HttpStatus.BAD_REQUEST)
               .contentType(MediaType.APPLICATION_JSON)
               .body(new ErrorResponse("VHS_LOAD_TEST_ERROR", ex.getMessage(), null, null, null,
@@ -174,5 +209,18 @@ public class VhsManagementHandler {
             .contentType(MediaType.APPLICATION_JSON)
             .body(new ErrorResponse("NOT_FOUND", message, null, null, null, null, null, null,
                     null));
+  }
+
+  private void audit(ServerRequest request, String action, String target, String outcome,
+          Object details) {
+    if (auditServiceProvider == null) {
+      return;
+    }
+    var auditService = auditServiceProvider.getIfAvailable();
+    if (auditService == null) {
+      return;
+    }
+    auditService.record(DslAuditService.currentActor(), action, target,
+            DslAuditService.correlationIdOf(request), outcome, details);
   }
 }

@@ -5,6 +5,7 @@ import cbs.nova.starter.model.PageResponse;
 import cbs.nova.starter.notification.NotificationRuleEngine;
 import cbs.nova.starter.notification.NotificationRuleService;
 import cbs.nova.starter.persistence.NotificationRuleFiringRepository;
+import cbs.nova.starter.service.DslAuditService;
 import cbs.nova.starter.webhook.WebhookDispatcher;
 import java.util.Optional;
 import io.swagger.v3.oas.annotations.Operation;
@@ -15,6 +16,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import org.springdoc.core.annotations.RouterOperation;
 import org.springdoc.core.annotations.RouterOperations;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -38,9 +40,10 @@ public class NotificationRouterConfiguration {
   @Bean
   NotificationRuleHandler notificationRuleHandler(NotificationRuleService ruleService,
           NotificationRuleEngine ruleEngine, NotificationRuleFiringRepository firingRepository,
-          Optional<WebhookDispatcher> webhookDispatcher) {
+          Optional<WebhookDispatcher> webhookDispatcher,
+          ObjectProvider<DslAuditService> auditServiceProvider) {
     return new NotificationRuleHandler(ruleService, ruleEngine, firingRepository,
-            webhookDispatcher);
+            webhookDispatcher, auditServiceProvider);
   }
 
   @Bean

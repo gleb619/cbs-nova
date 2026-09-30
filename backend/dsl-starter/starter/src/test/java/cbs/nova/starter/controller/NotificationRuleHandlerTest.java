@@ -1,5 +1,6 @@
 package cbs.nova.starter.controller;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -7,6 +8,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import cbs.nova.starter.AuditTestSupport;
 import cbs.nova.starter.config.router.NotificationRouterConfiguration;
 import cbs.nova.starter.converter.DefaultDslExceptionMapper;
 import cbs.nova.starter.model.NotificationRuleModels.ChannelDto;
@@ -19,7 +21,6 @@ import cbs.nova.starter.notification.NotificationRuleService;
 import cbs.nova.starter.persistence.CrudRepositories;
 import cbs.nova.starter.persistence.NotificationRuleFiringRepository;
 import cbs.nova.starter.persistence.NotificationRuleRepository;
-import cbs.nova.starter.service.DslAuditService;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -48,6 +49,8 @@ class NotificationRuleHandlerTest {
 
   private MockMvc mockMvc;
   private NotificationRuleService ruleService;
+  private NotificationRuleFiringRepository firingRepository;
+  private NotificationRuleEngine ruleEngine;
   private final ObjectMapper objectMapper = new ObjectMapper();
 
   @BeforeEach
@@ -63,7 +66,7 @@ class NotificationRuleHandlerTest {
     var repos = CrudRepositories.over(dataSource);
     var ruleRepository = new NotificationRuleRepository(repos.notificationRules(),
             repos.dslQueries());
-    var firingRepository = new NotificationRuleFiringRepository(
+    firingRepository = new NotificationRuleFiringRepository(
             repos.notificationRuleFirings(), repos.dslQueries());
 
     ruleService = new NotificationRuleService(ruleRepository, objectMapper,
@@ -71,11 +74,11 @@ class NotificationRuleHandlerTest {
 
     var executor = new ThreadPoolTaskExecutor();
     executor.initialize();
-    var ruleEngine = new NotificationRuleEngine(ruleRepository, firingRepository, ruleService,
+    ruleEngine = new NotificationRuleEngine(ruleRepository, firingRepository, ruleService,
             List.of(), executor);
 
     var handler = new NotificationRuleHandler(ruleService, ruleEngine, firingRepository,
-            Optional.empty());
+            Optional.empty(), AuditTestSupport.emptyProvider());
     var router = new NotificationRouterConfiguration();
 
     var adviceContext = new AnnotationConfigApplicationContext();
@@ -310,6 +313,198 @@ class NotificationRuleHandlerTest {
             .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
             .andExpect(
                     jsonPath("$.message").value("'eventType' is required and must not be blank"));
+  }
+
+  // ----- audit (T776) -------------------------------------------------------
+
+  @Test
+  void createWritesAuditRowWithIdNameEnabledAndOmitsSinkSecret() throws Exception {
+    var audit = AuditTestSupport.h2();
+    mockMvc = buildMockMvc(new NotificationRuleHandler(ruleService, ruleEngine, firingRepository,
+            Optional.empty(), AuditTestSupport.providerOf(audit.service())));
+
+    String body = objectMapper.writeValueAsString(sampleRule("loan-failures"));
+
+    mockMvc.perform(post("/api/dsl/notifications/rules")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(body))
+            .andExpect(status().isCreated());
+
+    var rows = audit.service().search(null, 0, 10).items();
+    assertThat(rows).hasSize(1);
+    var row = rows.get(0);
+    assertThat(row.action()).isEqualTo("NOTIFICATION_RULE_CREATE");
+    assertThat(row.outcome()).isEqualTo("SUCCESS");
+    assertThat(row.target()).isNotEqualTo("-");
+    assertThat(row.detailsJson())
+            .doesNotContain("topsecret") // sample rule secret
+            .doesNotContain("http://example.com/hook"); // sink URL
+    var details = objectMapper.readValue(row.detailsJson(), java.util.Map.class);
+    assertThat(details).containsKeys("id", "name", "enabled");
+    assertThat(details.get("name")).isEqualTo("loan-failures");
+  }
+
+  @Test
+  void createWithBlankNameWritesFailureAuditRow() throws Exception {
+    var audit = AuditTestSupport.h2();
+    mockMvc = buildMockMvc(new NotificationRuleHandler(ruleService, ruleEngine, firingRepository,
+            Optional.empty(), AuditTestSupport.providerOf(audit.service())));
+
+    var dto = new NotificationRuleDto(null, "   ", true,
+            new EventFilterDto("RunFailed", null, null, null, null),
+            List.of(new NotificationActionDto("email", null, null, "ops@example.com")),
+            0, "default", null, null);
+
+    mockMvc.perform(post("/api/dsl/notifications/rules")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(dto)))
+            .andExpect(status().isBadRequest());
+
+    var rows = audit.service().search(null, 0, 10).items();
+    assertThat(rows).hasSize(1);
+    var row = rows.get(0);
+    assertThat(row.action()).isEqualTo("NOTIFICATION_RULE_CREATE");
+    assertThat(row.outcome()).isEqualTo("FAILURE");
+  }
+
+  @Test
+  void updateWritesAuditRowOnSuccessAndOmitsSinkSecret() throws Exception {
+    var audit = AuditTestSupport.h2();
+    mockMvc = buildMockMvc(new NotificationRuleHandler(ruleService, ruleEngine, firingRepository,
+            Optional.empty(), AuditTestSupport.providerOf(audit.service())));
+    var created = ruleService.create(sampleRule("old-name"));
+    var updated = new NotificationRuleDto(
+            created.id(), "new-name", false,
+            new EventFilterDto("RunCompleted", null, null, null, null),
+            List.of(new NotificationActionDto("email", null, null, "ops@example.com")),
+            10, "urgent", null, null);
+
+    mockMvc.perform(put("/api/dsl/notifications/rules/" + created.id())
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(updated)))
+            .andExpect(status().isOk());
+
+    var rows = audit.service().search(null, 0, 10).items();
+    assertThat(rows).hasSize(1);
+    var row = rows.get(0);
+    assertThat(row.action()).isEqualTo("NOTIFICATION_RULE_UPDATE");
+    assertThat(row.outcome()).isEqualTo("SUCCESS");
+    assertThat(row.target()).isEqualTo(String.valueOf(created.id()));
+  }
+
+  @Test
+  void updateUnknownIdWritesFailureAuditRow() throws Exception {
+    var audit = AuditTestSupport.h2();
+    mockMvc = buildMockMvc(new NotificationRuleHandler(ruleService, ruleEngine, firingRepository,
+            Optional.empty(), AuditTestSupport.providerOf(audit.service())));
+    var body = objectMapper.writeValueAsString(sampleRule("any"));
+
+    mockMvc.perform(put("/api/dsl/notifications/rules/987654321")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(body))
+            .andExpect(status().isNotFound());
+
+    var rows = audit.service().search(null, 0, 10).items();
+    assertThat(rows).hasSize(1);
+    var row = rows.get(0);
+    assertThat(row.action()).isEqualTo("NOTIFICATION_RULE_UPDATE");
+    assertThat(row.outcome()).isEqualTo("FAILURE");
+  }
+
+  @Test
+  void deleteWritesAuditRowOnSuccess() throws Exception {
+    var audit = AuditTestSupport.h2();
+    mockMvc = buildMockMvc(new NotificationRuleHandler(ruleService, ruleEngine, firingRepository,
+            Optional.empty(), AuditTestSupport.providerOf(audit.service())));
+    var created = ruleService.create(sampleRule("to-delete"));
+
+    mockMvc.perform(delete("/api/dsl/notifications/rules/" + created.id()))
+            .andExpect(status().isNoContent());
+
+    var rows = audit.service().search(null, 0, 10).items();
+    assertThat(rows).hasSize(1);
+    var row = rows.get(0);
+    assertThat(row.action()).isEqualTo("NOTIFICATION_RULE_DELETE");
+    assertThat(row.outcome()).isEqualTo("SUCCESS");
+    assertThat(row.target()).isEqualTo(String.valueOf(created.id()));
+  }
+
+  @Test
+  void deleteUnknownIdWritesFailureAuditRow() throws Exception {
+    var audit = AuditTestSupport.h2();
+    mockMvc = buildMockMvc(new NotificationRuleHandler(ruleService, ruleEngine, firingRepository,
+            Optional.empty(), AuditTestSupport.providerOf(audit.service())));
+
+    mockMvc.perform(delete("/api/dsl/notifications/rules/987654321"))
+            .andExpect(status().isNotFound());
+
+    var rows = audit.service().search(null, 0, 10).items();
+    assertThat(rows).hasSize(1);
+    var row = rows.get(0);
+    assertThat(row.action()).isEqualTo("NOTIFICATION_RULE_DELETE");
+    assertThat(row.outcome()).isEqualTo("FAILURE");
+  }
+
+  @Test
+  void toggleWritesAuditRowOnSuccess() throws Exception {
+    var audit = AuditTestSupport.h2();
+    mockMvc = buildMockMvc(new NotificationRuleHandler(ruleService, ruleEngine, firingRepository,
+            Optional.empty(), AuditTestSupport.providerOf(audit.service())));
+    var created = ruleService.create(sampleRule("toggle"));
+    String body = objectMapper.writeValueAsString(new ToggleEnabledRequest(false));
+
+    mockMvc.perform(post("/api/dsl/notifications/rules/" + created.id() + "/enabled")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(body))
+            .andExpect(status().isOk());
+
+    var rows = audit.service().search(null, 0, 10).items();
+    assertThat(rows).hasSize(1);
+    var row = rows.get(0);
+    assertThat(row.action()).isEqualTo("NOTIFICATION_RULE_TOGGLE");
+    assertThat(row.outcome()).isEqualTo("SUCCESS");
+    assertThat(row.target()).isEqualTo(String.valueOf(created.id()));
+    var details = objectMapper.readValue(row.detailsJson(), java.util.Map.class);
+    assertThat(details.get("enabled")).isEqualTo(false);
+  }
+
+  @Test
+  void toggleUnknownIdWritesFailureAuditRow() throws Exception {
+    var audit = AuditTestSupport.h2();
+    mockMvc = buildMockMvc(new NotificationRuleHandler(ruleService, ruleEngine, firingRepository,
+            Optional.empty(), AuditTestSupport.providerOf(audit.service())));
+    String body = objectMapper.writeValueAsString(new ToggleEnabledRequest(true));
+
+    mockMvc.perform(post("/api/dsl/notifications/rules/987654321/enabled")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(body))
+            .andExpect(status().isNotFound());
+
+    var rows = audit.service().search(null, 0, 10).items();
+    assertThat(rows).hasSize(1);
+    var row = rows.get(0);
+    assertThat(row.action()).isEqualTo("NOTIFICATION_RULE_TOGGLE");
+    assertThat(row.outcome()).isEqualTo("FAILURE");
+  }
+
+  private static MockMvc buildMockMvc(NotificationRuleHandler handler) {
+    NotificationRouterConfiguration router = new NotificationRouterConfiguration();
+
+    AnnotationConfigApplicationContext adviceContext = new AnnotationConfigApplicationContext();
+    adviceContext.registerBean(DslExceptionHandler.class,
+            () -> new DslExceptionHandler(new DefaultDslExceptionMapper()));
+    adviceContext.refresh();
+
+    ExceptionHandlerExceptionResolver exceptionResolver = new ExceptionHandlerExceptionResolver();
+    exceptionResolver.setApplicationContext(adviceContext);
+    exceptionResolver.setMessageConverters(List.of(new JacksonJsonHttpMessageConverter()));
+    exceptionResolver.afterPropertiesSet();
+
+    return MockMvcBuilders.routerFunctions(router.notificationRouter(handler))
+            .setMessageConverters(new StringHttpMessageConverter(),
+                    new JacksonJsonHttpMessageConverter())
+            .setHandlerExceptionResolvers(exceptionResolver)
+            .build();
   }
 
   private NotificationRuleDto sampleRule(String name) {

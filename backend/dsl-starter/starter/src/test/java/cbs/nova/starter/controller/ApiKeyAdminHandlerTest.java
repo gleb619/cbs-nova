@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import cbs.nova.starter.AuditTestSupport;
 import cbs.nova.starter.config.router.ApiKeyAdminRouterConfiguration;
 import cbs.nova.starter.converter.DefaultDslExceptionMapper;
 import cbs.nova.starter.persistence.CrudRepositories;
@@ -55,7 +56,7 @@ class ApiKeyAdminHandlerTest {
     var repos = CrudRepositories.over(dataSource);
     JdbcApiKeyRepository repository = new JdbcApiKeyRepository(repos.apiKeys(), repos.dslQueries());
     store = new ApiKeyStore(repository, objectMapper, new SelfProvider(() -> store));
-    ApiKeyAdminHandler handler = new ApiKeyAdminHandler(store);
+    ApiKeyAdminHandler handler = new ApiKeyAdminHandler(store, AuditTestSupport.emptyProvider());
     ApiKeyAdminRouterConfiguration router = new ApiKeyAdminRouterConfiguration();
 
     AnnotationConfigApplicationContext adviceContext = new AnnotationConfigApplicationContext();
@@ -184,6 +185,125 @@ class ApiKeyAdminHandlerTest {
     String body = result.getResponse().getContentAsString();
     assertThat(body).doesNotContain(plaintext);
     assertThat(body).doesNotContain(storedHash);
+  }
+
+  // ----- audit (T776) -------------------------------------------------------
+
+  @Test
+  void createWritesAuditRowWithPrefixOnlyAndOmitsPlaintextAndHash() throws Exception {
+    var audit = AuditTestSupport.h2();
+    mockMvc = buildMockMvc(new ApiKeyAdminHandler(store,
+            AuditTestSupport.providerOf(audit.service())));
+
+    MvcResult createResult = mockMvc.perform(post("/api/dsl/auth/keys")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"label\":\"ops-deploy\"}"))
+            .andExpect(status().isOk())
+            .andReturn();
+
+    String createBody = createResult.getResponse().getContentAsString();
+    String plaintext = objectMapper.readTree(createBody).get("key").asText();
+    String storedHash = ApiKeyStore.sha256Hex(plaintext);
+
+    var rows = audit.service().search(null, 0, 10).items();
+    assertThat(rows).hasSize(1);
+    var row = rows.get(0);
+    assertThat(row.action()).isEqualTo("API_KEY_CREATE");
+    assertThat(row.outcome()).isEqualTo("SUCCESS");
+    assertThat(row.target()).isEqualTo(String.valueOf(row.target()));
+    // The raw key material must NEVER leak into the audit log.
+    assertThat(row.detailsJson()).doesNotContain(plaintext);
+    assertThat(row.detailsJson()).doesNotContain(storedHash);
+    var details = objectMapper.readValue(row.detailsJson(), java.util.Map.class);
+    assertThat(details).containsKeys("id", "label", "prefix");
+    assertThat(details.get("label")).isEqualTo("ops-deploy");
+  }
+
+  @Test
+  void createAuditRowOnFailureDoesNotIncludePlaintext() throws Exception {
+    var audit = AuditTestSupport.h2();
+    mockMvc = buildMockMvc(new ApiKeyAdminHandler(store,
+            AuditTestSupport.providerOf(audit.service())));
+
+    mockMvc.perform(post("/api/dsl/auth/keys")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{}"))
+            .andExpect(status().isBadRequest());
+
+    var rows = audit.service().search(null, 0, 10).items();
+    assertThat(rows).hasSize(1);
+    var row = rows.get(0);
+    assertThat(row.action()).isEqualTo("API_KEY_CREATE");
+    assertThat(row.outcome()).isEqualTo("FAILURE");
+    assertThat(row.target()).isEqualTo("-");
+  }
+
+  @Test
+  void revokeWritesAuditRowOnSuccess() throws Exception {
+    var audit = AuditTestSupport.h2();
+    mockMvc = buildMockMvc(new ApiKeyAdminHandler(store,
+            AuditTestSupport.providerOf(audit.service())));
+    ApiKeyStore.CreatedKey created = store.create("to-revoke");
+
+    mockMvc.perform(delete("/api/dsl/auth/keys/" + created.id()))
+            .andExpect(status().isNoContent());
+
+    var rows = audit.service().search(null, 0, 10).items();
+    assertThat(rows).hasSize(1);
+    var row = rows.get(0);
+    assertThat(row.action()).isEqualTo("API_KEY_REVOKE");
+    assertThat(row.outcome()).isEqualTo("SUCCESS");
+    assertThat(row.target()).isEqualTo(String.valueOf(created.id()));
+  }
+
+  @Test
+  void revokeUnknownIdWritesFailureAuditRow() throws Exception {
+    var audit = AuditTestSupport.h2();
+    mockMvc = buildMockMvc(new ApiKeyAdminHandler(store,
+            AuditTestSupport.providerOf(audit.service())));
+
+    mockMvc.perform(delete("/api/dsl/auth/keys/987654321"))
+            .andExpect(status().isNotFound());
+
+    var rows = audit.service().search(null, 0, 10).items();
+    assertThat(rows).hasSize(1);
+    var row = rows.get(0);
+    assertThat(row.action()).isEqualTo("API_KEY_REVOKE");
+    assertThat(row.outcome()).isEqualTo("FAILURE");
+    assertThat(row.target()).isEqualTo("987654321");
+  }
+
+  @Test
+  void handlerSucceedsWithoutAuditBean() throws Exception {
+    // The emptyProvider() path is the default @BeforeEach wiring; this test pins the
+    // "no DataSource" deployment shape — handler must still serve the full lifecycle.
+    ApiKeyStore.CreatedKey created = store.create("no-audit-bean");
+
+    mockMvc.perform(get("/api/dsl/auth/keys"))
+            .andExpect(status().isOk());
+
+    mockMvc.perform(delete("/api/dsl/auth/keys/" + created.id()))
+            .andExpect(status().isNoContent());
+  }
+
+  private static MockMvc buildMockMvc(ApiKeyAdminHandler handler) {
+    ApiKeyAdminRouterConfiguration router = new ApiKeyAdminRouterConfiguration();
+
+    AnnotationConfigApplicationContext adviceContext = new AnnotationConfigApplicationContext();
+    adviceContext.registerBean(DslExceptionHandler.class,
+            () -> new DslExceptionHandler(new DefaultDslExceptionMapper()));
+    adviceContext.refresh();
+
+    ExceptionHandlerExceptionResolver exceptionResolver = new ExceptionHandlerExceptionResolver();
+    exceptionResolver.setApplicationContext(adviceContext);
+    exceptionResolver.setMessageConverters(List.of(new JacksonJsonHttpMessageConverter()));
+    exceptionResolver.afterPropertiesSet();
+
+    return MockMvcBuilders.routerFunctions(router.apiKeyAdminRouter(handler))
+            .setMessageConverters(new StringHttpMessageConverter(),
+                    new JacksonJsonHttpMessageConverter())
+            .setHandlerExceptionResolvers(exceptionResolver)
+            .build();
   }
 
   private record SelfProvider(Supplier<ApiKeyStore> supplier)
