@@ -1,5 +1,14 @@
 # Security — supply chain baseline files (T414)
 
+## `httpCall` SSRF guard
+
+The built-in `httpCall` helper validates the request URL up front and validates every
+redirect target before a network packet is sent. See `docs/dsl/helpers.md` for redirect
+semantics and the per-hop SSRF guarantee. DNS-rebinding within a single hop remains a residual
+risk because the validator resolves the host once and the resolved IP could be re-bound before
+TCP connect completes; use `RedirectPolicy.NEVER` for untrusted endpoints when intermediate
+side effects are unacceptable.
+
 This directory holds the **baseline / suppression** files consumed by the
 two CVE scanners wired into `make cve-scan`. They let a real finding be
 triaged once and accepted for a bounded time, so the gate stays usable

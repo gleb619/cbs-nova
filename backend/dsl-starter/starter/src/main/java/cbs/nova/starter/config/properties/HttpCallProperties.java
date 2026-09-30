@@ -2,19 +2,31 @@ package cbs.nova.starter.config.properties;
 
 import java.util.List;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.bind.ConstructorBinding;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 
 @ConfigurationProperties(prefix = "cbs.dsl.helper.http-call")
 public record HttpCallProperties(
         List<String> allowedSchemes,
         @DefaultValue("true") boolean blockPrivateAddresses,
-        List<String> allowedHosts) {
+        List<String> allowedHosts,
+        @DefaultValue("5") int maxRedirectHops) {
 
+  @ConstructorBinding
   public HttpCallProperties {
     allowedSchemes = allowedSchemes == null
             ? List.of("https", "http")
             : List.copyOf(allowedSchemes);
     allowedHosts = allowedHosts == null ? List.of() : List.copyOf(allowedHosts);
+  }
+
+  /**
+   * Three-argument convenience constructor that keeps the legacy call sites working with the
+   * default redirect hop budget of 5.
+   */
+  public HttpCallProperties(List<String> allowedSchemes, boolean blockPrivateAddresses,
+          List<String> allowedHosts) {
+    this(allowedSchemes, blockPrivateAddresses, allowedHosts, 5);
   }
 
   /**

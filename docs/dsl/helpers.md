@@ -714,6 +714,29 @@ HttpCallOut resp = ctx.runHelper("httpCall",
         .as(HttpCallOut.class);
 ```
 
+### Redirect handling
+
+`httpCall` validates every redirect hop before following it. The initial URL and each
+`Location` target are run through the same `OutboundUrlValidator` checks (scheme allowlist,
+private-address block, optional host allowlist). A blocked hop is rejected with an
+`IllegalArgumentException` and **no request is sent to the target**. The hop budget defaults to 5
+and can be configured via `cbs.dsl.helper.http-call.max-redirect-hops`.
+
+Redirect semantics match the JDK `HttpClient`:
+
+- `NEVER` — 3xx responses are returned as non-2xx failures, no following.
+- `NORMAL` — follows redirects, but refuses to downgrade an `https` origin to `http`.
+- `ALWAYS` — follows redirects, including `https` → `http`.
+
+For 301/302/303 the helper switches to GET and drops the request body (HEAD stays HEAD);
+307/308 preserve the original method and body. `Authorization`, `Cookie` and
+`Proxy-Authorization` headers are stripped on cross-origin hops. Exceeding the hop limit or a
+missing `Location` header produces a clear `IllegalArgumentException`.
+
+> DNS-rebinding inside a single hop remains out of scope: the validator resolves the host once
+> before the request is sent, but the resolved IP could be re-bound between validation and the
+> actual TCP connection by an attacker who controls a TTL-bypassed DNS record.
+
 Pull a field out of the response with `jsonExtract` (`JsonExtractIn(json, path)`):
 
 ```java
