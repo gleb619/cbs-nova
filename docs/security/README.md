@@ -65,9 +65,40 @@ Reference:
    ```
 
 3. **Always set `expires_on`** so the entry expires and forces a
-   re-triage at least every quarter.
+   re-triage at least every quarter. The gate enforces it — see below.
 4. Re-run `make cve-scan`. The advisory should no longer contribute to
    the failure count.
+
+### `expires_on` semantics (enforced)
+
+`pnpm audit` advisories are gated by
+`scripts/src/cbs_cli/commands/cve_gate.py`, registered as the
+`cve-scan` CLI command:
+
+```bash
+python scripts/cbs_cli.py cve-scan <audit.json> <allowlist.json> [--today YYYY-MM-DD]
+```
+
+- `expires_on` is **mandatory** for every entry in
+  `allowlisted_advisories`. A missing, `null`, or unparseable value
+  makes the gate fail hard rather than silently accept the entry.
+- The last day is **inclusive**: an entry with `expires_on: 2026-09-30`
+  still suppresses its advisory on 2026-09-30 and is considered expired
+  from 2026-10-01 onward.
+- An expired entry is **not** allowlisted. Its advisory counts toward
+  the gate again and the output names the entry so the operator knows
+  why it reappeared:
+  `  - expired allowlist entry 1137043 (nuxt, expired 2026-01-31)`.
+- `--today YYYY-MM-DD` overrides the reference date (used by the tests
+  so nothing is time-dependent).
+
+Exit codes:
+
+| Code | Meaning                                                          |
+| ---- | ---------------------------------------------------------------- |
+| `0`  | No non-allowlisted `high`/`critical` advisories                  |
+| `1`  | At least one `high`/`critical` advisory is not allowlisted       |
+| `2`  | Config error — audit/allowlist unparseable, or invalid `expires_on` / `--today` |
 
 ## Graceful-degrade contract
 
