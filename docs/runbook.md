@@ -378,6 +378,119 @@ artifacts are deployed.
 
 ---
 
+## 9. Postgres unavailable / connection pool exhausted  — P0
+
+**Symptom.** The app serves `5xx` from `/api/dsl/**`, `/api/executions/**`, and the BFF path
+`/api/v1/**`; readiness probes go DOWN; Temporal, Keycloak, and Bugsink (which all share the
+same Postgres container) start misbehaving in the same window. App logs show
+`HikariPool-1 — Connection is not available, request timed out after …`, `org.postgresql.*`
+IOExceptions, or a flood of `pg_stat_activity` rows in `idle in transaction` / `active`. The
+shared `NovaHikariPool` (`backend/dsl-starter/starter-launcher/src/main/resources/application.yml`,
+`maximum-pool-size: 20`) is the choke point for **every** datastore-backed request.
+
+**Triage.** Read top-to-bottom; the four checks together pin down "DB down" vs "pool dry".
+
+1. **Liveness vs readiness** (read the [Health endpoints](#health-endpoints) section first):
+   ```bash
+   curl -s http://localhost:8090/actuator/health/liveness  | jq .status   # expect UP
+   curl -s http://localhost:8090/actuator/health/readiness | jq .status   # DOWN = stop traffic
+   curl -s http://localhost:8090/actuator/health/readiness | jq '.components.db.details'
+   ```
+   `db.status=DOWN` with `livenessState=UP` is the canonical signal: the JVM is fine, the
+   datastore is not. Readiness DOWN here pulls the pod from rotation automatically.
+2. **Hikari pool metrics** — confirm the series are exposed first, then read the live values
+   (`spring.datasource.hikari.pool-name` becomes the `pool` tag):
+   ```bash
+   curl -s http://localhost:8090/actuator/prometheus | grep -E '^hikaricp_connections' | head
+   # active near max-pool-size + pending > 0 for sustained period ⇒ pool exhausted
+   curl -s http://localhost:8090/actuator/prometheus | \
+     grep -E 'hikaricp_connections_(active|pending|idle|max)'
+   ```
+3. **Postgres container:**
+   ```bash
+   docker compose -f app/docker-compose.yml ps postgres
+   docker compose -f app/docker-compose.yml logs --tail=200 postgres
+   ```
+   Look for `FATAL: sorry, too many clients already`, `database system is shut down`,
+   OOM-kills, or the container simply `Exit(1)` / restart-looping.
+4. **Postgres-side view** — long-running sessions, locks, and `max_connections` headroom (one-liner
+   via the running `postgres` container; hostname `postgres` is compose-internal):
+   ```bash
+   docker exec -i $(docker ps -qf name=postgres) psql -U nova -d nova -c "
+     SELECT pid, usename, application_name, state, query_start,
+            now() - query_start AS age, wait_event_type, wait_event, left(query, 80) AS query
+     FROM pg_stat_activity
+     WHERE datname = current_database() AND pid <> pg_backend_pid()
+     ORDER BY query_start NULLS LAST LIMIT 30;"
+   docker exec -i $(docker ps -qf name=postgres) psql -U nova -d nova -c "
+     SELECT setting::int AS max_connections,
+            (SELECT count(*) FROM pg_stat_activity) AS used,
+            (SELECT count(*) FROM pg_stat_activity WHERE state='idle in transaction') AS idle_in_tx
+     FROM pg_settings WHERE name='max_connections';"
+   ```
+   `idle_in_tx` count high + an `accessexclusive` lock is the classic purger-vs-runner
+   deadlock; `used ≈ max_connections` means a different service (Keycloak, Bugsink) is
+   starving the app.
+
+**Hypotheses (ranked).**
+1. **Postgres container down** — crash, OOM, disk full, failed volume mount. Affects **every**
+   sibling (Keycloak, Temporal, Bugsink) — confirm via `ps`/`logs postgres` above. Restore
+   Postgres first; everything else heals on its own.
+2. **Pool exhausted by long-running transactions** — the purger holding a write lock for too
+   long, or a runner workflow in a tight retry loop with `auto-commit=false`. Look for
+   `state='idle in transaction'` or `state='active'` rows whose `age` exceeds a minute.
+3. **Connection leak** — code path opens a `Connection` / `JdbcTemplate` call and never
+   returns it to the pool. Symptom shape: `hikaricp_connections_active` pinned at `max`
+   while `hikaricp_connections_idle` trends to zero over minutes, with no growth in
+   `pg_stat_activity` from outside the app (rules out hypothesis 1).
+4. **`max_connections` hit by a sibling service** — Keycloak pool, Temporal persistence,
+   or Bugsink all opened more connections than Postgres allows. The app's pool looks
+   healthy (`active < max`) yet requests time out, because Postgres itself rejects new
+   sessions. Confirm with the `used/max_connections` query above.
+
+**Mitigation.**
+- **If Postgres is down:** restart it (`docker compose -f app/docker-compose.yml restart
+  postgres`); if it crash-loops, check `df -h` on the Postgres volume and the server log
+  before retrying. Once back, `/actuator/health/readiness` returns UP on its own.
+- **If the pool is exhausted by purger or long tx:** kill the offending `pid` from
+  `pg_stat_activity` (`SELECT pg_terminate_backend(<pid>);`) — Hikari will reclaim
+  connections within seconds. As a stop-gap, lower `cbs.runs.purge-batch-size` (default is
+  fine — see [incident #3](#3-retention-purger-stuck-or-too-aggressive--p1)) or pause the
+  purger until backlog drains.
+- **Raise the pool size** — the real knob is the Spring Boot standard property
+  `spring.datasource.hikari.maximum-pool-size` (default `20`, set in
+  [`../backend/dsl-starter/starter-launcher/src/main/resources/application.yml`](../backend/dsl-starter/starter-launcher/src/main/resources/application.yml));
+  via env override this is `SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE` (Spring's relaxed
+  binding applies to all standard Spring Boot keys — see the general override contract in
+  [dsl/configuration.md](dsl/configuration.md), not listed per-property because it is a
+  Spring Boot standard). Set, restart, watch `hikaricp_connections_pending` drop to zero.
+  Keep the new value **below** `max_connections` minus the headroom other services need.
+- **If a sibling service is the cause:** scale its pool down (Keycloak
+  `DB_POOL_MAX_SIZE`, Temporal datastore connections) or raise Postgres `max_connections`,
+  then restart the offending service. The app's pool cannot compensate for a server-side
+  limit.
+- **Readiness already pulls the pod out of rotation** — do **not** also restart the app to
+  "fix" a DB outage; you'll add startup latency to the recovery window (see [Health
+  endpoints](#health-endpoints) — readiness is intentionally separate from liveness).
+
+**Permanent fix.**
+- Managed Postgres / HA replica + monitoring on `pg_stat_activity.idle_in_tx` count and
+  `pg_stat_activity.count/max_connections` ratio. Pool tuning belongs in a load test, not
+  on-call — record the post-incident value and revert it once the real cause is fixed.
+- Add a Hikari leak detector (`spring.datasource.hikari.leak-detection-threshold`) once
+  hypothesis 3 is confirmed.
+- Raise the alert-rule coverage gap: this runbook entry has **no matching rule in
+  `app/compose/alerts.yml`** today — `hikaricp_connections_pending > 0 for 5m` and
+  `pg_stat_activity.idle_in_tx > 0 for 2m` are the natural candidates; raise a follow-up
+  task to add them.
+
+**Verification.** `/actuator/health/readiness` `db.status=UP`; `hikaricp_connections_pending`
+flat at `0`; `pg_stat_activity` shows no `idle in transaction` rows older than a few seconds;
+a fresh `POST /api/dsl/run/<name>` completes end-to-end; reconciliation sweep (see [incident
+#4](#4-stuck-running-reconciliation-lag--p2)) clears any rows stranded by the outage.
+
+---
+
 ## Correlating a request across logs
 
 Every request carries two ids. Both are optional — the caller may send either, neither, or both:
