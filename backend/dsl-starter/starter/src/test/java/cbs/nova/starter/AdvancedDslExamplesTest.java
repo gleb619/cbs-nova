@@ -52,6 +52,11 @@ import cbs.nova.dslexamples.v1.ApiKeyProvisioningModels.ApiKeyProvisioningIn;
 import cbs.nova.dslexamples.v1.ApiKeyProvisioningModels.ApiKeyProvisioningOut;
 import cbs.nova.dslexamples.v1.SampleDataGenerationModels.SampleDataGenerationIn;
 import cbs.nova.dslexamples.v1.SampleDataGenerationModels.SampleDataGenerationOut;
+import cbs.nova.dsl.config.Constants;
+import cbs.nova.dsl.process.PreviewSignalBuffer;
+import cbs.nova.dsl.process.SeededSignal;
+import cbs.nova.dslexamples.v1.SignalBranchModels.SignalBranchIn;
+import cbs.nova.dslexamples.v1.SignalBranchModels.SignalBranchOut;
 import cbs.nova.starter.config.properties.CbsNovaLoggingProperties;
 import cbs.nova.starter.config.properties.CbsNovaLoggingProperties.Level;
 import cbs.nova.starter.core.StarterConstants;
@@ -701,6 +706,56 @@ class AdvancedDslExamplesTest {
 
       throw new IllegalStateException("Cannot instantiate helper " + helperClass.getName());
     };
+  }
+
+  @Test
+  void signalBranchPreviewResolvesSeededSignalAndBranchesOnPayload() {
+    var input = new SignalBranchIn("req-1", 250);
+    Context<SignalBranchIn> ctx = SimpleContext.builder(input).mode(ExecutionMode.PREVIEW)
+            .runId("run-signal-branch")
+            .metadata(Map.of(Constants.PREVIEW_SIGNAL_SEEDS_KEY,
+                    List.of(new SeededSignal("decision", "{\"approved\":true}", null)),
+                    Constants.SIGNAL_AWAITER_METADATA_KEY,
+                    new PreviewSignalBuffer(List.of(
+                            new SeededSignal("decision", "{\"approved\":true}", null)))))
+            .build();
+
+    Result<?> result = GlobalManager.globalManager().runProcess("SignalBranch", ctx);
+
+    assertThat(result.isSuccess()).isTrue();
+    SignalBranchOut out = (SignalBranchOut) result.value();
+    assertThat(out.decision()).isEqualTo("APPROVED:250");
+    assertThat(out.requestId()).isEqualTo("req-1");
+    assertThat(out.signalSeen()).isTrue();
+  }
+
+  @Test
+  void signalBranchPreviewTakesRejectBranchOnSeededPayload() {
+    var input = new SignalBranchIn("req-2", 10);
+    var seed = new SeededSignal("decision", "{\"approved\":false}", null);
+    Context<SignalBranchIn> ctx = SimpleContext.builder(input).mode(ExecutionMode.PREVIEW)
+            .runId("run-signal-branch-reject")
+            .metadata(Map.of(Constants.SIGNAL_AWAITER_METADATA_KEY,
+                    new PreviewSignalBuffer(List.of(seed))))
+            .build();
+
+    Result<?> result = GlobalManager.globalManager().runProcess("SignalBranch", ctx);
+
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(((SignalBranchOut) result.value()).decision()).isEqualTo("REJECTED:10");
+  }
+
+  @Test
+  void signalBranchPreviewWithoutBufferStillFailsWithLegacyIllegalState() {
+    var input = new SignalBranchIn("req-3", 99);
+    Context<SignalBranchIn> ctx = SimpleContext.builder(input).mode(ExecutionMode.PREVIEW)
+            .runId("run-signal-branch-legacy")
+            .build();
+
+    Result<?> result = GlobalManager.globalManager().runProcess("SignalBranch", ctx);
+
+    assertThat(result.isSuccess()).isFalse();
+    assertThat(result.cause()).hasMessageContaining("Signal awaiting is not available");
   }
 
   private static String urlEncodeForm(String value) {

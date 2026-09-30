@@ -10,6 +10,7 @@ import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.model.HierarchyReport;
 import cbs.nova.dsl.model.PreviewReport;
 import cbs.nova.dsl.Result;
+import cbs.nova.dsl.config.Constants;
 import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.exception.DslException;
 import cbs.nova.starter.converter.DslRuntimeMapper;
@@ -20,6 +21,7 @@ import cbs.nova.starter.model.DslRequest;
 import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.starter.model.RuntimeOutcome;
 import java.util.HashMap;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -145,6 +147,9 @@ public class DslRuntimeService {
             : new HashMap<>();
     if (correlationId != null && !correlationId.isBlank()) {
       metadata.put(StarterConstants.CORRELATION_ID_METADATA_KEY, correlationId);
+    }
+    if (mode != ExecutionMode.RUN && request.signals() != null && !request.signals().isEmpty()) {
+      metadata.put(Constants.PREVIEW_SIGNAL_SEEDS_KEY, List.copyOf(request.signals()));
     }
     Object body = coerceBody(name, runId, request.body());
     Context<?> ctx = SimpleContext.builder().body(body).metadata(metadata).mode(mode).runId(runId)

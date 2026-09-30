@@ -4,6 +4,8 @@ import static cbs.nova.starter.core.StarterConstants.HELPER_NOT_FOUND_PREFIX;
 import static cbs.nova.starter.core.StarterConstants.UNKNOWN_ENTITY_PREFIX;
 
 import cbs.nova.dsl.PreviewErrorCode;
+import cbs.nova.dsl.process.SignalNotSeededException;
+import cbs.nova.dsl.process.SignalPayloadTypeMismatchException;
 import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.dsl.exception.DslCompensationException;
 import cbs.nova.dsl.exception.DslEntityNotFoundException;
@@ -78,6 +80,14 @@ public class PreviewErrorHandler {
           return helperNotFound(msg, extractAfterPrefix(msg, UNKNOWN_ENTITY_PREFIX), entityName);
         }
         return build(PreviewErrorCode.INPUT_VALIDATION_ERROR, msg, Map.of(), entityName);
+      }
+      case SignalNotSeededException snse -> {
+        return build(PreviewErrorCode.SIGNAL_NOT_SEEDED, messageOf(snse),
+                Map.of("signalName", snse.signalName()), entityName);
+      }
+      case SignalPayloadTypeMismatchException sptme -> {
+        return build(PreviewErrorCode.SIGNAL_PAYLOAD_TYPE_MISMATCH, messageOf(sptme),
+                Map.of("signalName", sptme.signalName()), entityName);
       }
       case RuntimeException re -> {
         return build(PreviewErrorCode.UNKNOWN_ERROR, messageOf(re), Map.of("exceptionType",
@@ -203,6 +213,12 @@ public class PreviewErrorHandler {
         "Increase the preview timeout or simplify the DSL to reduce execution time.";
       case TIMEOUT_EXCEEDED ->
         "Increase the preview timeout or simplify the DSL to reduce execution time.";
+      case SIGNAL_NOT_SEEDED ->
+        "Add the awaited signal to the preview request's signals timeline "
+                + "(name + payloadJson + deliverAt await-point index).";
+      case SIGNAL_PAYLOAD_TYPE_MISMATCH ->
+        "Check the seeded payloadJson against the signal's declared payload type in "
+                + "ProcessBuilder.signal(name, type).";
       case UNKNOWN_ERROR ->
         "Review the stack trace and recent changes; report if the issue persists.";
     };

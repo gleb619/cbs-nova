@@ -1,16 +1,17 @@
 package cbs.nova.starter.core.stage;
 
 import cbs.nova.dsl.Context;
-import cbs.nova.dsl.DslDescriptor;
+import cbs.nova.dsl.config.Constants;
 import cbs.nova.dsl.GlobalManager;
+import cbs.nova.dsl.DslDescriptor;
 import cbs.nova.dsl.model.Descriptors;
 import cbs.nova.starter.model.PreviewModels.PreviewCacheKey;
-import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Optional;
 import org.jspecify.annotations.NonNull;
-import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.json.JsonMapper;
 import cbs.nova.starter.json.DslDescriptorMapper;
 
@@ -25,7 +26,7 @@ final class PreviewCacheKeyBuilder {
             .or(() -> gm.describeHelper(name)
                     .map(helper -> Descriptors.from(name, helper)));
     String dslHash = descriptor.map(this::dslDescriptorHash).orElse("");
-    String inputHash = inputHash(ctx.body());
+    String inputHash = inputHash(ctx);
     return new PreviewCacheKey(name, dslHash, inputHash);
   }
 
@@ -38,11 +39,17 @@ final class PreviewCacheKeyBuilder {
     }
   }
 
-  private @NonNull String inputHash(@Nullable Object input) {
+  /**
+   * Hashes the request body together with the seeded signal timeline (T736). Without the timeline
+   * in the key, a seeded preview could be served from a cache entry produced by an unseeded preview
+   * of the same input (and vice versa).
+   */
+  private @NonNull String inputHash(@NonNull Context<?> ctx) {
     try {
-      byte[] bytes = input == null
-              ? "null".getBytes(StandardCharsets.UTF_8)
-              : jsonMapper.writeValueAsBytes(input);
+      Map<String, Object> requestShape = new LinkedHashMap<>();
+      requestShape.put("input", ctx.body());
+      requestShape.put("signals", ctx.metadata().get(Constants.PREVIEW_SIGNAL_SEEDS_KEY));
+      byte[] bytes = jsonMapper.writeValueAsBytes(requestShape);
       return sha256Hex(bytes);
     } catch (Exception e) {
       throw new IllegalStateException("Failed to serialize preview input", e);

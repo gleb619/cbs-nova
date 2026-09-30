@@ -61,6 +61,30 @@ class DslRuntimeResourceOpenApiTest {
     assertResponseRefersTo(apiDocs, "/api/dsl/explain/{name}", "ExplainReport");
   }
 
+  @Test
+  void dslRequestExposesOptionalPreviewSignalTimeline() throws Exception {
+    MvcResult result = mockMvc.perform(get("/v3/api-docs"))
+            .andExpect(status().isOk())
+            .andReturn();
+
+    JsonNode apiDocs = OBJECT_MAPPER.readTree(result.getResponse().getContentAsString());
+    JsonNode schemas = apiDocs.path("components").path("schemas");
+
+    JsonNode dslRequest = assertSchemaExists(schemas, "DslRequest");
+    assertHasProperty(dslRequest, "body");
+    assertHasProperty(dslRequest, "metadata");
+    assertHasProperty(dslRequest, "signals");
+
+    JsonNode signals = dslRequest.path("properties").path("signals");
+    assertThat(signals.path("items").path("$ref").asText())
+            .isEqualTo("#/components/schemas/SeededSignal");
+
+    JsonNode seededSignal = assertSchemaExists(schemas, "SeededSignal");
+    assertHasProperty(seededSignal, "name");
+    assertHasProperty(seededSignal, "payloadJson");
+    assertHasProperty(seededSignal, "deliverAt");
+  }
+
   private static JsonNode assertSchemaExists(JsonNode schemas, String name) {
     assertThat(schemas.has(name))
             .as("OpenAPI schema '%s' should be defined", name)

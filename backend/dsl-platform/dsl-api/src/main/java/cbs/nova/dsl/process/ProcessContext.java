@@ -43,8 +43,15 @@ public interface ProcessContext<T> extends Context<T> {
   void log(@NonNull String message);
 
   /**
-   * Await a Temporal signal declared by the process. Only available when the process is running
-   * inside a Temporal workflow with signal support; otherwise throws.
+   * Await a Temporal signal declared by the process.
+   *
+   * <p>
+   * In {@code run} mode inside a Temporal workflow this blocks until the signal arrives. In preview
+   * / hierarchy / explain mode it resolves against the seeded preview signal timeline
+   * ({@link cbs.nova.dsl.process.PreviewSignalBuffer}) — never blocking on wall-clock time. When no
+   * buffer is installed at all (e.g. a bare in-process run without any pipeline), it throws
+   * {@link IllegalStateException}; when a preview buffer exists but the name was not seeded, it
+   * throws {@link cbs.nova.dsl.process.SignalNotSeededException}.
    */
   @NonNull
   default <T> T awaitSignal(@NonNull String name, @NonNull Class<T> type) {

@@ -414,6 +414,13 @@
           "metadata": {
             "additionalProperties": {},
             "type": "object"
+          },
+          "signals": {
+            "description": "Optional preview-mode signal timeline (T736). Consumed by the preview / hierarchy / explain pipes and ignored by run mode, where Temporal owns signal delivery. Omitting it keeps signals inert exactly as before T736.",
+            "items": {
+              "$ref": "#/components/schemas/SeededSignal"
+            },
+            "type": "array"
           }
         },
         "type": "object"
@@ -1058,6 +1065,27 @@
             "type": "string"
           }
         },
+        "type": "object"
+      },
+      "SeededSignal": {
+        "description": "One entry of a preview-mode signal timeline. A seeded signal becomes visible at the zero-based await-point index given by deliverAt (absent or 0 = visible from the start of the preview). Preview resolves signals from this timeline instead of waiting on wall-clock time.",
+        "properties": {
+          "deliverAt": {
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "payloadJson": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
         "type": "object"
       },
       "ServerResponse": {},
