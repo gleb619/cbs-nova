@@ -57,7 +57,9 @@ class DslAuditStorePurgeIntegrationTest {
   @Test
   void purgeOlderThanUsesStrictLessThan() {
     Instant now = Instant.now();
-    Instant cutoff = now.minus(10, ChronoUnit.DAYS);
+    // truncate: the DB column has coarser precision than Instant.now(), which would push the
+    // boundary row below the cutoff
+    Instant cutoff = now.minus(10, ChronoUnit.DAYS).truncatedTo(ChronoUnit.SECONDS);
     harness.append(row(cutoff.minus(1, ChronoUnit.MINUTES)));
     harness.append(row(cutoff));
 
