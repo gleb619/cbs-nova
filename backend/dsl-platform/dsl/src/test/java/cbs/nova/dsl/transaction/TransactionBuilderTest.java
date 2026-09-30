@@ -419,4 +419,57 @@ class TransactionBuilderTest {
     assertThat(result.value().markdown()).contains("# Builder Sample");
   }
 
+  @Test
+  void heartbeatTimeoutGreaterThanStartToCloseTimeoutThrows() {
+    // T750: Temporal would never honour a heartbeatTimeout > startToCloseTimeout —
+    // the wall-clock budget fires first and the activity is cancelled regardless.
+    // Surface the misconfiguration at build time so DSL authors see a clear message.
+    var builder = Dsl.transaction("MisConfiguredHb")
+            .execute(ctx -> Result.success(null))
+            .startToCloseTimeout(Duration.ofSeconds(5))
+            .heartbeatTimeout(Duration.ofSeconds(10));
+    assertThatThrownBy(builder::build)
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("heartbeatTimeout")
+            .hasMessageContaining("startToCloseTimeout")
+            .hasMessageContaining("MisConfiguredHb");
+  }
+
+  @Test
+  void heartbeatTimeoutEqualToStartToCloseTimeoutIsAllowed() {
+    // T750: equality is the tightest legitimate configuration (heartbeat budget equals
+    // wall-clock budget). Allowed because Temporal treats both timers independently —
+    // either may fire first depending on jitter.
+    var built = Dsl.transaction("TightHb")
+            .execute(ctx -> Result.success(null))
+            .startToCloseTimeout(Duration.ofSeconds(5))
+            .heartbeatTimeout(Duration.ofSeconds(5))
+            .build();
+    assertThat(built.heartbeatTimeout()).isEqualTo(Duration.ofSeconds(5));
+    assertThat(built.startToCloseTimeout()).isEqualTo(Duration.ofSeconds(5));
+  }
+
+  @Test
+  void heartbeatTimeoutBelowStartToCloseTimeoutIsAllowed() {
+    // T750: the supported configuration — heartbeat fires before the wall-clock budget,
+    // generated activity code emits periodic heartbeats to stay alive.
+    var built = Dsl.transaction("HealthyHb")
+            .execute(ctx -> Result.success(null))
+            .startToCloseTimeout(Duration.ofSeconds(30))
+            .heartbeatTimeout(Duration.ofSeconds(5))
+            .build();
+    assertThat(built.heartbeatTimeout()).isEqualTo(Duration.ofSeconds(5));
+    assertThat(built.startToCloseTimeout()).isEqualTo(Duration.ofSeconds(30));
+  }
+
+  @Test
+  void nullHeartbeatTimeoutStillBuilds() {
+    // T750: null heartbeatTimeout is the default and must continue to build cleanly so
+    // existing DSL files without a declared heartbeat keep working unchanged.
+    var built = Dsl.transaction("NoHb")
+            .execute(ctx -> Result.success(null))
+            .build();
+    assertThat(built.heartbeatTimeout()).isNull();
+  }
+
 }

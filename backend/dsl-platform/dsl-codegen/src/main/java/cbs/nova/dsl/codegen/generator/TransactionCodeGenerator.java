@@ -47,7 +47,8 @@ public final class TransactionCodeGenerator {
             new GeneratedSource(
                     pkg, implName, generateImpl(pkg, name, interfaceName, implName,
                             versionConstant, descriptor.taskQueue(), inputTypeName,
-                            descriptor.inputType())));
+                            descriptor.inputType(),
+                            descriptor.heartbeatTimeout() != null)));
     log.atLevel(Level.DEBUG)
             .log(() -> "[TransactionCodeGenerator] Generated transaction %s v%s in package %s"
                     .formatted(name, versionConstant, pkg));
@@ -98,13 +99,39 @@ public final class TransactionCodeGenerator {
 
   private String generateImpl(String pkg, String transactionName, String interfaceName,
           String implName, String versionConstant, String taskQueue, String inputTypeName,
-          Class<?> inputType) {
+          Class<?> inputType, boolean heartbeatEnabled) {
     String importBlock = importBlock(inputType, DslTemporalTransactionRequest.class,
             GlobalManager.class, TransactionDslObject.class,
             DslGenerated.class, Generated.class);
+    if (heartbeatEnabled) {
+      // T750: wrap the activity body with a periodic Temporal heartbeat when the DSL
+      // declared a heartbeatTimeout. Without this, Temporal cancels the activity as
+      // soon as the timeout elapses — see ActivityHeartbeat.
+      importBlock = importBlock + "\nimport cbs.nova.starter.runtime.ActivityHeartbeat;\n"
+              + "import cbs.nova.starter.runtime.ActivityHeartbeat.HeartbeatHandle;\n"
+              + "import java.time.Duration;";
+    }
     String annotation = GeneratorMetadata.annotation(TransactionCodeGenerator.class);
 
     String providerClass = transactionName + "GeneratedClassProvider";
+    String executeBody = heartbeatEnabled
+            ? Substitutor.format("""
+                      var tx = (TransactionDslObject) new ${providerClass}().dslObject();
+                      HeartbeatHandle hb = ActivityHeartbeat.start(tx.heartbeatTimeout());
+                      try {
+                        return GlobalManager.globalManager().runTransactionWithCompensation(
+                                tx, request.runId(), request.payload());
+                      } finally {
+                        ActivityHeartbeat.stop(hb);
+                      }
+                    """,
+                    Map.of("providerClass", providerClass))
+            : Substitutor.format("""
+                      var tx = (TransactionDslObject) new ${providerClass}().dslObject();
+                      return GlobalManager.globalManager().runTransactionWithCompensation(
+                              tx, request.runId(), request.payload());
+                    """,
+                    Map.of("providerClass", providerClass));
     return Substitutor.format(// language=java
             """
                     package ${pkg};${importBlock}
@@ -120,9 +147,7 @@ public final class TransactionCodeGenerator {
 
                       @Override
                       public Object execute(DslTemporalTransactionRequest<${inputTypeName}> request) {
-                        var tx = (TransactionDslObject) new ${providerClass}().dslObject();
-                        return GlobalManager.globalManager().runTransactionWithCompensation(
-                                tx, request.runId(), request.payload());
+                        ${executeBody}
                       }
 
                       @Override
@@ -142,7 +167,8 @@ public final class TransactionCodeGenerator {
                     "interfaceName", interfaceName,
                     "implName", implName,
                     "version", versionConstant,
-                    "inputTypeName", inputTypeName));
+                    "inputTypeName", inputTypeName,
+                    "executeBody", executeBody));
   }
 
   private String typeName(Class<?> type) {

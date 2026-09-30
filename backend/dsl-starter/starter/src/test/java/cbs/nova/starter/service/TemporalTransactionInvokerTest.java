@@ -123,4 +123,34 @@ class TemporalTransactionInvokerTest {
     assertThat(options.getStartToCloseTimeout()).isEqualTo(expectedTimeout);
     assertThat(options.getTaskQueue()).isEqualTo(expectedQueue);
   }
+
+  @Test
+  void buildActivityOptionsAppliesHeartbeatTimeoutWhenSet() {
+    // T750: heartbeatTimeout declared in the DSL must reach Temporal's
+    // ActivityOptions so a stuck activity is cancelled.
+    var hb = Duration.ofSeconds(7);
+    var tx = Dsl.transaction("HeartbeatTx")
+            .execute(ctx -> Result.success("ok"))
+            .startToCloseTimeout(Duration.ofSeconds(30))
+            .heartbeatTimeout(hb)
+            .build();
+
+    ActivityOptions options = invoker.buildActivityOptions(tx);
+
+    assertThat(options.getHeartbeatTimeout()).isEqualTo(hb);
+  }
+
+  @Test
+  void buildActivityOptionsOmitsHeartbeatTimeoutWhenUnset() {
+    // T750: a null heartbeatTimeout must leave Temporal's default untouched;
+    // ActivityOptions#getHeartbeatTimeout reports null for "unset".
+    var tx = Dsl.transaction("NoHeartbeatTx")
+            .execute(ctx -> Result.success("ok"))
+            .startToCloseTimeout(Duration.ofSeconds(30))
+            .build();
+
+    ActivityOptions options = invoker.buildActivityOptions(tx);
+
+    assertThat(options.getHeartbeatTimeout()).isNull();
+  }
 }

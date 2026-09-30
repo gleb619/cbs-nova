@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 
 import javax.annotation.processing.Generated;
 
+import java.time.Duration;
 import java.util.Map;
 
 class TransactionCodeGeneratorTest {
@@ -203,5 +204,49 @@ class TransactionCodeGeneratorTest {
             .contains("NoCompTxGeneratedClassProvider")
             .contains("(TransactionDslObject)")
             .doesNotContain("compensateTransaction(\"");
+  }
+
+  @Test
+  void implementationWrapsBodyInHeartbeatWhenDeclared() {
+    // T750: when the DSL declares a heartbeatTimeout, the generated impl schedules a
+    // periodic Temporal heartbeat around the transaction body so the activity is not
+    // cancelled by Temporal for missing heartbeats.
+    var tx = Dsl.transaction("HeartbeatTx")
+            .input(String.class)
+            .startToCloseTimeout(Duration.ofSeconds(30))
+            .heartbeatTimeout(Duration.ofSeconds(5))
+            .execute(ctx -> Result.success("ok"))
+            .build();
+    var descriptor = new DescriptorFactory().fromTransaction(tx);
+
+    var impl = generator.generate(descriptor, null, null, true).get(1).source();
+
+    assertThat(impl)
+            .contains("import cbs.nova.starter.runtime.ActivityHeartbeat;")
+            .contains("import cbs.nova.starter.runtime.ActivityHeartbeat.HeartbeatHandle;")
+            .contains("ActivityHeartbeat.start(tx.heartbeatTimeout())")
+            .contains("ActivityHeartbeat.stop(hb)")
+            .contains("HeartbeatHandle hb = ")
+            .contains("try {")
+            .contains("} finally {");
+  }
+
+  @Test
+  void implementationSkipsHeartbeatWhenUndeclared() {
+    // T750: when no heartbeatTimeout is set, the generated impl must NOT pull in
+    // ActivityHeartbeat — local execution still works and the heartbeat machinery is
+    // a no-op cost-free import we can skip.
+    var descriptor = new DescriptorFactory().fromTransaction(
+            Dsl.transaction("PlainTx")
+                    .input(String.class)
+                    .execute(ctx -> Result.success("ok"))
+                    .build());
+
+    var impl = generator.generate(descriptor, null, null, true).get(1).source();
+
+    assertThat(impl)
+            .doesNotContain("ActivityHeartbeat")
+            .doesNotContain("HeartbeatHandle")
+            .contains("GlobalManager.globalManager().runTransactionWithCompensation(");
   }
 }

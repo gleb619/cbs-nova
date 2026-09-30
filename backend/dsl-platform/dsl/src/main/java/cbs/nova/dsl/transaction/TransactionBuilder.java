@@ -144,6 +144,16 @@ public final class TransactionBuilder<I, O> implements ObjectBuilder<Transaction
       throw new IllegalStateException(
               "transaction '" + name + "' cannot have both .parameters() and .input()/.output()");
     }
+    // T750: Temporal cancels an activity when heartbeatTimeout elapses without a heartbeat
+    // and startToCloseTimeout fires when the activity exceeds the wall-clock budget. A
+    // heartbeatTimeout > startToCloseTimeout is a configuration bug — the activity would
+    // always be cancelled by startToCloseTimeout first, making the heartbeat timeout dead
+    // code. Reject early with a clear message instead of waiting for a worker mystery.
+    if (heartbeatTimeout != null && heartbeatTimeout.compareTo(startToCloseTimeout) > 0) {
+      throw new IllegalStateException(
+              "transaction '" + name + "' heartbeatTimeout (" + heartbeatTimeout
+                      + ") must be <= startToCloseTimeout (" + startToCloseTimeout + ")");
+    }
     var effectiveDescriptor = effectiveDescriptor();
     var resolvedExecute = rawExecute();
     var explain = rawExplain() != null ? rawExplain() : defaultExplain();
