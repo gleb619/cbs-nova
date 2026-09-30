@@ -1,0 +1,48 @@
+# Root .dockerignore — applies to every image whose `context` is the repo root.
+# `app/docker-compose.yml` -> `context: ..` for the app image and
+# `app/compose/dsl-builder.yml` -> `context: ../..` for the dsl-builder image.
+# Anything matched here is excluded from the build context that BuildKit uploads
+# to the daemon, so it never invalidates COPY cache layers or bloats the
+# uploaded tarball.
+#
+# Keep this list narrow on purpose: the dsl-builder Dockerfile does
+# `COPY backend/gradle/ ./gradle/` and `COPY backend/gradle.properties
+# ./gradle.properties` and the app Dockerfile does `COPY backend/ ./`, so
+# `backend/` and the wrapper jar must NOT be excluded.
+
+# --- Gradle / Maven build outputs (the bulk of `backend/` on a dev machine) ---
+# Wildcard matches every subproject's `build/` directory and the top-level
+# `build/` if any. Gitignored already; BuildKit does not honour .gitignore.
+**/build
+**/.gradle
+
+# --- Frontend tool outputs (Nuxt + npm/pnpm) ---
+**/node_modules
+frontend/**/.nuxt
+frontend/**/.output
+frontend/**/dist
+
+# --- VCS, IDE, worktree, planning scratch ---
+.git
+.idea
+.vscode
+.codegraph
+.remember
+.worktrees
+.kiro
+.kilo
+.worktree-version
+.claude
+.blackboxcli
+.playwright-cli
+
+# --- Plans / scratch docs that ride along with the repo but are not part of
+# any build artifact. `docs/architecture-*` etc. stay so the build can pick up
+# referenced files; `docs/plans/` is pure process noise. ---
+docs/plans
+
+# --- Host-app scratch ---
+app/ui/local-registry
+app/ui/.nuxt
+app/ui/.output
+app/ui/node_modules
