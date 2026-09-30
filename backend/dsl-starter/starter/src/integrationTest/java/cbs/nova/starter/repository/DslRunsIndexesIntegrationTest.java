@@ -54,7 +54,8 @@ class DslRunsIndexesIntegrationTest {
   @BeforeAll
   static void applyMigrations() throws SQLException {
     ResourceDatabasePopulator populator = new ResourceDatabasePopulator(
-            new ClassPathResource("db/migration/postgres/V1__init.sql"));
+            new ClassPathResource("db/migration/postgres/V1__init.sql"),
+            new ClassPathResource("db/migration/postgres/V2__dsl_runs_started_at_index.sql"));
     populator.setContinueOnError(false);
     try (Connection connection = DriverManager.getConnection(
             postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword())) {
@@ -75,6 +76,13 @@ class DslRunsIndexesIntegrationTest {
                     "idx_dsl_runs_status_started_at",
                     "idx_dsl_runs_process_started_at",
                     "idx_dsl_runs_execution_mode");
+  }
+
+  @Test
+  void plainStartedAtIndexExistsForUnfilteredListAndStatsWindows() throws SQLException {
+    // T768: default list (ORDER BY started_at DESC) and stats/timeseries windows filter on
+    // started_at alone; every other dsl_runs index leads with a different column.
+    assertThat(readIndexNames()).contains("idx_dsl_runs_started_at");
   }
 
   @Test
