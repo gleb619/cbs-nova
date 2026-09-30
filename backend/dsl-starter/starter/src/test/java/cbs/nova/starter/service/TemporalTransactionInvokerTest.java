@@ -92,6 +92,91 @@ class TemporalTransactionInvokerTest {
   }
 
   @Test
+  void buildActivityOptionsAppliesMaximumIntervalWhenSet() {
+    // T751: a configured maximumInterval must reach Temporal so backoff does not
+    // grow beyond the configured cap on long retry chains.
+    var policy = new RetryPolicy(5, Duration.ofSeconds(1), 2.0)
+            .withMaximumInterval(Duration.ofSeconds(30));
+    var tx = Dsl.transaction("CappedRetryTx")
+            .execute(ctx -> Result.success("ok"))
+            .startToCloseTimeout(Duration.ofMinutes(5))
+            .retryPolicy(policy)
+            .build();
+
+    RetryOptions ro = invoker.buildActivityOptions(tx).getRetryOptions();
+
+    assertThat(ro.getMaximumInterval()).isEqualTo(Duration.ofSeconds(30));
+  }
+
+  @Test
+  void buildActivityOptionsOmitsMaximumIntervalWhenUnset() {
+    // T751: when maximumInterval is null the Temporal default cap is left
+    // untouched, preserving the prior behaviour for every existing DSL flow.
+    var policy = new RetryPolicy(5, Duration.ofSeconds(1), 2.0);
+    var tx = Dsl.transaction("DefaultCapRetryTx")
+            .execute(ctx -> Result.success("ok"))
+            .startToCloseTimeout(Duration.ofMinutes(5))
+            .retryPolicy(policy)
+            .build();
+
+    RetryOptions ro = invoker.buildActivityOptions(tx).getRetryOptions();
+
+    assertThat(ro.getMaximumInterval()).isNull();
+  }
+
+  @Test
+  void buildActivityOptionsAppliesDoNotRetryWhenSet() {
+    // T751: declared non-retryable error types must reach Temporal's
+    // RetryOptions#setDoNotRetry so a deterministic validation failure does
+    // not consume the retry budget.
+    var policy = new RetryPolicy(5, Duration.ofSeconds(1), 2.0)
+            .withNonRetryable("ValidationException", "BadRequest");
+    var tx = Dsl.transaction("NoDoRetryTx")
+            .execute(ctx -> Result.success("ok"))
+            .startToCloseTimeout(Duration.ofMinutes(5))
+            .retryPolicy(policy)
+            .build();
+
+    RetryOptions ro = invoker.buildActivityOptions(tx).getRetryOptions();
+
+    assertThat(ro.getDoNotRetry()).containsExactly("ValidationException", "BadRequest");
+  }
+
+  @Test
+  void buildActivityOptionsOmitsDoNotRetryWhenUnset() {
+    // T751: when nonRetryable is null the Temporal default retry-on-everything
+    // behaviour is left untouched, preserving the prior behaviour.
+    var policy = new RetryPolicy(5, Duration.ofSeconds(1), 2.0);
+    var tx = Dsl.transaction("DefaultDoRetryTx")
+            .execute(ctx -> Result.success("ok"))
+            .startToCloseTimeout(Duration.ofMinutes(5))
+            .retryPolicy(policy)
+            .build();
+
+    RetryOptions ro = invoker.buildActivityOptions(tx).getRetryOptions();
+
+    assertThat(ro.getDoNotRetry()).isNull();
+  }
+
+  @Test
+  void buildActivityOptionsOmitsDoNotRetryWhenEmptyList() {
+    // T751: an empty nonRetryable list must not call setDoNotRetry; an empty
+    // String[] would override the Temporal default and re-enable retrying
+    // everything.
+    var policy = new RetryPolicy(5, Duration.ofSeconds(1), 2.0)
+            .withNonRetryable(java.util.List.of());
+    var tx = Dsl.transaction("EmptyDoRetryTx")
+            .execute(ctx -> Result.success("ok"))
+            .startToCloseTimeout(Duration.ofMinutes(5))
+            .retryPolicy(policy)
+            .build();
+
+    RetryOptions ro = invoker.buildActivityOptions(tx).getRetryOptions();
+
+    assertThat(ro.getDoNotRetry()).isNull();
+  }
+
+  @Test
   void buildActivityOptionsFallsBackToDefaultRetryPolicy() {
     var tx = Dsl.transaction("DefaultRetryTx")
             .execute(ctx -> Result.success("ok"))

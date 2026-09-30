@@ -156,6 +156,56 @@ Constraints:
 - Local execution (no Temporal worker) is unaffected: the heartbeat callback swallows the
   resulting `IllegalStateException` and the periodic task is a no-op.
 
+#### Retry policy — cap and skip-list
+
+A `RetryPolicy` declares `maxAttempts`, `initialInterval`, and `backoffCoefficient`. Two
+optional knobs cap and short-circuit the retry chain when an upstream is slow or a failure
+is deterministic:
+
+- `maximumInterval(Duration)` caps the exponential backoff so a slow-recovering upstream
+  cannot accumulate arbitrarily long waits between retries. Without it Temporal grows the
+  delay to `100 × initialInterval`, which can exceed `startToCloseTimeout` and mask real
+  failures as timeout cascades. Must be `>= initialInterval`.
+- `nonRetryable(String...)` (or `nonRetryable(List<String>)`) lists Temporal error type
+  names that should fail the activity immediately instead of consuming the retry budget.
+  Use this for deterministic failures (validation, malformed payload) so the call fails fast
+  and the workflow can route the cause to compensation.
+
+Both fields are optional. When unset, Temporal's defaults apply — identical to the pre-T751
+behaviour — so adding them is purely additive. They reach Temporal through
+`TemporalTransactionInvoker#buildActivityOptions` as `setMaximumInterval` and
+`setDoNotRetry`.
+
+```java
+Dsl.transaction("SlowValidation")
+    .input(ValidationIn.class)
+    .output(ValidationOut.class)
+    .startToCloseTimeout(Duration.ofSeconds(30))
+    .retryPolicy(new RetryPolicy(5, Duration.ofMillis(500), 2.0)
+        .withMaximumInterval(Duration.ofSeconds(30))
+        .withNonRetryable("ValidationException", "BadRequest"))
+    .execute(ctx -> {
+        ValidationIn in = ctx.body();
+        if (!in.isWellFormed()) {
+            throw new IllegalArgumentException("payload is invalid");
+        }
+        return ctx.complete(new ValidationOut("OK"));
+    })
+    .build();
+```
+
+Validation enforced at `new RetryPolicy(...)` time:
+
+- `maxAttempts >= 1`.
+- `backoffCoefficient > 0`.
+- `maximumInterval >= initialInterval` when set.
+- `nonRetryable` entries must be non-blank when set.
+
+Wither methods (`withMaximumInterval`, `withNonRetryable`) return a new policy, leaving
+the original unchanged. The legacy 3-argument constructor `new RetryPolicy(maxAttempts,
+initialInterval, backoffCoefficient)` remains available so every existing DSL flow compiles
+unchanged.
+
 ### Function
 
 A Function is a lightweight DSL helper. It is not generated into Temporal classes.
