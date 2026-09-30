@@ -24,7 +24,7 @@ single-writer-per-file by routing edits through one replica or accepting overwri
 | Thing | Local URL | Notes |
 |---|---|---|
 | CBS Nova app | `http://localhost:8090` | Spring Boot; `SERVER_PORT` in prod |
-| Actuator health | `http://localhost:8090/actuator/health` | always anonymous |
+| Actuator health | `http://localhost:8090/actuator/health` | anonymous status-only; auth required for component detail (T752) |
 | Admin UI (Nuxt host + BFF) | `http://localhost:3000` | browser → BFF → app |
 | Keycloak | `http://localhost:8080` | realm `cbs-nova` |
 | Temporal UI | `http://localhost:8233` | server gRPC `7233` |
@@ -41,7 +41,13 @@ Key metrics (Micrometer, scraped from `/actuator/prometheus` when enabled):
 Common triage commands:
 
 ```bash
-curl -s http://localhost:8090/actuator/health | jq
+# Anonymous probes — status only (T752 hardening):
+curl -s http://localhost:8090/actuator/health/liveness  | jq .status
+curl -s http://localhost:8090/actuator/health/readiness | jq .status
+# Authenticated request — required to see component detail. Acquire a Keycloak token first;
+# in compose the realm is `cbs-nova`. Examples assume you've already exchanged a client
+# credential and have it in $TOKEN:
+curl -s -H "Authorization: Bearer $TOKEN" http://localhost:8090/actuator/health | jq .components
 docker compose -f app/docker-compose.yml ps
 docker compose -f app/docker-compose.yml logs --tail=200 app
 make logs                       # tail all compose services
@@ -72,16 +78,29 @@ Temporal/Postgres outage.
 keeps readiness UP even when Temporal is unreachable. Operators who want load balancers to stop
 traffic during a Temporal outage must explicitly set `cbs.health.temporal.fail-status=down`.
 
+**Health detail requires auth; probes stay anonymous (T752).** The launcher pins
+`management.endpoint.health.show-details=when-authorized` and `show-components=when-authorized`,
+overridable via env `HEALTH_SHOW_DETAILS` / `HEALTH_SHOW_COMPONENTS`. Anonymous callers always
+get the aggregate `status` field only — `components`, `details`, and any indicator key
+(`db`, `dsl`, `dslReadiness`, `temporal`, ...) are stripped from the response. Liveness and
+readiness group probes answer anonymously with plain `UP/DOWN` either way (group endpoints never
+embed component detail by default). To see which component is failing, supply a Bearer JWT — the
+same OIDC guard that protects `/api/dsl/**` admits the holder; `curl -H "Authorization: Bearer
+$TOKEN" http://localhost:8090/actuator/health | jq .components` reveals the full composite.
+
 **Symptom → Triage → Mitigation:**
 1. `curl -s http://localhost:8090/actuator/health/liveness \| jq .status` — should be `UP`.
 2. `curl -s http://localhost:8090/actuator/health/readiness \| jq .status` — `DOWN` means stop
-traffic; check whether `dslReadiness` or `db` is the failing component.
-3. `curl -s http://localhost:8090/actuator/health \| jq .components` — see the full composite to
-tell an external-dependency problem from an internal one.
+traffic; the readiness group itself includes `dslReadiness` and `db`, so this is the fastest
+signal.
+3. `curl -s -H "Authorization: Bearer $TOKEN" http://localhost:8090/actuator/health \| jq
+.components` — **authenticated** request is required (T752) to read the full composite and tell
+an external-dependency problem from an internal one. Without the header, the body is just
+`{"status": "DOWN"}`.
 
-**Verification.** After the dependency recovers, `/actuator/health/readiness` returns `UP` and
-`dslReadiness.details.temporal.reachable` becomes `true`; the pod re-enters rotation without a
-restart.
+**Verification.** After the dependency recovers, `/actuator/health/readiness` returns `UP`; an
+authenticated `/actuator/health` shows `dslReadiness.details.temporal.reachable=true`; the pod
+re-enters rotation without a restart.
 
 ---
 
@@ -92,7 +111,9 @@ UI unreachable; app logs show gRPC `UNAVAILABLE` / `DEADLINE_EXCEEDED` to `:7233
 
 **Triage.**
 ```bash
-curl -s http://localhost:8090/actuator/health | jq '.components.temporal // .components'
+# Authenticated request (T752 hardening — anonymous /actuator/health returns status only):
+curl -s -H "Authorization: Bearer $TOKEN" http://localhost:8090/actuator/health \
+  | jq '.components.temporal // .components'
 docker compose -f app/docker-compose.yml ps temporal
 docker compose -f app/docker-compose.yml logs --tail=100 temporal
 grep -i "temporal" <app-log> | tail -50
@@ -115,9 +136,9 @@ grep -i "temporal" <app-log> | tail -50
 **Permanent fix.** Temporal HA / managed Temporal; separate datastore from Keycloak. No kanban
 task yet — raise one if this recurs.
 
-**Verification.** `/actuator/health` Temporal component `reachable=true`; Temporal UI loads; a
-fresh preview→run of a trivial process completes; run the reconciliation job (incident #4) to
-sweep rows stranded during the outage.
+**Verification.** Authenticated `/actuator/health` shows the Temporal component
+`reachable=true`; Temporal UI loads; a fresh preview→run of a trivial process completes; run the
+reconciliation job (incident #4) to sweep rows stranded during the outage.
 
 ---
 
@@ -400,9 +421,13 @@ shared `NovaHikariPool` (`backend/dsl-starter/starter-launcher/src/main/resource
 
 1. **Liveness vs readiness** (read the [Health endpoints](#health-endpoints) section first):
    ```bash
+   # Anonymous probes — status only:
    curl -s http://localhost:8090/actuator/health/liveness  | jq .status   # expect UP
    curl -s http://localhost:8090/actuator/health/readiness | jq .status   # DOWN = stop traffic
-   curl -s http://localhost:8090/actuator/health/readiness | jq '.components.db.details'
+   # Authenticated (T752) — required to see the failing component by name. Without the header
+   # the body is just {"status": "DOWN"} and you lose the db vs dslReadiness distinction.
+   curl -s -H "Authorization: Bearer $TOKEN" \
+     http://localhost:8090/actuator/health/readiness | jq '.components.db.details'
    ```
    `db.status=DOWN` with `livenessState=UP` is the canonical signal: the JVM is fine, the
    datastore is not. Readiness DOWN here pulls the pod from rotation automatically.
@@ -492,7 +517,10 @@ shared `NovaHikariPool` (`backend/dsl-starter/starter-launcher/src/main/resource
   `pg_stat_activity.idle_in_tx > 0 for 2m` are the natural candidates; raise a follow-up
   task to add them.
 
-**Verification.** `/actuator/health/readiness` `db.status=UP`; `hikaricp_connections_pending`
+**Verification.** `/actuator/health/readiness` reports `UP` (readiness groups surface the
+aggregate status anonymously; for the per-component `db.status=UP` view, send the request with
+an `Authorization: Bearer $TOKEN` header per the T752 hardening note above);
+`hikaricp_connections_pending`
 flat at `0`; `pg_stat_activity` shows no `idle in transaction` rows older than a few seconds;
 a fresh `POST /api/dsl/run/<name>` completes end-to-end; reconciliation sweep (see [incident
 #4](#4-stuck-running-reconciliation-lag--p2)) clears any rows stranded by the outage.

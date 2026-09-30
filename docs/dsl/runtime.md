@@ -519,7 +519,12 @@ The behaviour of `/actuator/health` when Temporal is unreachable is controlled b
 | `none` | `DslHealthIndicator` returns `UP` with the `temporal` detail flagging `reachable=false`. Default.  |
 | `down` | `DslHealthIndicator` returns `DOWN` with the same `temporal` detail. Compose `service_healthy` and Kubernetes readiness probes now gate on the real Temporal state. |
 
-The probe timeout is `cbs.health.temporal.timeout` (default `PT2S`). Example YAML:
+The probe timeout is `cbs.health.temporal.timeout` (default `PT2S`). **T752 hardening:** the
+launcher pins `management.endpoint.health.show-details=when-authorized` (env `HEALTH_SHOW_DETAILS`)
+and `show-components=when-authorized` (env `HEALTH_SHOW_COMPONENTS`), so anonymous callers only
+ever see the aggregate `status` field — the `dsl` / `temporal` / `db` / `dslReadiness` blocks
+above are returned to authenticated callers (`Authorization: Bearer <jwt>`). Liveness/readiness
+group probes always answer anonymously with plain `UP/DOWN`. See [runbook § Health endpoints](../runbook.md#health-endpoints) and [§`cbs.security.oidc`](../dsl/configuration.md#cbsecurityoidc).
 
 ```yaml
 cbs:

@@ -145,7 +145,7 @@ only carries the cbs-nova toggle and the path lists.
 |-----|------|---------|--------|
 | `cbs.security.oidc.enabled` | `boolean` | `false` | Master switch. `false` (default) installs no security filter chain; all endpoints stay anonymous. |
 | `cbs.security.oidc.protected-paths` | `List<String>` | `["/api/dsl/**", "/api/executions/**"]` | Path patterns that require a Bearer JWT when enabled. |
-| `cbs.security.oidc.permit-all-paths` | `List<String>` | `["/actuator/health/**"]` | Path patterns that stay anonymous in both modes. |
+| `cbs.security.oidc.permit-all-paths` | `List<String>` | `["/actuator/health/**"]` | Path patterns that stay anonymous in both modes. Even with OIDC enabled, `/actuator/health/**` answers without a token — the **body** the anonymous caller sees is still subject to the launcher property `management.endpoint.health.show-details=when-authorized` (env `HEALTH_SHOW_DETAILS`) and `show-components=when-authorized` (env `HEALTH_SHOW_COMPONENTS`), which strip the `components` / `details` blocks so probe detail is not leaked. Liveness/readiness group probes always return plain `UP/DOWN` regardless of `show-details`. Set both env vars to `always` for local dev / compose to opt back into full detail; supply a Bearer JWT in production (T752 hardening, see [docs/runbook.md §Health endpoints](../runbook.md#health-endpoints)). |
 
 ---
 
