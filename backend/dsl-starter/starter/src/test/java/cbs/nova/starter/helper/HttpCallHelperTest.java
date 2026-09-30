@@ -25,14 +25,22 @@ import cbs.nova.starter.helper.model.HttpCallOut;
 import cbs.nova.starter.security.OutboundUrlValidator;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
+import static com.github.tomakehurst.wiremock.client.WireMock.absent;
+import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.MDC;
 
 import java.net.http.HttpClient;
+import java.security.SecureRandom;
+import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.Map;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLParameters;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 
 class HttpCallHelperTest {
 
@@ -70,6 +78,57 @@ class HttpCallHelperTest {
   private HttpCallHelper helperWith(HttpCallProperties properties) {
     return new HttpCallHelper(HttpClient.newHttpClient(),
             new CbsNovaLoggingProperties(Level.INFO, Level.INFO, true), properties);
+  }
+
+  private HttpCallHelper helperWith(HttpClient client, HttpCallProperties properties) {
+    return new HttpCallHelper(client,
+            new CbsNovaLoggingProperties(Level.INFO, Level.INFO, true), properties);
+  }
+
+  private static HttpClient trustAllClient() throws Exception {
+    SSLContext sslContext = SSLContext.getInstance("TLS");
+    sslContext.init(null, new TrustManager[]{new javax.net.ssl.X509ExtendedTrustManager() {
+      @Override
+      public void checkClientTrusted(X509Certificate[] chain, String authType,
+              java.net.Socket socket) {
+      }
+
+      @Override
+      public void checkServerTrusted(X509Certificate[] chain, String authType,
+              java.net.Socket socket) {
+      }
+
+      @Override
+      public void checkClientTrusted(X509Certificate[] chain, String authType,
+              javax.net.ssl.SSLEngine engine) {
+      }
+
+      @Override
+      public void checkServerTrusted(X509Certificate[] chain, String authType,
+              javax.net.ssl.SSLEngine engine) {
+      }
+
+      @Override
+      public void checkClientTrusted(X509Certificate[] chain, String authType) {
+      }
+
+      @Override
+      public void checkServerTrusted(X509Certificate[] chain, String authType) {
+      }
+
+      @Override
+      public X509Certificate[] getAcceptedIssuers() {
+        return new X509Certificate[0];
+      }
+    }}, new SecureRandom());
+    SSLParameters sslParameters = new SSLParameters();
+    sslParameters.setEndpointIdentificationAlgorithm("");
+    sslParameters.setServerNames(List.of());
+    return HttpClient.newBuilder()
+            .sslContext(sslContext)
+            .sslParameters(sslParameters)
+            .followRedirects(HttpClient.Redirect.NEVER)
+            .build();
   }
 
   private static HttpCallProperties secureProperties() {
@@ -576,9 +635,9 @@ class HttpCallHelperTest {
   }
 
   @Test
-  void redirectTargetIsRevalidatedAfterFollow() {
+  void redirectTargetIsValidatedBeforeFollowAndBlockedHopReceivesNoRequest() {
     // blockPrivateAddresses off so the initial request to localhost passes; allowedHosts only
-    // admits "localhost", so the redirect to 127.0.0.1 must be rejected post-hoc.
+    // admits "localhost", so the redirect to 127.0.0.1 is rejected before any packet is sent.
     var helper = helperWith(
             new HttpCallProperties(List.of("https", "http"), false, List.of("localhost")));
     wireMock.stubFor(get("/redirect-blocked")
@@ -598,7 +657,213 @@ class HttpCallHelperTest {
     assertThat(result.cause().getMessage())
             .contains("redirect")
             .contains("127.0.0.1");
-    // Detection, not prevention: the JDK client followed the redirect before we could reject it.
-    wireMock.verify(1, getRequestedFor(urlEqualTo("/target-blocked")));
+    wireMock.verify(0, getRequestedFor(urlEqualTo("/target-blocked")));
+  }
+
+  @Test
+  void blockedRedirectHopToSeparateFakeServerReceivesZeroRequests() {
+    WireMockServer blockedServer = new WireMockServer(
+            WireMockConfiguration.wireMockConfig().dynamicPort().bindAddress("127.0.0.1"));
+    blockedServer.start();
+    try {
+      var helper = helperWith(
+              new HttpCallProperties(List.of("https", "http"), false, List.of("localhost")));
+      wireMock.stubFor(get("/redirect-to-blocked")
+              .willReturn(temporaryRedirect(
+                      "http://127.0.0.1:" + blockedServer.port() + "/target-blocked")));
+      blockedServer.stubFor(get("/target-blocked")
+              .willReturn(aResponse().withStatus(200).withBody("should not be returned")));
+
+      Result<HttpCallOut> result = execute(helper, new HttpCallIn(
+              baseUrl() + "/redirect-to-blocked", "GET",
+              null, null, null, HttpCallIn.RedirectPolicy.ALWAYS, null));
+
+      assertThat(result.isSuccess()).isFalse();
+      assertThat(result.cause()).isInstanceOf(IllegalArgumentException.class);
+      assertThat(result.cause().getMessage())
+              .contains("redirect")
+              .contains("127.0.0.1");
+      blockedServer.verify(0, getRequestedFor(urlEqualTo("/target-blocked")));
+      wireMock.verify(1, getRequestedFor(urlEqualTo("/redirect-to-blocked")));
+    } finally {
+      blockedServer.stop();
+    }
+  }
+
+  @Test
+  void redirect302SwitchesToGetAndDropsBody() {
+    wireMock.stubFor(post("/post-redirect")
+            .willReturn(temporaryRedirect("/get-target")));
+    wireMock.stubFor(get("/get-target")
+            .willReturn(aResponse().withStatus(200).withBody("got-get")));
+
+    Result<HttpCallOut> result = execute(new HttpCallIn(
+            baseUrl() + "/post-redirect", "POST",
+            Map.of("Content-Type", "application/json"),
+            "{\"k\":\"v\"}", null, HttpCallIn.RedirectPolicy.ALWAYS, null));
+
+    assertThat(result.isSuccess())
+            .as("result cause: %s", result.cause())
+            .isTrue();
+    assertThat(result.value().bodyOrEmpty()).isEqualTo("got-get");
+    wireMock.verify(1, postRequestedFor(urlEqualTo("/post-redirect")));
+    wireMock.verify(1, getRequestedFor(urlEqualTo("/get-target")));
+  }
+
+  @Test
+  void redirect307PreservesMethodAndBody() {
+    wireMock.stubFor(post("/307-redirect")
+            .willReturn(aResponse()
+                    .withStatus(307)
+                    .withHeader("Location", "/307-target")));
+    wireMock.stubFor(post("/307-target")
+            .withRequestBody(equalToJson("{\"k\":\"v\"}"))
+            .withHeader("Content-Type", equalTo("application/json"))
+            .willReturn(aResponse().withStatus(200).withBody("ok-307")));
+
+    Result<HttpCallOut> result = execute(new HttpCallIn(
+            baseUrl() + "/307-redirect", "POST",
+            Map.of("Content-Type", "application/json"),
+            "{\"k\":\"v\"}", null, HttpCallIn.RedirectPolicy.ALWAYS, null));
+
+    assertThat(result.isSuccess())
+            .as("result cause: %s", result.cause())
+            .isTrue();
+    assertThat(result.value().bodyOrEmpty()).isEqualTo("ok-307");
+    wireMock.verify(1, postRequestedFor(urlEqualTo("/307-redirect")));
+    wireMock.verify(1, postRequestedFor(urlEqualTo("/307-target")));
+  }
+
+  @Test
+  void redirect308PreservesMethodAndBody() {
+    wireMock.stubFor(post("/308-redirect")
+            .willReturn(aResponse()
+                    .withStatus(308)
+                    .withHeader("Location", "/308-target")));
+    wireMock.stubFor(post("/308-target")
+            .withRequestBody(equalToJson("{\"k\":\"v\"}"))
+            .withHeader("Content-Type", equalTo("application/json"))
+            .willReturn(aResponse().withStatus(200).withBody("ok-308")));
+
+    Result<HttpCallOut> result = execute(new HttpCallIn(
+            baseUrl() + "/308-redirect", "POST",
+            Map.of("Content-Type", "application/json"),
+            "{\"k\":\"v\"}", null, HttpCallIn.RedirectPolicy.ALWAYS, null));
+
+    assertThat(result.isSuccess())
+            .as("result cause: %s", result.cause())
+            .isTrue();
+    assertThat(result.value().bodyOrEmpty()).isEqualTo("ok-308");
+    wireMock.verify(1, postRequestedFor(urlEqualTo("/308-redirect")));
+    wireMock.verify(1, postRequestedFor(urlEqualTo("/308-target")));
+  }
+
+  @Test
+  void redirectHopLimitIsEnforced() {
+    wireMock.stubFor(get("/loop1").willReturn(temporaryRedirect("/loop2")));
+    wireMock.stubFor(get("/loop2").willReturn(temporaryRedirect("/loop3")));
+    wireMock.stubFor(get("/loop3").willReturn(temporaryRedirect("/loop4")));
+    wireMock.stubFor(get("/loop4").willReturn(aResponse().withStatus(200).withBody("end")));
+
+    var helper = helperWith(
+            new HttpCallProperties(List.of("https", "http"), false, List.of(), 1));
+
+    Result<HttpCallOut> result = execute(helper, new HttpCallIn(
+            baseUrl() + "/loop1", "GET",
+            null, null, null, HttpCallIn.RedirectPolicy.ALWAYS, null));
+
+    assertThat(result.isSuccess()).isFalse();
+    assertThat(result.cause()).isInstanceOf(IllegalArgumentException.class);
+    assertThat(result.cause().getMessage()).contains("maximum redirect hops");
+    wireMock.verify(1, getRequestedFor(urlEqualTo("/loop1")));
+    wireMock.verify(1, getRequestedFor(urlEqualTo("/loop2")));
+    wireMock.verify(0, getRequestedFor(urlEqualTo("/loop3")));
+    wireMock.verify(0, getRequestedFor(urlEqualTo("/loop4")));
+  }
+
+  @Test
+  void crossOriginRedirectDropsAuthorizationHeader() throws Exception {
+    WireMockServer targetServer = new WireMockServer(
+            WireMockConfiguration.wireMockConfig().dynamicPort().bindAddress("127.0.0.1"));
+    targetServer.start();
+    try {
+      var helper = helperWith(
+              new HttpCallProperties(List.of("https", "http"), false, List.of()));
+      wireMock.stubFor(get("/auth-redirect")
+              .willReturn(temporaryRedirect(
+                      "http://127.0.0.1:" + targetServer.port() + "/auth-target")));
+      targetServer.stubFor(get("/auth-target")
+              .withHeader("Authorization", absent())
+              .willReturn(aResponse().withStatus(200).withBody("no-auth")));
+
+      Result<HttpCallOut> result = execute(helper, new HttpCallIn(
+              baseUrl() + "/auth-redirect", "GET",
+              Map.of("Authorization", "Bearer secret"),
+              null, null, HttpCallIn.RedirectPolicy.ALWAYS, null));
+
+      assertThat(result.isSuccess())
+              .as("result cause: %s", result.cause())
+              .isTrue();
+      assertThat(result.value().bodyOrEmpty()).isEqualTo("no-auth");
+      targetServer.verify(1, getRequestedFor(urlEqualTo("/auth-target"))
+              .withHeader("Authorization", absent()));
+    } finally {
+      targetServer.stop();
+    }
+  }
+
+  @Test
+  void normalPolicyRejectsHttpsToHttpRedirectDowngrade() throws Exception {
+    WireMockServer httpsServer = new WireMockServer(
+            WireMockConfiguration.wireMockConfig().dynamicPort().dynamicHttpsPort());
+    httpsServer.start();
+    try {
+      var helper = helperWith(trustAllClient(),
+              new HttpCallProperties(List.of("https", "http"), false, List.of()));
+      httpsServer.stubFor(get("/https-redirect")
+              .willReturn(temporaryRedirect(
+                      "http://localhost:" + httpsServer.port() + "/downgrade-target")));
+      httpsServer.stubFor(get("/downgrade-target")
+              .willReturn(aResponse().withStatus(200).withBody("downgraded")));
+
+      Result<HttpCallOut> result = execute(helper, new HttpCallIn(
+              "https://localhost:" + httpsServer.httpsPort() + "/https-redirect", "GET",
+              null, null, null, HttpCallIn.RedirectPolicy.NORMAL, null));
+
+      assertThat(result.isSuccess()).isFalse();
+      assertThat(result.cause()).isInstanceOf(IllegalArgumentException.class);
+      assertThat(result.cause().getMessage()).contains("https to http");
+      httpsServer.verify(0, getRequestedFor(urlEqualTo("/downgrade-target")));
+    } finally {
+      httpsServer.stop();
+    }
+  }
+
+  @Test
+  void alwaysPolicyAllowsHttpsToHttpRedirectDowngrade() throws Exception {
+    WireMockServer httpsServer = new WireMockServer(
+            WireMockConfiguration.wireMockConfig().dynamicPort().dynamicHttpsPort());
+    httpsServer.start();
+    try {
+      var helper = helperWith(trustAllClient(),
+              new HttpCallProperties(List.of("https", "http"), false, List.of()));
+      httpsServer.stubFor(get("/https-redirect")
+              .willReturn(temporaryRedirect(
+                      "http://localhost:" + httpsServer.port() + "/downgrade-target")));
+      httpsServer.stubFor(get("/downgrade-target")
+              .willReturn(aResponse().withStatus(200).withBody("downgraded")));
+
+      Result<HttpCallOut> result = execute(helper, new HttpCallIn(
+              "https://localhost:" + httpsServer.httpsPort() + "/https-redirect", "GET",
+              null, null, null, HttpCallIn.RedirectPolicy.ALWAYS, null));
+
+      assertThat(result.isSuccess())
+              .as("result cause: %s", result.cause())
+              .isTrue();
+      assertThat(result.value().bodyOrEmpty()).isEqualTo("downgraded");
+      httpsServer.verify(1, getRequestedFor(urlEqualTo("/downgrade-target")));
+    } finally {
+      httpsServer.stop();
+    }
   }
 }

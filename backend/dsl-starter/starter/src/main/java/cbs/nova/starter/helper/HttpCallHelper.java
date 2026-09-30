@@ -6,7 +6,6 @@ import cbs.nova.dsl.Result;
 import cbs.nova.starter.config.properties.CbsNovaLoggingProperties;
 import cbs.nova.starter.config.properties.CbsNovaLoggingProperties.Level;
 import cbs.nova.starter.config.properties.HttpCallProperties;
-import cbs.nova.starter.exception.ApiKeyNotFoundException;
 import cbs.nova.starter.helper.model.HttpCallContext;
 import cbs.nova.starter.helper.model.HttpCallIn;
 import cbs.nova.starter.helper.model.HttpCallIn.RedirectPolicy;
@@ -27,29 +26,29 @@ import java.net.http.HttpRequest.Builder;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.time.Duration;
-import java.util.EnumMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 @Slf4j
 @RequiredArgsConstructor
 public class HttpCallHelper implements Executable<HttpCallIn, HttpCallOut> {
 
+  private static final List<Integer> REDIRECT_STATUSES = List.of(301, 302, 303, 307, 308);
+
   private final HttpClient client;
   private final CbsNovaLoggingProperties loggingProperties;
   private final HttpCallProperties httpCallProperties;
-  private Map<RedirectPolicy, HttpClient> clientsByPolicy;
 
   /**
    * Convenience constructor with the legacy permissive guard config (no private-address blocking).
    * The Spring-managed bean uses the three-argument Lombok-generated constructor with the
-   * {@code cbs.dsl.helper.http-call} bound properties instead. The per-policy client snapshot is
-   * built eagerly here (post-delegation) so legacy call sites keep their eager-snapshot semantics.
+   * {@code cbs.dsl.helper.http-call} bound properties instead.
    */
   @Deprecated(forRemoval = true)
   public HttpCallHelper(HttpClient client, CbsNovaLoggingProperties loggingProperties) {
     this(client, loggingProperties, HttpCallProperties.permissive());
-    this.clientsByPolicy = buildClientsByPolicy(client);
   }
 
   @Override
@@ -67,7 +66,7 @@ public class HttpCallHelper implements Executable<HttpCallIn, HttpCallOut> {
       return Result.failure(e);
     }
 
-    HttpClient selectedClient = clientsByPolicy().get(call.redirectPolicy());
+    int maxHops = httpCallProperties.maxRedirectHops();
     logRequest(request);
     // Single attempt when maxAttempts resolves to 1 — preserves the pre-T628 byte-for-byte
     // behaviour. The loop body runs exactly once, producing the same Result shape as today.
@@ -84,17 +83,80 @@ public class HttpCallHelper implements Executable<HttpCallIn, HttpCallOut> {
         }
       }
       long startedAt = System.nanoTime();
+      HttpRequest currentRequest = request;
+      HttpResponse<String> response;
+      int hops = 0;
       try {
-        HttpResponse<String> response = selectedClient.send(request, BodyHandlers.ofString());
-        Result<HttpCallOut> redirectRejection = validateRedirectTarget(request, response, call);
-        if (redirectRejection != null) {
-          return redirectRejection;
+        while (true) {
+          response = client.send(currentRequest, BodyHandlers.ofString());
+          int status = response.statusCode();
+          if (call.redirectPolicy() == RedirectPolicy.NEVER
+                  || !REDIRECT_STATUSES.contains(status)) {
+            break;
+          }
+          if (hops >= maxHops) {
+            return redirectRejected(request, call,
+                    "exceeded maximum redirect hops (%d)".formatted(maxHops));
+          }
+          String location = response.headers().firstValue("Location").orElse(null);
+          if (location == null || location.isBlank()) {
+            return redirectRejected(request, call,
+                    "redirect response missing Location header");
+          }
+          URI resolved = currentRequest.uri().resolve(location);
+          try {
+            OutboundUrlValidator.validate(resolved.toString(), httpCallProperties);
+          } catch (IllegalArgumentException e) {
+            return Result.failure(new IllegalArgumentException(
+                    "httpCall %s %s followed a redirect to a rejected target: %s"
+                            .formatted(call.method(), OutboundUrlValidator.sanitize(request.uri()),
+                                    e.getMessage()),
+                    e));
+          }
+          if (call.redirectPolicy() == RedirectPolicy.NORMAL
+                  && "https".equalsIgnoreCase(currentRequest.uri().getScheme())
+                  && "http".equalsIgnoreCase(resolved.getScheme())) {
+            return redirectRejected(request, call,
+                    "https to http redirect downgrade is not allowed with NORMAL policy");
+          }
+          boolean sameOrigin = isSameOrigin(currentRequest.uri(), resolved);
+
+          Builder nextBuilder = HttpRequest.newBuilder(resolved)
+                  .timeout(Duration.ofMillis(call.timeoutMillis()));
+          String nextMethod;
+          String nextBody;
+          if (status == 307 || status == 308) {
+            nextMethod = currentRequest.method();
+            nextBody = call.body();
+          } else {
+            nextMethod = "HEAD".equalsIgnoreCase(currentRequest.method()) ? "HEAD" : "GET";
+            nextBody = null;
+          }
+
+          for (var entry : currentRequest.headers().map().entrySet()) {
+            String name = entry.getKey();
+            if (!sameOrigin && isSensitiveHeader(name)) {
+              continue;
+            }
+            if (nextBody == null && isBodyHeader(name)) {
+              continue;
+            }
+            copyHeader(nextBuilder, name, entry.getValue());
+          }
+
+          HttpRequest.BodyPublisher publisher = nextBody == null
+                  ? BodyPublishers.noBody()
+                  : BodyPublishers.ofString(nextBody);
+          nextBuilder.method(nextMethod, publisher);
+          currentRequest = nextBuilder.build();
+          hops++;
         }
+
         int status = response.statusCode();
         Map<String, String> headers = collectHeaders(response);
         String body = response.body();
         long durationMs = durationMillis(startedAt);
-        logResponse(request, status, durationMs);
+        logResponse(currentRequest, status, durationMs);
 
         if (call.isValidStatus(status)) {
           return Result.success(new HttpCallOut(status, headers, body, true, null));
@@ -109,12 +171,12 @@ public class HttpCallHelper implements Executable<HttpCallIn, HttpCallOut> {
                         call.method(), call.url(), status)));
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
-        logFailure(request, e, startedAt);
+        logFailure(currentRequest, e, startedAt);
         return Result.failure(new HttpCallTransportException(
                 "httpCall interrupted: " + e.getMessage(), e));
       } catch (IOException e) {
         long durationMs = durationMillis(startedAt);
-        logFailure(request, e, startedAt);
+        logFailure(currentRequest, e, startedAt);
         if (attempt < maxAttempts) {
           logRetry(request, -1, attempt, maxAttempts, durationMs);
           continue;
@@ -124,7 +186,7 @@ public class HttpCallHelper implements Executable<HttpCallIn, HttpCallOut> {
                         call.method(), call.url(), describeCause(e)),
                 e));
       } catch (Exception e) {
-        logFailure(request, e, startedAt);
+        logFailure(currentRequest, e, startedAt);
         return Result.failure(new HttpCallTransportException(
                 "httpCall %s %s failed: %s".formatted(
                         call.method(), call.url(), describeCause(e)),
@@ -193,33 +255,47 @@ public class HttpCallHelper implements Executable<HttpCallIn, HttpCallOut> {
     return builder.build();
   }
 
-  /**
-   * Re-validates the final URI after a followed redirect.
-   *
-   * <p>
-   * Honest limitation: this is detection, not prevention. The JDK {@link HttpClient} has already
-   * followed the redirect (and received the response body) before we see {@code response.uri()}, so
-   * a redirect to a blocked address is caught only after the fact — the same TOCTOU gap as the
-   * best-effort DNS check. Closing it fully needs a custom redirect-following interceptor inside
-   * the client (follow-up). Until then, use {@link RedirectPolicy#NEVER} for untrusted targets and
-   * validate the {@code Location} yourself. Returns {@code null} when the call is acceptable.
-   */
-  private Result<HttpCallOut> validateRedirectTarget(HttpRequest request,
-          HttpResponse<String> response, HttpCallContext call) {
-    if (call.redirectPolicy() == RedirectPolicy.NEVER
-            || response.uri().equals(request.uri())) {
-      return null;
+  private Result<HttpCallOut> redirectRejected(HttpRequest originalRequest,
+          HttpCallContext call, String reason) {
+    return Result.failure(new IllegalArgumentException(
+            "httpCall %s %s followed a redirect to a rejected target: %s"
+                    .formatted(call.method(), OutboundUrlValidator.sanitize(originalRequest.uri()),
+                            reason)));
+  }
+
+  private static boolean isSameOrigin(URI a, URI b) {
+    return Objects.equals(a.getScheme(), b.getScheme())
+            && Objects.equals(a.getHost(), b.getHost())
+            && a.getPort() == b.getPort();
+  }
+
+  private static boolean isSensitiveHeader(String name) {
+    return "Authorization".equalsIgnoreCase(name)
+            || "Cookie".equalsIgnoreCase(name)
+            || "Proxy-Authorization".equalsIgnoreCase(name);
+  }
+
+  private static boolean isBodyHeader(String name) {
+    return "Content-Length".equalsIgnoreCase(name)
+            || "Content-Type".equalsIgnoreCase(name)
+            || "Transfer-Encoding".equalsIgnoreCase(name);
+  }
+
+  private static void copyHeader(Builder builder, String name, List<String> values) {
+    if (values == null || values.isEmpty()) {
+      return;
     }
-    try {
-      OutboundUrlValidator.validate(response.uri().toString(), httpCallProperties);
-      return null;
-    } catch (IllegalArgumentException e) {
-      return Result.failure(new IllegalArgumentException(
-              "httpCall %s %s followed a redirect to a rejected target: %s"
-                      .formatted(call.method(), OutboundUrlValidator.sanitize(request.uri()),
-                              e.getMessage()),
-              e));
+    if (values.size() == 1) {
+      builder.header(name, values.get(0));
+      return;
     }
+    String[] pairs = new String[values.size() * 2];
+    int i = 0;
+    for (String value : values) {
+      pairs[i++] = name;
+      pairs[i++] = value;
+    }
+    builder.headers(pairs);
   }
 
   private void logRequest(HttpRequest request) {
@@ -281,47 +357,6 @@ public class HttpCallHelper implements Executable<HttpCallIn, HttpCallOut> {
       return t.getClass().getSimpleName();
     }
     return t.getClass().getSimpleName() + ": " + message;
-  }
-
-  public static HttpClient.Redirect toJdkRedirects(RedirectPolicy policy) {
-    return switch (policy) {
-      case NEVER -> HttpClient.Redirect.NEVER;
-      case NORMAL -> HttpClient.Redirect.NORMAL;
-      case ALWAYS -> HttpClient.Redirect.ALWAYS;
-    };
-  }
-
-  /**
-   * JDK HttpClient is configured once at build time and exposes no public config getters (connect
-   * timeout, executor, SSL context, etc.), so we cannot derive per-policy variants from the
-   * injected client. Instead we build one client per RedirectPolicy up front and cache the
-   * immutable snapshot in {@code clientsByPolicy}. The injected {@code client} is reused for
-   * {@code NEVER} since the JDK default redirect policy is NEVER — building a second identical
-   * client would just waste resources.
-   *
-   * <p>
-   * For the two-argument convenience ctor the snapshot is built eagerly post-delegation; for the
-   * Lombok-generated three-argument ctor (the Spring path) it is built lazily on first access via
-   * {@link #clientsByPolicy()}. Both paths share the same immutable result, so HTTP client policy
-   * behaviour is unchanged.
-   */
-  private static Map<RedirectPolicy, HttpClient> buildClientsByPolicy(HttpClient client) {
-    Map<RedirectPolicy, HttpClient> map = new EnumMap<>(RedirectPolicy.class);
-    map.put(RedirectPolicy.NEVER, client);
-    map.put(RedirectPolicy.NORMAL,
-            HttpClient.newBuilder().followRedirects(toJdkRedirects(RedirectPolicy.NORMAL)).build());
-    map.put(RedirectPolicy.ALWAYS,
-            HttpClient.newBuilder().followRedirects(toJdkRedirects(RedirectPolicy.ALWAYS)).build());
-    return Map.copyOf(map);
-  }
-
-  private Map<RedirectPolicy, HttpClient> clientsByPolicy() {
-    Map<RedirectPolicy, HttpClient> snapshot = clientsByPolicy;
-    if (snapshot == null) {
-      snapshot = buildClientsByPolicy(client);
-      clientsByPolicy = snapshot;
-    }
-    return snapshot;
   }
 
   public static final class HttpCallFailure extends RuntimeException {
