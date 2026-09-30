@@ -55,11 +55,25 @@ public final class TemporalTransactionInvoker implements TransactionInvoker {
     if (policy == null) {
       policy = DslConfig.dslConfig().defaultRetryPolicy();
     }
-    RetryOptions retryOptions = RetryOptions.newBuilder()
+    var retryBuilder = RetryOptions.newBuilder()
             .setMaximumAttempts(policy.maxAttempts())
             .setInitialInterval(policy.initialInterval())
-            .setBackoffCoefficient(policy.backoffCoefficient())
-            .build();
+            .setBackoffCoefficient(policy.backoffCoefficient());
+    if (policy.maximumInterval() != null) {
+      // T751: cap the exponential backoff so a slow-recovering upstream cannot
+      // accumulate arbitrarily long waits between retries. Without this cap
+      // Temporal grows the delay to 100x the initial interval, which can
+      // easily exceed the activity's startToCloseTimeout and mask real
+      // failures as timeout cascades.
+      retryBuilder.setMaximumInterval(policy.maximumInterval());
+    }
+    if (policy.nonRetryable() != null && !policy.nonRetryable().isEmpty()) {
+      // T751: validate-only / deterministic failures should fail the activity
+      // immediately instead of consuming the retry budget. Set the Temporal
+      // type names exactly as the activity throws them.
+      retryBuilder.setDoNotRetry(policy.nonRetryable().toArray(new String[0]));
+    }
+    RetryOptions retryOptions = retryBuilder.build();
     var optionsBuilder = ActivityOptions.newBuilder()
             .setStartToCloseTimeout(tx.startToCloseTimeout())
             .setRetryOptions(retryOptions)
