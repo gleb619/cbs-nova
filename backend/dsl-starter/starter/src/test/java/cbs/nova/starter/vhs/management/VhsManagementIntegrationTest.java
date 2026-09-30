@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import cbs.nova.starter.AuditTestSupport;
 import cbs.nova.starter.config.properties.CbsVhsProperties;
 import cbs.nova.starter.config.router.VhsManagementRouterConfiguration;
 import cbs.nova.starter.controller.DslExceptionHandler;
@@ -62,7 +63,8 @@ class VhsManagementIntegrationTest {
     LocalFileTapeStore store = new LocalFileTapeStore(properties, objectMapper);
     ObjectProvider<VhsReplayJob> replayProvider = mock(ObjectProvider.class);
     VhsManagementService service = new VhsManagementService(store, replayProvider);
-    VhsManagementHandler handler = new VhsManagementHandler(service, null, objectMapper);
+    VhsManagementHandler handler = new VhsManagementHandler(service, null, objectMapper,
+            AuditTestSupport.emptyProvider());
     VhsManagementRouterConfiguration router = new VhsManagementRouterConfiguration();
 
     AnnotationConfigApplicationContext adviceContext = new AnnotationConfigApplicationContext();

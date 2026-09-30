@@ -3,6 +3,7 @@ package cbs.nova.starter.config.router;
 import cbs.nova.starter.controller.ApiKeyAdminHandler;
 import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.starter.service.ApiKeyStore;
+import cbs.nova.starter.service.DslAuditService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
@@ -11,6 +12,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import org.springdoc.core.annotations.RouterOperation;
 import org.springdoc.core.annotations.RouterOperations;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -29,8 +31,9 @@ import org.springframework.web.servlet.function.ServerResponse;
 public class ApiKeyAdminRouterConfiguration {
 
   @Bean
-  ApiKeyAdminHandler apiKeyAdminHandler(ApiKeyStore store) {
-    return new ApiKeyAdminHandler(store);
+  ApiKeyAdminHandler apiKeyAdminHandler(ApiKeyStore store,
+          ObjectProvider<DslAuditService> auditServiceProvider) {
+    return new ApiKeyAdminHandler(store, auditServiceProvider);
   }
 
   @Bean

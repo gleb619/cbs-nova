@@ -14,6 +14,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import cbs.nova.starter.AuditTestSupport;
 import cbs.nova.starter.config.router.VhsManagementRouterConfiguration;
 import cbs.nova.starter.converter.DefaultDslExceptionMapper;
 import cbs.nova.starter.vhs.loadtest.VhsLoadTest;
@@ -62,7 +63,8 @@ class VhsManagementHandlerTest {
 
   @BeforeEach
   void setUp() {
-    mockMvc = buildMockMvc(new VhsManagementHandler(service, loadTest, objectMapper));
+    mockMvc = buildMockMvc(new VhsManagementHandler(service, loadTest, objectMapper,
+            AuditTestSupport.emptyProvider()));
   }
 
   // ----- list ---------------------------------------------------------------
@@ -230,7 +232,8 @@ class VhsManagementHandlerTest {
 
   @Test
   void loadtestReturns503WhenBeanUnavailable() throws Exception {
-    mockMvc = buildMockMvc(new VhsManagementHandler(service, null, objectMapper));
+    mockMvc = buildMockMvc(new VhsManagementHandler(service, null, objectMapper,
+            AuditTestSupport.emptyProvider()));
 
     mockMvc.perform(post("/api/v1/vhs/loadtest")
             .contentType("application/json")
@@ -306,6 +309,169 @@ class VhsManagementHandlerTest {
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.code").value("VHS_LOAD_TEST_ERROR"))
             .andExpect(jsonPath("$.message").value("No tape files found matching: /no/such/dir"));
+  }
+
+  // ----- audit (T776) -------------------------------------------------------
+
+  @Test
+  void deleteWritesAuditRowOnSuccess() throws Exception {
+    var audit = AuditTestSupport.h2();
+    mockMvc = buildMockMvc(new VhsManagementHandler(service, loadTest, objectMapper,
+            AuditTestSupport.providerOf(audit.service())));
+    when(service.deleteTape("run-del")).thenReturn(true);
+
+    mockMvc.perform(delete("/api/v1/vhs/tapes/run-del"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.deleted").value(true));
+
+    var rows = audit.service().search(null, 0, 10).items();
+    assertThat(rows).hasSize(1);
+    var row = rows.get(0);
+    assertThat(row.action()).isEqualTo("VHS_TAPE_DELETE");
+    assertThat(row.outcome()).isEqualTo("SUCCESS");
+    assertThat(row.target()).isEqualTo("run-del");
+  }
+
+  @Test
+  void deleteTapeNotFoundWritesFailureAuditRow() throws Exception {
+    var audit = AuditTestSupport.h2();
+    mockMvc = buildMockMvc(new VhsManagementHandler(service, loadTest, objectMapper,
+            AuditTestSupport.providerOf(audit.service())));
+    when(service.deleteTape("ghost")).thenReturn(false);
+
+    mockMvc.perform(delete("/api/v1/vhs/tapes/ghost"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.deleted").value(false));
+
+    var rows = audit.service().search(null, 0, 10).items();
+    assertThat(rows).hasSize(1);
+    var row = rows.get(0);
+    assertThat(row.action()).isEqualTo("VHS_TAPE_DELETE");
+    assertThat(row.outcome()).isEqualTo("FAILURE");
+    assertThat(row.target()).isEqualTo("ghost");
+  }
+
+  @Test
+  void replayAcceptedWritesAuditRowOnSuccess() throws Exception {
+    var audit = AuditTestSupport.h2();
+    mockMvc = buildMockMvc(new VhsManagementHandler(service, loadTest, objectMapper,
+            AuditTestSupport.providerOf(audit.service())));
+    ReplayRunResponse response = new ReplayRunResponse(
+            "replay-abc", "accepted", "dry-run", "exact",
+            "/api/v1/vhs/tapes/run-rep/replay/replay-abc", null);
+    when(service.startReplay(eq("run-rep"), any())).thenReturn(Optional.of(response));
+
+    mockMvc.perform(post("/api/v1/vhs/tapes/run-rep/replay")
+            .contentType("application/json")
+            .content("{\"target\":\"dry-run\",\"mode\":\"exact\",\"speed\":1.0,\"concurrency\":1,"
+                    + "\"copies\":1}"))
+            .andExpect(status().isAccepted());
+
+    var rows = audit.service().search(null, 0, 10).items();
+    assertThat(rows).hasSize(1);
+    var row = rows.get(0);
+    assertThat(row.action()).isEqualTo("VHS_TAPE_REPLAY");
+    assertThat(row.outcome()).isEqualTo("SUCCESS");
+    assertThat(row.target()).isEqualTo("run-rep");
+  }
+
+  @Test
+  void replayReturns503WhenServiceReturnsEmptyWritesFailureAuditRow() throws Exception {
+    var audit = AuditTestSupport.h2();
+    mockMvc = buildMockMvc(new VhsManagementHandler(service, loadTest, objectMapper,
+            AuditTestSupport.providerOf(audit.service())));
+    when(service.startReplay(eq("missing"), any())).thenReturn(Optional.empty());
+
+    mockMvc.perform(post("/api/v1/vhs/tapes/missing/replay")
+            .contentType("application/json")
+            .content("{}"))
+            .andExpect(status().isServiceUnavailable());
+
+    var rows = audit.service().search(null, 0, 10).items();
+    assertThat(rows).hasSize(1);
+    var row = rows.get(0);
+    assertThat(row.action()).isEqualTo("VHS_TAPE_REPLAY");
+    assertThat(row.outcome()).isEqualTo("FAILURE");
+    assertThat(row.target()).isEqualTo("missing");
+  }
+
+  @Test
+  void loadtestSuccessWritesAuditRow() throws Exception {
+    var audit = AuditTestSupport.h2();
+    mockMvc = buildMockMvc(new VhsManagementHandler(service, loadTest, objectMapper,
+            AuditTestSupport.providerOf(audit.service())));
+    VhsLoadTestReport report = new VhsLoadTestReport(
+            "dry-run", 1, 2L, 2L, 0L, 1234L, List.of(), List.of());
+    when(loadTest.run(eq("**/*.vhs.jsonl"), eq("dry-run"), eq(1.0), eq(4), eq(0L)))
+            .thenReturn(report);
+
+    mockMvc.perform(post("/api/v1/vhs/loadtest")
+            .contentType("application/json")
+            .content("{}"))
+            .andExpect(status().isOk());
+
+    var rows = audit.service().search(null, 0, 10).items();
+    assertThat(rows).hasSize(1);
+    var row = rows.get(0);
+    assertThat(row.action()).isEqualTo("VHS_LOAD_TEST");
+    assertThat(row.outcome()).isEqualTo("SUCCESS");
+    assertThat(row.target()).isEqualTo("-");
+  }
+
+  @Test
+  void loadtestBadParamsWritesFailureAuditRow() throws Exception {
+    var audit = AuditTestSupport.h2();
+    mockMvc = buildMockMvc(new VhsManagementHandler(service, loadTest, objectMapper,
+            AuditTestSupport.providerOf(audit.service())));
+    doThrow(new VhsLoadTestException("No tape files found matching: /no/such/dir"))
+            .when(loadTest).run(any(), any(), any(Double.class), any(Integer.class),
+                    any(Long.class));
+
+    mockMvc.perform(post("/api/v1/vhs/loadtest")
+            .contentType("application/json")
+            .content("{\"tapes\":\"/no/such/dir\"}"))
+            .andExpect(status().isBadRequest());
+
+    var rows = audit.service().search(null, 0, 10).items();
+    assertThat(rows).hasSize(1);
+    var row = rows.get(0);
+    assertThat(row.action()).isEqualTo("VHS_LOAD_TEST");
+    assertThat(row.outcome()).isEqualTo("FAILURE");
+  }
+
+  @Test
+  void loadtestBeanMissingWritesFailureAuditRow() throws Exception {
+    var audit = AuditTestSupport.h2();
+    mockMvc = buildMockMvc(new VhsManagementHandler(service, null, objectMapper,
+            AuditTestSupport.providerOf(audit.service())));
+
+    mockMvc.perform(post("/api/v1/vhs/loadtest")
+            .contentType("application/json")
+            .content("{}"))
+            .andExpect(status().isServiceUnavailable());
+
+    var rows = audit.service().search(null, 0, 10).items();
+    assertThat(rows).hasSize(1);
+    var row = rows.get(0);
+    assertThat(row.action()).isEqualTo("VHS_LOAD_TEST");
+    assertThat(row.outcome()).isEqualTo("FAILURE");
+  }
+
+  @Test
+  void vhsHandlerSucceedsWithoutAuditBean() throws Exception {
+    // Default @BeforeEach wiring uses the empty provider; pins the no-audit-bean path.
+    when(service.deleteTape("run-a")).thenReturn(true);
+
+    mockMvc.perform(delete("/api/v1/vhs/tapes/run-a"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.deleted").value(true));
+
+    ReplayRunResponse response = new ReplayRunResponse(
+            "replay-z", "accepted", "dry-run", "exact", null, null);
+    when(service.startReplay(eq("run-a"), any())).thenReturn(Optional.of(response));
+
+    mockMvc.perform(post("/api/v1/vhs/tapes/run-a/replay"))
+            .andExpect(status().isAccepted());
   }
 
   // ----- helpers ------------------------------------------------------------
