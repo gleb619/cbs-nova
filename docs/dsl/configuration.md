@@ -303,7 +303,7 @@ starter SDK remains the single trace export path (Spring Boot's
 `TracingConfiguration#openTelemetry`).
 
 **Trace verification.** With compose up, `make trace-smoke` curls one preview and queries
-Jaeger; see [architecture-backend § Tracing in compose](architecture-backend.md#tracing-in-compose-default-on)
+Jaeger; see [architecture-backend § Tracing in compose](../architecture-backend.md#tracing-in-compose-default-on)
 for the end-to-end chain and the no-traces troubleshooting checklist.
 
 ---
