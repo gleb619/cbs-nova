@@ -1,0 +1,39 @@
+# MinIO object storage for the local DSL demo stack.
+#
+# Opt-in: the `s3Storage` @Helper (`backend/dsl-starter/.../helper/S3StorageHelper.java`)
+# uses the host application's existing Spring `S3Client` bean. AWS SDK v2 is a
+# `compileOnly` dependency of the starter, so the app must declare
+# `software.amazon.awssdk:s3` and build a client with
+# `S3Client.builder().endpointOverride(...)` pointing here. Without that bean the
+# helper returns a clean failure
+# ("s3Storage: S3Client bean is not available; object storage is not configured"),
+# so other helpers keep working — the service is safe to leave un-started.
+#
+# Mirrors the opt-in `rabbitmq.yml` pattern for `amqpPublish` (T709).
+
+services:
+  minio:
+    image: minio/minio:RELEASE.2024-06-13T22-53-53Z
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      # Local-demo defaults only — override via MINIO_ROOT_USER / MINIO_ROOT_PASSWORD.
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    ports:
+      # S3 API — what `S3Client.builder().endpointOverride(...)` points at.
+      - "9000:9000"
+      # Console UI — http://localhost:9001 (minioadmin/minioadmin by default).
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      # `mc ready local` reports the object layer as accepting S3 requests.
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 20s
+
+volumes:
+  minio-data:

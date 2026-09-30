@@ -1056,6 +1056,39 @@ AmqpPublishOut published = ctx.runHelper("amqpPublish",
 
 ---
 
+## Object storage (S3 / MinIO)
+
+`s3Storage` (`S3StorageIn(op, bucket, key, body, contentType)`) runs a single `put`, `get` or
+`delete` against S3-compatible object storage through the host application's existing `S3Client`
+Spring bean — the helper never creates a client. AWS SDK v2 is a `compileOnly` dependency of the
+starter, so this helper is opt-in: add `software.amazon.awssdk:s3` to your app and expose an
+`S3Client` bean. MinIO works by pointing that bean at the local endpoint
+(`S3Client.builder().endpointOverride(...)`); see the RabbitMQ section above for the matching
+local-dev compose workflow.
+
+Validation happens before any network call: `op` must be one of `put`/`get`/`delete`, `bucket` and
+`key` must be non-blank, and `op=put` requires a non-blank `body`. `contentType` is optional on
+`put` and defaults to `application/octet-stream`. `get` returns the object bytes base64-encoded
+(pass them to the `base64` helper to decode). If no `S3Client` bean is available, the call fails
+with an explicit error instead of silently dropping the object.
+
+```java
+S3StorageOut stored = ctx.runHelper("s3Storage",
+        new S3StorageIn("put", "orders", "2026/01/order-42.json", payloadJson, "application/json"))
+        .as(S3StorageOut.class);
+// stored.op()/bucket()/key() echo what was written; timestamp() records completion
+
+S3StorageOut fetched = ctx.runHelper("s3Storage",
+        new S3StorageIn("get", "orders", "2026/01/order-42.json", null, null))
+        .as(S3StorageOut.class);
+// fetched.bodyBase64() holds the object bytes, fetched.contentType() its stored MIME type
+
+ctx.runHelper("s3Storage",
+        new S3StorageIn("delete", "orders", "2026/01/order-42.json", null, null));
+```
+
+---
+
 ## Observability
 
 - **Log the helper *inputs that matter*, never secrets.** Log the `url` and `method` of an

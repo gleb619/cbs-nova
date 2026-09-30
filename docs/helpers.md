@@ -4,7 +4,7 @@
 > For how to author and call helpers from DSL code, see the
 > [helpers authoring guide](dsl/helpers.md).
 
-58 helpers, sorted by name.
+59 helpers, sorted by name.
 
 | Name | Description | Input | Output |
 |---|---|---|---|
@@ -55,6 +55,7 @@
 | queryString |  |  |  |
 | random |  |  |  |
 | regex |  |  |  |
+| s3Storage |  |  |  |
 | schemaValidate |  |  |  |
 | secret |  |  |  |
 | semver |  |  |  |
