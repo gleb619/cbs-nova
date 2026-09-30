@@ -37,7 +37,16 @@ ENV GRADLE_OPTS="-Dorg.gradle.internal.http.connectionTimeout=120000 -Dorg.gradl
 # stay — runtime scaffold builds apply it — so it is published to Maven Local
 # together with the platform and the starter (DSL sources may compile against
 # starter helper model classes), then the service fat jar is built.
-RUN sed -i "/include 'dsl-idea-plugin'/d" dsl-plugins/settings.gradle && \
+#
+# BuildKit cache mount for the Gradle user home so dependency resolution
+# (`~/.gradle/caches/modules-2`, configuration cache, build cache) survives
+# across rebuilds. Maven Local (`~/.m2`) is intentionally NOT mounted: the
+# `publishToMavenLocal` invocations below write the seeded cbs.nova:* artifacts
+# into `/root/.m2`, which is then relocated into the runtime user's home by
+# the APP_UID/APP_GID RUN below. Mounting it would hide those writes from the
+# layer and break every runtime scaffold build.
+RUN --mount=type=cache,target=/root/.gradle \
+    sed -i "/include 'dsl-idea-plugin'/d" dsl-plugins/settings.gradle && \
     gradle -p dsl-platform publishToMavenLocal -x test --no-daemon --console=plain --no-configuration-cache && \
     gradle -p dsl-plugins :dsl-gradle-plugin:publishToMavenLocal -x test --no-daemon --console=plain --no-configuration-cache && \
     gradle -p dsl-starter :starter:publishToMavenLocal -x test -x :starter:generateGitProperties --no-daemon --console=plain --no-configuration-cache && \
