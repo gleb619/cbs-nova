@@ -55,6 +55,16 @@ public class HttpCallHelper implements Executable<HttpCallIn, HttpCallOut> {
   public @NonNull Result<HttpCallOut> execute(@NonNull Context<HttpCallIn> ctx) {
     HttpCallContext call = HttpCallContext.from(ctx.body());
 
+    // Fail closed: redirects are followed (and validated per hop) by this helper. An injected
+    // client
+    // that follows redirects itself would send requests to unvalidated Location targets.
+    if (client.followRedirects() != HttpClient.Redirect.NEVER) {
+      return Result.failure(new IllegalStateException(
+              "httpCall requires an HttpClient built with Redirect.NEVER (found "
+                      + client.followRedirects()
+                      + "); the helper validates each redirect hop itself"));
+    }
+
     if (call.url() == null || call.url().isBlank()) {
       return Result.failure(new IllegalArgumentException("httpCall.url is required"));
     }

@@ -2,6 +2,7 @@ package cbs.nova.starter.config.properties;
 
 import java.util.List;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.bind.ConstructorBinding;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 
 @ConfigurationProperties(prefix = "cbs.dsl.helper.http-call")
@@ -11,6 +12,7 @@ public record HttpCallProperties(
         List<String> allowedHosts,
         @DefaultValue("5") int maxRedirectHops) {
 
+  @ConstructorBinding
   public HttpCallProperties {
     allowedSchemes = allowedSchemes == null
             ? List.of("https", "http")

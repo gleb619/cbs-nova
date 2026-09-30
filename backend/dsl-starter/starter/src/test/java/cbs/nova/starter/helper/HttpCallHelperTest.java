@@ -866,4 +866,19 @@ class HttpCallHelperTest {
       httpsServer.stop();
     }
   }
+
+  @Test
+  void clientThatFollowsRedirectsItselfIsRejectedWithoutSendingAnything() {
+    wireMock.stubFor(get("/hello").willReturn(aResponse().withStatus(200).withBody("hi")));
+    HttpClient followingClient = HttpClient.newBuilder()
+            .followRedirects(HttpClient.Redirect.NORMAL).build();
+    HttpCallHelper unsafe = helperWith(followingClient, HttpCallProperties.permissive());
+
+    Result<HttpCallOut> result = execute(unsafe, HttpCallIn.get(baseUrl() + "/hello"));
+
+    assertThat(result.isSuccess()).isFalse();
+    assertThat(result.cause()).isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("Redirect.NEVER");
+    wireMock.verify(0, getRequestedFor(urlEqualTo("/hello")));
+  }
 }
