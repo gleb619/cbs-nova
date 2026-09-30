@@ -80,6 +80,15 @@ dependencies {
   implementation libs.opentelemetry.api
   implementation libs.opentelemetry.sdk
   implementation libs.opentelemetry.exporter.otlp
+  // T744: Micrometer Tracing over OpenTelemetry + Spring Boot's OTLP tracing/metrics
+  // auto-configurations. Versions come from the Spring Boot BOM (see libs.versions.toml) so the
+  // bridge stays aligned with the opentelemetry-sdk above. `micrometer-registry-otlp` is the
+  // registry that publishes every existing meter (dsl.preview.duration, dsl.run.duration, etc.)
+  // over OTLP/HTTP; export is opt-in via `management.otlp.metrics.export.*` below.
+  implementation libs.micrometer.tracing.bridge.otel
+  implementation libs.micrometer.registry.otlp
+  implementation libs.spring.boot.micrometer.tracing.opentelemetry
+  implementation libs.spring.boot.opentelemetry
   implementation libs.caffeine
   implementation libs.resilience4j.circuitbreaker
   implementation libs.resilience4j.bulkhead
@@ -96,6 +105,7 @@ dependencies {
   testImplementation libs.springdoc.openapi.starter.webmvc.ui
   testImplementation libs.spring.boot.starter.actuator
   testImplementation libs.micrometer.registry.prometheus
+  testImplementation libs.micrometer.registry.otlp
   testImplementation libs.bundles.spring.web
   testImplementation libs.bundles.spring.test
   testImplementation libs.jqwik

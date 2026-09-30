@@ -265,6 +265,49 @@ read-only lookup index for later enforcement layers.
 
 ---
 
+## Observability — OTLP export (T744)
+
+T744 wires the starter into the compose observability stack (`app/compose/observability.yml` —
+`otel-collector` :4317 gRPC / :4318 HTTP, jaeger :16686, loki, prometheus :9090 namespace `cbsnova`).
+A fresh starter ships inert (every OTLP knob blank or `false`); operators flip the documented
+values below to publish traces + metrics to a collector. Recommended endpoints:
+
+| Environment | Trace endpoint | Metrics endpoint |
+|-------------|----------------|------------------|
+| localhost dev | `http://localhost:4318` | `http://localhost:4318/v1/metrics` |
+| compose / k8s | `http://otel-collector:4318` | `http://otel-collector:4318/v1/metrics` |
+
+Endpoint resolution order (matches `TracingConfiguration.resolveOtlpEndpoint`):
+
+1. `cbs.nova.tracing.otlp.endpoint` (existing starter knob, T519 contract)
+2. `management.opentelemetry.tracing.export.otlp.endpoint` (Spring Boot 4 standard)
+3. `OTEL_EXPORTER_OTLP_ENDPOINT` env var (OpenTelemetry SDK standard)
+4. nothing → starter SDK is a no-op (`OpenTelemetry.noop()`); no startup failure, no log spam
+
+| Key / env | Type | Default | Effect |
+|-----------|------|---------|--------|
+| `cbs.nova.tracing.otlp.endpoint` | `String` | `''` (blank) | Trace endpoint (full URL). Blank disables the starter SDK unless the next two knobs resolve. |
+| `management.opentelemetry.tracing.export.otlp.endpoint` | `String` | `''` (blank) | Spring Boot 4 standard trace endpoint, fed into the same resolution chain as a fallback. |
+| `management.tracing.sampling.probability` | `double` | `1.0` | Sampler ratio; `0.0` records no spans, `1.0` records every span. |
+| `management.tracing.baggage.correlation.fields` | `List<String>` | `[cid]` | MDC keys copied onto the active span as baggage/attributes. The starter already populates `cid` from `X-Correlation-Id` (`RequestIdFilter`, `DslRuntimeService`, `PieceCheckPipeline`) — leaving this as `[cid]` joins a Jaeger span back to the matching BFF log line. |
+| `management.otlp.metrics.export.enabled` | `boolean` | `false` | Master switch for the OTLP metrics registry (`@ConditionalOnEnabledMetricsExport("otlp")`). Flip together with `url` to publish every existing Micrometer meter over OTLP/HTTP. |
+| `management.otlp.metrics.export.url` | `String` | `''` (blank) | OTLP HTTP metrics endpoint (default URL when unset is `http://localhost:4318/v1/metrics`). |
+| `management.otlp.metrics.export.step` | `Duration` | `1m` | Publish cadence. |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` (env) | `String` | `''` (blank) | OpenTelemetry SDK env var; same chain as above. |
+
+**What is NOT changed by T744.** The existing prometheus scrape path (`/actuator/prometheus`,
+`app/observability/prometheus.yml`) keeps working — `micrometer-registry-otlp` is added on top
+of `micrometer-registry-prometheus`, both children of the same Micrometer composite. The
+starter SDK remains the single trace export path (Spring Boot's
+`OpenTelemetrySdkAutoConfiguration` backs off via `@ConditionalOnMissingBean` on
+`TracingConfiguration#openTelemetry`).
+
+**Trace verification.** With compose up, `make trace-smoke` curls one preview and queries
+Jaeger; see [architecture-backend § Tracing in compose](architecture-backend.md#tracing-in-compose-default-on)
+for the end-to-end chain and the no-traces troubleshooting checklist.
+
+---
+
 ## Temporal & server env
 
 A few runtime knobs are wired through `@Value`/YAML rather than a `@ConfigurationProperties` class. Defaults come
