@@ -12,3 +12,4 @@ include:
   - path: ./compose/gitea.yml
   - path: ./compose/observability.yml
   - path: ./compose/rabbitmq.yml
+  - path: ./compose/minio.yml

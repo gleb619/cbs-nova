@@ -27,6 +27,7 @@ h2 = "2.4.240"
 caffeine = "3.1.8"
 resilience4j = "2.3.0"
 squigglesql = "4.2.1"
+awssdk = "2.34.0"
 
 jgit = "7.1.0.202411261347-r"
 jtokkit = "1.1.0"
@@ -120,6 +121,10 @@ spring-jdbc = { module = "org.springframework:spring-jdbc" }
 spring-cloud-dependencies = { module = "org.springframework.cloud:spring-cloud-dependencies", version.ref = "spring-cloud" }
 
 springdoc-openapi-starter-webmvc-ui = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc-openapi" }
+
+# -- AWS SDK v2 (T754) -- compileOnly for the opt-in `s3Storage` helper; users who do not
+# declare software.amazon.awssdk:s3 themselves keep a starter without S3 on the classpath.
+awssdk-s3 = { module = "software.amazon.awssdk:s3", version.ref = "awssdk" }
 
 # -- Misc --
 jspecify = { module = "org.jspecify:jspecify", version.ref = "jspecify" }

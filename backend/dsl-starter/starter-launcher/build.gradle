@@ -22,6 +22,9 @@ dependencies {
   // starter marks spring-boot-starter-amqp compileOnly (AmqpPublishHelper is optional-by-bean);
   // the deployable launcher must carry it so @SpringHelper instantiation finds AmqpTemplate classes
   implementation libs.spring.boot.starter.amqp
+  // T754: same reason for S3StorageHelper (compileOnly in the starter) — without the SDK on the
+  // launcher classpath @SpringHelper instantiation fails with NoClassDefFoundError: S3Client
+  implementation libs.awssdk.s3
   //implementation libs.spring.kafka
 
   testImplementation libs.bundles.spring.test

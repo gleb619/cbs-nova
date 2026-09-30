@@ -61,6 +61,10 @@ dependencies {
   compileOnly libs.openfeign.core
   compileOnly libs.spring.kafka
   compileOnly libs.spring.boot.starter.amqp
+  // T754: opt-in `s3Storage` helper. compileOnly keeps AWS SDK v2 off every user's runtime
+  // classpath — apps that want the helper declare software.amazon.awssdk:s3 themselves and
+  // expose an S3Client bean (MinIO works too via a custom endpointOverride).
+  compileOnly libs.awssdk.s3
   implementation libs.spring.boot.starter.data.jdbc
   compileOnly libs.spring.boot.starter.data.redis
   implementation libs.squigglesql
@@ -125,6 +129,7 @@ dependencies {
   testImplementation libs.wiremock
   testImplementation libs.spring.kafka
   testImplementation libs.spring.boot.starter.amqp
+  testImplementation libs.awssdk.s3
   testImplementation libs.spring.boot.starter.data.redis
   testImplementation libs.opentelemetry.sdk.testing
 }
