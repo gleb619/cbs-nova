@@ -55,10 +55,17 @@ public class TracingConfiguration {
 
   /**
    * Resolves the OTLP endpoint in T519 order: application property, then empty default, then the
-   * {@code OTEL_EXPORTER_OTLP_ENDPOINT} environment variable.
+   * {@code OTEL_EXPORTER_OTLP_ENDPOINT} environment variable. T744 adds the Spring Boot standard
+   * {@code management.opentelemetry.tracing.export.otlp.endpoint} in between so operators can use
+   * either knob; the starter-owned SDK below stays the single OTLP export path (Spring Boot's own
+   * {@code OpenTelemetrySdkAutoConfiguration} backs off via {@code @ConditionalOnMissingBean} on
+   * the {@code OpenTelemetry} bean declared here).
    */
   static String resolveOtlpEndpoint(TracingProperties tracingProperties, Environment environment) {
     String endpoint = tracingProperties.otlp().endpoint();
+    if (!StringUtils.hasText(endpoint)) {
+      endpoint = environment.getProperty("management.opentelemetry.tracing.export.otlp.endpoint");
+    }
     if (!StringUtils.hasText(endpoint)) {
       endpoint = environment.getProperty("OTEL_EXPORTER_OTLP_ENDPOINT");
     }

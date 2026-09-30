@@ -68,6 +68,21 @@ class TracingConfigurationTest {
   }
 
   @Test
+  void springBootOtlpPropertyBeatsEnvFallback() {
+    // T744: management.opentelemetry.tracing.export.otlp.endpoint slots between the cbs.* knob
+    // and the OTEL_EXPORTER_OTLP_ENDPOINT env var so operators can use either Spring Boot
+    // standard property or the cbs-namespaced one.
+    var properties = new TracingProperties(null, new TracingProperties.Otlp(""));
+    var environment = new MockEnvironment()
+            .withProperty("management.opentelemetry.tracing.export.otlp.endpoint",
+                    "http://spring.example:4318/v1/traces")
+            .withProperty("OTEL_EXPORTER_OTLP_ENDPOINT", "http://env.example:4318/v1/traces");
+
+    assertThat(TracingConfiguration.resolveOtlpEndpoint(properties, environment))
+            .isEqualTo("http://spring.example:4318/v1/traces");
+  }
+
+  @Test
   void customServiceNameIsBound() {
     runner
             .withPropertyValues("cbs.nova.tracing.service-name=custom-service")

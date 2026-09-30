@@ -16,7 +16,7 @@ awaitility = "4.3.0"
 sentry = "8.26.0"
 lombok = "1.18.46"
 mapstruct = "1.6.3"
-opentelemetry = "1.48.0"
+opentelemetry = "1.55.0"
 mvel = "2.5.2.Final"
 keycloak-admin-client = "22.0.0"
 rest-assured = "5.5.0"
@@ -137,6 +137,15 @@ opentelemetry-sdk = { module = "io.opentelemetry:opentelemetry-sdk", version.ref
 opentelemetry-exporter-otlp = { module = "io.opentelemetry:opentelemetry-exporter-otlp", version.ref = "opentelemetry" }
 opentelemetry-sdk-testing = { module = "io.opentelemetry:opentelemetry-sdk-testing", version.ref = "opentelemetry" }
 sentry-spring-boot-jakarta = { module = "io.sentry:sentry-spring-boot-4", version.ref = "sentry" }
+
+# -- OTLP export wiring (T744) --
+# No explicit versions: spring-boot-dependencies (applied by io.spring.dependency-management)
+# manages micrometer-tracing 1.6.4, micrometer 1.16.4 and opentelemetry 1.55.0, so these track
+# the Spring Boot BOM instead of drifting from it.
+micrometer-tracing-bridge-otel = { module = "io.micrometer:micrometer-tracing-bridge-otel" }
+micrometer-registry-otlp = { module = "io.micrometer:micrometer-registry-otlp" }
+spring-boot-opentelemetry = { module = "org.springframework.boot:spring-boot-opentelemetry" }
+spring-boot-micrometer-tracing-opentelemetry = { module = "org.springframework.boot:spring-boot-micrometer-tracing-opentelemetry" }
 
 
 # -- Databases --

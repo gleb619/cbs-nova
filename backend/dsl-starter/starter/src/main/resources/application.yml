@@ -35,6 +35,47 @@ management:
         readiness:
           include: readinessState,dslReadiness
 
+  # T744 — OTLP export wiring (traces + metrics). Both blocks ship blank so a fresh
+  # starter stays a no-op (matches the existing feature-off behaviour in this file).
+  # Activate by pointing at the collector; recommended values:
+  #   localhost dev       : http://localhost:4318          (and .../v1/metrics for metrics)
+  #   compose / k8s stack : http://otel-collector:4318    (compose service name resolves it)
+  # The compose stack listens on OTLP gRPC :4317 and OTLP HTTP :4318 (see
+  # app/compose/observability.yml); set EITHER the per-property URL or the
+  # `OTEL_EXPORTER_OTLP_ENDPOINT` env var and the starter picks it up.
+  # Spring Boot's @ConditionalOnMissingBean on TracingConfiguration#openTelemetry keeps the
+  # starter-owned SDK as the single trace export path; the `management.*` properties below feed
+  # both that fallback chain and the OTLP metrics registry auto-config.
+  tracing:
+    sampling:
+      probability: 1.0
+    baggage:
+      # Map the request-scope `cid` MDC key onto a span attribute so a span can be joined
+      # back to the BFF log line. See RequestIdFilter / DslRuntimeService / PieceCheckPipeline
+      # for the writers; Micrometer Tracing copies any MDC key listed here onto the active span
+      # (via Slf4jBaggageEventListener + OTel BaggageSpanProcessor; the cid→attribute mapping is
+      # driven by `management.tracing.baggage.correlation.fields`).
+      correlation:
+        fields:
+          - cid
+    opentelemetry:
+      tracing:
+        export:
+          otlp:
+            # Blank by default; set to e.g. http://localhost:4318 (or http://otel-collector:4318
+            # inside compose) to activate trace export. Resolved by TracingConfiguration in the
+            # order: cbs.nova.tracing.otlp.endpoint → this property → OTEL_EXPORTER_OTLP_ENDPOINT.
+            endpoint:
+  otlp:
+    metrics:
+      export:
+        # OTLP metrics are gated by the `enabled` flag (Spring Boot's
+        # @ConditionalOnEnabledMetricsExport("otlp")); flip both knobs together to publish
+        # every existing Micrometer meter over OTLP/HTTP.
+        enabled: false      # default off; flip to true + provide `url` to publish
+        url:                # blank by default; set to http://localhost:4318/v1/metrics
+        step: 1m
+
 # Expose request-scope MDC keys (rid = X-Request-Id, cid = X-Correlation-Id) on every
 # log line. %X{key:-} renders empty for uncorrelated requests (no noisy "null").
 logging:
