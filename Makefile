@@ -93,7 +93,7 @@ openapi: ## Regenerate docs/openapi.json from the live /v3/api-docs (needs Postg
 # Detects drift between the committed docs/openapi.json and a freshly
 # fetched spec without ever writing docs/openapi.json.
 .PHONY: openapi-check
-openapi-check: ## Fail if docs/openapi.json drifts from live /v3/api-docs (classifier: scripts/openapi-diff.py)
+openapi-check: ## Fail if docs/openapi.json drifts from live /v3/api-docs (classifier: cbs_cli openapi-diff)
 	@set -euo pipefail; \
 	TMP=$$(mktemp /tmp/cbs-nova-openapi-check.XXXXXX.json); \
 	cleanup() { rm -f "$$TMP"; }; \
@@ -105,8 +105,8 @@ openapi-check: ## Fail if docs/openapi.json drifts from live /v3/api-docs (class
 	fi; \
 	printf '\n==> docs/openapi.json drifts from the live spec:\n'; \
 	diff -u docs/openapi.json "$$TMP" | head -200 || true; \
-	printf '\n==> Classifier (scripts/openapi-diff.py):\n'; \
-	python3 scripts/openapi-diff.py docs/openapi.json "$$TMP"
+	printf '\n==> Classifier (cbs_cli openapi-diff):\n'; \
+	python3 $(SCRIPT) openapi-diff docs/openapi.json "$$TMP"
 
 
 # -----------------------------------------------------------------------------
