@@ -96,6 +96,10 @@ class CLI:
         p = subparsers.add_parser("cve-scan", help="Check pnpm audit against an allowlist")
         p.add_argument("audit_path", help="pnpm audit --json output file")
         p.add_argument("allowlist_path", help="baseline allowlist JSON")
+        p.add_argument(
+            "--today",
+            help="override today's date (YYYY-MM-DD) when evaluating expires_on",
+        )
         p.set_defaults(handler=CveGateCommand)
 
         p = subparsers.add_parser("openapi-diff", help="Classify OpenAPI additive vs breaking changes")
