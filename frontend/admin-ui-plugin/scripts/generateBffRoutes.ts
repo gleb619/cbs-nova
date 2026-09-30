@@ -478,7 +478,7 @@ export function generate(specPath: string, pluginDir: string, outDir: string): G
 // ---------------------------------------------------------------------------
 
 /** Discover committed route files under server/api/v1 (mirrors routeCoverage.spec.ts). */
-function discoverHandRoutes(apiDir: string): Array<{ key: string; relFile: string }> {
+export function discoverHandRoutes(apiDir: string): Array<{ key: string; relFile: string }> {
   const out: Array<{ key: string; relFile: string }> = []
   const walk = (dir: string) => {
     for (const entry of readdirSync(dir)) {
@@ -512,7 +512,7 @@ function discoverHandRoutes(apiDir: string): Array<{ key: string; relFile: strin
   return out
 }
 
-function check(pluginDir: string, outDir: string, generatedFiles: string[]): void {
+export function check(pluginDir: string, outDir: string, generatedFiles: string[]): void {
   const failures: string[] = []
 
   // 1. Drift: the in-tree generated output must match a fresh generation.
@@ -592,9 +592,20 @@ function main(): void {
   if (isCheck) check(pluginDir, target, generatedFiles)
 }
 
-try {
-  main()
-} catch (err) {
-  console.error((err as Error).message)
-  process.exit(1)
+// Detect direct CLI invocation. `process.argv[1]` is the entry script path
+// when the script is run via the wrapper (`node scripts/gen-bff-routes.mjs`
+// compiles this file to CJS and execs it) or via `node generateBffRoutes.ts`,
+// but is something else (the vitest binary, etc.) when this module is
+// imported as a library — so the guard avoids running `main()` on import,
+// which would call `process.exit(1)` before any consumer gets a chance.
+if (
+  process.argv[1]?.endsWith('generateBffRoutes.js') ||
+  process.argv[1]?.endsWith('generateBffRoutes.ts')
+) {
+  try {
+    main()
+  } catch (err) {
+    console.error((err as Error).message)
+    process.exit(1)
+  }
 }
