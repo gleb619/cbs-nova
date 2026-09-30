@@ -39,6 +39,12 @@ services:
       MANAGEMENT_TRACING_SAMPLING_PROBABILITY: "${MANAGEMENT_TRACING_SAMPLING_PROBABILITY:-1.0}"
       MANAGEMENT_TRACING_ENABLED: "${MANAGEMENT_TRACING_ENABLED:-true}"
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "${MANAGEMENT_ENDPOINTS:-health,info,prometheus}"
+      # T752: compose local-dev defaults to "always" so operators/devs see full health detail
+      # during triage. Production runs without these env vars and inherits the launcher default
+      # `when-authorized` (anonymous callers get status-only). See docs/runbook.md and
+      # docs/dsl/configuration.md §cbs.security.oidc.
+      HEALTH_SHOW_DETAILS: "${HEALTH_SHOW_DETAILS:-always}"
+      HEALTH_SHOW_COMPONENTS: "${HEALTH_SHOW_COMPONENTS:-always}"
     healthcheck:
       # The runtime image (eclipse-temurin:25-jre-jammy) does not ship
       # curl or wget, and we want to keep the Dockerfile minimal. Bash is

@@ -129,8 +129,12 @@ management:
         include: health,info,metrics,prometheus
   endpoint:
     health:
-      show-details: always
-      show-components: always
+      # Security default: anonymous callers (liveness/readiness probes, unauthenticated probes)
+      # receive status-only; full detail requires an authenticated principal. Local dev can opt
+      # back into "always" via env HEALTH_SHOW_DETAILS=always / HEALTH_SHOW_COMPONENTS=always.
+      # See docs/dsl/configuration.md §cbs.security.oidc (permit-all-paths) and docs/runbook.md.
+      show-details: ${HEALTH_SHOW_DETAILS:when-authorized}
+      show-components: ${HEALTH_SHOW_COMPONENTS:when-authorized}
       group:
         liveness:
           include: livenessState
