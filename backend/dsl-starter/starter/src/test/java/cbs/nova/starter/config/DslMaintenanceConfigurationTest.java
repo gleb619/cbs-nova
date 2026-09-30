@@ -9,6 +9,7 @@ import cbs.nova.starter.maintenance.AuditRetentionMaintenanceTask;
 import cbs.nova.starter.maintenance.DslMaintenanceService;
 import cbs.nova.starter.maintenance.DslRunReconciliationMaintenanceTask;
 import cbs.nova.starter.maintenance.DslRunRetentionMaintenanceTask;
+import cbs.nova.starter.persistence.DslAuditStore;
 import cbs.nova.starter.service.DslRunReconciliationService;
 import cbs.nova.starter.service.DslRunRetentionPurger;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -115,6 +116,11 @@ class DslMaintenanceConfigurationTest {
     @Bean
     MeterRegistry meterRegistry() {
       return new SimpleMeterRegistry();
+    }
+
+    @Bean
+    DslAuditStore dslAuditStore() {
+      return Mockito.mock(DslAuditStore.class);
     }
   }
 }

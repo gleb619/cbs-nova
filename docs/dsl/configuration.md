@@ -265,6 +265,27 @@ read-only lookup index for later enforcement layers.
 
 ---
 
+## `dsl.maintenance.*`
+
+Class: `DslMaintenanceProperties` (unified driver knobs) + `DslAuditRetentionProperties` (T747
+opt-in `dsl_audit` purge). The unified driver is **off by default**; legacy per-job schedulers
+keep running on their own. When the unified driver is on, each task is gated by its own
+`dsl.maintenance.tasks.<name>.enabled` switch — see [architecture-backend § Unified maintenance
+driver](../architecture-backend.md) for the dispatch order and the rationale.
+
+| Key | Type | Default | Effect |
+|-----|------|---------|--------|
+| `dsl.maintenance.unified-enabled` | `boolean` | `false` | Master switch for the unified maintenance driver. Flip to `true` to schedule every enabled task on a single executor; legacy per-job `ApplicationRunner`s are conditioned out at that point. |
+| `dsl.maintenance.schedule` | `Duration` | `PT1H` | Cadence for the unified driver when enabled. |
+| `dsl.maintenance.tasks.run-retention.enabled` | `boolean` | `true` | Include `run-retention` in the unified schedule. Honoured only when `dsl.maintenance.unified-enabled=true`; the legacy `cbs.runs.retention` knob still owns the actual purge when the unified driver is off. |
+| `dsl.maintenance.tasks.orphans.enabled` | `boolean` | `true` | Include `orphans` (workflow-vs-DB reconciliation) in the unified schedule. |
+| `dsl.maintenance.tasks.audit-retention.enabled` | `boolean` | `true` | Include `audit-retention` in the unified schedule. T747: the task itself remains a no-op until `dsl.maintenance.audit-retention.enabled=true` is set (orthogonal opt-in). |
+| `dsl.maintenance.audit-retention.enabled` | `boolean` | `false` | T747: master switch for the opt-in age-based purge of the `dsl_audit` table. `false` keeps the table strictly append-only; flip to `true` together with a positive `max-age` to bound table growth. The single deletion path lives on `DslAuditStore#purgeOlderThan` and is unreachable from any REST handler. |
+| `dsl.maintenance.audit-retention.max-age` | `Duration` | `P90D` | Maximum age of an audit row before it becomes eligible for purging. Non-positive values keep the task a no-op regardless of `enabled`. |
+| `dsl.maintenance.audit-retention.batch-size` | `int` (≥ 1) | `500` | Max rows removed per batched delete pass. Same rationale as `cbs.runs.purge-batch-size`. |
+
+---
+
 ## Observability — OTLP export (T744)
 
 T744 wires the starter into the compose observability stack (`app/compose/observability.yml` —

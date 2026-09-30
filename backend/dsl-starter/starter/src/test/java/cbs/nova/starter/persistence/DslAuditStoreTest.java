@@ -3,6 +3,7 @@ package cbs.nova.starter.persistence;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -86,6 +87,37 @@ class DslAuditStoreTest {
 
     verify(mapper).toEntity(row);
     verify(repository).save(entity);
+  }
+
+  @Test
+  void purgeOlderThanDelegatesToRepository() {
+    Instant cutoff = Instant.parse("2025-01-01T00:00:00Z");
+    when(repository.deleteOlderThan(cutoff, 500)).thenReturn(13);
+
+    int purged = store.purgeOlderThan(cutoff, 500);
+
+    assertThat(purged).isEqualTo(13);
+    verify(repository).deleteOlderThan(cutoff, 500);
+  }
+
+  @Test
+  void purgeOlderThanRejectsNullCutoff() {
+    assertThatThrownBy(() -> store.purgeOlderThan(null, 100))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("cutoff");
+    verify(repository, never()).deleteOlderThan(any(Instant.class), anyInt());
+  }
+
+  @Test
+  void purgeOlderThanRejectsNonPositiveBatchSize() {
+    Instant cutoff = Instant.parse("2025-01-01T00:00:00Z");
+    assertThatThrownBy(() -> store.purgeOlderThan(cutoff, 0))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("batchSize");
+    assertThatThrownBy(() -> store.purgeOlderThan(cutoff, -1))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("batchSize");
+    verify(repository, never()).deleteOlderThan(any(Instant.class), anyInt());
   }
 
   private Page<DslAuditEntity> pageWith(DslAuditEntity entity, long total, DslAudit domain) {

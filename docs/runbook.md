@@ -198,6 +198,14 @@ grep -E "cbs.runs.(retention|purge-interval|purge-batch-size)" <app-config>
 **Permanent fix.** T276 (retention), T315 (`dsl_runs` purge index). Partition `dsl_runs` by month
 if volume warrants.
 
+> **T747 audit retention.** The same opt-in pattern is now wired for the append-only `dsl_audit`
+> table (counter `dsl.audit.purged`, knobs `dsl.maintenance.audit-retention.{enabled,max-age,batch-size}`).
+> Disabled by default — no audit rows are ever deleted unless an operator flips
+> `dsl.maintenance.audit-retention.enabled=true` and sets a positive `max-age`. When enabled,
+> rows older than `max-age` are removed in `batch-size`-bounded passes via
+> `DslAuditStore#purgeOlderThan`, the sole deletion path on `dsl_audit` (unreachable from any
+> REST handler).
+
 **Verification.** `dsl.runs.purged` / `dsl.run.transactions.purged` counters advance; row count
 stabilises; no `DELETE` in `pg_stat_activity` older than a few seconds.
 

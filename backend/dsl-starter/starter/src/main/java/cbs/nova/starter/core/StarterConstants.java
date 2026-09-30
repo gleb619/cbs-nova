@@ -128,6 +128,7 @@ public class StarterConstants {
   public static final String TASK_DURATION_TIMER = "dsl.maintenance.task.duration";
   public static final String TASK_PURGED_COUNTER = "dsl.maintenance.task.purged";
   public static final String TASK_TAG = "task";
+  public static final String AUDIT_RETENTION_PURGED_COUNTER = "dsl.audit.purged";
 
   // Request-id plumbing
 

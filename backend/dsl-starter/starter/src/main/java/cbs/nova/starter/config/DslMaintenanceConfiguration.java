@@ -1,5 +1,6 @@
 package cbs.nova.starter.config;
 
+import cbs.nova.starter.config.properties.DslAuditRetentionProperties;
 import cbs.nova.starter.config.properties.DslMaintenanceProperties;
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.maintenance.AuditRetentionMaintenanceTask;
@@ -7,9 +8,11 @@ import cbs.nova.starter.maintenance.DslMaintenanceService;
 import cbs.nova.starter.maintenance.DslRunReconciliationMaintenanceTask;
 import cbs.nova.starter.maintenance.DslRunRetentionMaintenanceTask;
 import cbs.nova.starter.maintenance.MaintenanceTask;
+import cbs.nova.starter.persistence.DslAuditStore;
 import cbs.nova.starter.service.DslRunReconciliationService;
 import cbs.nova.starter.service.DslRunRetentionPurger;
 import io.micrometer.core.instrument.MeterRegistry;
+import java.time.Clock;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -31,7 +34,7 @@ import java.util.concurrent.ScheduledExecutorService;
 
 @Slf4j
 @Configuration
-@EnableConfigurationProperties(DslMaintenanceProperties.class)
+@EnableConfigurationProperties({DslMaintenanceProperties.class, DslAuditRetentionProperties.class})
 @AutoConfigureAfter({DslRunRetentionConfiguration.class, DslRunReconciliationConfiguration.class})
 public class DslMaintenanceConfiguration {
 
@@ -57,8 +60,16 @@ public class DslMaintenanceConfiguration {
   }
 
   @Bean
-  AuditRetentionMaintenanceTask auditRetentionMaintenanceTask() {
-    return new AuditRetentionMaintenanceTask();
+  @ConditionalOnBean(DslAuditStore.class)
+  AuditRetentionMaintenanceTask auditRetentionMaintenanceTask(
+          DslAuditStore auditStore,
+          DslAuditRetentionProperties properties,
+          ObjectProvider<MeterRegistry> meterRegistryProvider) {
+    return new AuditRetentionMaintenanceTask(
+            auditStore,
+            properties,
+            meterRegistryProvider.getIfAvailable(),
+            Clock.systemUTC());
   }
 
   // ---------------------------------------------------------------------
