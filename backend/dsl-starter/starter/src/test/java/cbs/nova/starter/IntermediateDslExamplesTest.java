@@ -132,7 +132,7 @@ class IntermediateDslExamplesTest {
 
   @Test
   void longWorkSimulationPreviewCompletesAllSteps() {
-    var input = new LongWorkIn("task-42", 5);
+    var input = new LongWorkIn("task-42", 5, 0L);
     Context<LongWorkIn> ctx = SimpleContext.builder(input).mode(ExecutionMode.PREVIEW).build();
 
     Result<?> result = GlobalManager.globalManager().runTransaction("LongWorkSimulation", ctx);

@@ -113,6 +113,49 @@ Dsl.transaction("KYC_CHECK")
     .build();
 ```
 
+#### Heartbeat
+
+Declare a `.heartbeatTimeout(Duration)` on long-running transactions so Temporal can cancel
+an activity that has stopped making progress. Without it, a stuck activity runs until the
+wall-clock `startToCloseTimeout` and the only signal is the final timeout. With a heartbeat
+timeout, Temporal cancels the activity as soon as no heartbeat arrives within the window.
+
+```java
+Dsl.transaction("LongWorkSimulation")
+    .input(LongWorkIn.class)
+    .output(LongWorkOut.class)
+    .startToCloseTimeout(Duration.ofSeconds(30))
+    .heartbeatTimeout(Duration.ofSeconds(5))
+    .execute(ctx -> {
+        LongWorkIn in = ctx.body();
+        int completed = 0;
+        for (int i = 0; i < in.steps(); i++) {
+            if (in.stepDelayMs() > 0) Thread.sleep(in.stepDelayMs());
+            completed++;
+        }
+        return Result.success(new LongWorkOut(in.taskId(), "COMPLETED", completed));
+    })
+    .build();
+```
+
+The generated activity implementation (see
+`backend/dsl-platform/dsl-codegen/.../TransactionCodeGenerator.java`) wraps the transaction
+body in a periodic Temporal heartbeat at `heartbeatTimeout / 3`, so DSL authors do not have
+to scatter `Activity.getExecutionContext().heartbeat()` calls through their transaction
+logic. The wrapper is implemented by
+`backend/dsl-starter/starter/.../runtime/ActivityHeartbeat.java`.
+
+Constraints:
+
+- `heartbeatTimeout` must be `<=` `startToCloseTimeout`. The builder rejects the opposite at
+  build time (`transaction '<name>' heartbeatTimeout (PT5S) must be <= startToCloseTimeout (PT3S)`)
+  because Temporal would always cancel on the wall-clock budget first and the heartbeat
+  timeout would be dead code.
+- Equal values are allowed (the tightest legitimate configuration). Anything in between
+  gives Temporal two chances to detect a stuck activity before the wall-clock budget.
+- Local execution (no Temporal worker) is unaffected: the heartbeat callback swallows the
+  resulting `IllegalStateException` and the periodic task is a no-op.
+
 ### Function
 
 A Function is a lightweight DSL helper. It is not generated into Temporal classes.

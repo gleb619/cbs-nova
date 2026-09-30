@@ -111,6 +111,7 @@ dependencies {
   testImplementation libs.jqwik
   testImplementation libs.spring.security.test
   testImplementation libs.temporal.testing
+  testImplementation libs.mockito.core
   testImplementation libs.openfeign.core
   testImplementation libs.testcontainers.core
   testImplementation libs.testcontainers.junit.jupiter

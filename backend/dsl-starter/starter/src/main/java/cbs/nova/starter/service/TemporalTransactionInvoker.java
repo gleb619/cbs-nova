@@ -60,10 +60,18 @@ public final class TemporalTransactionInvoker implements TransactionInvoker {
             .setInitialInterval(policy.initialInterval())
             .setBackoffCoefficient(policy.backoffCoefficient())
             .build();
-    return ActivityOptions.newBuilder()
+    var optionsBuilder = ActivityOptions.newBuilder()
             .setStartToCloseTimeout(tx.startToCloseTimeout())
             .setRetryOptions(retryOptions)
-            .setTaskQueue(tx.taskQueue())
-            .build();
+            .setTaskQueue(tx.taskQueue());
+    if (tx.heartbeatTimeout() != null) {
+      // T750: surface the DSL's heartbeatTimeout to Temporal. Without this call,
+      // a DSL author who declares a heartbeat timeout gets a silent no-op and
+      // Temporal never knows to cancel a stuck activity. Generated activity
+      // implementations are responsible for emitting periodic heartbeats via
+      // cbs.nova.starter.runtime.ActivityHeartbeat.
+      optionsBuilder.setHeartbeatTimeout(tx.heartbeatTimeout());
+    }
+    return optionsBuilder.build();
   }
 }
