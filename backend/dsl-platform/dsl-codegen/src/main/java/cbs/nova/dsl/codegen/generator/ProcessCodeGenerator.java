@@ -215,16 +215,18 @@ public final class ProcessCodeGenerator {
 
   private String signalBufferClass() {
     return """
-                      private static final class SignalBuffer implements cbs.nova.dsl.process.SignalAwaiter {
+                      private static final class SignalBuffer implements cbs.nova.dsl.process.SignalBuffer {
                         private final java.util.Map<String, Object> payloads = new java.util.concurrent.ConcurrentHashMap<>();
                         private final java.util.Set<String> received = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
-                        void receive(String name, Object payload) {
+                        @Override
+                        public void receive(String name, Object payload) {
                           payloads.put(name, payload);
                           received.add(name);
                         }
 
-                        java.util.Map<String, Object> snapshot() {
+                        @Override
+                        public java.util.Map<String, Object> snapshot() {
                           return java.util.Map.copyOf(payloads);
                         }
 

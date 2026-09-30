@@ -19,6 +19,7 @@ import cbs.nova.starter.core.stage.ExternalCallRecordingStage;
 import cbs.nova.starter.core.stage.FakingStage;
 import cbs.nova.starter.core.stage.HierarchyReportStage;
 import cbs.nova.starter.core.stage.MetricsStage;
+import cbs.nova.starter.core.stage.SignalSeedStage;
 import cbs.nova.starter.logging.DryRunLogBufferRegistry;
 import cbs.nova.starter.reporting.HierarchyDiagramRenderer;
 import cbs.nova.starter.security.ManifestObjectGuard;
@@ -58,6 +59,7 @@ public final class HierarchyDslPipe implements DslExecutionPipe<HierarchyReport>
             .stage(new CurrentObjectNameStage())
             .stage(new HierarchyReportStage(diagramRenderer))
             .stage(new MetricsStage(meterRegistry))
+            .stage(new SignalSeedStage())
             .stage(new ExecutionTreeStage(previewProperties.callTree().maxDepth()))
             .stage(new DryRunLogStage(dryRunLoggingContext, bufferRegistry, maxEventsPerRun))
             .stage(new ExecutionTraceStage())

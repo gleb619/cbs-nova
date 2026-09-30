@@ -45,6 +45,65 @@ primarily for **coding agents and automated review tools** that need to:
 6. **A report is returned.** The runtime collects execution trace entries, external calls, a nested call-tree AST, and
    dry-run logs, then bundles them into a `PreviewReport`.
 
+## Preview-mode signals
+
+A Process may declare Temporal signals via `ProcessBuilder.signal(name, type)` and consume them with
+`ctx.awaitSignal(...)`, `ctx.getSignalPayload(...)` and `ctx.signalReceived(...)`. In `run` mode
+these block on real Temporal signals; in preview they resolve against a **seeded signal timeline**
+supplied in the request, so a signal-branching flow can be dry-run without a Temporal worker.
+
+### Request shape
+
+```json
+{
+  "body": { "requestId": "req-1", "amount": 250 },
+  "metadata": {},
+  "signals": [
+    { "name": "decision", "payloadJson": "{\"approved\":true}", "deliverAt": 0 }
+  ]
+}
+```
+
+| Field         | Required | Meaning                                                                            |
+|---------------|----------|------------------------------------------------------------------------------------|
+| `name`        | yes      | Signal name as declared with `.signal(name, type)`                                   |
+| `payloadJson` | no       | JSON encoding of the payload; `null`/omitted means "delivered with no payload"      |
+| `deliverAt`   | no       | Await-point index at which the signal becomes visible. Absent or `0` = from step 0   |
+
+`signals` is **optional and backward compatible**: omitting it reproduces the pre-T736 behavior
+(no buffer installed). `run` mode ignores `signals` entirely — Temporal remains authoritative there.
+
+### Delivery semantics
+
+Delivery is purely index-based; preview never sleeps or waits on wall-clock time:
+
+- The buffer keeps an `awaitIndex` cursor, incremented on every `awaitSignal` call (first await → `1`).
+- A seeded entry is delivered as soon as `deliverAt <= awaitIndex`.
+- Consequently a `deliverAt: 0` (or omitted) signal is visible immediately, so
+  `getSignalPayload(...)` / `signalReceived(...)` answer correctly even before the first await.
+- Seeded payloads are decoded from JSON and converted to the declared payload type (records are
+  populated by component name).
+
+### Awaiting an unseeded signal
+
+Awaiting a name that is not on the timeline fails **immediately** with `SignalNotSeededException`,
+surfaced as the preview error code `SIGNAL_NOT_SEEDED` (HTTP 422) with the offending signal name in
+the error context. Preview never hangs and never throws the generic
+`IllegalStateException("Signal awaiting is not available …")` — that message is now only reachable
+when no pipeline installed a buffer at all (e.g. a bare in-process `GlobalManager.runProcess` call).
+
+### Hierarchy and explain
+
+Hierarchy and explain install the same buffer, so signal declarations no longer break the walk and
+seeded payloads resolve. Delivery *simulation* beyond the timeline is intentionally out of scope for
+this version — those modes render the flow, they do not replay it.
+
+### Worked example
+
+[`SignalBranchDsl.java`](../../backend/dsl-starter/dsl-examples/src/dsl/SignalBranchDsl.java)
+declares a `decision` signal, peeks with `signalReceived` / `getSignalPayload`, then awaits and
+branches on `payload.approved`. Exercised by `AdvancedDslExamplesTest#signalBranchPreview*`.
+
 ## The PreviewReport
 
 ```java

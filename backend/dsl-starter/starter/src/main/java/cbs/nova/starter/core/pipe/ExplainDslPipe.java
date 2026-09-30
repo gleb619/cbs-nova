@@ -8,6 +8,7 @@ import cbs.nova.dsl.helper.NoopHelperInterceptor;
 import cbs.nova.starter.core.stage.CurrentObjectNameStage;
 import cbs.nova.starter.core.stage.DispatchStage;
 import cbs.nova.starter.core.stage.ExplainReportStage;
+import cbs.nova.starter.core.stage.SignalSeedStage;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 
@@ -22,6 +23,7 @@ public final class ExplainDslPipe implements DslExecutionPipe<ExplainReport> {
     return DslExecutionPipeline.<ExplainReport>builder()
             .stage(new CurrentObjectNameStage())
             .stage(new ExplainReportStage(explainProperties))
+            .stage(new SignalSeedStage())
             .stage(DispatchStage.inline(NoopHelperInterceptor.INSTANCE))
             .build()
             .execute(name, ctx);

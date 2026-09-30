@@ -18,6 +18,7 @@ import cbs.nova.starter.core.stage.FakingStage;
 import cbs.nova.starter.core.stage.MetricsStage;
 import cbs.nova.starter.core.stage.PreviewCacheStage;
 import cbs.nova.starter.core.stage.PreviewReportStage;
+import cbs.nova.starter.core.stage.SignalSeedStage;
 import cbs.nova.starter.logging.DryRunLogBufferRegistry;
 import cbs.nova.starter.security.ManifestObjectGuard;
 import cbs.nova.starter.service.PreviewResultCache;
@@ -73,6 +74,7 @@ public final class PreviewDslPipe implements DslExecutionPipe<PreviewReport> {
     return DslExecutionPipeline.<PreviewReport>builder()
             .stage(new CurrentObjectNameStage())
             .stage(new PreviewCacheStage(cache))
+            .stage(new SignalSeedStage())
             .stage(new PreviewReportStage())
             .stage(new MetricsStage(meterRegistry))
             .stage(new ExecutionTreeStage(

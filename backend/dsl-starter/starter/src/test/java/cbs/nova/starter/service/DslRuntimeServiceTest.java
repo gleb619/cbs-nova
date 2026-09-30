@@ -23,6 +23,7 @@ import cbs.nova.dsl.Result;
 import cbs.nova.dsl.config.Constants;
 import cbs.nova.dsl.exception.DslException;
 import cbs.nova.dsl.process.ProcessDslObject;
+import cbs.nova.dsl.process.SeededSignal;
 import cbs.nova.dslexamples.v1.BatchModels.BatchIn;
 import cbs.nova.starter.config.properties.CbsNovaLoggingProperties;
 import cbs.nova.starter.core.StarterConstants;
@@ -349,6 +350,46 @@ class DslRuntimeServiceTest {
     } finally {
       GlobalManager.globalManager().resetForTests();
     }
+  }
+
+  @Test
+  void previewPutsSeededSignalTimelineIntoContextMetadata() {
+    PreviewReport report = previewReport("Ping", true, List.of());
+    doReturn(Result.success(report)).when(dslRuntime).preview(eq("Ping"), any());
+    var seeds = List.of(new SeededSignal("approval", "{\"approved\":true}", 1));
+
+    service.preview("Ping", new DslRequest("hello", null, seeds), "req-1");
+
+    ArgumentCaptor<Context<?>> captor = ArgumentCaptor.forClass(Context.class);
+    verify(dslRuntime).preview(eq("Ping"), captor.capture());
+    assertThat(captor.getValue().metadata())
+            .containsEntry(Constants.PREVIEW_SIGNAL_SEEDS_KEY, seeds);
+  }
+
+  @Test
+  void previewWithoutSignalsOmitsTimelineMetadata() {
+    PreviewReport report = previewReport("Ping", true, List.of());
+    doReturn(Result.success(report)).when(dslRuntime).preview(eq("Ping"), any());
+
+    service.preview("Ping", new DslRequest("hello", null), "req-1");
+
+    ArgumentCaptor<Context<?>> captor = ArgumentCaptor.forClass(Context.class);
+    verify(dslRuntime).preview(eq("Ping"), captor.capture());
+    assertThat(captor.getValue().metadata())
+            .doesNotContainKey(Constants.PREVIEW_SIGNAL_SEEDS_KEY);
+  }
+
+  @Test
+  void runModeIgnoresSeededSignalsSoTemporalStaysAuthoritative() {
+    doReturn(Result.success("ok")).when(dslRuntime).run(eq("P"), any());
+    var seeds = List.of(SeededSignal.of("approval", "{}"));
+
+    service.run("P", new DslRequest("input", null, seeds), "req-1");
+
+    ArgumentCaptor<Context<?>> captor = ArgumentCaptor.forClass(Context.class);
+    verify(dslRuntime).run(eq("P"), captor.capture());
+    assertThat(captor.getValue().metadata())
+            .doesNotContainKey(Constants.PREVIEW_SIGNAL_SEEDS_KEY);
   }
 
   @Test

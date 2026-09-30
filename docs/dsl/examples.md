@@ -953,6 +953,47 @@ Dsl.process("SignalProbe")
 
 Covered end-to-end by `SignalProbeDslIntegrationTest`.
 
+## Branching on a signal in preview with `SignalBranchDsl`
+
+`SignalProbeDsl` waits for a real Temporal signal, so it can only be exercised against a worker.
+`SignalBranchDsl` covers the same declare-then-branch shape for the **preview** path: the process
+declares `.signal("decision", Map.class)`, peeks with `signalReceived` / `getSignalPayload`, then
+awaits and branches on the seeded payload. Because preview resolves signals from the request's
+seeded timeline (T736, see [preview-mode.md](preview-mode.md#preview-mode-signals)), no Temporal
+worker is needed.
+
+See `backend/dsl-starter/dsl-examples/src/dsl/SignalBranchDsl.java`:
+
+```java
+Dsl.process("SignalBranch")
+    .input(SignalBranchIn.class)
+    .output(SignalBranchOut.class)
+    .signal("decision", Map.class)
+    .execute(ctx -> {
+      SignalBranchIn in = ctx.body();
+      boolean seenBeforeAwait = ctx.signalReceived("decision");
+      Object peek = ctx.getSignalPayload("decision", Map.class);
+      @SuppressWarnings("unchecked")
+      Map<String, Object> decision =
+          (Map<String, Object>) ctx.awaitSignal("decision", Map.class);
+      boolean approved = Boolean.TRUE.equals(decision.get("approved"));
+      return Result.success(new SignalBranchOut(
+          (approved ? "APPROVED" : "REJECTED") + ":" + in.amount(),
+          in.requestId(), seenBeforeAwait && peek != null));
+    })
+    .buildList();
+```
+
+Previewing it with a seeded timeline:
+
+```json
+{ "body": {"requestId": "req-1", "amount": 250},
+  "signals": [{"name": "decision", "payloadJson": "{\"approved\":true}"}] }
+```
+
+Covered by `AdvancedDslExamplesTest.signalBranchPreviewResolvesSeededSignalAndBranchesOnPayload`
+(and its reject / no-buffer siblings).
+
 ## Pinning a DSL version with `VersionProbeDsl`
 
 Shows `.version("v1")`, which pins the definition so an in-flight workflow keeps running the

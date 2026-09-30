@@ -25,6 +25,13 @@ public class Constants {
 
   public static final String SIGNAL_AWAITER_METADATA_KEY = "cbs.nova.dsl.signalAwaiter";
 
+  /**
+   * Context metadata key holding the requested preview signal timeline as a
+   * {@code List<cbs.nova.dsl.process.SeededSignal>}. Read by the preview / hierarchy / explain
+   * pipes.
+   */
+  public static final String PREVIEW_SIGNAL_SEEDS_KEY = "cbs.nova.dsl.previewSignalSeeds";
+
   // JSON Schema draft URI (JacksonJsonSchemaGenerator)
 
   public static final String JSON_SCHEMA_DRAFT_URI = "https://json-schema.org/draft/2020-12/schema";
