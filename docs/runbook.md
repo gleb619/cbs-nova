@@ -527,6 +527,156 @@ a fresh `POST /api/dsl/run/<name>` completes end-to-end; reconciliation sweep (s
 
 ---
 
+## 10. Temporal worker stall / task-queue mismatch  — P1
+
+**Symptom.** Runs sit `RUNNING` with no progress; new `POST /api/dsl/run/*` calls land in the
+Executions list as `RUNNING` and never move; `/actuator/health` reports `temporal.reachable=true`
+(Temporal itself is fine — so this is **not** [incident #1](#1-temporal-disconnect--p0));
+Temporal UI shows the workflow stuck on a "Pending Workflow Task" with **zero pollers** on
+that task queue; no activity log lines for the affected `processName`. Distinguishing signal
+from incidents #1 and #4: gRPC reachability is healthy and `dsl.run.reconciliation.*`
+counters are flat (the runner never declared the row terminal).
+
+**Triage.** Confirm the diagnosis before redeploying — a stranded workflow may simply be
+waiting on a slow worker start.
+
+1. **Confirm Temporal is reachable** (it usually is — that is the trap):
+   ```bash
+   # Authenticated (T752) — anonymous /actuator/health returns status only; the `temporal`
+   # detail (reachable / target / configuredTaskQueues / error) is only returned when the
+   # Authorization header is supplied:
+   curl -s -H "Authorization: Bearer $TOKEN" http://localhost:8090/actuator/health \
+     | jq '.components.dsl.details.temporal'
+   #   -> reachable=true, configuredTaskQueues=[…]
+   ```
+2. **Compare the configured queues to the queue the workflow was started on.** The health
+   detail lists every distinct `GeneratedClassDescriptor.taskQueue` value across registered
+   `PROCESS`-typed descriptors (sourced in `DslHealthIndicatorSupport.configuredTaskQueues()`).
+   The launcher starts the workflow on that same `descriptor.taskQueue()`
+   (`TemporalDslService.defaultOptions`, `TemporalDslProcessLauncher`):
+   ```bash
+   # Queues the app *should* be polling:
+   curl -s -H "Authorization: Bearer $TOKEN" http://localhost:8090/actuator/health \
+     | jq '.components.dsl.details.temporal.configuredTaskQueues'
+   # The workflow's task queue — Temporal UI -> Workflow -> "Pending Task", or:
+   temporal workflow describe \
+     --address localhost:7233 \
+     --workflow-id <runId-or-workflowId> \
+     | jq '.workflowExecutionInfo.taskQueue'
+   ```
+   The mismatch shape: the workflow is on queue `X`, but `configuredTaskQueues` contains
+   only `X'` (or `X` is missing entirely because no process descriptor declares it).
+3. **Confirm the pollers view** — a queue with zero pollers means no worker is polling it:
+   ```bash
+   # Temporal CLI (the target defaults to the configured `temporal.connection-target`):
+   temporal task-queue describe \
+     --address localhost:7233 \
+     --task-queue <queue-from-step-2>
+   # Look for: "Pollers: <count>" — 0 = nobody is polling.
+   ```
+   The same view is in Temporal UI (Task Queues → Pollers column).
+4. **Confirm the worker factory started** — the `SmartLifecycle` in `DslWorkerConfiguration`
+   is the only path that calls `factory.start()` for the default deployment:
+   ```bash
+   grep -iE "WorkerFactory|dslWorker|started.*worker|SmartLifecycle" <app-log> | tail -20
+   # On a clean boot you should see one "Started worker …" line per configured task queue
+   # then the lifecycle's start() log; absence of the lifecycle log = factory never started.
+   ```
+
+**Hypotheses (ranked).** Verify each against `DslWorkerConfiguration`,
+`TemporalConfiguration`, and `DslProperties` before acting.
+1. **Task-queue mismatch — most common.** `DslWorkerConfiguration.dslWorker` creates **one**
+   `Worker` on `cbs.dsl.task-queue` (default `dsl-task-queue`, from
+   `DslProperties.taskQueue()`) and registers every generated process workflow **and** every
+   generated activity on that single worker. But `TemporalDslService.defaultOptions` /
+   `TemporalDslProcessLauncher` start workflows on `descriptor.taskQueue()`, and
+   `TemporalTransactionInvoker` schedules activities on `tx.taskQueue()` — any definition
+   whose `GeneratedClassDescriptor.taskQueue` is set to something other than
+   `dsl-task-queue` (a per-process queue) routes workflow tasks to a queue **no worker
+   polls**. Symptom: `configuredTaskQueues` contains both `"dsl-task-queue"` and the
+   per-process queue, but the per-process queue reports `Pollers: 0` in step 3.
+2. **Worker factory never started.** `DslWorkerConfiguration.WorkerFactoryLifecycle` is a
+   `SmartLifecycle` (phase `Integer.MAX_VALUE`) that calls `factory.start()`. If the
+   lifecycle does not run — bean absent because `cbs.dsl.worker.enabled=false` (the
+   `DslProperties.Worker.enabled` default is `false`), an earlier bean construction failure
+   short-circuited the lifecycle, or `cbs.dsl.worker.enabled=true` but the conditional on
+   the worker factory bean did not match — the factory stays idle and no workers poll
+   anything. Symptom: `configuredTaskQueues` lists the queues but every one shows
+   `Pollers: 0`; `/actuator/health` shows `temporal.reachable=true`. Fix: set
+   `cbs.dsl.worker.enabled=true` (and confirm `cbs.dsl.task-queue` matches the
+   workflow's queue).
+3. **Worker enabled, lifecycle ran, but registry is empty.** A reload
+   (`POST /api/dsl/reload`) that produces zero `PROCESS`-typed descriptors leaves
+   `registerGeneratedImplementations` registering nothing — Temporal has an empty `Worker`
+   polling `dsl-task-queue` with nothing to dispatch. Symptom: `configuredTaskQueues` is an
+   empty array even though the worker started (registry underflow); pollers are present
+   but every run still stalls. Fix: rebuild / re-publish so the process registry is
+   non-empty, or roll back the reload.
+4. **Workflow-task non-determinism after redeploy.** A workflow whose history-changing DSL
+   change was deployed without `getVersion(...)` / `continueAsNew` gets stuck retrying the
+   same workflow task forever — Temporal UI shows the workflow pinned on a
+   `WorkflowTaskFailed` event with reason `NonDeterministicError`. The worker is polling
+   fine; the cluster just keeps replaying the failing task. Symptom: the queue *does* show
+   pollers, but a specific `workflowId` stays in `RUNNING` with the same pending event
+   forever; workflow history has repeating `WorkflowTaskFailed` events. Fix:
+   `temporal workflow reset --reapply-type NONE --workflow-id <id>` (drops the offending
+   history) or `temporal workflow continue-as-new --workflow-id <id>` (starts a fresh
+   chain).
+5. **Poller / slot exhaustion under default options.** `DslWorkerConfiguration` creates the
+   worker with the **default** `WorkerOptions` (no
+   `setMaxConcurrentWorkflowTaskExecutionSize` /
+   `setMaxConcurrentActivityExecutionSize` override), so Temporal defaults apply. A burst
+   that pins every slot stops the worker from picking up new tasks until old ones
+   complete; runs in the same window sit on "Pending Workflow Task". Symptom: Temporal UI
+   shows the queue has pollers but they all report "Slot exhausted";
+   `dsl.run.duration` rises for the same set of processes. Fix: raise slot limits
+   via `WorkerOptions` (code change) — measure, then revert once the burst subsides.
+   This requires a code change today; the worker factory does not read any property for
+   slot tuning.
+
+**Mitigation.**
+- **Confirm Temporal is up** — do **not** restart Temporal; this is **not** incident #1.
+  `/actuator/health/readiness` returns `UP`; authenticated `temporal.reachable=true`.
+- **Align the task queue** (most common): if the workflow is on a per-process queue and
+  the worker is on `dsl-task-queue`, either set the descriptor's `taskQueue` to
+  `dsl-task-queue` (re-publish the DSL module) or extend the worker factory to call
+  `dslWorkerFactory.newWorker(...)` once per distinct task queue before registering — do
+  **not** patch a production definition's `taskQueue` without a deploy plan, because the
+  re-publish reloads generated code.
+- **Bring workers up** if `cbs.dsl.worker.enabled=false`: set it to `true`, redeploy the
+  app, and confirm Temporal UI's Pollers column rises to ≥1 on every queue in
+  `configuredTaskQueues`.
+- **Sweep stranded runs** with the reconciliation job once workers are polling — see
+  [incident #4](#4-stuck-running-reconciliation-lag--p2); the
+  `dsl.run.reconciliation.{inspected,resolved}` counters surface the backlog.
+
+**Permanent fix.**
+- `DslWorkerConfiguration` should create one `Worker` per distinct
+  `GeneratedClassDescriptor.taskQueue` (a `Collectors.toSet()` over the process
+  registry), exactly as `TemporalConfiguration.temporalWorkerRegistrationRunner` already
+  does in its `MissingBean`-fallback path. Today the code registers every workflow and
+  activity on the single `dsl-task-queue` worker — any definition that sets
+  `GeneratedClassDescriptor.taskQueue` to a different value is silently un-polled. Wire
+  both paths through one implementation so the fallback runner and the
+  `SmartLifecycle`-started worker agree on the set of queues.
+- Always set `cbs.dsl.worker.enabled=true` in any profile that runs workflows (`run`
+  mode); the default `false` is intentional for preview / explain-only hosts but is the
+  single biggest foot-gun for the run path.
+- Add alert coverage: this runbook entry has **no matching rule in
+  `app/compose/alerts.yml`** today. The natural signals are
+  `dsl_runs.status='RUNNING' AND started_at < now() - 10m` (stuck runs, rides on the same
+  series reconciliation uses) and Temporal's per-queue `Pollers == 0 for 5m` (no worker);
+  raise a follow-up task to add them.
+
+**Verification.** Authenticated `/actuator/health` shows
+`components.dsl.details.temporal.reachable=true`; Temporal UI's Pollers column shows ≥1
+poller on every queue in `configuredTaskQueues`; `POST /api/dsl/run/<name>` for a process
+on each declared queue completes end-to-end; the reconciliation sweep (see
+[incident #4](#4-stuck-running-reconciliation-lag--p2)) clears rows stranded during the
+stall; new runs no longer park on "Pending Workflow Task".
+
+---
+
 ## Correlating a request across logs
 
 Every request carries two ids. Both are optional — the caller may send either, neither, or both:
