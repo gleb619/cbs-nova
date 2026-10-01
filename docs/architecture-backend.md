@@ -511,7 +511,7 @@ The signals panel is not yet a dedicated page/section in [`architecture-ui.md`](
 - **No correlation between send and audit/replay.** The success body confirms the signal was *accepted by Temporal* (`status: "sent"`), not that the workflow observed it (`Workflow.await` unblocks in the next workflow task turn). For a guaranteed at-least-once on the workflow side today, callers must follow up with `GET /api/dsl/queries/{runId}` and inspect `signalState`.
 
 See [Runtime Engine](dsl/runtime.md) for the broader request/auth/correlation context, and
-[Authoring DSL Flows — Signals](dsl/authoring.md) (when added) for end-to-end authoring recipes.
+[Authoring DSL Flows — Signals](dsl/authoring.md#signals) for end-to-end authoring recipes.
 
 ## Build & run
 
