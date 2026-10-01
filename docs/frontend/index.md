@@ -20,6 +20,7 @@ The frontend gives operators and flow authors a single place to manage orchestra
 | [dsl-workbench.md](./dsl-workbench.md) | DSL editing experience: editor, validation, and flow structure |
 | [runner.md](./runner.md) | Runner page: Preview/Run/Explain modes, input form, SSE log streaming, output tabs |
 | [execution-details.md](./execution-details.md) | Executions list and detail view: event history, status, signals, and diagnostics |
+| [operations-pages.md](./operations-pages.md) | Operations screens: Schedules, Activity, Webhooks, Notifications, Approvals, Promote |
 
 ## Relationship to other docs
 
