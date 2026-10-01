@@ -50,6 +50,8 @@ import cbs.nova.dslexamples.v1.WebhookSignatureModels.WebhookSignatureIn;
 import cbs.nova.dslexamples.v1.WebhookSignatureModels.WebhookSignatureOut;
 import cbs.nova.dslexamples.v1.ApiKeyProvisioningModels.ApiKeyProvisioningIn;
 import cbs.nova.dslexamples.v1.ApiKeyProvisioningModels.ApiKeyProvisioningOut;
+import cbs.nova.dslexamples.v1.RecordReconcileModels.RecordReconcileIn;
+import cbs.nova.dslexamples.v1.RecordReconcileModels.RecordReconcileOut;
 import cbs.nova.dslexamples.v1.SampleDataGenerationModels.SampleDataGenerationIn;
 import cbs.nova.dslexamples.v1.SampleDataGenerationModels.SampleDataGenerationOut;
 import cbs.nova.dsl.config.Constants;
@@ -502,6 +504,83 @@ class AdvancedDslExamplesTest {
   }
 
   @Test
+  void recordReconcilePreviewMatchesCandidateAndDiffsPayload() {
+    // Three existing customer records; "Anne-Sophie Müller" must reconcile to "Anne Müller"
+    // under jaroWinkler (person-name friendly) and the diff must surface the field-level
+    // changes between the matched record's JSON and the candidate JSON.
+    List<Map<String, Object>> candidates = List.of(
+            Map.of("name", "Jon Doe", "email", "jon@example.com", "tier", "silver"),
+            Map.of("name", "Anne Müller", "email", "anne@example.com", "tier", "gold"),
+            Map.of("name", "Bob Stone", "email", "bob@example.com", "tier", "bronze"));
+    String candidateJson = "{\"name\":\"Anne-Sophie Müller\","
+            + "\"email\":\"anne.sophie@example.com\","
+            + "\"tier\":\"platinum\"}";
+    var input = new RecordReconcileIn(
+            "Anne-Sophie Müller",
+            candidates,
+            candidateJson,
+            0.5,
+            "jaroWinkler",
+            "name");
+    Context<RecordReconcileIn> ctx = SimpleContext.builder(input).mode(ExecutionMode.PREVIEW)
+            .build();
+
+    Result<?> result = GlobalManager.globalManager().runProcess("RecordReconcile", ctx);
+
+    assertThat(result.isSuccess()).as("cause: %s", result.cause()).isTrue();
+    RecordReconcileOut out = (RecordReconcileOut) result.value();
+    assertThat(out.mode()).isEqualTo("jaroWinkler");
+    assertThat(out.candidateName()).isEqualTo("Anne-Sophie Müller");
+    assertThat(out.matchThreshold()).isEqualTo(0.5);
+    assertThat(out.matched()).isTrue();
+    assertThat(out.matchedIndex()).isEqualTo(1);
+    assertThat(out.bestCandidateName()).isEqualTo("Anne Müller");
+    // jaroWinkler >= 0.5 for a clear partial-name match; lower bound leaves room across
+    // dependency upgrades of the algorithm, but the result must stay non-trivial.
+    assertThat(out.bestScore()).isBetween(0.5, 1.0);
+    // jsonDiff sees a structurally similar record: the matched record has 3 keys, the
+    // candidate JSON has 3 keys, and at least one of the leaf values differs.
+    assertThat(out.identical()).isFalse();
+    assertThat(out.changeCount()).isPositive();
+    assertThat(out.firstChangeOp()).isIn("changed", "added", "removed");
+    assertThat(out.firstChangePath()).startsWith("$.");
+  }
+
+  @Test
+  void recordReconcilePreviewReportsNoMatchBelowThreshold() {
+    // All candidates score too low against "Carol Jones"; no match should be reported
+    // and jsonDiff still runs against the empty-object fallback to keep the output shape
+    // uniform (the candidate JSON is then reported as fully added).
+    List<Map<String, Object>> candidates = List.of(
+            Map.of("name", "Jon Doe", "email", "jon@example.com"),
+            Map.of("name", "Bob Stone", "email", "bob@example.com"));
+    String candidateJson = "{\"name\":\"Carol Jones\",\"email\":\"carol@example.com\"}";
+    var input = new RecordReconcileIn(
+            "Carol Jones",
+            candidates,
+            candidateJson,
+            0.999,
+            "levenshtein",
+            "name");
+    Context<RecordReconcileIn> ctx = SimpleContext.builder(input).mode(ExecutionMode.PREVIEW)
+            .build();
+
+    Result<?> result = GlobalManager.globalManager().runProcess("RecordReconcile", ctx);
+
+    assertThat(result.isSuccess()).as("cause: %s", result.cause()).isTrue();
+    RecordReconcileOut out = (RecordReconcileOut) result.value();
+    assertThat(out.mode()).isEqualTo("levenshtein");
+    assertThat(out.matched()).isFalse();
+    assertThat(out.matchedIndex()).isEqualTo(-1);
+    assertThat(out.bestCandidateName()).isEmpty();
+    // No match -> matched record is the empty-object fallback, so every candidate
+    // JSON field is reported as added.
+    assertThat(out.identical()).isFalse();
+    assertThat(out.changeCount()).isEqualTo(2);
+    assertThat(out.firstChangeOp()).isEqualTo("added");
+  }
+
+  @Test
   void dslConfigValidationPreviewParsesValidatesAndFormatsConfig() {
     String configYaml = "service: payment-gateway\n"
             + "version: 2.3.1\n"
@@ -690,6 +769,12 @@ class AdvancedDslExamplesTest {
       }
       if (helperClass == InterpolateHelper.class) {
         return new InterpolateHelper();
+      }
+      if (helperClass == SimilarityHelper.class) {
+        return new SimilarityHelper();
+      }
+      if (helperClass == JsonDiffHelper.class) {
+        return new JsonDiffHelper();
       }
       if (helperClass == MetricHelper.class) {
         return new MetricHelper(null);
