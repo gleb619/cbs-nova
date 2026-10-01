@@ -1039,6 +1039,24 @@ AmqpPublishOut out = published.as(AmqpPublishOut.class);
 return Result.success(new PublishOut(out.routingKey(), out.timestamp()));
 ```
 
+## Publishing to Kafka with `KafkaPublishDsl`
+
+Publishes a JSON payload to a topic via the `kafkaPublish` helper and returns the topic, partition,
+offset, and timestamp. Same `isSuccess()` / `cause()` / `as(...)` guard pattern as `AmqpPublishDsl`.
+Needs a `KafkaTemplate` bean (opt-in; see the `kafkaPublish` entry in [helpers](helpers.md)).
+
+See `backend/dsl-starter/dsl-examples/src/dsl/KafkaPublishDsl.java`:
+
+```java
+var published = ctx.runHelper("kafkaPublish",
+    new KafkaPublishIn(in.topic(), in.key(), in.payload()));
+if (!published.isSuccess()) {
+  return Result.failure(published.cause());
+}
+KafkaPublishOut out = published.as(KafkaPublishOut.class);
+return Result.success(new PublishOut(out.topic(), out.partition(), out.offset(), out.timestamp()));
+```
+
 ## Extracting XML by XPath with `XmlExtractDsl`
 
 Uses `extractXml` twice against the same SOAP-ish envelope: one XPath that always matches and one
