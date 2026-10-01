@@ -57,7 +57,7 @@ The active item is styled with `bg-primary-500 text-white`; hover uses a neutral
 
 - **Toasts** — `AppToastContainer` renders ephemeral notifications driven by the `useNotifications` toast store in `components/src/composables/useNotifications.ts`. (Note: `app/composables/useNotifications.ts` is a different, backend-facing composable for notification-rule CRUD used by the `/notifications` page.)
 - **Drafts entry points** — the top-bar `DslDraftsWidget`, plus the workbench draft flow (`useWorkbenchDraft`, `DraftRestoreBanner`, `DraftsList`). `admin.vue` owns server-draft fetching via `useSavedDrafts` and dispatches `dsl:save` on Ctrl/Cmd+S.
-- **Activity feed** — the `/activity` page hosting the `ActivityFeed` component.
+- **Activity feed** — the `/activity` page hosting the `ActivityFeed` component. The other five operations screens (Schedules, Webhooks, Notifications, Approvals, Promote) are documented in [operations-pages.md](./operations-pages.md).
 
 ## Breakpoints
 
