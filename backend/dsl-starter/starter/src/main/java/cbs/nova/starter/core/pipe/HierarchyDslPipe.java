@@ -24,6 +24,7 @@ import cbs.nova.starter.logging.DryRunLogBufferRegistry;
 import cbs.nova.starter.reporting.HierarchyDiagramRenderer;
 import cbs.nova.starter.security.ManifestObjectGuard;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.opentelemetry.api.trace.Tracer;
 import java.time.Duration;
 import java.util.concurrent.ExecutorService;
 import lombok.RequiredArgsConstructor;
@@ -44,6 +45,29 @@ public final class HierarchyDslPipe implements DslExecutionPipe<HierarchyReport>
   private final HierarchyDiagramRenderer diagramRenderer;
   private final ExecutorService executor;
   private final @Nullable ManifestObjectGuard objectGuard;
+  // T746: optional tracer forwarded into the dispatch stage span. Null disables it.
+  private final @Nullable Tracer dispatchTracer;
+
+  /**
+   * Legacy constructor used by tests that do not exercise the telemetry path. The tracer is null —
+   * DispatchStage treats a null tracer as telemetry-disabled.
+   */
+  public HierarchyDslPipe(
+          ExternalCallRecorder recorder,
+          DryRunLoggingContext dryRunLoggingContext,
+          DryRunLogBufferRegistry bufferRegistry,
+          int maxEventsPerRun,
+          CbsNovaPreviewProperties previewProperties,
+          CbsNovaFakesProperties fakesProperties,
+          RunScopedFakeConfig runScopedFakeConfig,
+          MeterRegistry meterRegistry,
+          HierarchyDiagramRenderer diagramRenderer,
+          ExecutorService executor,
+          ManifestObjectGuard objectGuard) {
+    this(recorder, dryRunLoggingContext, bufferRegistry, maxEventsPerRun, previewProperties,
+            fakesProperties, runScopedFakeConfig, meterRegistry, diagramRenderer, executor,
+            objectGuard, null);
+  }
 
   @Override
   public @NonNull Result<HierarchyReport> execute(@NonNull String name,
@@ -67,7 +91,7 @@ public final class HierarchyDslPipe implements DslExecutionPipe<HierarchyReport>
             .stage(new ExternalCallRecordingStage(recorder))
             .stage(new DispatchStage(dispatchInterceptor,
                     Duration.ofMillis(previewProperties.execution().timeoutMs()), executor,
-                    meterRegistry, dryRunLoggingContext))
+                    meterRegistry, dryRunLoggingContext, dispatchTracer))
             .build()
             .execute(name, hierarchyCtx);
   }

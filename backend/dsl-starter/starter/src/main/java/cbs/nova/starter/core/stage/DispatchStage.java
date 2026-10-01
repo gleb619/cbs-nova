@@ -2,6 +2,7 @@ package cbs.nova.starter.core.stage;
 
 import cbs.nova.dsl.model.SimpleContext;
 import cbs.nova.dsl.Context;
+import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.helper.HelperInterceptor;
@@ -11,8 +12,13 @@ import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.core.pipe.DslPipeStage;
 import cbs.nova.starter.exception.PreviewTimeoutException;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.StatusCode;
+import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.context.Scope;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 import java.time.Duration;
 import java.util.concurrent.ExecutionException;
@@ -48,24 +54,68 @@ import java.util.concurrent.TimeoutException;
 @RequiredArgsConstructor
 public final class DispatchStage implements DslPipeStage {
 
+  // T746: tracer is intentionally optional — when null, this stage is telemetry-silent (matches
+  // the existing OpenTelemetry.noop() behavior). Production wires a real Tracer bean.
   private final HelperInterceptor helperInterceptor;
   private final Duration timeout;
   private final ExecutorService executor;
   private final MeterRegistry meterRegistry;
   private final DryRunLoggingContext dryRunLoggingContext;
+  private final @Nullable Tracer tracer;
 
   public static DispatchStage inline(
           @NonNull HelperInterceptor helperInterceptor) {
-    return new DispatchStage(helperInterceptor, null, null, null, null);
+    return new DispatchStage(helperInterceptor, null, null, null, null, null);
+  }
+
+  /**
+   * Legacy constructor preserved for callers / tests that do not pass a tracer. Telemetry is
+   * disabled when the tracer is null.
+   */
+  public DispatchStage(HelperInterceptor helperInterceptor, Duration timeout,
+          ExecutorService executor, MeterRegistry meterRegistry,
+          DryRunLoggingContext dryRunLoggingContext) {
+    this(helperInterceptor, timeout, executor, meterRegistry, dryRunLoggingContext, null);
   }
 
   @Override
   public @NonNull Result<?> execute(@NonNull DslPipeContext context, @NonNull Next next) {
-    Context<?> modeCtx = buildModeContext(context);
-    GlobalManager gm = GlobalManager.globalManager();
-    Result<?> result = dispatchWithOptionalTimeout(context.name(), modeCtx, gm);
-    context.setAttribute("dslResult", result);
-    return next.proceed(context);
+    // T746: span around preview/explain/hierarchy/run dispatch. The plan scopes this to the
+    // "preview dispatch" entry point — DispatchStage is the single dispatch entry shared by all
+    // four pipes; tagging by mode keeps Jaeger queries clean without per-pipe stage wrappers.
+    Span span = tracer != null
+            ? tracer.spanBuilder("dsl.preview.dispatch")
+                    .setAttribute("definition", context.name())
+                    .setAttribute("mode", context.mode().name())
+                    .setAttribute("runId",
+                            context.runId() != null ? context.runId() : "")
+                    .startSpan()
+            : null;
+    try (Scope ignored = span != null ? span.makeCurrent() : null) {
+      Context<?> modeCtx = buildModeContext(context);
+      GlobalManager gm = GlobalManager.globalManager();
+      Result<?> result = dispatchWithOptionalTimeout(context.name(), modeCtx, gm);
+      context.setAttribute("dslResult", result);
+      tagOutcome(span, result);
+      return next.proceed(context);
+    } catch (RuntimeException e) {
+      if (span != null) {
+        span.recordException(e);
+        span.setStatus(StatusCode.ERROR, e.getMessage());
+        span.setAttribute("outcome", "error");
+      }
+      throw e;
+    } finally {
+      if (span != null) {
+        span.end();
+      }
+    }
+  }
+
+  private static void tagOutcome(@Nullable Span span, @NonNull Result<?> result) {
+    if (span != null) {
+      span.setAttribute("outcome", result.isSuccess() ? "success" : "error");
+    }
   }
 
   private @NonNull Context<?> buildModeContext(@NonNull DslPipeContext context) {
