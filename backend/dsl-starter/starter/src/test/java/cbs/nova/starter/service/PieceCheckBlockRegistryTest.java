@@ -88,7 +88,7 @@ class PieceCheckBlockRegistryTest {
   private PieceCheckBlockRegistry newRegistry(String scope, Duration ttl) {
     return new PieceCheckBlockRegistry(
             new CbsDslManifestProperties(true, "classpath:piece-manifest.yaml", null, null,
-                    new CbsDslManifestProperties.PostCheck(2, ttl, scope)),
+                    new CbsDslManifestProperties.PostCheck(2, ttl, scope), null, null),
             clock::get);
   }
 }

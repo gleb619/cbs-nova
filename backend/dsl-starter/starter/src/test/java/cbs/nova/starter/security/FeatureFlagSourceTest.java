@@ -15,7 +15,7 @@ class FeatureFlagSourceTest {
 
   private final CbsDslManifestProperties properties = new CbsDslManifestProperties(true,
           "classpath:piece-manifest.yaml",
-          Map.of("workbench-publish", true, "retired-feature", false), null);
+          Map.of("workbench-publish", true, "retired-feature", false), null, null, null, null);
   private final PropertiesFeatureFlagSource source = new PropertiesFeatureFlagSource(properties);
   private final MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/x");
 
