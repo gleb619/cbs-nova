@@ -7,7 +7,14 @@ import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
-@Deprecated
+/**
+ * Factory for creating {@link JsonValue} instances backed by Jackson {@link JsonNode}.
+ *
+ * <p>
+ * Starter-tier counterpart to the platform's Avaje-backed JSON value type. Use this when the active
+ * {@code ObjectMapper} is Jackson (the default in {@code dsl-starter}); prefer the Avaje-backed
+ * factory in modules that wire {@code AvajeJsonValue} instead.
+ */
 public final class JsonValues {
 
   private JsonValues() {
