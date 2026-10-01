@@ -1079,6 +1079,36 @@ AmqpPublishOut published = ctx.runHelper("amqpPublish",
 
 ---
 
+## Messaging (Kafka)
+
+`kafkaPublish` (`KafkaPublishIn(topic, key, payload)`) publishes a JSON payload to a Kafka topic
+via the host application's existing `KafkaTemplate` Spring bean — no extra producer is created.
+The helper validates first: `topic` and `payload` must be non-blank (`key` is optional and used
+for partitioning when set), and `payload` must be well-formed JSON (it is sent as the record
+value with a `Content-Type: application/json` header; malformed JSON fails with
+`IllegalArgumentException` before anything reaches the broker). The send future is awaited with a
+bounded timeout (5s) so a stuck broker cannot pin the calling activity. If no `KafkaTemplate`
+bean is available (Kafka not configured), the call fails with an explicit error rather than
+silently dropping the record.
+
+Opt-in: spring-kafka is a `compileOnly` dependency of the starter and `starter-launcher` excludes
+`KafkaAutoConfiguration` by default, so a plain `mvn spring-boot:run` never sees a
+`KafkaTemplate`. To enable, drop the `org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration`
+exclude from `application.yml`, add `spring-kafka` as a runtime dependency of your service, and set
+`spring.kafka.bootstrap-servers` — Spring Boot then auto-configures the `KafkaTemplate` the helper
+uses.
+
+```java
+KafkaPublishOut published = ctx.runHelper("kafkaPublish",
+        new KafkaPublishIn("orders", "order-42", payloadJson))
+        .as(KafkaPublishOut.class);
+// published.topic() echoes the destination topic;
+// published.partition() / published.offset() come from the broker RecordMetadata;
+// published.timestamp() records when the helper sent the record
+```
+
+---
+
 ## Object storage (S3 / MinIO)
 
 `s3Storage` (`S3StorageIn(op, bucket, key, body, contentType)`) runs a single `put`, `get` or
