@@ -1149,6 +1149,66 @@ String encodedPayload = ctx.runHelper("base64", new Base64In(compressed, "encode
     .as(Base64Out.class).result();
 ```
 
+## Reconciling a customer record with `similarity` + `jsonDiff`
+
+Deduplicate a candidate record against an existing list of customer records via fuzzy
+similarity, then surface field-level changes between the matched record's JSON payload and
+the candidate's JSON payload. This is the canonical "inbound record came in again — find the
+nearest existing match and tell me exactly what changed" flow.
+
+The process scores each candidate against `candidateName` under the requested `mode`
+(`jaroWinkler`, `levenshtein`, or `ratio`), keeps the highest-scoring candidate above
+`matchThreshold`, then calls `jsonDiff` with the matched record's JSON on the left and the
+candidate JSON on the right. The output exposes the chosen `mode`, the `bestScore` and
+`bestCandidateName`, whether a candidate cleared the threshold (`matched` + `matchedIndex`),
+plus the `jsonDiff` result (`identical`, `changeCount`, and the first per-path change so
+callers can pivot on the leading diff entry).
+
+See `backend/dsl-starter/dsl-examples/src/dsl/RecordReconcileDsl.java` (input/output models
+in `backend/dsl-starter/dsl-examples/src/models/RecordReconcileModels.java`):
+
+```java
+double bestScore = 0.0;
+int bestIndex = -1;
+String bestName = "";
+String nameField = in.candidateField() == null ? "name" : in.candidateField();
+String mode = in.mode() == null ? "jaroWinkler" : in.mode();
+for (int i = 0; i < in.candidates().size(); i++) {
+  Map<String, Object> entry = in.candidates().get(i);
+  Object raw = entry == null ? null : entry.get(nameField);
+  String other = raw == null ? "" : String.valueOf(raw);
+  var scored = ctx.runHelper("similarity",
+      new SimilarityIn(mode, in.candidateName(), other, false));
+  if (!scored.isSuccess()) {
+    return Result.failure(scored.cause());
+  }
+  double score = scored.as(SimilarityOut.class).score();
+  if (score > bestScore) {
+    bestScore = score;
+    bestIndex = i;
+    bestName = other;
+  }
+}
+boolean matched = bestIndex >= 0 && bestScore >= in.matchThreshold();
+Map<String, Object> matchedRecord = matched ? in.candidates().get(bestIndex) : Map.of();
+String matchedJson = serializeAsJson(matchedRecord);
+
+var diff = ctx.runHelper("jsonDiff",
+    new JsonDiffIn(matchedJson, in.candidateJson()));
+JsonDiffOut diffOut = diff.as(JsonDiffOut.class);
+```
+
+With `candidateName` = `"Anne-Sophie Müller"`, candidates including
+`{"name":"Anne Müller","email":"anne@example.com","tier":"gold"}`, and a candidate JSON of
+`{"name":"Anne-Sophie Müller","email":"anne.sophie@example.com","tier":"platinum"}`, the
+process returns `bestCandidateName="Anne Müller"`, `matched=true`, `matchedIndex=1`, a
+non-trivial `bestScore`, plus a non-identical diff (`changeCount > 0`) with the leading
+entry's `op` in `{changed, added, removed}`. The threshold sub-test uses a `0.999` threshold
+against an unrelated candidate list so `matched=false` / `matchedIndex=-1` and the diff
+falls back to the empty-object left side (every candidate JSON field is reported as
+`added`). `mode` and `matchThreshold` echo the caller's values so callers can audit which
+algorithm and cutoff produced the verdict.
+
 ## Composing a saga in `OrderSagaDsl`
 
 The canonical two-step saga: two `Dsl.transaction(...)` definitions (`reserveInventory`,
