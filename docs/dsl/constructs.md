@@ -76,7 +76,10 @@ A Process maps to a Temporal Workflow. It orchestrates Transactions, Helpers, an
 - a typed input/output pair or a parameter schema,
 - a task queue,
 - an optional human-readable `version` label,
-- an optional `.compensation(...)` block.
+- an optional `.compensation(...)` block,
+- zero or more declared signals via `.signal(name, payloadType)`, consumed inside `execute(...)` with
+  `ctx.awaitSignal(...)` / `ctx.getSignalPayload(...)` / `ctx.signalReceived(...)`. See
+  [Signals](authoring.md#signals).
 
 ### Transaction
 

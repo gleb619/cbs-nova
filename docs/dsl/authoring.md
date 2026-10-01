@@ -1,7 +1,7 @@
 # Authoring DSL Flows
 
 This page describes how to write DSL definitions: the source-file format, the fluent builder API, typed vs
-parameter-based definitions, helper/transaction/function calls, compensation, and a complete end-to-end example.
+parameter-based definitions, helper/transaction/function calls, signals, compensation, and a complete end-to-end example.
 
 ## DSL source files
 
@@ -295,6 +295,107 @@ if (!kyc.verified()) {
     ctx.fail("KYC failed");
 }
 ```
+
+## Signals
+
+A Process can declare **signals** — named, typed messages an external caller delivers to a running workflow.
+Declaration happens on the builder (`.signal(name, payloadType)`), consumption happens on the
+`ProcessContext` inside `.execute(...)`. Signals are Temporal-only in **Run** mode; in **Preview** /
+**Hierarchy** / **Explain** they resolve from a seeded timeline (see
+[Preview-mode signals](preview-mode.md#preview-mode-signals)).
+
+Runtime design, codegen, routes, and RBAC: [Architecture — Signals (T567)](../architecture-backend.md#signals-t567).
+Operator recipe: [Runbook — Signal a running process](../runbook.md#signal-a-running-process).
+
+### Declaring a signal
+
+```java
+public <T> ProcessBuilder<I, O> signal(@NonNull String name, @NonNull Class<T> payloadType)
+```
+
+Each `.signal(...)` call appends a `SignalDescriptor(name, payloadType)` to the builder's list; the descriptors
+land in both `ProcessDescriptor.signals` (drives codegen) and `ProcessDslObject.signals` (the runtime
+`DslObject`) when `build()` runs. Declare every signal you intend to await — undeclared names are rejected by
+the send route with `400` (`UNKNOWN_SIGNAL`), and Temporal silently drops them.
+
+### Consuming a signal
+
+Three default helpers on `ProcessContext<T>`:
+
+```java
+@NonNull <T> T awaitSignal(@NonNull String name, @NonNull Class<T> type);   // blocking
+@Nullable <T> T getSignalPayload(@NonNull String name, @NonNull Class<T> type);  // non-blocking peek
+boolean signalReceived(@NonNull String name);                              // non-blocking check
+```
+
+- `awaitSignal` blocks until the signal has been received, then returns the payload cast to `type`.
+- `getSignalPayload` returns the payload if already received, otherwise `null`.
+- `signalReceived` returns `true` once the signal has been received, otherwise `false`.
+
+All three resolve the same `SignalAwaiter` from the run metadata key
+`Constants.SIGNAL_AWAITER_METADATA_KEY = "cbs.nova.dsl.signalAwaiter"`, so they are mode-agnostic: the generated
+Temporal workflow buffer serves `Run`, `PreviewSignalBuffer` serves the other modes.
+
+### Worked example
+
+Trimmed from
+[`SignalProbeDsl.java`](../../backend/dsl-starter/dsl-examples/src/dsl/SignalProbeDsl.java):
+
+```java
+List<DslObject> define() {
+  return Dsl.process("SignalProbe")
+          .input(String.class)
+          .output(String.class)
+          .signal("approval", Map.class)
+          .execute(ctx -> {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> approval = ctx.awaitSignal("approval", Map.class);
+            boolean approved = Boolean.TRUE.equals(approval.get("approved"));
+            String reviewer = String.valueOf(approval.getOrDefault("reviewer", "unknown"));
+            return Result.success("approved=" + approved + ":" + reviewer + ":" + ctx.body());
+          })
+          .buildList();
+}
+```
+
+See also [`SignalBranchDsl.java`](../../backend/dsl-starter/dsl-examples/src/dsl/SignalBranchDsl.java) for the
+peek-then-await pattern (`signalReceived` / `getSignalPayload` before `awaitSignal`).
+
+### Sending a signal
+
+Signals are delivered to a **running** execution over REST:
+
+| Verb | Path | Purpose |
+|---|---|---|
+| `POST` | `/api/dsl/signals/{runId}` | Deliver a named signal. Body `SignalRequest{signalName, payload?}`. Returns `200 {runId, signalName, status:"sent"}`. |
+| `GET` | `/api/dsl/queries/{runId}` | Read the buffered payloads: `200 {runId, signalState: {name → payload, ...}}`. |
+
+Error mapping: `404 NOT_FOUND` for an unknown run id, `409 CONFLICT` when the run is not `RUNNING`,
+`400` for a malformed body or an undeclared signal name. Sending requires `Role.RUNNER`; the query route
+falls through to the read default (`Role.VIEWER`). Both routes are also proxied by the BFF at
+`/api/v1/dsl/signals/{runId}` and `/api/v1/dsl/queries/{runId}`. A `curl` example lives in the
+[runbook](../runbook.md#signal-a-running-process); the Executions-detail panel exposes the same two calls
+(`data-testid="signal-panel"`).
+
+A `200 {"status":"sent"}` confirms Temporal *accepted* the signal, not that the workflow has observed it — poll
+the query route for `signalState` when you need that guarantee.
+
+### Timeouts and absent signals
+
+There is **no timeout overload** on the signal API — `awaitSignal(name, type)` is the only blocking form, and
+in **Run** mode it waits indefinitely for the signal. Bound the wait from the outside: enforce a
+workflow/activity timeout, or have the caller always deliver. The non-blocking helpers never wait, so guard
+long-running flows with `signalReceived(...)` if you would rather branch than block.
+
+Mode-specific behaviour when a signal never arrives:
+
+- **Run** — the workflow task stays blocked on the signal; the run stays `RUNNING`. If the run is not
+  `RUNNING` the send route answers `409 CONFLICT` and nothing is delivered.
+- **Preview** — a signal absent from the seeded `signals` timeline fails fast with `SignalNotSeededException`,
+  surfaced as preview error code `SIGNAL_NOT_SEEDED` (HTTP 422). Preview never hangs.
+- **Bare in-process runs** (no pipeline installed a buffer) — `awaitSignal` throws `IllegalStateException`
+  ("Signal awaiting is not available in this context"); `getSignalPayload` returns `null` and
+  `signalReceived` returns `false`.
 
 ## Compensation and Sagas
 
