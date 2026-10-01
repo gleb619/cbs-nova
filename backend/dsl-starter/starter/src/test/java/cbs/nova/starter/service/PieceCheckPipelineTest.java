@@ -292,6 +292,7 @@ class PieceCheckPipelineTest {
 
   private static CbsDslManifestProperties defaultProperties() {
     return new CbsDslManifestProperties(true, "classpath:piece-manifest.yaml", null, null,
-            new CbsDslManifestProperties.PostCheck(2, Duration.ofMinutes(30), "principal"));
+            new CbsDslManifestProperties.PostCheck(2, Duration.ofMinutes(30), "principal"), null,
+            null);
   }
 }

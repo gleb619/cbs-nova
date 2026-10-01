@@ -85,19 +85,6 @@ public record CbsDslManifestProperties(
     private final ObjectMode objectMode;
   }
 
-  // TODO: replace ctor with lomboks one
-  public CbsDslManifestProperties(boolean enabled, String path,
-          Map<String, Boolean> flags, Map<String, RateClass> rateClasses) {
-    this(enabled, path, flags, rateClasses, null, null, null);
-  }
-
-  // TODO: replace ctor with lomboks one
-  public CbsDslManifestProperties(boolean enabled, String path,
-          Map<String, Boolean> flags, Map<String, RateClass> rateClasses,
-          PostCheck postCheck) {
-    this(enabled, path, flags, rateClasses, postCheck, null, null);
-  }
-
   /**
    * Token-bucket shape for one named rate class used by {@code preCheck: rate-class}.
    */

@@ -171,7 +171,8 @@ class PieceGuardFilterTest {
   void enabledFlagFromPropertiesPasses() throws Exception {
     pieceWith(List.of(new PreCheck.FeatureFlagCheck("workbench-publish")));
     CbsDslManifestProperties properties = new CbsDslManifestProperties(true,
-            "classpath:piece-manifest.yaml", Map.of("workbench-publish", true), null);
+            "classpath:piece-manifest.yaml", Map.of("workbench-publish", true), null, null, null,
+            null);
     filter = newFilter(properties, new PropertiesFeatureFlagSource(properties));
 
     Invocation invocation = invoke(new MockHttpServletRequest("POST", ROUTE),
@@ -203,7 +204,8 @@ class PieceGuardFilterTest {
     pieceWith(List.of(new PreCheck.RateClassCheck("control-plane")));
     CbsDslManifestProperties properties = new CbsDslManifestProperties(true,
             "classpath:piece-manifest.yaml", null,
-            Map.of("control-plane", new CbsDslManifestProperties.RateClass(1, 0.5)));
+            Map.of("control-plane", new CbsDslManifestProperties.RateClass(1, 0.5)), null, null,
+            null);
     filter = newFilter(properties, new PropertiesFeatureFlagSource(properties));
 
     // capacity 1: first request consumes the only token; clock frozen → no refill.
@@ -225,7 +227,8 @@ class PieceGuardFilterTest {
     pieceWith(List.of(new PreCheck.RateClassCheck("control-plane")));
     CbsDslManifestProperties properties = new CbsDslManifestProperties(true,
             "classpath:piece-manifest.yaml", null,
-            Map.of("control-plane", new CbsDslManifestProperties.RateClass(1, 1.0)));
+            Map.of("control-plane", new CbsDslManifestProperties.RateClass(1, 1.0)), null, null,
+            null);
     filter = newFilter(properties, new PropertiesFeatureFlagSource(properties));
 
     assertThat(invoke(new MockHttpServletRequest("POST", ROUTE), chainWriting(200, "ok"))
@@ -254,7 +257,8 @@ class PieceGuardFilterTest {
     pieceWith(List.of(new PreCheck.RateClassCheck("control-plane")));
     CbsDslManifestProperties properties = new CbsDslManifestProperties(true,
             "classpath:piece-manifest.yaml", null,
-            Map.of("control-plane", new CbsDslManifestProperties.RateClass(1, 0.5)));
+            Map.of("control-plane", new CbsDslManifestProperties.RateClass(1, 0.5)), null, null,
+            null);
     filter = newFilter(properties, new PropertiesFeatureFlagSource(properties));
 
     MockHttpServletRequest alice = new MockHttpServletRequest("POST", ROUTE);
