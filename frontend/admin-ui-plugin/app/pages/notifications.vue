@@ -28,7 +28,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="p-6 space-y-4 h-full flex flex-col">
+  <div class="p-6 space-y-4 h-full flex flex-col" data-testid="notifications-page">
     <header>
       <h1 class="text-2xl font-bold text-neutral-900">Notifications</h1>
       <p class="text-sm text-neutral-600">
