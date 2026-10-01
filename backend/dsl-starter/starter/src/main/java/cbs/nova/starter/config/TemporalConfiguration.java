@@ -221,11 +221,13 @@ public class TemporalConfiguration {
           RunScopedFakeConfig runScopedFakeConfig,
           MeterRegistry meterRegistry,
           @Qualifier("cbsNovaPreviewDispatchExecutor") ExecutorService dispatchExecutor,
-          ObjectProvider<ManifestObjectGuard> objectGuardProvider) {
+          ObjectProvider<ManifestObjectGuard> objectGuardProvider,
+          OpenTelemetry openTelemetry) {
     return new PreviewDslPipe(externalCallRecorder, dryRunLoggingContext,
             bufferRegistry, dryRunProperties.log().maxEventsPerRun(), previewResultCache,
             previewProperties, fakesProperties, runScopedFakeConfig, meterRegistry,
-            dispatchExecutor, objectGuardProvider.getIfAvailable());
+            dispatchExecutor, objectGuardProvider.getIfAvailable(),
+            openTelemetry.getTracer("cbs.nova.dsl"));
   }
 
   @Bean
@@ -253,11 +255,13 @@ public class TemporalConfiguration {
           MeterRegistry meterRegistry,
           HierarchyDiagramRenderer diagramRenderer,
           @Qualifier("cbsNovaPreviewDispatchExecutor") ExecutorService dispatchExecutor,
-          ObjectProvider<ManifestObjectGuard> objectGuardProvider) {
+          ObjectProvider<ManifestObjectGuard> objectGuardProvider,
+          OpenTelemetry openTelemetry) {
     return new HierarchyDslPipe(externalCallRecorder, dryRunLoggingContext,
             bufferRegistry, dryRunProperties.log().maxEventsPerRun(), previewProperties,
             fakesProperties, runScopedFakeConfig, meterRegistry, diagramRenderer,
-            dispatchExecutor, objectGuardProvider.getIfAvailable());
+            dispatchExecutor, objectGuardProvider.getIfAvailable(),
+            openTelemetry.getTracer("cbs.nova.dsl"));
   }
 
   @Bean

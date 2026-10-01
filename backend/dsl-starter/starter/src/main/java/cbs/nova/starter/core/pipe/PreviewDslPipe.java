@@ -23,6 +23,7 @@ import cbs.nova.starter.logging.DryRunLogBufferRegistry;
 import cbs.nova.starter.security.ManifestObjectGuard;
 import cbs.nova.starter.service.PreviewResultCache;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.opentelemetry.api.trace.Tracer;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -44,9 +45,13 @@ public final class PreviewDslPipe implements DslExecutionPipe<PreviewReport> {
   private final MeterRegistry meterRegistry;
   private final ExecutorService executor;
   private final @Nullable ManifestObjectGuard objectGuard;
+  // T746: optional tracer forwarded into the dispatch stage span. Null is OK — DispatchStage
+  // treats a null tracer as telemetry-disabled.
+  private final @Nullable Tracer dispatchTracer;
 
   /**
-   * Legacy constructor used by tests that do not exercise object-level enforcement.
+   * Legacy constructor used by tests that do not exercise object-level enforcement or the telemetry
+   * path.
    */
   public PreviewDslPipe(
           ExternalCallRecorder recorder,
@@ -61,7 +66,7 @@ public final class PreviewDslPipe implements DslExecutionPipe<PreviewReport> {
           ExecutorService executor) {
     this(recorder, dryRunLoggingContext, bufferRegistry, maxEventsPerRun, cache,
             previewProperties, fakesProperties, runScopedFakeConfig, meterRegistry, executor,
-            null);
+            null, null);
   }
 
   @Override
@@ -85,7 +90,7 @@ public final class PreviewDslPipe implements DslExecutionPipe<PreviewReport> {
             .stage(new ExternalCallRecordingStage(recorder))
             .stage(new DispatchStage(dispatchInterceptor,
                     Duration.ofMillis(previewProperties.execution().timeoutMs()), executor,
-                    meterRegistry, dryRunLoggingContext))
+                    meterRegistry, dryRunLoggingContext, dispatchTracer))
             .build()
             .execute(name, ctx);
   }

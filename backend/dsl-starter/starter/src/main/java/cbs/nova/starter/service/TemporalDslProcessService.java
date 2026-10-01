@@ -149,53 +149,72 @@ public class TemporalDslProcessService {
           @Nullable Object input,
           @NonNull Map<String, Object> metadata,
           @Nullable String correlationId) {
-    Object body = input != null ? input : Map.of();
-    String runId = SimpleContext.generateRunId();
-    var runIdScope = propagateRunId(runId);
-    try {
-      String inputJson = serialize(body);
-      Instant startedAt = now();
-      String triggeredBy = runIdentityResolver.resolve();
-
-      DslRun running = DslRun.builder()
-              .runId(runId)
-              .processName(processName)
-              .status(DslRunStatus.RUNNING.name())
-              .input(inputJson)
-              .output(StarterConstants.EMPTY_OUTPUT_JSON)
-              .error(null)
-              .startedAt(startedAt)
-              .finishedAt(StarterConstants.NOT_FINISHED_AT)
-              .executionMode(ExecutionMode.RUN.name())
-              .triggeredBy(triggeredBy)
-              .correlationId(correlationId)
-              // T492: descriptor-identity hash of the definition this run executes; null
-              // (never an exception) when the definition cannot be resolved.
-              .definitionHash(RunDefinitionHash.of(processName))
-              // T648: content-identity hash of the definition source snapshot published at
-              // reload; null (never an exception) before the first reload.
-              .contentHash(DefinitionContentHash.of(processName))
-              .build();
-
-      submitDbWrite(() -> {
-        runRepository.save(running);
-        publishEvent(new DomainEvent.RunStarted(
-                runId, processName, triggeredBy, startedAt, correlationId));
-        publishStatusChanged(runId, DslRunStatus.RUNNING.name());
-        return null;
-      });
-
-      ensureHealthcheckStarted();
-
-      CompletableFuture<Result<?>> result = CompletableFuture.supplyAsync(
-              () -> executeAndRecord(processName, body, metadata, runId, startedAt),
-              dslProcessExecutor);
-      return new ProcessRun(runId, result);
-    } finally {
+    // T746: operator-facing span around the startProcess entry point. The inner
+    // dsl.run.<processName> span inside doExecuteAndRecord() is preserved — this top-level
+    // span joins the startProcess call to its inner execution so the Jaeger service graph
+    // shows the operator's start click as the parent of the workflow run.
+    Tracer tracer = openTelemetry.getTracer("cbs.nova.dsl");
+    Span startSpan = tracer.spanBuilder("dsl.run.start")
+            .setAttribute("processName", processName)
+            .setAttribute("correlationId",
+                    correlationId != null ? correlationId : "")
+            .startSpan();
+    try (Scope startScope = startSpan.makeCurrent()) {
+      Object body = input != null ? input : Map.of();
+      String runId = SimpleContext.generateRunId();
+      var runIdScope = propagateRunId(runId);
       try {
-        runIdScope.close();
-      } catch (Exception ignored) {
+        startSpan.setAttribute("runId", runId);
+        String inputJson = serialize(body);
+        Instant startedAt = now();
+        String triggeredBy = runIdentityResolver.resolve();
+
+        DslRun running = DslRun.builder()
+                .runId(runId)
+                .processName(processName)
+                .status(DslRunStatus.RUNNING.name())
+                .input(inputJson)
+                .output(StarterConstants.EMPTY_OUTPUT_JSON)
+                .error(null)
+                .startedAt(startedAt)
+                .finishedAt(StarterConstants.NOT_FINISHED_AT)
+                .executionMode(ExecutionMode.RUN.name())
+                .triggeredBy(triggeredBy)
+                .correlationId(correlationId)
+                // T492: descriptor-identity hash of the definition this run executes; null
+                // (never an exception) when the definition cannot be resolved.
+                .definitionHash(RunDefinitionHash.of(processName))
+                // T648: content-identity hash of the definition source snapshot published at
+                // reload; null (never an exception) before the first reload.
+                .contentHash(DefinitionContentHash.of(processName))
+                .build();
+
+        submitDbWrite(() -> {
+          runRepository.save(running);
+          publishEvent(new DomainEvent.RunStarted(
+                  runId, processName, triggeredBy, startedAt, correlationId));
+          publishStatusChanged(runId, DslRunStatus.RUNNING.name());
+          return null;
+        });
+
+        ensureHealthcheckStarted();
+
+        CompletableFuture<Result<?>> result = CompletableFuture.supplyAsync(
+                () -> executeAndRecord(processName, body, metadata, runId, startedAt),
+                dslProcessExecutor);
+        return new ProcessRun(runId, result);
+      } finally {
+        try {
+          runIdScope.close();
+        } catch (Exception ignored) {
+        }
       }
+    } catch (RuntimeException e) {
+      startSpan.recordException(e);
+      startSpan.setStatus(StatusCode.ERROR, e.getMessage());
+      throw e;
+    } finally {
+      startSpan.end();
     }
   }
 

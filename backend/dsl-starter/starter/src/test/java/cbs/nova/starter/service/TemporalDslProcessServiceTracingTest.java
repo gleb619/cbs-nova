@@ -77,22 +77,24 @@ class TemporalDslProcessServiceTracingTest {
 
       service.startProcess(processName, Map.of(), Map.of()).result().join();
 
-      assertThat(exporter.getFinishedSpanItems()).hasSize(1);
-      SpanData span = exporter.getFinishedSpanItems().get(0);
-      assertThat(span.getName()).isEqualTo("dsl.run." + processName);
+      SpanData runSpan = exporter.getFinishedSpanItems().stream()
+              .filter(s -> ("dsl.run." + processName).equals(s.getName()))
+              .findFirst()
+              .orElseThrow();
+      assertThat(runSpan.getName()).isEqualTo("dsl.run." + processName);
       assertThat(
-              span.getAttributes().get(AttributeKey.stringKey("runId")))
+              runSpan.getAttributes().get(AttributeKey.stringKey("runId")))
               .isEqualTo(runId);
-      assertThat(span.getAttributes()
+      assertThat(runSpan.getAttributes()
               .get(AttributeKey.stringKey("processName")))
               .isEqualTo(processName);
-      assertThat(span.getAttributes()
+      assertThat(runSpan.getAttributes()
               .get(AttributeKey.stringKey("executionMode")))
               .isEqualTo(ExecutionMode.RUN.name());
       assertThat(
-              span.getAttributes().get(AttributeKey.stringKey("status")))
+              runSpan.getAttributes().get(AttributeKey.stringKey("status")))
               .isEqualTo(DslRunStatus.FAILED.name());
-      assertThat(span.getStatus().getStatusCode())
+      assertThat(runSpan.getStatus().getStatusCode())
               .isEqualTo(StatusCode.ERROR);
     }
   }
