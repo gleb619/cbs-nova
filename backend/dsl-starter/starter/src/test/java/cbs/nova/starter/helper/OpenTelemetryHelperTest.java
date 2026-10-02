@@ -5,12 +5,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.Result;
+import cbs.nova.starter.config.properties.OpenTelemetryHelperProperties;
 import cbs.nova.starter.helper.model.OtelIn;
 import cbs.nova.starter.helper.model.OtelOut;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.sdk.testing.junit5.OpenTelemetryExtension;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import io.opentelemetry.sdk.trace.data.StatusData;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,11 +32,20 @@ class OpenTelemetryHelperTest {
   @RegisterExtension
   static final OpenTelemetryExtension OTEL = OpenTelemetryExtension.create();
 
+  private MutableClock mutableClock;
   private OpenTelemetryHelper helper;
 
   @BeforeEach
   void setUp() {
-    helper = new OpenTelemetryHelper(OTEL.getOpenTelemetry());
+    mutableClock = new MutableClock(Instant.parse("2024-01-01T00:00:00Z"));
+    helper = new OpenTelemetryHelper(
+            OTEL.getOpenTelemetry(),
+            new OpenTelemetryHelperProperties(
+                    /* spanMaxEntries */ 1000,
+                    Duration.ofMinutes(10),
+                    Duration.ofMinutes(10),
+                    /* baggageMaxRuns */ 1000),
+            mutableClock);
   }
 
   @Test
@@ -267,11 +281,282 @@ class OpenTelemetryHelperTest {
     assertThat(result.cause()).hasMessageContaining("otel.mode must be one of");
   }
 
+  // ----- Bounded-span-state lifecycle tests (T789) -----
+
+  @Test
+  void leakedSpanIsEndedWithAbandonedAfterTtlPasses() {
+    String traceparent = (String) execute(OtelInSpan("leaked")).value().result();
+
+    // No endSpan call — simulate a run that crashed mid-flight. Span stays open past TTL,
+    // next helper call must end it with ERROR/"abandoned" via lazy cleanup.
+    mutableClock.advance(Duration.ofMinutes(10).plusSeconds(1));
+
+    String trigger = (String) execute(OtelInSpan("next")).value().result();
+    // End the trigger so it lands in OTEL.getSpans().
+    Result<OtelOut> end = execute(new OtelIn(
+            "endSpan", null, null, trigger, "OK", null, null, null, null, null));
+    assertThat(end.isSuccess()).isTrue();
+
+    List<SpanData> finished = OTEL.getSpans();
+    SpanData leaked = finished.stream()
+            .filter(d -> d.getName().equals("leaked"))
+            .findFirst().orElseThrow();
+    assertThat(leaked.getStatus().getStatusCode())
+            .isEqualTo(io.opentelemetry.sdk.trace.data.StatusData.error().getStatusCode());
+    assertThat(leaked.getStatus().getDescription()).isEqualTo("abandoned");
+    assertThat(leaked.hasEnded()).isTrue();
+  }
+
+  @Test
+  void leakedSpanTtlBoundaryKeepsItOpen() {
+    String traceparent = (String) execute(OtelInSpan("leaked")).value().result();
+
+    // Just before TTL — still open, not ended.
+    mutableClock.advance(Duration.ofMinutes(10).minusSeconds(1));
+    // A new helper call should NOT reap the leaked span; if it did, the leaked span would be
+    // ended with ERROR/"abandoned". Verify the opposite: the span is still open by adding an
+    // event to it (addEvent rejects ended spans).
+    Result<OtelOut> addOnLeaked = execute(new OtelIn(
+            "addEvent", null, null, traceparent, null, null, "still-alive", null, null, null));
+    assertThat(addOnLeaked.isSuccess()).isTrue();
+  }
+
+  @Test
+  void endSpanAfterTtlCleanupIsSilentNoOp() {
+    String traceparent = (String) execute(OtelInSpan("leaked")).value().result();
+    mutableClock.advance(Duration.ofMinutes(11));
+
+    // Trigger TTL cleanup
+    execute(OtelInSpan("next"));
+
+    // Late endSpan should NOT throw, NOT double-end.
+    Result<OtelOut> late = execute(new OtelIn(
+            "endSpan", null, null, traceparent, "OK", null, null, null, null, null));
+    assertThat(late.isSuccess()).isTrue();
+
+    SpanData leaked = OTEL.getSpans().stream()
+            .filter(d -> d.getName().equals("leaked"))
+            .findFirst().orElseThrow();
+    // Ended exactly once with the abandoned marker, not the caller-supplied OK.
+    assertThat(leaked.getStatus().getDescription()).isEqualTo("abandoned");
+    assertThat(leaked.hasEnded()).isTrue();
+  }
+
+  @Test
+  void maxEntriesEvictionEndsOldestWithEvictedMarker() {
+    helper = new OpenTelemetryHelper(
+            OTEL.getOpenTelemetry(),
+            new OpenTelemetryHelperProperties(
+                    /* spanMaxEntries */ 2,
+                    Duration.ofMinutes(10),
+                    Duration.ofMinutes(10),
+                    1000),
+            mutableClock);
+
+    String tpA = (String) execute(OtelInSpan("a")).value().result();
+    String tpB = (String) execute(OtelInSpan("b")).value().result();
+    String tpC = (String) execute(OtelInSpan("c")).value().result();
+    // Inserting b must NOT evict a (size was 1); inserting c must evict a (oldest, size was 2).
+    // End c so its SpanData is visible in OTEL.getSpans().
+    execute(new OtelIn(
+            "endSpan", null, null, tpC, "OK", null, null, null, null, null));
+
+    // a should have been ended with ERROR/"evicted".
+    List<SpanData> finished = OTEL.getSpans();
+    SpanData a = finished.stream()
+            .filter(d -> d.getName().equals("a"))
+            .findFirst().orElseThrow();
+    assertThat(a.hasEnded()).isTrue();
+    assertThat(a.getStatus().getDescription()).isEqualTo("evicted");
+
+    // b is still open (addEvent works).
+    Result<OtelOut> addOnB = execute(new OtelIn(
+            "addEvent", null, null, tpB, null, null, "evt", null, null, null));
+    assertThat(addOnB.isSuccess()).isTrue();
+    assertThat(tpA).isNotNull();
+    assertThat(tpC).isNotNull();
+  }
+
+  @Test
+  void endSpanAfterEvictionIsSilentNoOp() {
+    helper = new OpenTelemetryHelper(
+            OTEL.getOpenTelemetry(),
+            new OpenTelemetryHelperProperties(
+                    /* spanMaxEntries */ 1,
+                    Duration.ofMinutes(10),
+                    Duration.ofMinutes(10),
+                    1000),
+            mutableClock);
+
+    String tpA = (String) execute(OtelInSpan("a")).value().result();
+    // Insert b → evicts a with ERROR/"evicted".
+    execute(OtelInSpan("b"));
+
+    // Late endSpan on tpA: no-op success, span already ended with "evicted".
+    Result<OtelOut> late = execute(new OtelIn(
+            "endSpan", null, null, tpA, "OK", null, null, null, null, null));
+    assertThat(late.isSuccess()).isTrue();
+
+    SpanData a = OTEL.getSpans().stream()
+            .filter(d -> d.getName().equals("a"))
+            .findFirst().orElseThrow();
+    assertThat(a.hasEnded()).isTrue();
+    assertThat(a.getStatus().getDescription()).isEqualTo("evicted");
+  }
+
+  @Test
+  void spanEndIsInvokedAtMostOnceUnderConcurrency() throws Exception {
+    String tp = (String) execute(OtelInSpan("race")).value().result();
+
+    int threads = 8;
+    java.util.concurrent.CountDownLatch start = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(threads);
+    java.util.concurrent.atomic.AtomicInteger errors = new java.util.concurrent.atomic.AtomicInteger(
+            0);
+    Runnable r = () -> {
+      try {
+        start.await();
+        Result<OtelOut> res = execute(new OtelIn(
+                "endSpan", null, null, tp, "OK", null, null, null, null, null));
+        if (!res.isSuccess()) {
+          errors.incrementAndGet();
+        }
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+      } finally {
+        done.countDown();
+      }
+    };
+    for (int i = 0; i < threads; i++) {
+      new Thread(r).start();
+    }
+    start.countDown();
+    done.await();
+
+    // Exactly one thread should observe a successful end; the other seven should fail-fast with
+    // "no open span". Span must have ended exactly once.
+    assertThat(errors.get()).isEqualTo(threads - 1);
+    SpanData d = OTEL.getSpans().stream()
+            .filter(s -> s.getName().equals("race"))
+            .findFirst().orElseThrow();
+    assertThat(d.hasEnded()).isTrue();
+  }
+
+  // ----- Per-run baggage scoping tests (T789) -----
+
+  @Test
+  void baggageSetInRunAIsNotVisibleInRunB() {
+    String runA = "run-a";
+    String runB = "run-b";
+
+    Result<OtelOut> setInA = executeForRun(runA, new OtelIn(
+            "setBaggage", null, null, null, null, null, null, "user", "alice", null));
+    assertThat(setInA.isSuccess()).isTrue();
+
+    Result<OtelOut> getInB = executeForRun(runB, new OtelIn(
+            "getBaggage", null, null, null, null, null, null, "user", null, null));
+    assertThat(getInB.isSuccess()).isFalse();
+    assertThat(getInB.cause()).hasMessageContaining("no value stored for baggageKey");
+  }
+
+  @Test
+  void baggageInSameRunIsVisible() {
+    String run = "same-run";
+    executeForRun(run, new OtelIn(
+            "setBaggage", null, null, null, null, null, null, "user", "bob", null));
+    Result<OtelOut> get = executeForRun(run, new OtelIn(
+            "getBaggage", null, null, null, null, null, null, "user", null, null));
+    assertThat(get.isSuccess()).isTrue();
+    assertThat(get.value().result()).isEqualTo("bob");
+  }
+
+  @Test
+  void baggageTtlDropsEntryOnNextAccess() {
+    String run = "ttl-baggage";
+    executeForRun(run, new OtelIn(
+            "setBaggage", null, null, null, null, null, null, "u", "x", null));
+    mutableClock.advance(Duration.ofMinutes(10).plusSeconds(1));
+    Result<OtelOut> get = executeForRun(run, new OtelIn(
+            "getBaggage", null, null, null, null, null, null, "u", null, null));
+    assertThat(get.isSuccess()).isFalse();
+    assertThat(get.cause()).hasMessageContaining("no value stored for baggageKey");
+  }
+
+  @Test
+  void baggageMaxRunsEvictsOldestRunSilently() {
+    helper = new OpenTelemetryHelper(
+            OTEL.getOpenTelemetry(),
+            new OpenTelemetryHelperProperties(
+                    1000,
+                    Duration.ofMinutes(10),
+                    Duration.ofMinutes(10),
+                    /* baggageMaxRuns */ 2),
+            mutableClock);
+
+    executeForRun("r1", new OtelIn(
+            "setBaggage", null, null, null, null, null, null, "k", "v1", null));
+    executeForRun("r2", new OtelIn(
+            "setBaggage", null, null, null, null, null, null, "k", "v2", null));
+    executeForRun("r3", new OtelIn(
+            "setBaggage", null, null, null, null, null, null, "k", "v3", null));
+
+    // r1's entries were evicted silently when r3 was inserted (r1 is the oldest by insertion
+    // order).
+    Result<OtelOut> getFromR1 = executeForRun("r1", new OtelIn(
+            "getBaggage", null, null, null, null, null, null, "k", null, null));
+    assertThat(getFromR1.isSuccess()).isFalse();
+
+    Result<OtelOut> getFromR3 = executeForRun("r3", new OtelIn(
+            "getBaggage", null, null, null, null, null, null, "k", null, null));
+    assertThat(getFromR3.isSuccess()).isTrue();
+    assertThat(getFromR3.value().result()).isEqualTo("v3");
+  }
+
+  private static final String DEFAULT_RUN_ID = "default-run";
+
   private Result<OtelOut> execute(OtelIn input) {
-    return helper.execute(SimpleContext.builder(input).mode(ExecutionMode.PREVIEW).build());
+    return helper.execute(SimpleContext.builder(input)
+            .mode(ExecutionMode.PREVIEW)
+            .runId(DEFAULT_RUN_ID)
+            .build());
+  }
+
+  private Result<OtelOut> executeForRun(String runId, OtelIn input) {
+    return helper.execute(SimpleContext.builder(input)
+            .mode(ExecutionMode.PREVIEW)
+            .runId(runId)
+            .build());
   }
 
   private static OtelIn OtelInSpan(String name) {
     return new OtelIn("span", name, null, null, null, null, null, null, null, null);
+  }
+
+  /** Mutable {@link Clock} that returns an {@link Instant} we can advance in tests. */
+  private static final class MutableClock extends Clock {
+    private Instant now;
+
+    MutableClock(Instant initial) {
+      this.now = initial;
+    }
+
+    void advance(Duration d) {
+      now = now.plus(d);
+    }
+
+    @Override
+    public ZoneOffset getZone() {
+      return ZoneOffset.UTC;
+    }
+
+    @Override
+    public Clock withZone(java.time.ZoneId zone) {
+      return this;
+    }
+
+    @Override
+    public Instant instant() {
+      return now;
+    }
   }
 }

@@ -57,7 +57,8 @@ class DslRootAutoConfigurationTest {
                       VhsConfiguration.class.getName(),
                       "cbs.nova.starter.config.router.NotificationRouterConfiguration",
                       "cbs.nova.starter.config.router.ChangeRequestRouterConfiguration",
-                      RbacFilterConfiguration.class.getName());
+                      RbacFilterConfiguration.class.getName(),
+                      OpenTelemetryHelperConfiguration.class.getName());
     }
   }
 
