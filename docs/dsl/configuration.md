@@ -449,6 +449,29 @@ starter SDK remains the single trace export path (Spring Boot's
 Jaeger; see [architecture-backend § Tracing in compose](../architecture-backend.md#tracing-in-compose-default-on)
 for the end-to-end chain and the no-traces troubleshooting checklist.
 
+### Built-in `otel` helper — bounded state (T789)
+
+The `otel` helper is a Spring singleton. To stop two production failure modes (unbounded growth on
+a leaked `span()` call, and cross-run baggage bleed) it tracks its in-memory state with hard caps
+and reaps stale entries lazily on the next helper call. There is no scheduler thread.
+
+| Key / env | Type | Default | Effect |
+|-----------|------|---------|--------|
+| `cbs.otel.helper.span-max-entries` | `int` (`@Min(1)`) | `1000` | Maximum number of concurrently open spans tracked by the helper. Inserting a new span past this bound ends the oldest open span with status `ERROR`/"evicted" rather than silently dropping it. |
+| `cbs.otel.helper.span-ttl` | `Duration` | `PT10M` | Maximum age of an open span. The next `span()` / `endSpan()` / `addEvent()` call reaps entries older than this with status `ERROR`/"abandoned" so the exporter still sees them. |
+| `cbs.otel.helper.baggage-ttl` | `Duration` | `PT10M` | Maximum age of a per-run baggage value. The next `setBaggage` / `getBaggage` call silently drops entries older than this. |
+| `cbs.otel.helper.baggage-max-runs` | `int` (`@Min(1)`) | `1000` | Maximum number of distinct run-ids whose baggage the helper tracks concurrently. Inserting a baggage value from a new run past this bound silently drops the oldest run's entries. |
+
+**Baggage is per-run.** `setBaggage` / `getBaggage` are partitioned by `Context.runId()`: a key
+written by run A is NOT visible to run B. This is independent of (and complementary to) W3C OTel
+baggage propagation, which is handled by `injectContext` / `extractContext`.
+
+**Lazy cleanup, no scheduler thread.** All four knobs are evaluated lazily on the next helper
+invocation; if your DSL stops calling `otel` the state sits untouched until a call arrives or the
+process restarts. A late `endSpan` for a span the helper has already reaped (TTL or eviction) is
+a silent no-op: the entry is gone from the registry and `Span.end()` already ran once, so we
+cannot re-end it.
+
 ---
 
 ## Temporal & server env
