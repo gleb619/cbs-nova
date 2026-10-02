@@ -3,6 +3,8 @@ package cbs.nova.starter.webhook;
 import java.net.http.HttpClient;
 import java.util.Optional;
 import java.util.concurrent.ThreadPoolExecutor;
+import io.micrometer.core.instrument.MeterRegistry;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -18,9 +20,10 @@ public class WebhookConfiguration {
   WebhookDispatcher webhookDispatcher(WebhookProperties properties, ObjectMapper objectMapper,
           ThreadPoolTaskExecutor cbsNovaWebhookDeliveryExecutor,
           @Qualifier("webhookHttpClient") HttpClient webhookHttpClient,
-          Optional<WebhookDeliveryRecordRepository> deliveryRecordRepository) {
+          Optional<WebhookDeliveryRecordRepository> deliveryRecordRepository,
+          ObjectProvider<MeterRegistry> meterRegistryProvider) {
     return new WebhookDispatcher(properties, objectMapper, cbsNovaWebhookDeliveryExecutor,
-            webhookHttpClient, deliveryRecordRepository);
+            webhookHttpClient, deliveryRecordRepository, meterRegistryProvider);
   }
 
   @Bean

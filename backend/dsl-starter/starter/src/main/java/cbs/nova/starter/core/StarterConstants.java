@@ -130,6 +130,16 @@ public class StarterConstants {
   public static final String TASK_TAG = "task";
   public static final String AUDIT_RETENTION_PURGED_COUNTER = "dsl.audit.purged";
 
+  // T775 — outbound delivery meters (webhook + notification sinks).
+  // Card is bounded: outcome is a closed vocabulary (success/failure/noop/skipped/rejected/...)
+  // and the notification sink tag is the sink type string ("webhook"/"slack"/"pagerduty"/"email"
+  // /"test"/...). URLs, rule ids, and run ids never appear as tags.
+  public static final String WEBHOOK_DELIVERY_COUNT_COUNTER = "cbs.webhook.delivery.count";
+  public static final String WEBHOOK_DELIVERY_DURATION_TIMER = "cbs.webhook.delivery.duration";
+  public static final String NOTIFICATION_FIRING_COUNT_COUNTER = "cbs.notification.firing.count";
+  public static final String NOTIFICATION_FIRING_DURATION_TIMER = "cbs.notification.firing.duration";
+  public static final String SINK_TAG = "sink";
+
   // Request-id plumbing
 
   public static final String REQUEST_ID_HEADER = "X-Request-Id";

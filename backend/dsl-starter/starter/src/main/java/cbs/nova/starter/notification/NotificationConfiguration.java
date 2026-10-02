@@ -8,6 +8,7 @@ import cbs.nova.starter.persistence.NotificationRuleRepository;
 import cbs.nova.starter.service.DslAuditService;
 import cbs.nova.starter.webhook.WebhookDispatcher;
 import cbs.nova.starter.webhook.WebhookProperties;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.net.http.HttpClient;
 import java.util.List;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -114,8 +115,9 @@ public class NotificationConfiguration {
   NotificationRuleEngine notificationRuleEngine(NotificationRuleRepository ruleRepository,
           NotificationRuleFiringRepository firingRepository, NotificationRuleService ruleService,
           List<NotificationSink> sinks,
-          ThreadPoolTaskExecutor cbsNovaNotificationExecutor) {
+          ThreadPoolTaskExecutor cbsNovaNotificationExecutor,
+          ObjectProvider<MeterRegistry> meterRegistryProvider) {
     return new NotificationRuleEngine(ruleRepository, firingRepository, ruleService, sinks,
-            cbsNovaNotificationExecutor);
+            cbsNovaNotificationExecutor, meterRegistryProvider);
   }
 }
