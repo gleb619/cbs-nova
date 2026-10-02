@@ -1355,6 +1355,54 @@ var formatted = ctx.runHelper("formatMessage",
     new FormatMessageIn(in.greetingTemplate(), Map.of("orderId", in.order().get("id"))));
 ```
 
+## Pre-flighting a Temporal schedule with `ScheduleGuardDsl`
+
+The schedule guard: `cronParse` in `validate` mode first (fail fast on bad syntax), then
+`cronParse` in `nextFire` mode against a caller-pinned `after` timestamp to preview the
+upcoming fire times. Use as a gate before creating a Temporal schedule so misconfigured
+expressions never reach the scheduler — operators see the verdict (`valid` + ordered
+`fireTimes`) or a structured `errorMessage` without having to spin up the worker.
+
+The helper accepts the same three shapes the starter's `cronParse` documents: the
+DST-safe 6-field form (`sec min hour dom mon dow`), the 5-field Unix form
+(`min hour dom mon dow`, the helper prepends "0 " seconds), and macro shorthands
+(`@daily`, `@hourly`, `@yearly`, ...). All times are evaluated as UTC wall-clock
+times; the returned `fireTimes` are Z-normalized ISO-8601 instants so callers can
+diff/sort them without re-parsing.
+
+See `backend/dsl-starter/dsl-examples/src/dsl/ScheduleGuardDsl.java` (input/output models in
+`backend/dsl-starter/dsl-examples/src/models/ScheduleGuardModels.java`):
+
+```java
+var validate = ctx.runHelper("cronParse",
+    new CronParseIn(in.expression(), "validate", null, null));
+if (!validate.isSuccess()) {
+  return Result.success(new ScheduleGuardOut(
+      in.scheduleName(), in.expression(), false, null,
+      validate.cause().getMessage()));
+}
+var preview = ctx.runHelper("cronParse",
+    new CronParseIn(in.expression(), "nextFire", in.fixedAfter(), in.previewCount()));
+if (!preview.isSuccess()) {
+  return Result.success(new ScheduleGuardOut(
+      in.scheduleName(), in.expression(), false, null,
+      preview.cause().getMessage()));
+}
+List<String> fireTimes = preview.as(CronParseOut.class).timestamps();
+return Result.success(new ScheduleGuardOut(
+    in.scheduleName(), in.expression(), true, fireTimes, null));
+```
+
+With `expression = "0 0 12 * * *"` (6-field daily noon), `fixedAfter = "2024-01-15T00:00:00Z"`,
+and `previewCount = 3`, the guard returns `fireTimes = ["2024-01-15T12:00:00Z",
+"2024-01-16T12:00:00Z", "2024-01-17T12:00:00Z"]`. The 5-field variant
+(`"30 9 * * *"`) returns `["2024-01-15T09:30:00Z", "2024-01-16T09:30:00Z"]`. The `@daily`
+macro returns `["2024-01-16T00:00:00Z", "2024-01-17T00:00:00Z"]` (next-midnight relative to
+the pinned after). An invalid expression like `"0 0 12 32 * *"` short-circuits on the
+validate pass: the DSL still succeeds, but `valid = false`, `fireTimes = null`, and
+`errorMessage` carries the parser's complaint so the operator message can be routed back
+verbatim.
+
 ## Exercising OpenTelemetry with `DistributedTracingDsl`
 
 Walks the seven `otel` modes: `span` (start, returns the traceparent), `addEvent`,
