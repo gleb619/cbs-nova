@@ -262,6 +262,7 @@ onMounted(() => {
 
       <select
         v-model="sinceFilter"
+        aria-label="Time range"
         class="px-2 py-1 text-sm border border-gray-300 rounded"
         data-testid="activity-filter-since"
         @change="applySinceFilter"

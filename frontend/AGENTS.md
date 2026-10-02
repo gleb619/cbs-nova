@@ -156,6 +156,7 @@ browser, asserting on the `data-testid` attributes installed across T257-T261.
 ```bash
 pnpm test:e2e          # headless run — chromium by default
 pnpm test:e2e:ui       # interactive Playwright UI mode
+pnpm exec playwright test e2e/a11y.spec.ts   # axe accessibility scan (T777)
 ```
 
 ### Backend-optional
