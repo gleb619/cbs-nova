@@ -1,6 +1,7 @@
 package cbs.nova.starter;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -9,9 +10,11 @@ import static org.mockito.Mockito.when;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.controller.DslDocsHandler;
 import cbs.nova.starter.exception.BuilderApiException;
+import cbs.nova.starter.exception.DslPayloadTooLargeException;
 import cbs.nova.starter.model.DslFileModels.FileContentResponse;
 import cbs.nova.starter.service.DslDocsService;
 import cbs.nova.starter.service.DocTemplateService;
+import cbs.nova.starter.web.RequestBodyLimitFilter;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -160,5 +163,24 @@ class DslDocsHandlerTest {
             servletResponse,
             () -> List.of(new JacksonJsonHttpMessageConverter()));
     return servletResponse.getContentAsString();
+  }
+
+  @Test
+  void bulkWriteRespectsGlobalRequestBodyLimit() {
+    // The router's RequestBodyLimitFilter rejects oversized bodies before the controller runs.
+    // DslExceptionHandler then maps the DslPayloadTooLargeException to a 413 with the
+    // PAYLOAD_TOO_LARGE ErrorResponse. We assert the filter short-circuit here; the response
+    // shape is pinned by DslExceptionHandlerTest.
+    RequestBodyLimitFilter filter = new RequestBodyLimitFilter(
+            new cbs.nova.starter.config.properties.CbsNovaWebProperties(8L));
+    MockHttpServletRequest req = new MockHttpServletRequest("POST", "/api/dsl/docs/bulk");
+    req.setContentType("application/json");
+    req.setContent(("{\"entries\":[" + "{\"data\":\"" + "x".repeat(4096) + "\"}".repeat(50) + "]}")
+            .getBytes());
+    ServerRequest oversized = ServerRequest.create(req, CONVERTERS);
+
+    assertThatThrownBy(() -> filter.filter(oversized, handler::bulkWrite))
+            .isInstanceOfSatisfying(DslPayloadTooLargeException.class, ex ->
+                    assertThat(ex.getEntityName()).isEqualTo(RequestBodyLimitFilter.ENTITY_NAME));
   }
 }
