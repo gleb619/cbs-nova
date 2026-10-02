@@ -13,6 +13,7 @@ import cbs.nova.starter.model.ValidationErrorsResponse;
 import cbs.nova.starter.service.DslRuntimeService;
 import cbs.nova.starter.service.InputValidator;
 import cbs.nova.starter.web.DslPayloadSizeValidator;
+import cbs.nova.starter.web.RequestBodyLimitFilter;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import io.swagger.v3.oas.annotations.Operation;
@@ -89,12 +90,14 @@ public class DslRuntimeRouterConfiguration {
               @ApiResponse(responseCode = "422", description = "Input validation failed", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ValidationErrorsResponse.class)))
           }))
   })
-  public RouterFunction<ServerResponse> dslRuntimeRouter(DslRuntimeHandler handler) {
+  public RouterFunction<ServerResponse> dslRuntimeRouter(DslRuntimeHandler handler,
+          RequestBodyLimitFilter requestBodyLimitFilter) {
     return RouterFunctions.route()
             .POST("/api/dsl/preview/{name}", handler::preview)
             .POST("/api/dsl/hierarchy/{name}", handler::hierarchy)
             .POST("/api/dsl/run/{name}", handler::run)
             .POST("/api/dsl/explain/{name}", handler::explain)
+            .filter(requestBodyLimitFilter)
             .build();
   }
 }

@@ -11,6 +11,7 @@ import cbs.nova.starter.vhs.loadtest.VhsLoadTest;
 import cbs.nova.starter.vhs.management.ReplayRunResponse;
 import cbs.nova.starter.vhs.management.TapeSummary;
 import cbs.nova.starter.vhs.management.VhsManagementService;
+import cbs.nova.starter.web.RequestBodyLimitFilter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -89,13 +90,15 @@ public class VhsManagementRouterConfiguration {
               @ApiResponse(responseCode = "503", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
           }))
   })
-  public RouterFunction<ServerResponse> vhsManagementRouter(VhsManagementHandler handler) {
+  public RouterFunction<ServerResponse> vhsManagementRouter(VhsManagementHandler handler,
+          RequestBodyLimitFilter requestBodyLimitFilter) {
     return RouterFunctions.route()
             .GET("/api/v1/vhs/tapes", handler::list)
             .GET("/api/v1/vhs/tapes/{runId}", handler::download)
             .DELETE("/api/v1/vhs/tapes/{runId}", handler::delete)
             .POST("/api/v1/vhs/tapes/{runId}/replay", handler::replay)
             .POST("/api/v1/vhs/loadtest", handler::loadtest)
+            .filter(requestBodyLimitFilter)
             .build();
   }
 }

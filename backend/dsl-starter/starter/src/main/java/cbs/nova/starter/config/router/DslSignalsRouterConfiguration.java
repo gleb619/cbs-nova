@@ -3,6 +3,7 @@ package cbs.nova.starter.config.router;
 import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.starter.controller.DslSignalsHandler;
 import cbs.nova.starter.service.DslSignalService;
+import cbs.nova.starter.web.RequestBodyLimitFilter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
@@ -43,10 +44,12 @@ public class DslSignalsRouterConfiguration {
               @ApiResponse(responseCode = "404", description = "Run not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
           }))
   })
-  public RouterFunction<ServerResponse> dslSignalsRouter(DslSignalsHandler handler) {
+  public RouterFunction<ServerResponse> dslSignalsRouter(DslSignalsHandler handler,
+          RequestBodyLimitFilter requestBodyLimitFilter) {
     return RouterFunctions.route()
             .POST("/api/dsl/signals/{runId}", handler::sendSignal)
             .GET("/api/dsl/queries/{runId}", handler::querySignalState)
+            .filter(requestBodyLimitFilter)
             .build();
   }
 }

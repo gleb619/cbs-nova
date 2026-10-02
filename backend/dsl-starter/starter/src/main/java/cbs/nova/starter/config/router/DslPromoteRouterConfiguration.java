@@ -6,6 +6,7 @@ import cbs.nova.starter.model.PromotionModels.PromotionDefinition;
 import cbs.nova.starter.model.PromotionModels.PromotionEnvironment;
 import cbs.nova.starter.model.PromotionModels.PromotionRequest;
 import cbs.nova.starter.model.VcsModels.ImportBundleResult;
+import cbs.nova.starter.web.RequestBodyLimitFilter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -44,11 +45,13 @@ public class DslPromoteRouterConfiguration {
               @ApiResponse(responseCode = "404", description = "Source or target environment not configured", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
           }))
   })
-  public RouterFunction<ServerResponse> dslPromoteRouter(DslPromoteHandler handler) {
+  public RouterFunction<ServerResponse> dslPromoteRouter(DslPromoteHandler handler,
+          RequestBodyLimitFilter requestBodyLimitFilter) {
     return RouterFunctions.route()
             .GET("/api/dsl/promote/environments", handler::environments)
             .GET("/api/dsl/promote/definitions", handler::definitions)
             .POST("/api/dsl/promote", handler::promote)
+            .filter(requestBodyLimitFilter)
             .build();
   }
 

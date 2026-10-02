@@ -6,6 +6,7 @@ import cbs.nova.starter.model.DefinitionTestRunReport;
 import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.starter.service.DslAuditService;
 import cbs.nova.starter.service.DslDefinitionTestService;
+import cbs.nova.starter.web.RequestBodyLimitFilter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
@@ -47,11 +48,13 @@ public class DslDefinitionTestRouterConfiguration {
               @Parameter(name = "case", in = ParameterIn.QUERY, description = "Optional case-name subset; may be repeated")}, responses = @ApiResponse(responseCode = "200", content = @Content(mediaType = "application/json", schema = @Schema(implementation = DefinitionTestRunReport.class)))))
   })
   public RouterFunction<ServerResponse> dslDefinitionTestRouter(
-          DslDefinitionTestHandler handler) {
+          DslDefinitionTestHandler handler,
+          RequestBodyLimitFilter requestBodyLimitFilter) {
     return RouterFunctions.route()
             .GET("/api/dsl/definitions/{name}/tests", handler::list)
             .PUT("/api/dsl/definitions/{name}/tests", handler::replace)
             .POST("/api/dsl/definitions/{name}/tests/run", handler::run)
+            .filter(requestBodyLimitFilter)
             .build();
   }
 }

@@ -6,6 +6,7 @@ import cbs.nova.starter.controller.ChangeRequestHandler;
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.entity.ChangeRequestEntity;
 import cbs.nova.starter.security.RoleResolver;
+import cbs.nova.starter.web.RequestBodyLimitFilter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
@@ -75,12 +76,14 @@ public class ChangeRequestRouterConfiguration {
               @ApiResponse(responseCode = "409", description = "Change request is not pending", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
           }))
   })
-  public RouterFunction<ServerResponse> changeRequestRouter(ChangeRequestHandler handler) {
+  public RouterFunction<ServerResponse> changeRequestRouter(ChangeRequestHandler handler,
+          RequestBodyLimitFilter requestBodyLimitFilter) {
     return RouterFunctions.route()
             .POST("/api/dsl/drafts/{name}/change-request", handler::submit)
             .GET("/api/dsl/change-requests", handler::list)
             .POST("/api/dsl/change-requests/{id}/approve", handler::approve)
             .POST("/api/dsl/change-requests/{id}/reject", handler::reject)
+            .filter(requestBodyLimitFilter)
             .build();
   }
 }
