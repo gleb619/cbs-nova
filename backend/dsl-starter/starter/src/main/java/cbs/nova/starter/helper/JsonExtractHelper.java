@@ -39,7 +39,11 @@ public class JsonExtractHelper implements Executable<JsonExtractIn, JsonExtractO
       return Result.failure(new IllegalArgumentException("Invalid JSON: " + e.getMessage(), e));
     }
 
-    JsonValue terminal = navigate(value, tokenize(input.path()));
+    String[] segments = tokenize(input.path());
+    if (segments.length == 0) {
+      return Result.success(new JsonExtractOut(null, false));
+    }
+    JsonValue terminal = navigate(value, segments);
     if (!terminal.isPresent()) {
       return Result.success(new JsonExtractOut(null, false));
     }
@@ -52,16 +56,16 @@ public class JsonExtractHelper implements Executable<JsonExtractIn, JsonExtractO
    * {@link #navigate}. Accepts:
    *
    * <ul>
-   *   <li>a leading {@code $} (with an optional following {@code .}) — stripped;</li>
-   *   <li>plain dotted keys, e.g. {@code a.b.c};</li>
-   *   <li>numeric array indices in brackets, e.g. {@code items[0].id};
-   *       the bracket form is expanded into {@code items}, {@code 3} segments.</li>
+   * <li>a leading {@code $} (with an optional following {@code .}) — stripped;</li>
+   * <li>plain dotted keys, e.g. {@code a.b.c};</li>
+   * <li>numeric array indices in brackets, e.g. {@code items[0].id}; the bracket form is expanded
+   * into {@code items}, {@code 3} segments.</li>
    * </ul>
    *
-   * <p>Blank or {@code $}-only paths resolve to the document root and yield
-   * {@code present = false} (matching the pre-existing blank-path contract). Malformed
-   * bracket expressions such as {@code items[x]} or {@code items[} also resolve to
-   * {@code present = false} without throwing.
+   * <p>
+   * Blank or {@code $}-only paths resolve to the document root and yield {@code present = false}
+   * (matching the pre-existing blank-path contract). Malformed bracket expressions such as
+   * {@code items[x]} or {@code items[} also resolve to {@code present = false} without throwing.
    */
   @NonNull
   static String[] tokenize(@NonNull String path) {
