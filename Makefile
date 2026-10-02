@@ -248,7 +248,8 @@ KANBAN_LOCK         := scripts/kanban/pnpm-lock.yaml
 ## Stamp is node_modules/.modules.yaml (rewritten by pnpm on every install).
 ## Reinstalls when package.json or pnpm-lock.yaml is newer than the stamp,
 ## or when node_modules is missing entirely.
-kanban-install: $(KANBAN_MODULES_STAMP)
+.PHONY: kanban-install
+kanban-install: $(KANBAN_MODULES_STAMP) ## Install kanban CLI Node dependencies (non-interactive; skipped when up to date)
 
 $(KANBAN_MODULES_STAMP): $(KANBAN_PKG) $(KANBAN_LOCK)
 	@cd scripts/kanban && CI=true pnpm install --silent --frozen-lockfile --config.confirmModulesPurge=false
