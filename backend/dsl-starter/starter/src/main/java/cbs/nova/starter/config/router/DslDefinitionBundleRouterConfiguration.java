@@ -4,6 +4,7 @@ import cbs.nova.starter.controller.DslDraftHandler;
 import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.starter.model.VcsModels.DefinitionBundle;
 import cbs.nova.starter.model.VcsModels.ImportBundleResult;
+import cbs.nova.starter.web.RequestBodyLimitFilter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -36,10 +37,12 @@ public class DslDefinitionBundleRouterConfiguration {
               @ApiResponse(responseCode = "409", description = "Source directory not configured or not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
           }))
   })
-  public RouterFunction<ServerResponse> dslDefinitionBundleRouter(DslDraftHandler draftHandler) {
+  public RouterFunction<ServerResponse> dslDefinitionBundleRouter(DslDraftHandler draftHandler,
+          RequestBodyLimitFilter requestBodyLimitFilter) {
     return RouterFunctions.route()
             .GET("/api/dsl/definitions/export", draftHandler::exportBundle)
             .POST("/api/dsl/definitions/import", draftHandler::importBundle)
+            .filter(requestBodyLimitFilter)
             .build();
   }
 

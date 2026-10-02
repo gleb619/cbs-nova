@@ -14,6 +14,7 @@ import cbs.nova.dsl.model.LoadResult;
 import cbs.nova.dsl.model.PreviewReport;
 import cbs.nova.dsl.utils.DefinitionLoader;
 import cbs.nova.starter.builder.DslBuilderClient;
+import cbs.nova.starter.web.RequestBodyLimitFilter;
 import cbs.nova.starter.config.router.DslReloadRouterConfiguration;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.controller.DslReloadHandler;
@@ -104,7 +105,8 @@ class DslReloadResourceTest {
   void routerFunctionIsRegisteredByDefault() {
     new ApplicationContextRunner()
             .withUserConfiguration(DslPropertiesConfiguration.class,
-                    DslReloadRouterConfiguration.class, DslReloadHandler.class)
+                    DslReloadRouterConfiguration.class, RequestBodyLimitFilterConfig.class,
+                    DslReloadHandler.class)
             .run(ctx -> assertThat(ctx).hasSingleBean(RouterFunction.class));
   }
 
@@ -557,6 +559,21 @@ class DslReloadResourceTest {
     @Bean
     DslDefinitionLoader dslDefinitionLoader() {
       return new DefinitionLoader();
+    }
+  }
+
+  /**
+   * Stub configuration that exposes the {@link RequestBodyLimitFilter} bean for router configs
+   * under test. The starter normally wires it through {@code RequestBodyLimitFilterConfiguration}
+   * ({@code DslRootAutoConfiguration}), but the focused ApplicationContextRunner tests above load
+   * the router config classes directly without the full auto-configuration graph.
+   */
+  @Configuration
+  static class RequestBodyLimitFilterConfig {
+    @Bean
+    RequestBodyLimitFilter requestBodyLimitFilter() {
+      return new RequestBodyLimitFilter(
+              new cbs.nova.starter.config.properties.CbsNovaWebProperties(0L));
     }
   }
 

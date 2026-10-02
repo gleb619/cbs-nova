@@ -2,6 +2,7 @@ package cbs.nova.starter.config.router;
 
 import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.starter.controller.DslDocsHandler;
+import cbs.nova.starter.web.RequestBodyLimitFilter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -77,7 +78,8 @@ public class DslDocsRouterConfiguration {
               @ApiResponse(responseCode = "409", description = "Source directory not configured", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
           }))
   })
-  RouterFunction<ServerResponse> dslDocsRouter(DslDocsHandler docsHandler) {
+  RouterFunction<ServerResponse> dslDocsRouter(DslDocsHandler docsHandler,
+          RequestBodyLimitFilter requestBodyLimitFilter) {
     return RouterFunctions.route()
             .GET("/api/dsl/docs", docsHandler::list)
             .GET("/api/dsl/docs/by-name/{name}", docsHandler::readByName)
@@ -88,6 +90,7 @@ public class DslDocsRouterConfiguration {
             .GET("/api/dsl/docs/exists/{*path}", docsHandler::exists)
             .GET("/api/dsl/docs/{*path}", docsHandler::read)
             .POST("/api/dsl/docs/{*path}", docsHandler::write)
+            .filter(requestBodyLimitFilter)
             .build();
   }
 }

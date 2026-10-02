@@ -103,7 +103,8 @@ class DslRootAutoConfigurationTest {
             VhsConfiguration.class,
             NotificationConfiguration.class,
             MqEventConfiguration.class,
-            ChangeRequestConfiguration.class);
+            ChangeRequestConfiguration.class,
+            RequestBodyLimitFilterConfiguration.class);
   }
 
   @Test

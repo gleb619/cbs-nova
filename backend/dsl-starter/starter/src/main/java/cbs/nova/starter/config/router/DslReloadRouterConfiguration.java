@@ -2,6 +2,7 @@ package cbs.nova.starter.config.router;
 
 import cbs.nova.starter.controller.DslReloadHandler;
 import cbs.nova.dsl.model.ErrorResponse;
+import cbs.nova.starter.web.RequestBodyLimitFilter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -29,9 +30,11 @@ public class DslReloadRouterConfiguration {
               @ApiResponse(responseCode = "500", description = "Reload failed", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
           }))
   })
-  RouterFunction<ServerResponse> dslReloadRouter(DslReloadHandler reloadHandler) {
+  RouterFunction<ServerResponse> dslReloadRouter(DslReloadHandler reloadHandler,
+          RequestBodyLimitFilter requestBodyLimitFilter) {
     return RouterFunctions.route()
             .POST("/api/dsl/reload", reloadHandler::reload)
+            .filter(requestBodyLimitFilter)
             .build();
   }
 }

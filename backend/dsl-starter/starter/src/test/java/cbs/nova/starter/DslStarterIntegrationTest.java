@@ -96,7 +96,11 @@ class DslStarterIntegrationTest {
             Caffeine.newBuilder().build());
     var handler = new DslRuntimeHandler(service, validator, inputValidator);
     var router = new DslRuntimeRouterConfiguration();
-    mockMvc = MockMvcBuilders.routerFunctions(router.dslRuntimeRouter(handler)).build();
+    mockMvc = MockMvcBuilders.routerFunctions(
+            router.dslRuntimeRouter(handler,
+                    new cbs.nova.starter.web.RequestBodyLimitFilter(
+                            new cbs.nova.starter.config.properties.CbsNovaWebProperties(0L))))
+            .build();
   }
 
   @AfterEach

@@ -310,6 +310,64 @@ pages load; no upstream errors in Nitro logs for 5 minutes.
 
 ---
 
+## 5a. `HTTP 413 PAYLOAD_TOO_LARGE` from a write endpoint  — P2
+
+**Symptom.** Any `POST` / `PUT` / `PATCH` under `/api/` (drafts save, bulk file/docs write,
+signals, schedules, manifest reload, notification rules, promote, api-key admin, change
+request submit/approve/reject, VHS replay/loadtest, run/preview/explain/hierarchy) returns
+`413 PAYLOAD_TOO_LARGE` with the body
+`{"code":"PAYLOAD_TOO_LARGE","message":"Request body for 'request-body' exceeds maximum input size (limit <N> bytes, actual <M> bytes)","entityName":"request-body", ...}`
+— even for uploads that used to succeed. The global body cap
+(`cbs.nova.web.max-request-bytes`, default **10 MiB**) is the outer ceiling that protects
+against unbounded buffering.
+
+**Triage.**
+```bash
+# Confirm the response shape (PAYLOAD_TOO_LARGE) and the limit reported by the server.
+curl -i -X POST -H 'Content-Type: application/json' --data-binary "@big.json" \
+  http://localhost:8090/api/dsl/drafts/foo/save | head -20
+
+# Compare the request body size to the configured limit.
+wc -c big.json
+grep -E 'cbs.nova.web.max-request-bytes' <application.yml-or-env>
+
+# A 413 from a chunked upload (no Content-Length) will only surface once the controller
+# actually reads the body — look for "Request body for 'request-body' exceeds maximum input
+# size" in app logs around the failing call.
+grep -E 'PAYLOAD_TOO_LARGE|Request body for' <app-log> | tail -20
+```
+
+**Hypotheses.**
+- **Legit oversized upload** (CI/CD bundle, large DSL migration, video tape replay). Raise the
+  cap for that workflow; size it from the largest existing bulk-write test fixture (the largest
+  legitimate body in the suite is well under 1 MiB, so the 10 MiB default leaves ~10x headroom).
+- **Bug or DoS probe** — a misbehaving client sends a tiny payload but claims a huge
+  `Content-Length`, or sends a chunked stream that never finishes. The filter catches both
+  cases (header short-circuit OR counting `ServletInputStream`).
+
+**Mitigation.**
+```bash
+# Per-environment, raise the cap (set in deployment YAML or env):
+export CBS_NOVA_WEB_MAX_REQUEST_BYTES=104857600  # 100 MiB
+# Restart the starter; verify with:
+curl -s http://localhost:8090/actuator/configprops | jq '.cbs.nova.web'
+
+# To disable the global cap entirely (loopback / trusted-only deployments):
+export CBS_NOVA_WEB_MAX_REQUEST_BYTES=0
+```
+
+**Permanent fix.** Tune `cbs.nova.web.max-request-bytes` per environment to a value that
+matches the largest legitimate upload in that environment (see `docs/dsl/configuration.md` →
+`### cbs.nova.web`). The per-run semantic cap (`cbs.runs.max-input-bytes`) is unchanged and
+still applies to the run/preview/hierarchy/explain payloads — the new global cap is the
+*outer* ceiling, not a replacement.
+
+**Verification.** Repeat the upload that previously failed; expect `2xx`. Verify that other
+write endpoints still return `413` for genuinely oversized requests by sending a body well
+above the new limit and confirming the `PAYLOAD_TOO_LARGE` shape is unchanged.
+
+---
+
 ## 6. Helper catalog empty / helper missing  — P2
 
 **Symptom.** `GET /api/dsl/helpers` returns an empty (or short) `names` list; DSL Workbench

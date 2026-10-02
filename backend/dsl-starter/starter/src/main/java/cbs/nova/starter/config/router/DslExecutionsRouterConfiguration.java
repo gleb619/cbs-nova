@@ -13,6 +13,7 @@ import cbs.nova.starter.model.TransactionExecutionDto;
 import cbs.nova.starter.persistence.DslRunStatsRepository;
 import cbs.nova.starter.service.DslAuditService;
 import cbs.nova.starter.service.DslRunCancellationService;
+import cbs.nova.starter.web.RequestBodyLimitFilter;
 import org.springframework.beans.factory.ObjectProvider;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -96,7 +97,8 @@ public class DslExecutionsRouterConfiguration {
               @ApiResponse(responseCode = "409", description = "The run is not in a cancellable state", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
           }))
   })
-  public RouterFunction<ServerResponse> dslExecutionsRouter(DslExecutionsHandler handler) {
+  public RouterFunction<ServerResponse> dslExecutionsRouter(DslExecutionsHandler handler,
+          RequestBodyLimitFilter requestBodyLimitFilter) {
     return RouterFunctions.route()
             .GET("/api/executions", handler::list)
             // Literal routes must precede "/api/executions/{id}" or "stats"/"timeseries" would be
@@ -107,6 +109,7 @@ public class DslExecutionsRouterConfiguration {
             .GET("/api/executions/{id}", handler::detail)
             .GET("/api/executions/{id}/transactions", handler::transactions)
             .POST("/api/executions/{id}/cancel", handler::cancel)
+            .filter(requestBodyLimitFilter)
             .build();
   }
 }

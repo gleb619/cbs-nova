@@ -3,6 +3,7 @@ package cbs.nova.starter;
 import static cbs.nova.starter.BuilderClientTestSupport.providerOf;
 import static cbs.nova.starter.BuilderClientTestSupport.stubLocalCompile;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -23,6 +24,8 @@ import cbs.nova.starter.controller.DslDraftHandler;
 import cbs.nova.starter.controller.DslDraftSupport;
 import cbs.nova.starter.controller.DslReloadHandler;
 import cbs.nova.starter.exception.BuilderApiException;
+import cbs.nova.starter.exception.DslPayloadTooLargeException;
+import cbs.nova.starter.web.RequestBodyLimitFilter;
 import cbs.nova.starter.model.CompileModels.CompileRequest;
 import cbs.nova.starter.model.CompileModels.CompileResult;
 import cbs.nova.starter.model.DslFileModels.FileContentResponse;
@@ -437,6 +440,23 @@ class DslDraftResourceTest {
   private static final List<HttpMessageConverter<?>> CONVERTERS = List
           .of(new ByteArrayHttpMessageConverter(),
                   new StringHttpMessageConverter());
+
+  @Test
+  void draftSaveRespectsGlobalRequestBodyLimit() {
+    // A request body larger than the configured cap must be rejected before the handler
+    // runs. The router's RequestBodyLimitFilter throws DslPayloadTooLargeException, which
+    // DslExceptionHandler maps to a 413 with the PAYLOAD_TOO_LARGE ErrorResponse.
+    RequestBodyLimitFilter filter = new RequestBodyLimitFilter(
+            new cbs.nova.starter.config.properties.CbsNovaWebProperties(16L));
+    ServerRequest oversizedBody = postRequestWithSource(
+            "/api/dsl/drafts/foo/save", "foo", "class Foo " + "x".repeat(256));
+
+    assertThatThrownBy(() -> filter.filter(oversizedBody, handler::save))
+            .isInstanceOfSatisfying(DslPayloadTooLargeException.class, ex -> {
+              assertThat(ex.getEntityName()).isEqualTo(RequestBodyLimitFilter.ENTITY_NAME);
+              assertThat(ex.getLimit()).isEqualTo(16L);
+            });
+  }
 
   @SuppressWarnings("unchecked")
   private static <T> ObjectProvider<T> providerOfBean(T bean) {

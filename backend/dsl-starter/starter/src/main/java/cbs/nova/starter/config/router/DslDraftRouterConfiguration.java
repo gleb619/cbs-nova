@@ -9,6 +9,7 @@ import cbs.nova.starter.model.VcsModels.CommitResult;
 import cbs.nova.starter.model.VcsModels.FetchResult;
 import cbs.nova.starter.model.VcsModels.PullResult;
 import cbs.nova.starter.model.VcsModels.RebaseResult;
+import cbs.nova.starter.web.RequestBodyLimitFilter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -124,7 +125,8 @@ public class DslDraftRouterConfiguration {
   })
   RouterFunction<ServerResponse> dslDraftRouter(DslDraftHandler draftHandler,
           DslDraftHistoryHandler historyHandler,
-          DslDraftVcsHandler vcsHandler) {
+          DslDraftVcsHandler vcsHandler,
+          RequestBodyLimitFilter requestBodyLimitFilter) {
     return RouterFunctions.route()
             .POST("/api/dsl/drafts/fetch", vcsHandler::fetch)
             .POST("/api/dsl/drafts/pull", vcsHandler::pull)
@@ -142,6 +144,7 @@ public class DslDraftRouterConfiguration {
             .POST("/api/dsl/drafts/{name}/discard", draftHandler::discard)
             .GET("/api/dsl/drafts/{name}/commits", historyHandler::commits)
             .DELETE("/api/dsl/drafts/{name}", draftHandler::delete)
+            .filter(requestBodyLimitFilter)
             .build();
   }
 }

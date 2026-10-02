@@ -77,7 +77,9 @@ class DslExecutionsHandlerTest {
             auditProvider);
 
     MockMvc mockMvc = MockMvcBuilders.routerFunctions(
-            new DslExecutionsRouterConfiguration().dslExecutionsRouter(handler))
+            new DslExecutionsRouterConfiguration().dslExecutionsRouter(handler,
+                    new cbs.nova.starter.web.RequestBodyLimitFilter(
+                            new cbs.nova.starter.config.properties.CbsNovaWebProperties(0L))))
             .build();
 
     return new Harness(runRepository, transactionExecutionRepository, statsRepository,

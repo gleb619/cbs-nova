@@ -13,6 +13,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.starter.config.router.DslRuntimeRouterConfiguration;
+import cbs.nova.starter.config.properties.CbsNovaWebProperties;
+import cbs.nova.starter.web.RequestBodyLimitFilter;
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.model.DslRequest;
 import cbs.nova.starter.model.RuntimeOutcome;
@@ -42,10 +44,12 @@ class DslRuntimeHandlerTest {
   private DslRuntimeService service;
   private DslPayloadSizeValidator payloadSizeValidator;
   private InputValidator inputValidator;
+  private static RequestBodyLimitFilter requestBodyLimitFilter;
   private MockMvc mockMvc;
 
   @BeforeEach
   void setUp() {
+    requestBodyLimitFilter = new RequestBodyLimitFilter(new CbsNovaWebProperties(0L));
     service = mock(DslRuntimeService.class);
     payloadSizeValidator = mock(DslPayloadSizeValidator.class);
     inputValidator = mock(InputValidator.class);
@@ -54,7 +58,8 @@ class DslRuntimeHandlerTest {
             inputValidator);
     DslRuntimeRouterConfiguration router = new DslRuntimeRouterConfiguration();
 
-    mockMvc = MockMvcBuilders.routerFunctions(router.dslRuntimeRouter(handler))
+    mockMvc = MockMvcBuilders
+            .routerFunctions(router.dslRuntimeRouter(handler, requestBodyLimitFilter))
             .setMessageConverters(new StringHttpMessageConverter(),
                     new JacksonJsonHttpMessageConverter())
             .build();

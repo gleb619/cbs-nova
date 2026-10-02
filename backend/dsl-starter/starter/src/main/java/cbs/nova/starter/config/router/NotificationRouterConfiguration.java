@@ -6,6 +6,7 @@ import cbs.nova.starter.notification.NotificationRuleEngine;
 import cbs.nova.starter.notification.NotificationRuleService;
 import cbs.nova.starter.persistence.NotificationRuleFiringRepository;
 import cbs.nova.starter.service.DslAuditService;
+import cbs.nova.starter.web.RequestBodyLimitFilter;
 import cbs.nova.starter.webhook.WebhookDispatcher;
 import java.util.Optional;
 import io.swagger.v3.oas.annotations.Operation;
@@ -84,7 +85,8 @@ public class NotificationRouterConfiguration {
       @RouterOperation(path = "/api/dsl/notifications/test", beanClass = NotificationRuleHandler.class, beanMethod = "test", method = RequestMethod.POST, operation = @Operation(operationId = "testNotificationRules", summary = "Test-match a synthetic event against the enabled rules and report results", tags = {
           "Notifications"}, responses = @ApiResponse(responseCode = "200", description = "Matched rule ids and per-action results; nothing is persisted")))
   })
-  public RouterFunction<ServerResponse> notificationRouter(NotificationRuleHandler handler) {
+  public RouterFunction<ServerResponse> notificationRouter(NotificationRuleHandler handler,
+          RequestBodyLimitFilter requestBodyLimitFilter) {
     return RouterFunctions.route()
             .GET("/api/dsl/notifications/rules", handler::list)
             .POST("/api/dsl/notifications/rules", handler::create)
@@ -95,6 +97,7 @@ public class NotificationRouterConfiguration {
             .PUT("/api/dsl/notifications/rules/{id}", handler::update)
             .DELETE("/api/dsl/notifications/rules/{id}", handler::delete)
             .POST("/api/dsl/notifications/rules/{id}/enabled", handler::setEnabled)
+            .filter(requestBodyLimitFilter)
             .build();
   }
 }

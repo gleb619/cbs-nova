@@ -6,6 +6,7 @@ import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.starter.model.PageResponse;
 import cbs.nova.starter.service.DslAuditService;
 import cbs.nova.starter.service.DslScheduleService;
+import cbs.nova.starter.web.RequestBodyLimitFilter;
 import io.swagger.v3.oas.annotations.Operation;
 
 import io.swagger.v3.oas.annotations.media.Content;
@@ -78,7 +79,8 @@ public class DslScheduleRouterConfiguration {
               @ApiResponse(responseCode = "404", description = "Schedule not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
           }))
   })
-  public RouterFunction<ServerResponse> dslScheduleRouter(DslScheduleHandler handler) {
+  public RouterFunction<ServerResponse> dslScheduleRouter(DslScheduleHandler handler,
+          RequestBodyLimitFilter requestBodyLimitFilter) {
     return RouterFunctions.route()
             .GET("/api/dsl/schedules", handler::list)
             .POST("/api/dsl/schedules", handler::create)
@@ -86,6 +88,7 @@ public class DslScheduleRouterConfiguration {
             .POST("/api/dsl/schedules/{definition}/resume", handler::resume)
             .PATCH("/api/dsl/schedules/{definition}", handler::update)
             .DELETE("/api/dsl/schedules/{definition}", handler::delete)
+            .filter(requestBodyLimitFilter)
             .build();
   }
 }

@@ -16,9 +16,12 @@ import cbs.nova.starter.model.PreCheck;
 import cbs.nova.starter.model.Target;
 import cbs.nova.starter.security.RoleResolver;
 import cbs.nova.starter.service.PieceManifestService;
+import cbs.nova.starter.web.RequestBodyLimitFilter;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.web.servlet.function.RouterFunction;
@@ -48,7 +51,8 @@ class DslManifestHandlerTest {
   void routerFunctionIsRegisteredByDefault() {
     new ApplicationContextRunner()
             .withUserConfiguration(DslManifestConfiguration.class,
-                    DslManifestRouterConfiguration.class)
+                    DslManifestRouterConfiguration.class,
+                    RequestBodyLimitFilterConfig.class)
             .run(ctx -> assertThat(ctx).hasSingleBean(RouterFunction.class));
   }
 
@@ -56,7 +60,8 @@ class DslManifestHandlerTest {
   void routerFunctionSkippedWhenManifestDisabled() {
     new ApplicationContextRunner()
             .withUserConfiguration(DslManifestConfiguration.class,
-                    DslManifestRouterConfiguration.class)
+                    DslManifestRouterConfiguration.class,
+                    RequestBodyLimitFilterConfig.class)
             .withPropertyValues("cbs.dsl.manifest.enabled=false")
             .run(ctx -> {
               assertThat(ctx).hasNotFailed();
@@ -123,5 +128,20 @@ class DslManifestHandlerTest {
 
     assertThat(handler.resolveGuard(request))
             .containsExactly(new ManifestGuardEntry("workbench-publish", true, null));
+  }
+
+  /**
+   * Stub configuration that exposes the {@link RequestBodyLimitFilter} bean for router configs
+   * under test. The starter normally wires it through {@code RequestBodyLimitFilterConfiguration}
+   * ({@code DslRootAutoConfiguration}), but the focused ApplicationContextRunner tests below load
+   * the router config classes directly without the full auto-configuration graph.
+   */
+  @Configuration
+  static class RequestBodyLimitFilterConfig {
+    @Bean
+    RequestBodyLimitFilter requestBodyLimitFilter() {
+      return new RequestBodyLimitFilter(
+              new cbs.nova.starter.config.properties.CbsNovaWebProperties(0L));
+    }
   }
 }

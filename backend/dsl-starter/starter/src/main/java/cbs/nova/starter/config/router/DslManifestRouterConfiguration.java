@@ -8,6 +8,7 @@ import cbs.nova.starter.model.ManifestGuardEntry;
 import cbs.nova.starter.model.ManifestReloadResponse;
 import cbs.nova.starter.security.RoleResolver;
 import cbs.nova.starter.service.PieceManifestService;
+import cbs.nova.starter.web.RequestBodyLimitFilter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -63,10 +64,12 @@ public class DslManifestRouterConfiguration {
               @ApiResponse(responseCode = "500", description = "Unexpected resolution failure", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
           }))
   })
-  RouterFunction<ServerResponse> dslManifestRouter(DslManifestHandler handler) {
+  RouterFunction<ServerResponse> dslManifestRouter(DslManifestHandler handler,
+          RequestBodyLimitFilter requestBodyLimitFilter) {
     return RouterFunctions.route()
             .POST("/api/dsl/manifest/reload", handler::reload)
             .GET("/api/dsl/manifest/guard", handler::guard)
+            .filter(requestBodyLimitFilter)
             .build();
   }
 }

@@ -20,6 +20,7 @@ import org.springframework.context.annotation.Import;
 @AutoConfigureAfter(DataSourceAutoConfiguration.class)
 @Import({
     RequestIdFilterConfiguration.class,
+    RequestBodyLimitFilterConfiguration.class,
     LoggingConfiguration.class,
     DryRunLoggingConfiguration.class,
     DslConfiguration.class,

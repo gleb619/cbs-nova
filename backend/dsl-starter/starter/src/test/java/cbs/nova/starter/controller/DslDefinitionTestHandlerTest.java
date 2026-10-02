@@ -18,6 +18,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.model.PreviewReport;
 import cbs.nova.starter.AuditTestSupport;
+import cbs.nova.starter.config.properties.CbsNovaWebProperties;
+import cbs.nova.starter.web.RequestBodyLimitFilter;
 import cbs.nova.starter.config.router.DslDefinitionTestRouterConfiguration;
 import cbs.nova.starter.converter.DefaultDslExceptionMapper;
 import cbs.nova.starter.exception.DefinitionNotFoundException;
@@ -50,12 +52,14 @@ class DslDefinitionTestHandlerTest {
 
   private DslDefinitionTestService service;
   private AuditTestSupport.Harness audit;
+  private static RequestBodyLimitFilter requestBodyLimitFilter;
   private MockMvc mockMvc;
 
   private final JsonMapper jackson3 = JsonMapper.builder().build();
 
   @BeforeEach
   void setUp() {
+    requestBodyLimitFilter = new RequestBodyLimitFilter(new CbsNovaWebProperties(0L));
     service = mock(DslDefinitionTestService.class);
     audit = AuditTestSupport.h2();
     DslDefinitionTestHandler handler = new DslDefinitionTestHandler(service,
@@ -72,7 +76,8 @@ class DslDefinitionTestHandlerTest {
     exceptionResolver.setMessageConverters(List.of(new JacksonJsonHttpMessageConverter()));
     exceptionResolver.afterPropertiesSet();
 
-    mockMvc = MockMvcBuilders.routerFunctions(router.dslDefinitionTestRouter(handler))
+    mockMvc = MockMvcBuilders
+            .routerFunctions(router.dslDefinitionTestRouter(handler, requestBodyLimitFilter))
             .setMessageConverters(new StringHttpMessageConverter(),
                     new JacksonJsonHttpMessageConverter())
             .setHandlerExceptionResolvers(exceptionResolver)

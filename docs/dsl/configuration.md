@@ -130,6 +130,33 @@ raw `eventType` is published.
 | `cbs.nova.events.mq.retry-batch-size` | `int` | `100` | Max events retried per pass by `MqDomainEventRetryTask`. Coerced to `100` if `<= 0`. |
 | `cbs.nova.events.mq.retry-interval-seconds` | `long` | `30` | Fixed-delay between `MqDomainEventRetryTask` passes (seconds). Coerced to `30` if `<= 0`. |
 
+### `cbs.nova.web`
+
+Class: `CbsNovaWebProperties` (record). Web-layer global caps applied before any controller
+reads the body. The `RequestBodyLimitFilter` (a `HandlerFilterFunction` wired onto every
+functional router under `config/router/`) enforces this cap for `POST` / `PUT` / `PATCH`
+requests. Read-only methods (`GET` / `HEAD` / `OPTIONS` / `DELETE`) bypass the filter.
+
+- If a `Content-Length` header is present and exceeds the limit, the request is rejected
+  immediately with `HttpStatus.PAYLOAD_TOO_LARGE` (413) and the
+  `PAYLOAD_TOO_LARGE` `ErrorResponse` shape — the body is never read.
+- If the header is missing (chunked transfer-encoding) or the client lies about the size, the
+  underlying `ServletInputStream` is wrapped in a counting/limiting stream that throws
+  `DslPayloadTooLargeException` as soon as a handler reads past the cap.
+
+`DslPayloadSizeValidator` (`cbs.runs.max-input-bytes`) stays in place for the per-run /
+preview / hierarchy / explain handlers — the filter is the **outer** ceiling, not a replacement.
+
+Default `10485760` (`1024 * 1024 * 10`, **10 MiB**) was picked so that the largest existing
+bulk-write fixture in the test suite still fits comfortably (the bulky fixture is a few KiB,
+many orders below 10 MiB). Increase it for bulk-import / VCS-import workflows that ship large
+bundles; set it to `0` to disable the global cap entirely (e.g. trusted-loopback deployments
+or test contexts).
+
+| Key | Type | Default | Effect |
+|-----|------|---------|--------|
+| `cbs.nova.web.max-request-bytes` | `long` | `10485760` (10 MiB) | Max HTTP request body size for any `POST` / `PUT` / `PATCH` under `/api/`. Oversized requests are rejected with HTTP 413 `PAYLOAD_TOO_LARGE`. `0` (or negative, normalised to `0`) disables the cap entirely. |
+
 ### `cbs.nova.logging`
 
 Class: `CbsNovaLoggingProperties` (record). Starter-internal log levels and MDC behaviour.

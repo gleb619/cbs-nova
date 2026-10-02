@@ -1,6 +1,7 @@
 package cbs.nova.starter.config.router;
 
 import cbs.nova.starter.controller.ApiKeyAdminHandler;
+import cbs.nova.starter.web.RequestBodyLimitFilter;
 import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.starter.service.ApiKeyStore;
 import cbs.nova.starter.service.DslAuditService;
@@ -49,11 +50,13 @@ public class ApiKeyAdminRouterConfiguration {
               @ApiResponse(responseCode = "204", description = "Key revoked"),
               @ApiResponse(responseCode = "404", description = "Unknown id", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))}))
   })
-  public RouterFunction<ServerResponse> apiKeyAdminRouter(ApiKeyAdminHandler handler) {
+  public RouterFunction<ServerResponse> apiKeyAdminRouter(ApiKeyAdminHandler handler,
+          RequestBodyLimitFilter requestBodyLimitFilter) {
     return RouterFunctions.route()
             .GET("/api/dsl/auth/keys", handler::list)
             .POST("/api/dsl/auth/keys", handler::create)
             .DELETE("/api/dsl/auth/keys/{id}", handler::revoke)
+            .filter(requestBodyLimitFilter)
             .build();
   }
 }

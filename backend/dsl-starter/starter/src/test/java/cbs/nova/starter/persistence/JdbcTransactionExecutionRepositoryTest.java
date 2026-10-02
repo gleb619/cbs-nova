@@ -8,6 +8,7 @@ import cbs.nova.dsl.transaction.TransactionExecutionStatus;
 import cbs.nova.starter.config.DslRootAutoConfiguration;
 import cbs.nova.starter.config.DslScheduleConfiguration;
 import cbs.nova.starter.config.router.DslDiagnosticsRouterConfiguration;
+import cbs.nova.starter.config.router.DslManifestRouterConfiguration;
 import cbs.nova.starter.config.router.DslScheduleRouterConfiguration;
 import cbs.nova.starter.converter.TransactionExecutionMapperImpl;
 import java.time.Instant;
@@ -177,7 +178,11 @@ class JdbcTransactionExecutionRepositoryTest {
   @Configuration
   @EnableAutoConfiguration(exclude = {DslRootAutoConfiguration.class,
       DslScheduleConfiguration.class, DslDiagnosticsRouterConfiguration.class,
-      DslScheduleRouterConfiguration.class})
+      DslScheduleRouterConfiguration.class,
+      // T774: each *RouterConfiguration now requires a RequestBodyLimitFilter bean that
+      // RequestBodyLimitFilterConfiguration (only loaded by DslRootAutoConfiguration) supplies.
+      // DslRootAutoConfiguration is excluded above, so skip the manifest router config too.
+      DslManifestRouterConfiguration.class})
   @EnableJdbcRepositories(basePackages = "cbs.nova.starter.persistence")
   @Import({JdbcTransactionExecutionRepository.class, TransactionExecutionMapperImpl.class})
   static class TestApplication {

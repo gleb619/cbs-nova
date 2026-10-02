@@ -8,7 +8,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import cbs.nova.dsl.model.ErrorResponse;
+import cbs.nova.starter.exception.DslPayloadTooLargeException;
 import cbs.nova.starter.service.DslSignalService;
+import cbs.nova.starter.web.RequestBodyLimitFilter;
 import tools.jackson.databind.exc.MismatchedInputException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -157,6 +159,24 @@ class DslSignalsHandlerTest {
     Map<String, Object> entity = (Map<String, Object>) ((EntityResponse<?>) response).entity();
     assertThat(entity).containsEntry("runId", RUN_ID)
             .containsEntry("signalState", state);
+  }
+
+  @Test
+  void sendSignalRespectsGlobalRequestBodyLimit() {
+    // The router's RequestBodyLimitFilter rejects oversized bodies with
+    // DslPayloadTooLargeException before the handler runs; DslExceptionHandler then maps that
+    // to a 413 with the PAYLOAD_TOO_LARGE ErrorResponse. Verify the filter short-circuit here;
+    // the response shape is pinned by DslExceptionHandlerTest.
+    RequestBodyLimitFilter filter = new RequestBodyLimitFilter(
+            new cbs.nova.starter.config.properties.CbsNovaWebProperties(8L));
+    String hugeJson = "{\"signalName\":\"" + SIGNAL_NAME + "\",\"payload\":"
+            + "{\"data\":\"" + "x".repeat(2048) + "\"}}";
+    ServerRequest oversized = postRequest(RUN_ID, hugeJson);
+
+    assertThatThrownBy(() -> filter.filter(oversized, handler::sendSignal))
+            .isInstanceOfSatisfying(DslPayloadTooLargeException.class,
+                    ex -> assertThat(ex.getEntityName())
+                            .isEqualTo(RequestBodyLimitFilter.ENTITY_NAME));
   }
 
   private static String body() {
