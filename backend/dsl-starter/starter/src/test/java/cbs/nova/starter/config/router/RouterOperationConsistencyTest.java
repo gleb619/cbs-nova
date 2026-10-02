@@ -5,6 +5,7 @@ import static org.mockito.Mockito.mock;
 
 import cbs.nova.starter.config.properties.CbsNovaWebProperties;
 import cbs.nova.starter.web.RequestBodyLimitFilter;
+import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -25,10 +26,10 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springdoc.core.annotations.RouterOperation;
 import org.springdoc.core.annotations.RouterOperations;
-import org.springframework.beans.factory.config.BeanDefinition;
-import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
+import org.springframework.core.type.classreading.SimpleMetadataReaderFactory;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.type.filter.AnnotationTypeFilter;
 import org.springframework.http.HttpMethod;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.servlet.function.RouterFunction;
@@ -62,6 +63,15 @@ import org.springframework.web.servlet.function.ServerResponse;
 class RouterOperationConsistencyTest {
 
   private static final String CONFIG_PACKAGE = "cbs.nova.starter.config.router";
+
+  /** Measured 2026-10-02: 21 router classes, 94 routes. Lower bounds only. */
+  private static final int MIN_ROUTER_CLASSES = 21;
+  private static final int MIN_REGISTERED_ROUTES = 94;
+
+  /** Config classes in the package that legitimately register no router of their own. */
+  private static final Set<String> NON_ROUTER_CONFIGURATIONS = Set.of(
+          // Aggregator: only @Import's the individual router configurations.
+          "DslRouterConfiguration");
 
   /**
    * Reverse-direction gaps: {@code (httpMethod, path)} tuples that are registered by the
@@ -135,6 +145,25 @@ class RouterOperationConsistencyTest {
     }
 
     // Forward direction: every annotation must match a registered (method, path) pair.
+    // Coverage floors: the guard must not pass vacuously if discovery or route collection regress.
+    // Every config class must expose a RouterFunction<ServerResponse> bean unless it is listed
+    // in NON_ROUTER_CONFIGURATIONS; counts are lower bounds so adding routers/routes stays green.
+    List<String> unexpectedNonRouters = configClasses.stream()
+            .map(Class::getSimpleName)
+            .filter(n -> !registeredRoutesByClass.containsKey(n))
+            .filter(n -> !NON_ROUTER_CONFIGURATIONS.contains(n))
+            .toList();
+    assertThat(unexpectedNonRouters)
+            .as("config classes without a RouterFunction<ServerResponse> bean (add to "
+                    + "NON_ROUTER_CONFIGURATIONS only with a reason)")
+            .isEmpty();
+    assertThat(registeredRoutesByClass).as("router configuration classes examined")
+            .hasSizeGreaterThanOrEqualTo(MIN_ROUTER_CLASSES);
+    assertThat(registeredRoutesByClass.values().stream().mapToInt(Set::size).sum())
+            .as("registered routes examined").isGreaterThanOrEqualTo(MIN_REGISTERED_ROUTES);
+    assertThat(registeredRoutesByClass).as("conditionally-enabled routers must be included")
+            .containsKey("WebhookRouterConfiguration");
+
     List<String> annotationMismatches = new ArrayList<>();
     for (Map.Entry<String, Set<RouteKey>> entry : annotationRoutesByClass.entrySet()) {
       String className = entry.getKey();
@@ -183,16 +212,23 @@ class RouterOperationConsistencyTest {
   // Discovery: classpath scan of cbs.nova.starter.config.router for @Configuration classes.
   // ---------------------------------------------------------------------------------------------
 
-  private static List<Class<?>> discoverRouterConfigurations() {
-    ClassPathScanningCandidateComponentProvider scanner = new ClassPathScanningCandidateComponentProvider(
-            false);
-    scanner.addIncludeFilter(new AnnotationTypeFilter(Configuration.class));
-    Set<BeanDefinition> metadataReaders = scanner.findCandidateComponents(CONFIG_PACKAGE);
-
-    // Sort by class name for reproducible test output.
+  /**
+   * Walks the package's {@code .class} metadata directly instead of using
+   * {@code ClassPathScanningCandidateComponentProvider}: that provider evaluates
+   * {@code @Conditional} and would silently drop conditionally-enabled routers such as
+   * {@code WebhookRouterConfiguration} ({@code @ConditionalOnProperty(cbs.webhook.enabled)}) — the
+   * exact area where openapi drift was found (T767).
+   */
+  private static List<Class<?>> discoverRouterConfigurations() throws IOException {
+    PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
+    SimpleMetadataReaderFactory readers = new SimpleMetadataReaderFactory();
     TreeSet<String> names = new TreeSet<>();
-    for (BeanDefinition reader : metadataReaders) {
-      names.add(reader.getBeanClassName());
+    for (Resource resource : resolver.getResources(
+            "classpath*:" + CONFIG_PACKAGE.replace('.', '/') + "/*.class")) {
+      var metadata = readers.getMetadataReader(resource).getAnnotationMetadata();
+      if (metadata.isAnnotated(Configuration.class.getName())) {
+        names.add(metadata.getClassName());
+      }
     }
 
     List<Class<?>> classes = new ArrayList<>();
