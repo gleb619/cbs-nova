@@ -100,11 +100,14 @@ public final class VhsReplayJob {
    */
   private void recordStatus(@NonNull JobStatus status) {
     synchronized (statuses) {
-      boolean isNewId = !statuses.containsKey(status.replayRunId());
-      if (isNewId && isFinished(status.status()) && statuses.size() >= statusLimit()) {
-        evictOldestFinished();
+      String id = status.replayRunId();
+      if (isFinished(status.status())) {
+        // Re-insert so finished entries are ordered by completion time (oldest-completed evicted
+        // first); a plain re-put would keep the job's original, older `accepted` position.
+        statuses.remove(id);
       }
-      statuses.put(status.replayRunId(), status);
+      statuses.put(id, status);
+      trimToLimit(id);
     }
   }
 
@@ -112,17 +115,23 @@ public final class VhsReplayJob {
     return "completed".equals(state) || "failed".equals(state);
   }
 
-  private void evictOldestFinished() {
+  /**
+   * Evicts oldest-completed finished entries until the map is within the limit. In-flight entries
+   * and the entry just recorded are never evicted, so when everything else is in flight the map
+   * temporarily overshoots rather than dropping a running job; it trims as those jobs finish.
+   */
+  private void trimToLimit(@NonNull String justRecordedId) {
+    int limit = statusLimit();
+    if (statuses.size() <= limit) {
+      return;
+    }
     Iterator<Map.Entry<String, JobStatus>> it = statuses.entrySet().iterator();
-    while (it.hasNext()) {
+    while (statuses.size() > limit && it.hasNext()) {
       Map.Entry<String, JobStatus> entry = it.next();
-      if (isFinished(entry.getValue().status())) {
+      if (!entry.getKey().equals(justRecordedId) && isFinished(entry.getValue().status())) {
         it.remove();
-        return;
       }
     }
-    // No finished entry to evict: every tracked job is in-flight. Per the documented contract
-    // we tolerate a temporary overshoot rather than dropping an in-flight job.
   }
 
   private int statusLimit() {

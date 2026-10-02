@@ -78,6 +78,55 @@ class VhsReplayJobTest {
   }
 
   @Test
+  void asyncLifecycleAcceptedThenCompletedStaysBounded() throws Exception {
+    // The real async path: every job is first recorded `accepted`, later re-recorded `completed`
+    // under the same id. The map must stay bounded across that lifecycle (this is the leak path).
+    int limit = 5;
+    VhsReplayJob job = jobWithStatusLimit(limit);
+    List<String> ids = new ArrayList<>();
+    for (int i = 0; i < limit * 4; i++) {
+      String id = "replay-async-" + i;
+      ids.add(id);
+      recordStatus(job, id, "accepted", null);
+      recordStatus(job, id, "completed", reportStub());
+    }
+
+    assertThat(job.statusCount()).isEqualTo(limit);
+    // Oldest completed are gone, newest `limit` are present with their final status + report.
+    assertThat(job.status(ids.get(0))).isEmpty();
+    for (String id : ids.subList(ids.size() - limit, ids.size())) {
+      assertThat(job.status(id)).isPresent().hasValueSatisfying(s -> {
+        assertThat(s.status()).isEqualTo("completed");
+        assertThat(s.report()).isNotNull();
+      });
+    }
+  }
+
+  @Test
+  void jobsInFlightWhenMapIsFullCompleteLaterWithoutLosingTheirFinalStatus() throws Exception {
+    int limit = 3;
+    VhsReplayJob job = jobWithStatusLimit(limit);
+    // 3 in flight at once (overshoot allowed only while nothing is finished)...
+    for (String id : List.of("a", "b", "c", "d", "e")) {
+      recordStatus(job, id, "accepted", null);
+    }
+    assertThat(job.statusCount()).isEqualTo(5);
+    // ...completing them trims back toward the bound, oldest-completed first, and the job that
+    // just finished always keeps its own final status.
+    for (String id : List.of("d", "a", "e", "b", "c")) {
+      recordStatus(job, id, "completed", reportStub());
+      assertThat(job.status(id)).as("just-finished %s keeps final status", id).isPresent();
+    }
+    assertThat(job.statusCount()).isEqualTo(limit);
+    // Completion order d,a,e,b,c -> the 3 most recently completed survive: e,b,c.
+    assertThat(job.status("d")).isEmpty();
+    assertThat(job.status("a")).isEmpty();
+    assertThat(job.status("e")).isPresent();
+    assertThat(job.status("b")).isPresent();
+    assertThat(job.status("c")).isPresent();
+  }
+
+  @Test
   void lateCompletionUpdateDoesNotEvictInFlightJob() throws Exception {
     int limit = 3;
     VhsReplayJob job = jobWithStatusLimit(limit);
@@ -88,18 +137,18 @@ class VhsReplayJobTest {
     recordStatus(job, "replay-fin-2", "completed", reportStub());
     assertThat(job.statusCount()).isEqualTo(limit);
 
-    // An in-flight job arrives; the map temporarily overshoots the limit (no finished entry is
-    // old enough to evict, and the in-flight one must not be evicted either).
+    // An in-flight job arrives while the map is full of finished entries: the oldest finished
+    // entry is evicted to stay within the bound; the in-flight one is never evicted.
     String inflight = "replay-late";
     recordStatus(job, inflight, "accepted", null);
-    assertThat(job.statusCount()).isEqualTo(limit + 1);
+    assertThat(job.statusCount()).isEqualTo(limit);
     assertThat(job.status(inflight)).isPresent();
+    assertThat(job.status("replay-fin-0")).isEmpty();
 
-    // Late completion update of the in-flight id: this is an existing key, so the value is
-    // replaced in place and no eviction is triggered. The final status must be visible and
-    // the other finished entries must still be present.
+    // Late completion of the in-flight id: it keeps its final status + report, the bound holds,
+    // and the oldest remaining finished entry makes room.
     recordStatus(job, inflight, "completed", reportStub());
-    assertThat(job.statusCount()).isEqualTo(limit + 1);
+    assertThat(job.statusCount()).isEqualTo(limit);
     assertThat(job.status(inflight))
             .isPresent()
             .hasValueSatisfying(s -> {

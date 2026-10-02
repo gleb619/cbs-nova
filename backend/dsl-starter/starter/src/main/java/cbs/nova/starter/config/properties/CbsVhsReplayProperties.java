@@ -5,6 +5,7 @@ import cbs.nova.starter.vhs.replay.fake.FakeRule;
 import java.util.List;
 import java.util.Map;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.bind.ConstructorBinding;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 import org.springframework.validation.annotation.Validated;
 
@@ -68,6 +69,9 @@ public record CbsVhsReplayProperties(
             DEFAULT_STATUS_LIMIT);
   }
 
+  // Two public constructors exist (this canonical one + the 13-arg compatibility overload), so
+  // Spring Boot needs an explicit binding constructor or the context fails to start.
+  @ConstructorBinding
   public CbsVhsReplayProperties {
     if (copies < 1) {
       throw new IllegalArgumentException("cbs.vhs.replay.copies must be >= 1, was " + copies);
