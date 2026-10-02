@@ -24,15 +24,18 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import cbs.nova.starter.core.StarterConstants;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tags;
+import io.micrometer.core.instrument.Timer;
 import tools.jackson.databind.ObjectMapper;
 
 @Slf4j
-@RequiredArgsConstructor
 public class WebhookDispatcher {
 
   private final WebhookProperties properties;
@@ -46,6 +49,48 @@ public class WebhookDispatcher {
   private final Map<SubscriptionKey, WebhookDeliveryInfo> outcomes = new ConcurrentHashMap<>();
 
   private final Optional<WebhookDeliveryRecordRepository> deliveryRepository;
+
+  /**
+   * Optional Micrometer registry. Resolved once at construction so a missing registry (tests,
+   * hosts without actuator) silently turns into a no-op rather than a hot lookup per delivery.
+   */
+  @Nullable
+  private final MeterRegistry meterRegistry;
+
+  /**
+   * Production wiring constructor — the registry is resolved via {@link ObjectProvider} so
+   * contexts without a {@code MeterRegistry} bean (e.g. tests, minimal hosts) stay working.
+   */
+  public WebhookDispatcher(WebhookProperties properties, ObjectMapper objectMapper,
+          ThreadPoolTaskExecutor deliveryExecutor, HttpClient httpClient,
+          Optional<WebhookDeliveryRecordRepository> deliveryRepository,
+          ObjectProvider<MeterRegistry> meterRegistryProvider) {
+    this(properties, objectMapper, deliveryExecutor, httpClient, deliveryRepository,
+            meterRegistryProvider.getIfAvailable());
+  }
+
+  /**
+   * Convenience constructor for callers without a Micrometer registry. Keeps existing unit tests
+   * green (none of them wire a registry).
+   */
+  public WebhookDispatcher(WebhookProperties properties, ObjectMapper objectMapper,
+          ThreadPoolTaskExecutor deliveryExecutor, HttpClient httpClient,
+          Optional<WebhookDeliveryRecordRepository> deliveryRepository) {
+    this(properties, objectMapper, deliveryExecutor, httpClient, deliveryRepository,
+            (MeterRegistry) null);
+  }
+
+  public WebhookDispatcher(WebhookProperties properties, ObjectMapper objectMapper,
+          ThreadPoolTaskExecutor deliveryExecutor, HttpClient httpClient,
+          Optional<WebhookDeliveryRecordRepository> deliveryRepository,
+          @Nullable MeterRegistry meterRegistry) {
+    this.properties = properties;
+    this.objectMapper = objectMapper;
+    this.deliveryExecutor = deliveryExecutor;
+    this.httpClient = httpClient;
+    this.deliveryRepository = deliveryRepository;
+    this.meterRegistry = meterRegistry;
+  }
 
   public void onRunComplete(String runId, String processName, String status,
           Instant startedAt, Instant finishedAt, @Nullable String error) {
@@ -93,16 +138,22 @@ public class WebhookDispatcher {
       body = objectMapper.writeValueAsBytes(payload);
     } catch (Exception ex) {
       log.warn("Failed to serialize notification payload for {}", url, ex);
-      return new WebhookDeliveryResult("serialization_failed", 0, ex.getMessage(), 0L);
+      long ms = durationMs(deliveryStarted);
+      recordDeliveryMetric("serialization_failed", ms);
+      return new WebhookDeliveryResult("serialization_failed", 0, ex.getMessage(), ms);
     }
 
     if (!isUrlAllowed(url)) {
       log.warn("Rejecting notification delivery to non-https URL: {}", url);
+      long ms = durationMs(deliveryStarted);
+      recordDeliveryMetric("rejected", ms);
       return new WebhookDeliveryResult("rejected", 0,
-              "Non-https URL not allowed: " + truncate(url), 0L);
+              "Non-https URL not allowed: " + truncate(url), ms);
     }
 
-    return sendWithRetries(url, secret, eventType, body, deliveryStarted);
+    WebhookDeliveryResult result = sendWithRetries(url, secret, eventType, body, deliveryStarted);
+    recordDeliveryMetric(classify(result.status()), result.durationMs());
+    return result;
   }
 
   private boolean matches(WebhookSubscription subscription, String processName, String status) {
@@ -132,14 +183,18 @@ public class WebhookDispatcher {
     try {
       body = objectMapper.writeValueAsBytes(payload);
     } catch (Exception ex) {
-      recordOutcome(subscription, "serialization_failed", 0, ex.getMessage(), 0L);
+      long ms = durationMs(deliveryStarted);
+      recordOutcome(subscription, "serialization_failed", 0, ex.getMessage(), ms);
+      recordDeliveryMetric("failure", ms);
       log.warn("Failed to serialize webhook payload for {}", url, ex);
       return;
     }
 
     if (!isUrlAllowed(url)) {
+      long ms = durationMs(deliveryStarted);
       recordOutcome(subscription, "rejected", 0,
-              "Non-https URL not allowed: " + truncate(url), 0L);
+              "Non-https URL not allowed: " + truncate(url), ms);
+      recordDeliveryMetric("rejected", ms);
       log.warn("Rejecting webhook delivery to non-https URL: {}", url);
       return;
     }
@@ -148,6 +203,7 @@ public class WebhookDispatcher {
             StarterConstants.WEBHOOK_EVENT_RUN_COMPLETED, body, deliveryStarted);
     recordOutcome(subscription, result.status(), result.attempts(), result.error(),
             result.durationMs());
+    recordDeliveryMetric(classify(result.status()), result.durationMs());
   }
 
   /**
@@ -300,6 +356,48 @@ public class WebhookDispatcher {
       return value;
     }
     return value.substring(0, StarterConstants.WEBHOOK_URL_MAX_LENGTH);
+  }
+
+  /**
+   * Map the raw transport {@code status} ({@code "200"}, {@code "500"}, {@code "failed"},
+   * {@code "interrupted"}, ...) onto the closed metric vocabulary. Outcomes: {@code success} /
+   * {@code failure} / {@code rejected}. Anything non-success that is also non-rejected counts as
+   * {@code failure}; this includes retries-exhausted 5xx and IOException after the call.
+   */
+  private static String classify(String status) {
+    if ("rejected".equals(status)) {
+      return "rejected";
+    }
+    if ("serialization_failed".equals(status) || "interrupted".equals(status)
+            || "failed".equals(status)) {
+      return "failure";
+    }
+    try {
+      int code = Integer.parseInt(status);
+      return (code >= 200 && code < 400) ? "success" : "failure";
+    } catch (NumberFormatException ex) {
+      return "failure";
+    }
+  }
+
+  private void recordDeliveryMetric(String outcome, long durationMs) {
+    if (meterRegistry == null) {
+      return;
+    }
+    Tags tags = Tags.of(StarterConstants.OUTCOME_TAG, outcome);
+    Counter.builder(StarterConstants.WEBHOOK_DELIVERY_COUNT_COUNTER)
+            .description("Webhook delivery outcomes recorded by WebhookDispatcher, both the "
+                    + "static subscription path and the rule-based dispatchTo path. "
+                    + "Tags: outcome (success | failure | rejected).")
+            .tags(tags)
+            .register(meterRegistry)
+            .increment();
+    Timer.builder(StarterConstants.WEBHOOK_DELIVERY_DURATION_TIMER)
+            .description("Wall-clock duration of a webhook delivery attempt including retries. "
+                    + "Tags: outcome (success | failure | rejected).")
+            .tags(tags)
+            .register(meterRegistry)
+            .record(Duration.ofMillis(Math.max(0L, durationMs)));
   }
 
   private record SubscriptionKey(String url, String definitionPattern) {
