@@ -74,6 +74,7 @@ import tools.jackson.databind.ObjectMapper;
 import java.net.http.HttpClient;
 import cbs.nova.dslexamples.v1.DistributedTracingModels.DistributedTracingIn;
 import cbs.nova.dslexamples.v1.DistributedTracingModels.DistributedTracingOut;
+import cbs.nova.starter.config.properties.OpenTelemetryHelperProperties;
 import cbs.nova.starter.helper.OpenTelemetryHelper;
 import io.opentelemetry.sdk.testing.junit5.OpenTelemetryExtension;
 
@@ -83,7 +84,13 @@ class AdvancedDslExamplesTest {
   static final OpenTelemetryExtension OTEL = OpenTelemetryExtension.create();
 
   private static final OpenTelemetryHelper OTEL_HELPER = new OpenTelemetryHelper(
-          OTEL.getOpenTelemetry());
+          OTEL.getOpenTelemetry(),
+          new OpenTelemetryHelperProperties(
+                  1000,
+                  java.time.Duration.ofMinutes(10),
+                  java.time.Duration.ofMinutes(10),
+                  1000),
+          java.time.Clock.systemUTC());
 
   @BeforeEach
   void loadCompactDsls() {

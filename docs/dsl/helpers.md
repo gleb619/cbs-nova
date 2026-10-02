@@ -1506,8 +1506,13 @@ that are `null` are coerced to the empty string (Micrometer's `Tag.of` rejects n
 - `"addEvent"` — attaches a named event (`eventName` required) with optional `attributes` to an
   open span.
 - `"setBaggage"` / `"getBaggage"` — a local, JVM-scoped key/value store for business-key
-  correlation within a single DSL run. This is *not* W3C baggage propagation; `getBaggage` on a
-  key that was never set is an error.
+  correlation within a single DSL run. Entries are partitioned by the enclosing
+  `Context.runId()`: a key written by run A is NOT visible to run B. The store is also bounded
+  by `cbs.otel.helper.baggage-max-runs` (default 1000 distinct run-ids) and `cbs.otel.helper.baggage-ttl`
+  (default 10 minutes); stale entries are silently dropped on the next `setBaggage`/`getBaggage`
+  call. Contexts that carry no `runId` all share one anonymous scope, so do not rely on isolation
+  for those. This is *not* W3C baggage propagation; `getBaggage` on a key that was never set (or whose
+  entry has been reaped) is an error.
 - `"injectContext"` — injects W3C `traceparent` headers into a `headers` carrier map (returned
   as `OtelOut.result`). Useful before an `httpCall` whose headers should join the trace.
 - `"extractContext"` — pulls the span-id out of inbound W3C trace headers; returns `""` when no
@@ -1557,6 +1562,16 @@ helper deliberately does not chain ambient OTel context across helper invocation
 parent-child nesting between two helper-initiated spans is not supported. And when tracing is
 disabled in the host application the `OpenTelemetry` bean is a no-op implementation: the helper
 still succeeds, it just produces no exported spans — DSL code can call it unconditionally.
+
+The helper is a Spring singleton tracking open spans and per-run baggage in process memory; both
+maps are bounded (`cbs.otel.helper.span-max-entries`, `cbs.otel.helper.baggage-max-runs`,
+`...span-ttl`, `...baggage-ttl`; defaults documented in [configuration.md § Built-in otel helper —
+bounded state](./configuration.md#built-in-otel-helper--bounded-state-t789)). Stale entries are reaped
+lazily on the next helper call: a span that sits open past its TTL is ended with status
+`ERROR`/"abandoned" (the exporter still sees it); inserting a new span past `span-max-entries`
+ends the oldest one with `ERROR`/"evicted" rather than silently dropping it; per-run baggage is
+silently dropped past the run/TTL bounds. A late `"endSpan"` for a span the helper has already
+ended itself is a silent no-op (the entry is already gone and `Span.end()` already ran).
 
 ## Masking sensitive values
 
