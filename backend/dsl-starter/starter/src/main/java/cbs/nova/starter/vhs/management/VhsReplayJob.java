@@ -7,10 +7,11 @@ import cbs.nova.starter.vhs.replay.VhsReplayEngine;
 import cbs.nova.starter.vhs.replay.VhsReplayReport;
 import cbs.nova.starter.vhs.replay.VhsTapeReader;
 import java.nio.file.Path;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
@@ -24,8 +25,12 @@ import tools.jackson.databind.ObjectMapper;
  *
  * <p>
  * Dry-run/exact replays are executed inline and return a full report. Load-mode replays (and any
- * non-dry-run target) are submitted to a {@link ThreadPoolTaskExecutor} and tracked in memory.
- * Persistence of job history is a follow-up task.
+ * non-dry-run target) are submitted to a {@link ThreadPoolTaskExecutor} and tracked in memory. The
+ * status map is bounded by {@link CbsVhsReplayProperties#statusLimit()} (default
+ * {@value CbsVhsReplayProperties#DEFAULT_STATUS_LIMIT}): in-flight (accepted/running) entries are
+ * never evicted before they finish, finished entries are evicted oldest-first, and a transient
+ * overshoot is allowed when every slot is in-flight. Persistence of job history is a follow-up
+ * task.
  */
 @Slf4j
 @RequiredArgsConstructor
@@ -34,7 +39,7 @@ public final class VhsReplayJob {
   private final @NonNull CbsVhsReplayProperties baseProperties;
   private final @NonNull ObjectMapper objectMapper;
   private final @Nullable AsyncTaskExecutor executor;
-  private final Map<String, JobStatus> statuses = new ConcurrentHashMap<>();
+  private final Map<String, JobStatus> statuses = new LinkedHashMap<>();
 
   /**
    * Start a replay for the given tape file.
@@ -51,19 +56,19 @@ public final class VhsReplayJob {
 
     if (isInline(properties)) {
       VhsReplayReport report = runEngine(properties, tapeFile);
-      statuses.put(replayRunId, new JobStatus(replayRunId, "completed", report));
+      recordStatus(new JobStatus(replayRunId, "completed", report));
       return new ReplayRunResponse(replayRunId, "completed", properties.target(),
               properties.mode().name(), statusUrl, report);
     }
 
-    statuses.put(replayRunId, new JobStatus(replayRunId, "accepted", null));
+    recordStatus(new JobStatus(replayRunId, "accepted", null));
     executor.execute(() -> {
       try {
         VhsReplayReport report = runEngine(properties, tapeFile);
-        statuses.put(replayRunId, new JobStatus(replayRunId, "completed", report));
+        recordStatus(new JobStatus(replayRunId, "completed", report));
       } catch (Exception ex) {
         log.warn("VHS replay job {} failed: {}", replayRunId, ex.getMessage());
-        statuses.put(replayRunId, new JobStatus(replayRunId, "failed", null));
+        recordStatus(new JobStatus(replayRunId, "failed", null));
       }
     });
     return new ReplayRunResponse(replayRunId, "accepted", properties.target(),
@@ -72,7 +77,57 @@ public final class VhsReplayJob {
 
   @NonNull
   public Optional<JobStatus> status(@NonNull String replayRunId) {
-    return Optional.ofNullable(statuses.get(replayRunId));
+    synchronized (statuses) {
+      return Optional.ofNullable(statuses.get(replayRunId));
+    }
+  }
+
+  /**
+   * Visible for testing: current number of tracked statuses (in-flight + finished).
+   */
+  int statusCount() {
+    synchronized (statuses) {
+      return statuses.size();
+    }
+  }
+
+  /**
+   * Insert or replace a job status while keeping the map bounded. A late completion update for an
+   * id that is already tracked (in-flight → finished) replaces the value in place and never evicts
+   * the same id — so the final status of a still-tracked job is never silently lost. New ids that
+   * are already finished may evict the oldest finished entry to honour the cap; new in-flight ids
+   * never evict (overshoot tolerated, documented in the class javadoc).
+   */
+  private void recordStatus(@NonNull JobStatus status) {
+    synchronized (statuses) {
+      boolean isNewId = !statuses.containsKey(status.replayRunId());
+      if (isNewId && isFinished(status.status()) && statuses.size() >= statusLimit()) {
+        evictOldestFinished();
+      }
+      statuses.put(status.replayRunId(), status);
+    }
+  }
+
+  private static boolean isFinished(@NonNull String state) {
+    return "completed".equals(state) || "failed".equals(state);
+  }
+
+  private void evictOldestFinished() {
+    Iterator<Map.Entry<String, JobStatus>> it = statuses.entrySet().iterator();
+    while (it.hasNext()) {
+      Map.Entry<String, JobStatus> entry = it.next();
+      if (isFinished(entry.getValue().status())) {
+        it.remove();
+        return;
+      }
+    }
+    // No finished entry to evict: every tracked job is in-flight. Per the documented contract
+    // we tolerate a temporary overshoot rather than dropping an in-flight job.
+  }
+
+  private int statusLimit() {
+    int limit = baseProperties.statusLimit();
+    return limit <= 0 ? CbsVhsReplayProperties.DEFAULT_STATUS_LIMIT : limit;
   }
 
   @NonNull
