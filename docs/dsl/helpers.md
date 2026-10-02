@@ -763,6 +763,13 @@ JsonExtractOut orderId = ctx.runHelper("jsonExtract",
 if (orderId.present()) { /* use orderId.value() */ }
 ```
 
+Supported path notation: dotted keys (`a.b.c`), an optional leading `$` prefix
+(`$.data.orderId` is equivalent to `data.orderId`), and numeric array indices in bracket
+segments (`items[0].id`). Wildcards, filters, and recursive descent (`..`, `*`, `[?()]`)
+are not supported. A blank path or `$` alone resolves to `present = false`. Out-of-range
+indices and malformed bracket expressions (e.g. `items[x]`, `items[`) also return
+`present = false` without throwing.
+
 ### Compare two JSON documents with `jsonDiff`
 
 `jsonDiff` (`JsonDiffIn(left, right)`) walks two JSON-encoded strings in parallel and returns a
