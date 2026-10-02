@@ -95,6 +95,41 @@ Class: `DryRunProperties` (record). Dry-run context and log buffering.
 | `cbs.nova.dry-run.context.type` | `String` | `threadlocal` | Context carrier for dry-run state. **Only `threadlocal` is supported**; any other value throws at startup. |
 | `cbs.nova.dry-run.log.max-events-per-run` | `int` | `1000` | Maximum buffered dry-run log events retained per run (`@Min(1)`). |
 
+### `cbs.nova.startup-report`
+
+Class: `CbsStartupReportProperties` (record). Starter startup report: top-N slowest steps logged on
+boot, gated on a per-step slow threshold. See `StartupReportLogger` for the consumer.
+
+| Key | Type | Default | Effect |
+|-----|------|---------|--------|
+| `cbs.nova.startup-report.enabled` | `boolean` | `true` | Whether the startup report is emitted on application ready. |
+| `cbs.nova.startup-report.top-steps` | `int` | `10` | How many of the slowest steps are included in the report. |
+| `cbs.nova.startup-report.slow-threshold-millis` | `long` | `50` | Only steps slower than this threshold (ms) are considered "slow" candidates for the top-N report. |
+
+### `cbs.nova.events.mq`
+
+Class: `MqEventProperties` (record). Optional RabbitMQ publisher for `DomainEvent` notifications.
+The publisher is registered as a Spring bean only when `cbs.nova.events.mq.enabled=true`
+(`@ConditionalOnProperty`, `MqEventConfiguration`); with the default `false` the starter starts
+without a RabbitMQ broker and no publisher wiring exists. Routing-key resolution
+(`MqEventProperties#effectiveRoutingKey`): if `routing-key` is set, it is used verbatim;
+otherwise the publisher falls back to `topic + "." + eventType`; if `topic` is also blank, the
+raw `eventType` is published.
+
+> **Secrets / env-injected:** `cbs.nova.events.mq.*` carries **no** secret material — RabbitMQ
+> credentials and broker URL are configured via the standard Spring AMQP properties
+> (`spring.rabbitmq.host` / `port` / `username` / `password`), not via `cbs.nova.*`. Keep secrets
+> out of source-controlled YAML; supply them via env vars or a secrets manager.
+
+| Key | Type | Default | Effect |
+|-----|------|---------|--------|
+| `cbs.nova.events.mq.enabled` | `boolean` | `false` | Master switch. `false` (default) skips MQ publisher registration entirely. |
+| `cbs.nova.events.mq.exchange` | `String` | — (unset; no initializer) | Target RabbitMQ exchange the publisher declares / publishes to (e.g. `cbs.nova.events.exchange`). |
+| `cbs.nova.events.mq.topic` | `String` | — (unset; no initializer) | Topic prefix used to derive a routing key when `routing-key` is blank (`<topic>.<eventType>`). |
+| `cbs.nova.events.mq.routing-key` | `String` | — (unset; no initializer) | Optional fixed routing key; overrides the `topic`-derived one. |
+| `cbs.nova.events.mq.retry-batch-size` | `int` | `100` | Max events retried per pass by `MqDomainEventRetryTask`. Coerced to `100` if `<= 0`. |
+| `cbs.nova.events.mq.retry-interval-seconds` | `long` | `30` | Fixed-delay between `MqDomainEventRetryTask` passes (seconds). Coerced to `30` if `<= 0`. |
+
 ### `cbs.nova.logging`
 
 Class: `CbsNovaLoggingProperties` (record). Starter-internal log levels and MDC behaviour.
@@ -246,6 +281,34 @@ these settings back.
 | `cbs.dsl.builder.git.pull-strategy` | `PullStrategy` | `REBASE` | How `POST /api/dsl/vcs/pull` handles divergence from upstream: `REBASE` (default; replay local commits onto upstream, abort cleanly on conflict leaving the tree untouched) or `MERGE` (create a merge commit; a conflict leaves the repo `MERGING`). |
 
 ---
+
+### `cbs.dsl.helper.jwt`
+
+Class: `JwtProperties` (record). Defaults applied by the `jwt` helper (`cbs.dsl.helper.jwt`).
+See [docs/dsl/helpers.md § Tokens & JWT](../dsl/helpers.md#tokens--jwt) for the helper contract,
+the decode-only caveat for `parse` / `claim`, and the alg-confusion guards.
+
+> **Secrets / env-injected:** the JWT signing secret is **not** a property here — it must be
+> supplied at the call site (`JwtIn.secret`). Do not commit signing material to source-controlled
+> YAML; inject it via env vars / a secrets manager and pass it through to `jwt.sign` /
+> `jwt.verify` at runtime. The two keys below are non-secret defaults.
+
+| Key | Type | Default | Effect |
+|-----|------|---------|--------|
+| `cbs.dsl.helper.jwt.default-algorithm` | `String` | `HS256` | Default JWS algorithm used by `jwt.sign` / `jwt.verify` when the call does not override it. Accepted values: `HS256`, `HS384`, `HS512` (symmetric HMAC family). Coerced to `HS256` when blank. |
+| `cbs.dsl.helper.jwt.default-ttl-seconds` | `long` | `3600` | Default `exp` offset (TTL) applied by `jwt.sign` when the call does not override it (seconds). Coerced to `3600` if `null`. |
+
+### `cbs.dsl.helper.json-patch`
+
+Class: `JsonPatchProperties` (record). Defaults applied by the `jsonPatch` helper
+(`cbs.dsl.helper.json-patch`). See
+[docs/dsl/helpers.md § JSON object merge patches](../dsl/helpers.md#json-object-merge-patches)
+for the helper contract (modes `apply` / `diff`, RFC 7396 semantics, and the compact-result
+format).
+
+| Key | Type | Default | Effect |
+|-----|------|---------|--------|
+| `cbs.dsl.helper.json-patch.pretty-print` | `boolean` | `false` | When `true`, `JsonPatchOut.result` is pretty-printed JSON instead of the compact (no-whitespace) form. Coerced to `false` if `null`. |
 
 ## `cbs.dsl.manifest`
 
