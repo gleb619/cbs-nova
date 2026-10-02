@@ -25,6 +25,8 @@ import cbs.nova.dsl.repository.InMemoryTransactionExecutionRepository;
 import cbs.nova.dsl.transaction.TransactionExecution;
 import cbs.nova.dsl.transaction.TransactionExecutionStatus;
 import cbs.nova.starter.AuditTestSupport;
+import cbs.nova.starter.config.properties.CbsNovaWebProperties;
+import cbs.nova.starter.web.RequestBodyLimitFilter;
 import cbs.nova.starter.config.router.DslExecutionsRouterConfiguration;
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.converter.DefaultDslExceptionMapper;
@@ -66,10 +68,12 @@ class DslExecutionsResourceTest {
   private final TransactionExecutionRepository transactionExecutionRepository = new InMemoryTransactionExecutionRepository();
   private final ObjectMapper objectMapper = new ObjectMapper();
   private final WorkflowClient workflowClient = mock(WorkflowClient.class);
-  private MockMvc mockMvc;
+  private static RequestBodyLimitFilter requestBodyLimitFilter;
+private MockMvc mockMvc;
 
   @BeforeEach
   void setUp() {
+    requestBodyLimitFilter = new RequestBodyLimitFilter(new CbsNovaWebProperties(0L));
     DslRunCancellationService cancellationService = cancellationService(repository);
     DslExecutionsHandler handler = new DslExecutionsHandler(repository, objectMapper,
             cancellationService, null, transactionExecutionRepository, new RequestQueryConverter(),
@@ -85,7 +89,7 @@ class DslExecutionsResourceTest {
     exceptionResolver.setMessageConverters(List.of(new JacksonJsonHttpMessageConverter()));
     exceptionResolver.afterPropertiesSet();
 
-    mockMvc = MockMvcBuilders.routerFunctions(router.dslExecutionsRouter(handler))
+    mockMvc = MockMvcBuilders.routerFunctions(router.dslExecutionsRouter(handler, requestBodyLimitFilter))
             .setMessageConverters(new JacksonJsonHttpMessageConverter(),
                     new StringHttpMessageConverter(StandardCharsets.UTF_8))
             .setHandlerExceptionResolvers(exceptionResolver)
@@ -680,7 +684,7 @@ class DslExecutionsResourceTest {
     exceptionResolver.setMessageConverters(List.of(new JacksonJsonHttpMessageConverter()));
     exceptionResolver.afterPropertiesSet();
 
-    return MockMvcBuilders.routerFunctions(router.dslExecutionsRouter(handler))
+    return MockMvcBuilders.routerFunctions(router.dslExecutionsRouter(handler, requestBodyLimitFilter))
             .setMessageConverters(new StringHttpMessageConverter(),
                     new JacksonJsonHttpMessageConverter())
             .setHandlerExceptionResolvers(exceptionResolver)
@@ -745,7 +749,7 @@ class DslExecutionsResourceTest {
             cancellationService(repository), statsRepository,
             transactionExecutionRepository, new RequestQueryConverter(), null);
     mockMvc = MockMvcBuilders
-            .routerFunctions(new DslExecutionsRouterConfiguration().dslExecutionsRouter(handler))
+            .routerFunctions(new DslExecutionsRouterConfiguration().dslExecutionsRouter(handler, requestBodyLimitFilter))
             .build();
 
     mockMvc.perform(get("/api/executions/stats"))
@@ -771,7 +775,7 @@ class DslExecutionsResourceTest {
             cancellationService(repository), statsRepository,
             transactionExecutionRepository, new RequestQueryConverter(), null);
     mockMvc = MockMvcBuilders
-            .routerFunctions(new DslExecutionsRouterConfiguration().dslExecutionsRouter(handler))
+            .routerFunctions(new DslExecutionsRouterConfiguration().dslExecutionsRouter(handler, requestBodyLimitFilter))
             .build();
 
     mockMvc.perform(get("/api/executions/stats").param("topProcesses", "99"))
@@ -831,7 +835,7 @@ class DslExecutionsResourceTest {
             cancellationService(repository), statsRepository,
             transactionExecutionRepository, new RequestQueryConverter(), null);
     mockMvc = MockMvcBuilders
-            .routerFunctions(new DslExecutionsRouterConfiguration().dslExecutionsRouter(handler))
+            .routerFunctions(new DslExecutionsRouterConfiguration().dslExecutionsRouter(handler, requestBodyLimitFilter))
             .build();
 
     mockMvc.perform(get("/api/executions/stats/timeseries").param("windowHours", "2"))
@@ -1208,7 +1212,7 @@ class DslExecutionsResourceTest {
             cancellationService, null, transactionExecutionRepository, new RequestQueryConverter(),
             null);
     MockMvc cappedMockMvc = MockMvcBuilders
-            .routerFunctions(new DslExecutionsRouterConfiguration().dslExecutionsRouter(handler))
+            .routerFunctions(new DslExecutionsRouterConfiguration().dslExecutionsRouter(handler, requestBodyLimitFilter))
             .build();
 
     int cap = StarterConstants.CSV_EXPORT_MAX_ROWS;

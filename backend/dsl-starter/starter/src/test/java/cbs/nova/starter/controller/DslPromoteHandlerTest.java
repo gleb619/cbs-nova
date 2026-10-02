@@ -15,6 +15,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import cbs.nova.starter.config.properties.DslProperties;
+import cbs.nova.starter.config.properties.CbsNovaWebProperties;
+import cbs.nova.starter.web.RequestBodyLimitFilter;
 import cbs.nova.starter.config.router.DslPromoteRouterConfiguration;
 import cbs.nova.starter.converter.DefaultDslExceptionMapper;
 import cbs.nova.starter.model.VcsModels.DefinitionBundle;
@@ -51,7 +53,8 @@ import tools.jackson.databind.ObjectMapper;
  */
 class DslPromoteHandlerTest {
 
-  private MockMvc mockMvc;
+  private static RequestBodyLimitFilter requestBodyLimitFilter;
+private MockMvc mockMvc;
   private Path devDir;
   private Path stagingDir;
   private DslDefinitionBundleService bundleService;
@@ -61,6 +64,7 @@ class DslPromoteHandlerTest {
 
   @BeforeEach
   void setUp() throws Exception {
+    requestBodyLimitFilter = new RequestBodyLimitFilter(new CbsNovaWebProperties(0L));
     devDir = Files.createTempDirectory("dsl-promote-handler-dev-");
     stagingDir = Files.createTempDirectory("dsl-promote-handler-staging-");
     DslProperties props = DslProperties.builder()
@@ -87,7 +91,7 @@ class DslPromoteHandlerTest {
     exceptionResolver.setMessageConverters(List.of(new JacksonJsonHttpMessageConverter()));
     exceptionResolver.afterPropertiesSet();
 
-    mockMvc = MockMvcBuilders.routerFunctions(router.dslPromoteRouter(handler))
+    mockMvc = MockMvcBuilders.routerFunctions(router.dslPromoteRouter(handler, requestBodyLimitFilter))
             .setMessageConverters(new StringHttpMessageConverter(),
                     new JacksonJsonHttpMessageConverter())
             .setHandlerExceptionResolvers(exceptionResolver)

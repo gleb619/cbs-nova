@@ -9,6 +9,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import cbs.nova.starter.AuditTestSupport;
+import cbs.nova.starter.config.properties.CbsNovaWebProperties;
+import cbs.nova.starter.web.RequestBodyLimitFilter;
 import cbs.nova.starter.config.router.NotificationRouterConfiguration;
 import cbs.nova.starter.converter.DefaultDslExceptionMapper;
 import cbs.nova.starter.model.NotificationRuleModels.ChannelDto;
@@ -48,7 +50,8 @@ import tools.jackson.databind.ObjectMapper;
  */
 class NotificationRuleHandlerTest {
 
-  private MockMvc mockMvc;
+  private static RequestBodyLimitFilter requestBodyLimitFilter;
+private MockMvc mockMvc;
   private NotificationRuleService ruleService;
   private NotificationRuleFiringRepository firingRepository;
   private NotificationRuleEngine ruleEngine;
@@ -56,6 +59,7 @@ class NotificationRuleHandlerTest {
 
   @BeforeEach
   void setUp() throws Exception {
+    requestBodyLimitFilter = new RequestBodyLimitFilter(new CbsNovaWebProperties(0L));
     var dataSource = new JdbcDataSource();
     dataSource.setURL("jdbc:h2:mem:notification-rules-handler-"
             + UUID.randomUUID().toString().replace("-", "")
@@ -93,7 +97,7 @@ class NotificationRuleHandlerTest {
     exceptionResolver.setMessageConverters(List.of(new JacksonJsonHttpMessageConverter()));
     exceptionResolver.afterPropertiesSet();
 
-    mockMvc = MockMvcBuilders.routerFunctions(router.notificationRouter(handler))
+    mockMvc = MockMvcBuilders.routerFunctions(router.notificationRouter(handler, requestBodyLimitFilter))
             .setMessageConverters(new StringHttpMessageConverter(),
                     new JacksonJsonHttpMessageConverter())
             .setHandlerExceptionResolvers(exceptionResolver)
@@ -510,7 +514,7 @@ class NotificationRuleHandlerTest {
     exceptionResolver.setMessageConverters(List.of(new JacksonJsonHttpMessageConverter()));
     exceptionResolver.afterPropertiesSet();
 
-    return MockMvcBuilders.routerFunctions(router.notificationRouter(handler))
+    return MockMvcBuilders.routerFunctions(router.notificationRouter(handler, requestBodyLimitFilter))
             .setMessageConverters(new StringHttpMessageConverter(),
                     new JacksonJsonHttpMessageConverter())
             .setHandlerExceptionResolvers(exceptionResolver)

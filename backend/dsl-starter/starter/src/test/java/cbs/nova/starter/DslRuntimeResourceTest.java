@@ -24,6 +24,8 @@ import cbs.nova.dsl.model.HierarchyReport;
 import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.dsl.model.PreviewReport;
 import cbs.nova.starter.exception.PreviewTimeoutException;
+import cbs.nova.starter.config.properties.CbsNovaWebProperties;
+import cbs.nova.starter.web.RequestBodyLimitFilter;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.jsonschema.JacksonJsonSchemaGenerator;
 import cbs.nova.starter.config.router.DslRuntimeRouterConfiguration;
@@ -55,10 +57,12 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 class DslRuntimeResourceTest {
 
   private final DslRuntime dslRuntime = mock(DslRuntime.class);
-  private MockMvc mockMvc;
+  private static RequestBodyLimitFilter requestBodyLimitFilter;
+private MockMvc mockMvc;
 
   @BeforeEach
   void setUp() {
+    requestBodyLimitFilter = new RequestBodyLimitFilter(new CbsNovaWebProperties(0L));
     GlobalManager.globalManager().resetForTests();
 
     var loggingProperties = new CbsNovaLoggingProperties(
@@ -79,7 +83,7 @@ class DslRuntimeResourceTest {
             Caffeine.newBuilder().build());
     DslRuntimeHandler handler = new DslRuntimeHandler(service, validator, inputValidator);
     DslRuntimeRouterConfiguration router = new DslRuntimeRouterConfiguration();
-    mockMvc = MockMvcBuilders.routerFunctions(router.dslRuntimeRouter(handler)).build();
+    mockMvc = MockMvcBuilders.routerFunctions(router.dslRuntimeRouter(handler, requestBodyLimitFilter)).build();
   }
 
   @AfterEach

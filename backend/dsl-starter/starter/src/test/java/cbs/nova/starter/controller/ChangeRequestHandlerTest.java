@@ -13,6 +13,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import cbs.nova.starter.config.router.ChangeRequestRouterConfiguration;
+import cbs.nova.starter.config.properties.CbsNovaWebProperties;
+import cbs.nova.starter.web.RequestBodyLimitFilter;
 import cbs.nova.starter.converter.DefaultDslExceptionMapper;
 import cbs.nova.starter.entity.ChangeRequestEntity;
 import cbs.nova.starter.entity.ChangeRequestEntity.Status;
@@ -48,11 +50,13 @@ class ChangeRequestHandlerTest {
 
   private ChangeRequestService changeRequestService;
   private RoleResolver roleResolver;
-  private MockMvc mockMvc;
+  private static RequestBodyLimitFilter requestBodyLimitFilter;
+private MockMvc mockMvc;
   private final ObjectMapper objectMapper = new ObjectMapper();
 
   @BeforeEach
   void setUp() {
+    requestBodyLimitFilter = new RequestBodyLimitFilter(new CbsNovaWebProperties(0L));
     changeRequestService = mock(ChangeRequestService.class);
     roleResolver = mock(RoleResolver.class);
 
@@ -70,7 +74,7 @@ class ChangeRequestHandlerTest {
     exceptionResolver.setMessageConverters(List.of(new JacksonJsonHttpMessageConverter()));
     exceptionResolver.afterPropertiesSet();
 
-    mockMvc = MockMvcBuilders.routerFunctions(router.changeRequestRouter(handler))
+    mockMvc = MockMvcBuilders.routerFunctions(router.changeRequestRouter(handler, requestBodyLimitFilter))
             .setMessageConverters(new StringHttpMessageConverter(),
                     new JacksonJsonHttpMessageConverter())
             .setHandlerExceptionResolvers(exceptionResolver)

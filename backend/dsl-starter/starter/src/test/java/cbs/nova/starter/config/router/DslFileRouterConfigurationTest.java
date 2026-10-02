@@ -9,9 +9,11 @@ import static org.mockito.Mockito.when;
 
 import cbs.nova.starter.config.router.DslDocsRouterConfiguration;
 import cbs.nova.starter.config.router.DslFileRouterConfiguration;
+import cbs.nova.starter.config.properties.CbsNovaWebProperties;
 import cbs.nova.starter.controller.DslDocsHandler;
 import cbs.nova.starter.controller.DslFileHandler;
 import cbs.nova.starter.model.DslFileModels.PendingWritesStatus;
+import cbs.nova.starter.web.RequestBodyLimitFilter;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -42,8 +44,11 @@ class DslFileRouterConfigurationTest {
     when(fileHandler.flush(any())).thenReturn(ServerResponse.ok().build());
     when(docsHandler.status(any())).thenReturn(ok(new PendingWritesStatus(0)));
     when(docsHandler.flush(any())).thenReturn(ServerResponse.ok().build());
-    fileRouter = new DslFileRouterConfiguration().dslFileRouter(fileHandler);
-    docsRouter = new DslDocsRouterConfiguration().dslDocsRouter(docsHandler);
+    // Router tests stay focused on routing semantics, not the body cap. Use a disabled filter
+    // (limit 0) so the wiring is exercised without affecting the assertions below.
+    RequestBodyLimitFilter filter = new RequestBodyLimitFilter(new CbsNovaWebProperties(0L));
+    fileRouter = new DslFileRouterConfiguration().dslFileRouter(fileHandler, filter);
+    docsRouter = new DslDocsRouterConfiguration().dslDocsRouter(docsHandler, filter);
   }
 
   @Test

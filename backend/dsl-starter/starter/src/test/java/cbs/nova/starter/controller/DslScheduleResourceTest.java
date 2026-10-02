@@ -16,6 +16,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import cbs.nova.starter.AuditTestSupport;
+import cbs.nova.starter.config.properties.CbsNovaWebProperties;
+import cbs.nova.starter.web.RequestBodyLimitFilter;
 import cbs.nova.starter.config.router.DslScheduleRouterConfiguration;
 import cbs.nova.starter.converter.DefaultDslExceptionMapper;
 import cbs.nova.starter.exception.DefinitionNotFoundException;
@@ -40,10 +42,12 @@ class DslScheduleResourceTest {
 
   private final DslScheduleService service = mock(DslScheduleService.class);
   private final ObjectMapper objectMapper = new ObjectMapper();
-  private MockMvc mockMvc;
+  private static RequestBodyLimitFilter requestBodyLimitFilter;
+private MockMvc mockMvc;
 
   @BeforeEach
   void setUp() {
+    requestBodyLimitFilter = new RequestBodyLimitFilter(new CbsNovaWebProperties(0L));
     DslScheduleHandler handler = new DslScheduleHandler(service, objectMapper,
             AuditTestSupport.emptyProvider());
     DslScheduleRouterConfiguration router = new DslScheduleRouterConfiguration();
@@ -58,7 +62,7 @@ class DslScheduleResourceTest {
     exceptionResolver.setMessageConverters(List.of(new JacksonJsonHttpMessageConverter()));
     exceptionResolver.afterPropertiesSet();
 
-    mockMvc = MockMvcBuilders.routerFunctions(router.dslScheduleRouter(handler))
+    mockMvc = MockMvcBuilders.routerFunctions(router.dslScheduleRouter(handler, requestBodyLimitFilter))
             .setMessageConverters(new StringHttpMessageConverter(),
                     new JacksonJsonHttpMessageConverter())
             .setHandlerExceptionResolvers(exceptionResolver)
@@ -136,7 +140,7 @@ class DslScheduleResourceTest {
     exceptionResolver.setMessageConverters(List.of(new JacksonJsonHttpMessageConverter()));
     exceptionResolver.afterPropertiesSet();
 
-    return MockMvcBuilders.routerFunctions(router.dslScheduleRouter(handler))
+    return MockMvcBuilders.routerFunctions(router.dslScheduleRouter(handler, requestBodyLimitFilter))
             .setMessageConverters(new StringHttpMessageConverter(),
                     new JacksonJsonHttpMessageConverter())
             .setHandlerExceptionResolvers(exceptionResolver)

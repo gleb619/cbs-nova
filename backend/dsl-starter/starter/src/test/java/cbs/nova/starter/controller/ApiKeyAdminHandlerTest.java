@@ -8,6 +8,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import cbs.nova.starter.AuditTestSupport;
+import cbs.nova.starter.config.properties.CbsNovaWebProperties;
+import cbs.nova.starter.web.RequestBodyLimitFilter;
 import cbs.nova.starter.config.router.ApiKeyAdminRouterConfiguration;
 import cbs.nova.starter.converter.DefaultDslExceptionMapper;
 import cbs.nova.starter.persistence.CrudRepositories;
@@ -40,12 +42,14 @@ import tools.jackson.databind.ObjectMapper;
 class ApiKeyAdminHandlerTest {
 
   private ApiKeyStore store;
-  private MockMvc mockMvc;
+  private static RequestBodyLimitFilter requestBodyLimitFilter;
+private MockMvc mockMvc;
 
   private final ObjectMapper objectMapper = new ObjectMapper();
 
   @BeforeEach
   void setUp() throws Exception {
+    requestBodyLimitFilter = new RequestBodyLimitFilter(new CbsNovaWebProperties(0L));
     var dataSource = new JdbcDataSource();
     dataSource
             .setURL("jdbc:h2:mem:api-keys-handler-" + UUID.randomUUID().toString().replace("-", "")
@@ -69,7 +73,7 @@ class ApiKeyAdminHandlerTest {
     exceptionResolver.setMessageConverters(List.of(new JacksonJsonHttpMessageConverter()));
     exceptionResolver.afterPropertiesSet();
 
-    mockMvc = MockMvcBuilders.routerFunctions(router.apiKeyAdminRouter(handler))
+    mockMvc = MockMvcBuilders.routerFunctions(router.apiKeyAdminRouter(handler, requestBodyLimitFilter))
             .setMessageConverters(new StringHttpMessageConverter(),
                     new JacksonJsonHttpMessageConverter())
             .setHandlerExceptionResolvers(exceptionResolver)
@@ -299,7 +303,7 @@ class ApiKeyAdminHandlerTest {
     exceptionResolver.setMessageConverters(List.of(new JacksonJsonHttpMessageConverter()));
     exceptionResolver.afterPropertiesSet();
 
-    return MockMvcBuilders.routerFunctions(router.apiKeyAdminRouter(handler))
+    return MockMvcBuilders.routerFunctions(router.apiKeyAdminRouter(handler, requestBodyLimitFilter))
             .setMessageConverters(new StringHttpMessageConverter(),
                     new JacksonJsonHttpMessageConverter())
             .setHandlerExceptionResolvers(exceptionResolver)

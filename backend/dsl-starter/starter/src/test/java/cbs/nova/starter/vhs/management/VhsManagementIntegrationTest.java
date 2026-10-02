@@ -9,6 +9,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import cbs.nova.starter.AuditTestSupport;
+import cbs.nova.starter.config.properties.CbsNovaWebProperties;
+import cbs.nova.starter.web.RequestBodyLimitFilter;
 import cbs.nova.starter.config.properties.CbsVhsProperties;
 import cbs.nova.starter.config.router.VhsManagementRouterConfiguration;
 import cbs.nova.starter.controller.DslExceptionHandler;
@@ -49,11 +51,13 @@ class VhsManagementIntegrationTest {
   @TempDir
   Path tempDir;
 
-  private MockMvc mockMvc;
+  private static RequestBodyLimitFilter requestBodyLimitFilter;
+private MockMvc mockMvc;
   private ObjectMapper objectMapper;
 
   @BeforeEach
   void setUp() {
+    requestBodyLimitFilter = new RequestBodyLimitFilter(new CbsNovaWebProperties(0L));
     objectMapper = JsonMapper.builder().build();
     CbsVhsProperties properties = new CbsVhsProperties(
             true, List.of("*"), CbsVhsProperties.SinkType.local,
@@ -77,7 +81,7 @@ class VhsManagementIntegrationTest {
     exceptionResolver.setMessageConverters(List.of(new JacksonJsonHttpMessageConverter()));
     exceptionResolver.afterPropertiesSet();
 
-    mockMvc = MockMvcBuilders.routerFunctions(router.vhsManagementRouter(handler))
+    mockMvc = MockMvcBuilders.routerFunctions(router.vhsManagementRouter(handler, requestBodyLimitFilter))
             .setMessageConverters(new StringHttpMessageConverter(),
                     new JacksonJsonHttpMessageConverter())
             .setHandlerExceptionResolvers(exceptionResolver)
