@@ -114,7 +114,7 @@ The page wires three props into the panel:
 
 ### BFF routes
 
-Hand-written proxy, not yet covered by `docs/openapi.json`:
+Hand-written proxy, spec-covered (backend `GET /api/dsl/events` is present in `docs/openapi.json`):
 
 - `GET /api/v1/dsl/events` — `frontend/admin-ui-plugin/server/api/v1/dsl/events.get.ts` (proxies `/api/dsl/events` with optional `offset`, `limit`, `type`, `aggregateType`, `aggregateId`, `correlationId`, `since`).
 
@@ -164,7 +164,8 @@ Pager: `webhook-deliveries-pager` with `Prev` (`webhook-deliveries-pager-prev`) 
 
 ### BFF routes
 
-Hand-written, not yet covered by `docs/openapi.json`:
+Hand-written, spec-covered (backend `GET /api/dsl/webhooks/deliveries` is annotated on
+`WebhookRouterConfiguration` but absent from `docs/openapi.json` — stale spec; regen tracked in T767):
 
 - `GET /api/v1/dsl/webhooks/deliveries` (`frontend/admin-ui-plugin/server/api/v1/dsl/webhooks/deliveries.get.ts`) proxies `/api/dsl/webhooks/deliveries` with optional `offset`, `limit`, `subscriptionId`.
 
@@ -209,7 +210,7 @@ Known sink types: `webhook`, `email`, `slack`, `pagerduty`.
 
 ### BFF routes
 
-Hand-written, not yet covered by `docs/openapi.json`:
+Hand-written, spec-covered (backend notification paths are present in `docs/openapi.json`):
 
 - `GET /api/v1/dsl/notifications/rules?offset=&limit=`
 - `POST /api/v1/dsl/notifications/rules`
@@ -335,7 +336,7 @@ Apply errors render in `promote-apply-error`. Preview errors render in `promote-
 
 ### BFF routes
 
-Hand-written, not yet covered by `docs/openapi.json`:
+Hand-written, spec-covered (backend promotion paths are present in `docs/openapi.json`):
 
 - `GET /api/v1/dsl/promote/environments` — promotion-target catalog.
 - `GET /api/v1/dsl/promote/definitions?env=<name>` — published definitions visible in the source env.

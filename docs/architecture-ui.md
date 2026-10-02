@@ -280,7 +280,7 @@ counterpart to the backend `GET /api/dsl/events` audit surface.
   `useDslApi.fetchEvents` (`frontend/admin-ui-plugin/app/composables/useDslApi.ts:273`) maps
   `DomainEventQuery` (`type`, `aggregateType`, `aggregateId`, `correlationId`, `since`, `limit`, `offset`) onto a
   BFF query string.
-- **BFF route** — hand-written, not yet covered by `docs/openapi.json`:
+- **BFF route** — hand-written, spec-covered (backend `GET /api/dsl/events` is present in `docs/openapi.json`):
   `GET /api/v1/dsl/events` (`frontend/admin-ui-plugin/server/api/v1/dsl/events.get.ts`) proxies
   `/api/dsl/events` with optional `offset`, `limit`, `type`, `aggregateType`, `aggregateId`, `correlationId`, `since`.
 
@@ -294,7 +294,8 @@ it surfaces the backend's own delivery log so operators can see which sinks succ
   prop. The panel handles its own paging, filters, and `subscriptionId` query.
 - **Composable** — no dedicated composable; `useDslApi.fetchWebhookDeliveries(query)` is called directly. It maps
   `WebhookDeliveryQuery` (`subscriptionId`, `limit`, `offset`) onto a BFF query string.
-- **BFF route** — hand-written, not yet covered by `docs/openapi.json`:
+- **BFF route** — hand-written, spec-covered (backend `GET /api/dsl/webhooks/deliveries` is
+  annotated on `WebhookRouterConfiguration` but absent from `docs/openapi.json` — stale spec; regen tracked in T767):
   `GET /api/v1/dsl/webhooks/deliveries` (`frontend/admin-ui-plugin/server/api/v1/dsl/webhooks/deliveries.get.ts`)
   proxies `/api/dsl/webhooks/deliveries` with optional `offset`, `limit`, `subscriptionId`.
 
@@ -310,7 +311,7 @@ PagerDuty sinks, and shows the recent fire log so operators can see which rules 
   `useDslApi`. State surface: `{ rules, loading, error, fireLog, fireLogLoading, fireLogError, testing, testResult }`.
   Actions: `load()` (rules), `loadFireLog(offset, ruleId)` with a 25-row page (`FIRE_LOG_PAGE_SIZE`), `create`,
   `update`, `toggleEnabled`, `remove`, `test` (synthetic event payload).
-- **BFF routes** — hand-written, not yet covered by `docs/openapi.json`:
+- **BFF routes** — hand-written, spec-covered (backend notification paths are present in `docs/openapi.json`):
   - `GET /api/v1/dsl/notifications/rules?offset=&limit=` — `server/api/v1/dsl/notifications/rules/index.get.ts`.
   - `POST /api/v1/dsl/notifications/rules` — `server/api/v1/dsl/notifications/rules/index.post.ts`.
   - `GET /api/v1/dsl/notifications/rules/{id}` — `server/api/v1/dsl/notifications/rules/[id].get.ts`.
@@ -368,7 +369,7 @@ operator UI over the backend's `cbs.dsl.promotion.environments.<name>.base-path`
   previewLoading/Error, applying, applyError, applyResult }`. Actions: `loadEnvironments()`, `loadDefinitions(env)`,
   `runPreview(payload)` (calls `promoteDefinitions(payload, true)`), `apply(payload)` (`promoteDefinitions(payload,
   false)`), `reset()` (clears preview / apply state when source / target / selection changes).
-- **BFF routes** — hand-written, not yet covered by `docs/openapi.json`:
+- **BFF routes** — hand-written, spec-covered (backend promotion paths are present in `docs/openapi.json`):
   - `GET /api/v1/dsl/promote/environments` — `server/api/v1/dsl/promote/environments.get.ts` (returns the
     promotion-target catalog configured on the backend).
   - `GET /api/v1/dsl/promote/definitions?env=<name>` — `server/api/v1/dsl/promote/definitions.get.ts`
