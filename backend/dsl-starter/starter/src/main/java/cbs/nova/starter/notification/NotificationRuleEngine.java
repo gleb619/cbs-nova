@@ -183,10 +183,16 @@ public class NotificationRuleEngine implements DomainEventListener {
     return true;
   }
 
+  static final String UNKNOWN_SINK_TAG = "unknown";
+
   private void fireAndRecord(NotificationRuleEntity rule, NotificationActionDto action,
           DomainEvent event, long eventRowId) {
-    FiringOutcome outcome = deliver(rule, action, event, sinksByType());
-    recordFiringMetric(action.sink(), outcome);
+    Map<String, NotificationSink> sinksByType = sinksByType();
+    FiringOutcome outcome = deliver(rule, action, event, sinksByType);
+    // The sink name is user-authored rule data; only registered sink types may become a tag value,
+    // anything else collapses to "unknown" so tag cardinality stays bounded.
+    recordFiringMetric(sinksByType.containsKey(action.sink()) ? action.sink() : UNKNOWN_SINK_TAG,
+            outcome);
     try {
       firingRepository.insert(new NotificationRuleFiringEntity(
               null,

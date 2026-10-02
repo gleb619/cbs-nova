@@ -9,6 +9,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.dsl.history.DslRunStatus;
 import cbs.nova.starter.entity.NotificationRuleEntity;
 import cbs.nova.starter.events.DomainEvent;
@@ -165,8 +166,26 @@ class NotificationRuleEngineMetricsTest {
     awaitExecutorDrain();
 
     verify(firingRepository, times(1)).insert(any());
-    assertCounter("webhook", "skipped", 1.0);
-    assertTimerCount("webhook", 1);
+    // "webhook" is not a registered sink here, so the tag collapses to "unknown".
+    assertCounter("unknown", "skipped", 1.0);
+    assertTimerCount("unknown", 1);
+  }
+
+  @Test
+  void arbitraryUserSuppliedSinkNameNeverBecomesATagValue() throws Exception {
+    NotificationRuleEngine e = engine(); // no sinks
+    NotificationRuleEntity rule = rule(5L, "rule-5", "RunFailed", null);
+    when(ruleRepository.findMatchingEnabled("RunFailed")).thenReturn(List.of(rule));
+    when(ruleService.actionsOf(rule)).thenReturn(List.of(
+            new NotificationActionDto("attacker-chosen-1", null, null, null),
+            new NotificationActionDto("attacker-chosen-2", null, null, null)));
+
+    e.onEvent(runFailed("run-5", "Demo"), 104L);
+    awaitExecutorDrain();
+
+    assertCounter("unknown", "skipped", 2.0);
+    assertThat(registry.find(StarterConstants.NOTIFICATION_FIRING_COUNT_COUNTER)
+            .tag(StarterConstants.SINK_TAG, "attacker-chosen-1").counter()).isNull();
   }
 
   @Test
