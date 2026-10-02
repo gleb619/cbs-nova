@@ -71,8 +71,8 @@ public class EmailRuleSink implements NotificationSink {
   }
 
   private static String buildBody(NotificationRuleEntity rule, DomainEvent event) {
-    return "Notification rule: " + rule.name() + "%nEvent: " + event.eventType()
-            + "%nAggregate: " + event.aggregateType() + "/" + event.aggregateId();
+    return "Notification rule: " + rule.name() + "\nEvent: " + event.eventType()
+            + "\nAggregate: " + event.aggregateType() + "/" + event.aggregateId();
   }
 
   private static long elapsedMs(long startNanos) {

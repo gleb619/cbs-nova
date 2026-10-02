@@ -63,7 +63,8 @@ class EmailRuleSinkTest {
     SimpleMailMessage sent = captor.getValue();
     assertThat(sent.getTo()).containsExactly("ops@example.com");
     assertThat(sent.getSubject()).isEqualTo("[RunFailed] run/run-1");
-    assertThat(sent.getText()).contains("Notification rule: loan-failures")
+    assertThat(sent.getText()).doesNotContain("%n")
+            .contains("Notification rule: loan-failures\nEvent: RunFailed")
             .contains("Event: RunFailed")
             .contains("Aggregate: run/run-1");
     assertThat(outcome.outcome()).isEqualTo("success");
