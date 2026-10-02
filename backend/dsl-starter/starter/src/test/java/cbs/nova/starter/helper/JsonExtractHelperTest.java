@@ -85,4 +85,91 @@ class JsonExtractHelperTest {
     assertThat(result.value().present()).isFalse();
     assertThat(result.value().value()).isNull();
   }
+
+  @Test
+  void extractsJsonPathWithLeadingDollar() {
+    var ctx = SimpleContext.<JsonExtractIn>builder()
+            .body(new JsonExtractIn("{\"data\":{\"orderId\":\"abc-42\"}}", "$.data.orderId"))
+            .mode(ExecutionMode.PREVIEW).build();
+    Result<JsonExtractOut> result = helper.execute(ctx);
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(result.value().present()).isTrue();
+    assertThat(result.value().value()).isEqualTo("abc-42");
+  }
+
+  @Test
+  void dollarOnlyReturnsNotPresent() {
+    var ctx = SimpleContext.<JsonExtractIn>builder()
+            .body(new JsonExtractIn("{\"a\":1}", "$"))
+            .mode(ExecutionMode.PREVIEW).build();
+    Result<JsonExtractOut> result = helper.execute(ctx);
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(result.value().present()).isFalse();
+    assertThat(result.value().value()).isNull();
+  }
+
+  @Test
+  void extractsArrayElementWithBracketNotation() {
+    var ctx = SimpleContext.<JsonExtractIn>builder()
+            .body(new JsonExtractIn(
+                    "{\"items\":[{\"id\":7},{\"id\":9}]}",
+                    "$.items[0].id"))
+            .mode(ExecutionMode.PREVIEW).build();
+    Result<JsonExtractOut> result = helper.execute(ctx);
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(result.value().present()).isTrue();
+    assertThat(result.value().value()).isEqualTo("7");
+  }
+
+  @Test
+  void extractsSecondArrayElementViaBracketNotation() {
+    var ctx = SimpleContext.<JsonExtractIn>builder()
+            .body(new JsonExtractIn(
+                    "{\"items\":[{\"id\":7},{\"id\":9}]}",
+                    "items[1].id"))
+            .mode(ExecutionMode.PREVIEW).build();
+    Result<JsonExtractOut> result = helper.execute(ctx);
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(result.value().present()).isTrue();
+    assertThat(result.value().value()).isEqualTo("9");
+  }
+
+  @Test
+  void returnsNotPresentForOutOfRangeIndex() {
+    var ctx = SimpleContext.<JsonExtractIn>builder()
+            .body(new JsonExtractIn(
+                    "{\"items\":[{\"id\":7},{\"id\":9}]}",
+                    "$.items[5].id"))
+            .mode(ExecutionMode.PREVIEW).build();
+    Result<JsonExtractOut> result = helper.execute(ctx);
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(result.value().present()).isFalse();
+    assertThat(result.value().value()).isNull();
+  }
+
+  @Test
+  void returnsNotPresentForNonNumericIndex() {
+    var ctx = SimpleContext.<JsonExtractIn>builder()
+            .body(new JsonExtractIn(
+                    "{\"items\":[{\"id\":7},{\"id\":9}]}",
+                    "items[x].id"))
+            .mode(ExecutionMode.PREVIEW).build();
+    Result<JsonExtractOut> result = helper.execute(ctx);
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(result.value().present()).isFalse();
+    assertThat(result.value().value()).isNull();
+  }
+
+  @Test
+  void returnsNotPresentForUnclosedBracket() {
+    var ctx = SimpleContext.<JsonExtractIn>builder()
+            .body(new JsonExtractIn(
+                    "{\"items\":[{\"id\":7}]}",
+                    "items["))
+            .mode(ExecutionMode.PREVIEW).build();
+    Result<JsonExtractOut> result = helper.execute(ctx);
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(result.value().present()).isFalse();
+    assertThat(result.value().value()).isNull();
+  }
 }

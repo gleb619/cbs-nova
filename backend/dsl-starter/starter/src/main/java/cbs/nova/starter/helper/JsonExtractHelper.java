@@ -39,7 +39,7 @@ public class JsonExtractHelper implements Executable<JsonExtractIn, JsonExtractO
       return Result.failure(new IllegalArgumentException("Invalid JSON: " + e.getMessage(), e));
     }
 
-    JsonValue terminal = navigate(value, input.path().split("\\."));
+    JsonValue terminal = navigate(value, tokenize(input.path()));
     if (!terminal.isPresent()) {
       return Result.success(new JsonExtractOut(null, false));
     }
@@ -47,11 +47,73 @@ public class JsonExtractHelper implements Executable<JsonExtractIn, JsonExtractO
     return Result.success(new JsonExtractOut(raw == null ? null : raw.asText(), true));
   }
 
+  /**
+   * Normalizes a JSONPath-style expression into the flat segment list consumed by
+   * {@link #navigate}. Accepts:
+   *
+   * <ul>
+   *   <li>a leading {@code $} (with an optional following {@code .}) — stripped;</li>
+   *   <li>plain dotted keys, e.g. {@code a.b.c};</li>
+   *   <li>numeric array indices in brackets, e.g. {@code items[0].id};
+   *       the bracket form is expanded into {@code items}, {@code 3} segments.</li>
+   * </ul>
+   *
+   * <p>Blank or {@code $}-only paths resolve to the document root and yield
+   * {@code present = false} (matching the pre-existing blank-path contract). Malformed
+   * bracket expressions such as {@code items[x]} or {@code items[} also resolve to
+   * {@code present = false} without throwing.
+   */
+  @NonNull
+  static String[] tokenize(@NonNull String path) {
+    String p = path;
+    if (p.startsWith("$")) {
+      p = p.substring(1);
+      if (p.startsWith(".")) {
+        p = p.substring(1);
+      }
+    }
+    if (p.isEmpty()) {
+      return new String[0];
+    }
+    java.util.List<String> out = new java.util.ArrayList<>();
+    StringBuilder current = new StringBuilder();
+    for (int i = 0; i < p.length(); i++) {
+      char c = p.charAt(i);
+      if (c == '.') {
+        if (current.length() > 0) {
+          out.add(current.toString());
+          current.setLength(0);
+        }
+      } else if (c == '[') {
+        if (current.length() > 0) {
+          out.add(current.toString());
+          current.setLength(0);
+        }
+        int close = p.indexOf(']', i + 1);
+        if (close < 0) {
+          return new String[]{"__malformed__"};
+        }
+        String inside = p.substring(i + 1, close);
+        if (inside.isEmpty() || !inside.chars().allMatch(Character::isDigit)) {
+          return new String[]{"__malformed__"};
+        }
+        out.add(inside);
+        i = close;
+      } else {
+        current.append(c);
+      }
+    }
+    if (current.length() > 0) {
+      out.add(current.toString());
+    }
+    return out.toArray(new String[0]);
+  }
+
   private @NonNull JsonValue navigate(@NonNull JsonValue root, @NonNull String[] segments) {
     JsonValue current = root;
     for (String segment : segments) {
-      if (segment.isBlank()) {
-        continue;
+      if (segment.isBlank() || "__malformed__".equals(segment)) {
+        return JsonValues.missing();
       }
       if (current.isArray()) {
         int index;
