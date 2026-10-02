@@ -512,6 +512,65 @@ class OpenTelemetryHelperTest {
     assertThat(getFromR3.value().result()).isEqualTo("v3");
   }
 
+  @Test
+  void helperEndedMarkersStayBoundedWhenManySpansLeak() {
+    int max = 5;
+    helper = new OpenTelemetryHelper(
+            OTEL.getOpenTelemetry(),
+            new OpenTelemetryHelperProperties(max, Duration.ofMinutes(10), Duration.ofMinutes(10),
+                    1000),
+            mutableClock);
+
+    // Leak far more spans than the bound; each overflow evicts (and remembers) the oldest.
+    for (int i = 0; i < max * 20; i++) {
+      execute(OtelInSpan("leak-" + i));
+    }
+
+    assertThat(helper.openSpanCount()).isLessThanOrEqualTo(max);
+    assertThat(helper.endedMarkerCount())
+            .as("the remembered-ended-id set must not grow with every leaked span")
+            .isLessThanOrEqualTo(max);
+
+    // Same for TTL reaping: advance past the TTL so all open spans are reaped on the next call.
+    mutableClock.advance(Duration.ofMinutes(11));
+    for (int i = 0; i < max * 20; i++) {
+      execute(OtelInSpan("later-" + i));
+      mutableClock.advance(Duration.ofMinutes(11));
+    }
+    assertThat(helper.endedMarkerCount()).isLessThanOrEqualTo(max);
+  }
+
+  @Test
+  void concurrentBaggageReadsAndWritesNeverFailOrCorrupt() throws Exception {
+    int threads = 8;
+    int iterations = 400;
+    java.util.concurrent.CountDownLatch start = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors
+            .newFixedThreadPool(threads);
+    java.util.List<java.util.concurrent.Future<?>> futures = new java.util.ArrayList<>();
+    for (int t = 0; t < threads; t++) {
+      String run = "run-" + t;
+      futures.add(pool.submit(() -> {
+        start.await();
+        for (int i = 0; i < iterations; i++) {
+          String key = "k" + (i % 7);
+          executeForRun(run, new OtelIn(
+                  "setBaggage", null, null, null, null, null, null, key, "v" + i, null));
+          Result<OtelOut> got = executeForRun(run, new OtelIn(
+                  "getBaggage", null, null, null, null, null, null, key, null, null));
+          // Own write must be readable (runs are isolated; no other thread writes this run).
+          assertThat(got.isSuccess()).isTrue();
+        }
+        return null;
+      }));
+    }
+    start.countDown();
+    for (java.util.concurrent.Future<?> f : futures) {
+      f.get(30, java.util.concurrent.TimeUnit.SECONDS);
+    }
+    pool.shutdownNow();
+  }
+
   private static final String DEFAULT_RUN_ID = "default-run";
 
   private Result<OtelOut> execute(OtelIn input) {

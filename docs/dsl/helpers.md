@@ -1510,7 +1510,8 @@ that are `null` are coerced to the empty string (Micrometer's `Tag.of` rejects n
   `Context.runId()`: a key written by run A is NOT visible to run B. The store is also bounded
   by `cbs.otel.helper.baggage-max-runs` (default 1000 distinct run-ids) and `cbs.otel.helper.baggage-ttl`
   (default 10 minutes); stale entries are silently dropped on the next `setBaggage`/`getBaggage`
-  call. This is *not* W3C baggage propagation; `getBaggage` on a key that was never set (or whose
+  call. Contexts that carry no `runId` all share one anonymous scope, so do not rely on isolation
+  for those. This is *not* W3C baggage propagation; `getBaggage` on a key that was never set (or whose
   entry has been reaped) is an error.
 - `"injectContext"` — injects W3C `traceparent` headers into a `headers` carrier map (returned
   as `OtelOut.result`). Useful before an `httpCall` whose headers should join the trace.
