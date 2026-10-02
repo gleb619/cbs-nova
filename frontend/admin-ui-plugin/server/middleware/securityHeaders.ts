@@ -42,11 +42,13 @@ export default defineEventHandler((event) => {
     isHttps,
   })
 
+  const overrides = typeof config.securityHeaders === 'object' ? config.securityHeaders : undefined
+
   for (const [name, value] of Object.entries(headers)) {
-    // Respect pre-existing response headers (e.g. another middleware or the
-    // Nitro static-file handler). The spec asserts that a header set by the
-    // host app survives this middleware.
-    if (event.node.res.getHeader(name) !== undefined) {
+    // Respect pre-existing response headers (host app, reverse proxy, earlier middleware) unless
+    // the module option explicitly overrides this header with a string value.
+    const explicitOverride = typeof overrides?.[name] === 'string'
+    if (!explicitOverride && event.node.res.getHeader(name) !== undefined) {
       continue
     }
     setResponseHeader(event, name, value)

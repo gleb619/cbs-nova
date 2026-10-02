@@ -238,6 +238,18 @@ describe('securityHeaders middleware', () => {
       expect(setResponseHeaderMock).toHaveBeenCalledWith(event, 'X-Frame-Options', 'DENY')
     })
 
+    it('explicit override replaces a header the host already set', () => {
+      res.headers['x-frame-options'] = 'ALLOW-FROM https://partner.example'
+      setSecurityHeaders({ 'X-Frame-Options': 'DENY' })
+      const event = { node: { res, req } } as unknown as Parameters<
+        typeof securityHeadersMiddleware
+      >[0]
+      securityHeadersMiddleware(event)
+
+      expect(setResponseHeaderMock).toHaveBeenCalledWith(event, 'X-Frame-Options', 'DENY')
+      expect(res.headers['x-frame-options']).toBe('DENY')
+    })
+
     it('omits a header when the override is null', () => {
       setSecurityHeaders({ 'X-Frame-Options': null })
       const event = { node: { res, req } } as unknown as Parameters<
