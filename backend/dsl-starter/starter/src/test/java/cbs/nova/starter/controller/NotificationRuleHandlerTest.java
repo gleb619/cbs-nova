@@ -35,6 +35,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.jdbc.datasource.init.ScriptUtils;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -78,7 +79,8 @@ class NotificationRuleHandlerTest {
             List.of(), executor);
 
     var handler = new NotificationRuleHandler(ruleService, ruleEngine, firingRepository,
-            Optional.empty(), AuditTestSupport.emptyProvider());
+            Optional.empty(), AuditTestSupport.emptyProvider(),
+            AuditTestSupport.emptyMailSenderProvider());
     var router = new NotificationRouterConfiguration();
 
     var adviceContext = new AnnotationConfigApplicationContext();
@@ -321,7 +323,8 @@ class NotificationRuleHandlerTest {
   void createWritesAuditRowWithIdNameEnabledAndOmitsSinkSecret() throws Exception {
     var audit = AuditTestSupport.h2();
     mockMvc = buildMockMvc(new NotificationRuleHandler(ruleService, ruleEngine, firingRepository,
-            Optional.empty(), AuditTestSupport.providerOf(audit.service())));
+            Optional.empty(), AuditTestSupport.providerOf(audit.service()),
+            AuditTestSupport.emptyMailSenderProvider()));
 
     String body = objectMapper.writeValueAsString(sampleRule("loan-failures"));
 
@@ -348,7 +351,8 @@ class NotificationRuleHandlerTest {
   void createWithBlankNameWritesFailureAuditRow() throws Exception {
     var audit = AuditTestSupport.h2();
     mockMvc = buildMockMvc(new NotificationRuleHandler(ruleService, ruleEngine, firingRepository,
-            Optional.empty(), AuditTestSupport.providerOf(audit.service())));
+            Optional.empty(), AuditTestSupport.providerOf(audit.service()),
+            AuditTestSupport.emptyMailSenderProvider()));
 
     var dto = new NotificationRuleDto(null, "   ", true,
             new EventFilterDto("RunFailed", null, null, null, null),
@@ -371,7 +375,8 @@ class NotificationRuleHandlerTest {
   void updateWritesAuditRowOnSuccessAndOmitsSinkSecret() throws Exception {
     var audit = AuditTestSupport.h2();
     mockMvc = buildMockMvc(new NotificationRuleHandler(ruleService, ruleEngine, firingRepository,
-            Optional.empty(), AuditTestSupport.providerOf(audit.service())));
+            Optional.empty(), AuditTestSupport.providerOf(audit.service()),
+            AuditTestSupport.emptyMailSenderProvider()));
     var created = ruleService.create(sampleRule("old-name"));
     var updated = new NotificationRuleDto(
             created.id(), "new-name", false,
@@ -396,7 +401,8 @@ class NotificationRuleHandlerTest {
   void updateUnknownIdWritesFailureAuditRow() throws Exception {
     var audit = AuditTestSupport.h2();
     mockMvc = buildMockMvc(new NotificationRuleHandler(ruleService, ruleEngine, firingRepository,
-            Optional.empty(), AuditTestSupport.providerOf(audit.service())));
+            Optional.empty(), AuditTestSupport.providerOf(audit.service()),
+            AuditTestSupport.emptyMailSenderProvider()));
     var body = objectMapper.writeValueAsString(sampleRule("any"));
 
     mockMvc.perform(put("/api/dsl/notifications/rules/987654321")
@@ -415,7 +421,8 @@ class NotificationRuleHandlerTest {
   void deleteWritesAuditRowOnSuccess() throws Exception {
     var audit = AuditTestSupport.h2();
     mockMvc = buildMockMvc(new NotificationRuleHandler(ruleService, ruleEngine, firingRepository,
-            Optional.empty(), AuditTestSupport.providerOf(audit.service())));
+            Optional.empty(), AuditTestSupport.providerOf(audit.service()),
+            AuditTestSupport.emptyMailSenderProvider()));
     var created = ruleService.create(sampleRule("to-delete"));
 
     mockMvc.perform(delete("/api/dsl/notifications/rules/" + created.id()))
@@ -433,7 +440,8 @@ class NotificationRuleHandlerTest {
   void deleteUnknownIdWritesFailureAuditRow() throws Exception {
     var audit = AuditTestSupport.h2();
     mockMvc = buildMockMvc(new NotificationRuleHandler(ruleService, ruleEngine, firingRepository,
-            Optional.empty(), AuditTestSupport.providerOf(audit.service())));
+            Optional.empty(), AuditTestSupport.providerOf(audit.service()),
+            AuditTestSupport.emptyMailSenderProvider()));
 
     mockMvc.perform(delete("/api/dsl/notifications/rules/987654321"))
             .andExpect(status().isNotFound());
@@ -449,7 +457,8 @@ class NotificationRuleHandlerTest {
   void toggleWritesAuditRowOnSuccess() throws Exception {
     var audit = AuditTestSupport.h2();
     mockMvc = buildMockMvc(new NotificationRuleHandler(ruleService, ruleEngine, firingRepository,
-            Optional.empty(), AuditTestSupport.providerOf(audit.service())));
+            Optional.empty(), AuditTestSupport.providerOf(audit.service()),
+            AuditTestSupport.emptyMailSenderProvider()));
     var created = ruleService.create(sampleRule("toggle"));
     String body = objectMapper.writeValueAsString(new ToggleEnabledRequest(false));
 
@@ -472,7 +481,8 @@ class NotificationRuleHandlerTest {
   void toggleUnknownIdWritesFailureAuditRow() throws Exception {
     var audit = AuditTestSupport.h2();
     mockMvc = buildMockMvc(new NotificationRuleHandler(ruleService, ruleEngine, firingRepository,
-            Optional.empty(), AuditTestSupport.providerOf(audit.service())));
+            Optional.empty(), AuditTestSupport.providerOf(audit.service()),
+            AuditTestSupport.emptyMailSenderProvider()));
     String body = objectMapper.writeValueAsString(new ToggleEnabledRequest(true));
 
     mockMvc.perform(post("/api/dsl/notifications/rules/987654321/enabled")

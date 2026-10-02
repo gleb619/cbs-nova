@@ -22,6 +22,7 @@ import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration;
 import org.springframework.context.annotation.Bean;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.servlet.function.RouterFunction;
 import org.springframework.web.servlet.function.RouterFunctions;
@@ -41,9 +42,10 @@ public class NotificationRouterConfiguration {
   NotificationRuleHandler notificationRuleHandler(NotificationRuleService ruleService,
           NotificationRuleEngine ruleEngine, NotificationRuleFiringRepository firingRepository,
           Optional<WebhookDispatcher> webhookDispatcher,
-          ObjectProvider<DslAuditService> auditServiceProvider) {
+          ObjectProvider<DslAuditService> auditServiceProvider,
+          ObjectProvider<JavaMailSender> mailSenderProvider) {
     return new NotificationRuleHandler(ruleService, ruleEngine, firingRepository,
-            webhookDispatcher, auditServiceProvider);
+            webhookDispatcher, auditServiceProvider, mailSenderProvider);
   }
 
   @Bean
@@ -72,7 +74,7 @@ public class NotificationRouterConfiguration {
               @ApiResponse(responseCode = "200", description = "The updated rule"),
               @ApiResponse(responseCode = "404", description = "No rule with the given id")})),
       @RouterOperation(path = "/api/dsl/notifications/channels", beanClass = NotificationRuleHandler.class, beanMethod = "channels", method = RequestMethod.GET, operation = @Operation(operationId = "listNotificationChannels", summary = "List available notification channel types", tags = {
-          "Notifications"}, responses = @ApiResponse(responseCode = "200", description = "Static channel catalogue; email is a placeholder"))),
+          "Notifications"}, responses = @ApiResponse(responseCode = "200", description = "Static channel catalogue; email is active when a JavaMailSender bean is present"))),
       @RouterOperation(path = "/api/dsl/notifications/fire-log", beanClass = NotificationRuleHandler.class, beanMethod = "fireLog", method = RequestMethod.GET, operation = @Operation(operationId = "listNotificationFireLog", summary = "List notification rule firing audit rows, newest first", tags = {
           "Notifications"}, parameters = {
               @Parameter(name = "ruleId", in = ParameterIn.QUERY, description = "Optional exact rule id filter"),

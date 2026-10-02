@@ -61,6 +61,11 @@ dependencies {
   compileOnly libs.openfeign.core
   compileOnly libs.spring.kafka
   compileOnly libs.spring.boot.starter.amqp
+  // T769: opt-in SMTP transport for the `email` notification sink. JavaMailSender + jakarta.mail
+  // types are referenced at compile time only — apps that want real email delivery declare this
+  // dependency themselves and publish a JavaMailSender bean (the starter never pulls a runtime
+  // mail jar on users that do not need it).
+  compileOnly libs.spring.boot.starter.mail
   // T754: opt-in `s3Storage` helper. compileOnly keeps AWS SDK v2 off every user's runtime
   // classpath — apps that want the helper declare software.amazon.awssdk:s3 themselves and
   // expose an S3Client bean (MinIO works too via a custom endpointOverride).
@@ -129,6 +134,7 @@ dependencies {
   testImplementation libs.wiremock
   testImplementation libs.spring.kafka
   testImplementation libs.spring.boot.starter.amqp
+  testImplementation libs.spring.boot.starter.mail
   testImplementation libs.awssdk.s3
   testImplementation libs.spring.boot.starter.data.redis
   testImplementation libs.opentelemetry.sdk.testing

@@ -3306,7 +3306,7 @@
                 }
               }
             },
-            "description": "Static channel catalogue; email is a placeholder"
+            "description": "Static channel catalogue; email is active when a JavaMailSender bean is present"
           }
         },
         "summary": "List available notification channel types",
