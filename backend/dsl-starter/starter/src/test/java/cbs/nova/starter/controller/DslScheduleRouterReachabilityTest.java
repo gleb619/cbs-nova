@@ -67,6 +67,9 @@ class DslScheduleRouterReachabilityTest {
     DslScheduleHandler handler = new DslScheduleHandler(service, new ObjectMapper(),
             AuditTestSupport.emptyProvider());
     context.registerBean(DslScheduleHandler.class, () -> handler);
+    context.registerBean(cbs.nova.starter.web.RequestBodyLimitFilter.class,
+            () -> new cbs.nova.starter.web.RequestBodyLimitFilter(
+                    new cbs.nova.starter.config.properties.CbsNovaWebProperties(0L)));
     context.register(DslScheduleRouterConfiguration.class);
     context.refresh();
 
@@ -156,6 +159,9 @@ class DslScheduleRouterReachabilityTest {
     DslScheduleHandler handler = new DslScheduleHandler(service, new ObjectMapper(),
             AuditTestSupport.emptyProvider());
     context.registerBean(DslScheduleHandler.class, () -> handler);
+    context.registerBean(cbs.nova.starter.web.RequestBodyLimitFilter.class,
+            () -> new cbs.nova.starter.web.RequestBodyLimitFilter(
+                    new cbs.nova.starter.config.properties.CbsNovaWebProperties(0L)));
     context.register(DslScheduleRouterConfiguration.class);
     context.refresh();
 

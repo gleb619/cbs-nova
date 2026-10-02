@@ -37,8 +37,8 @@ import org.springframework.web.servlet.function.ServerResponse;
  * <li>under-limit requests pass through to the handler unchanged;</li>
  * <li>requests whose declared {@code Content-Length} exceeds the limit are rejected with
  * {@link DslPayloadTooLargeException} <em>before</em> the handler runs;</li>
- * <li>chunked / no-{@code Content-Length} bodies are capped by the wrapping stream so the
- * exception fires when the handler actually reads past the limit;</li>
+ * <li>chunked / no-{@code Content-Length} bodies are capped by the wrapping stream so the exception
+ * fires when the handler actually reads past the limit;</li>
  * <li>a configured limit of {@code 0} disables the filter entirely;</li>
  * <li>{@code GET} / {@code DELETE} requests bypass the filter because they do not carry a
  * body.</li>
@@ -265,7 +265,8 @@ class RequestBodyLimitFilterTest {
       assertThat(stream.read()).isEqualTo(-1);
     }
 
-    private RequestBodyLimitFilter.CountingServletInputStream stream(byte[] src, long limit) throws Exception {
+    private RequestBodyLimitFilter.CountingServletInputStream stream(byte[] src, long limit)
+            throws Exception {
       ServletInputStream delegate = new ServletInputStream() {
         private final InputStream srcStream = new ByteArrayInputStream(src);
 
@@ -298,9 +299,9 @@ class RequestBodyLimitFilterTest {
           return srcStream.read(b, off, len);
         }
       };
-      Constructor<RequestBodyLimitFilter.CountingServletInputStream> ctor =
-              RequestBodyLimitFilter.CountingServletInputStream.class.getDeclaredConstructor(
-                  ServletInputStream.class, long.class, String.class);
+      Constructor<RequestBodyLimitFilter.CountingServletInputStream> ctor = RequestBodyLimitFilter.CountingServletInputStream.class
+              .getDeclaredConstructor(
+                      ServletInputStream.class, long.class, String.class);
       ctor.setAccessible(true);
       return ctor.newInstance(delegate, limit, RequestBodyLimitFilter.ENTITY_NAME);
     }

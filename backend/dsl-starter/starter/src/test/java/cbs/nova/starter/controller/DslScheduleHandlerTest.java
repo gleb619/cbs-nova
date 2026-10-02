@@ -53,7 +53,7 @@ class DslScheduleHandlerTest {
   private final DslScheduleService service = mock(DslScheduleService.class);
   private final ObjectMapper objectMapper = new ObjectMapper();
   private static RequestBodyLimitFilter requestBodyLimitFilter;
-private MockMvc mockMvc;
+  private MockMvc mockMvc;
 
   @BeforeEach
   void setUp() {
@@ -419,7 +419,8 @@ private MockMvc mockMvc;
     exceptionResolver.setMessageConverters(List.of(new JacksonJsonHttpMessageConverter()));
     exceptionResolver.afterPropertiesSet();
 
-    return MockMvcBuilders.routerFunctions(router.dslScheduleRouter(handler, requestBodyLimitFilter))
+    return MockMvcBuilders
+            .routerFunctions(router.dslScheduleRouter(handler, requestBodyLimitFilter))
             .setMessageConverters(new StringHttpMessageConverter(),
                     new JacksonJsonHttpMessageConverter())
             .setHandlerExceptionResolvers(exceptionResolver)

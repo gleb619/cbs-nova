@@ -52,7 +52,7 @@ class VhsManagementIntegrationTest {
   Path tempDir;
 
   private static RequestBodyLimitFilter requestBodyLimitFilter;
-private MockMvc mockMvc;
+  private MockMvc mockMvc;
   private ObjectMapper objectMapper;
 
   @BeforeEach
@@ -81,7 +81,8 @@ private MockMvc mockMvc;
     exceptionResolver.setMessageConverters(List.of(new JacksonJsonHttpMessageConverter()));
     exceptionResolver.afterPropertiesSet();
 
-    mockMvc = MockMvcBuilders.routerFunctions(router.vhsManagementRouter(handler, requestBodyLimitFilter))
+    mockMvc = MockMvcBuilders
+            .routerFunctions(router.vhsManagementRouter(handler, requestBodyLimitFilter))
             .setMessageConverters(new StringHttpMessageConverter(),
                     new JacksonJsonHttpMessageConverter())
             .setHandlerExceptionResolvers(exceptionResolver)

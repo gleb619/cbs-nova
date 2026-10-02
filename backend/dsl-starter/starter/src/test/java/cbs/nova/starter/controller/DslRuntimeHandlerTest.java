@@ -45,7 +45,7 @@ class DslRuntimeHandlerTest {
   private DslPayloadSizeValidator payloadSizeValidator;
   private InputValidator inputValidator;
   private static RequestBodyLimitFilter requestBodyLimitFilter;
-private MockMvc mockMvc;
+  private MockMvc mockMvc;
 
   @BeforeEach
   void setUp() {
@@ -58,7 +58,8 @@ private MockMvc mockMvc;
             inputValidator);
     DslRuntimeRouterConfiguration router = new DslRuntimeRouterConfiguration();
 
-    mockMvc = MockMvcBuilders.routerFunctions(router.dslRuntimeRouter(handler, requestBodyLimitFilter))
+    mockMvc = MockMvcBuilders
+            .routerFunctions(router.dslRuntimeRouter(handler, requestBodyLimitFilter))
             .setMessageConverters(new StringHttpMessageConverter(),
                     new JacksonJsonHttpMessageConverter())
             .build();

@@ -174,8 +174,9 @@ class DslSignalsHandlerTest {
     ServerRequest oversized = postRequest(RUN_ID, hugeJson);
 
     assertThatThrownBy(() -> filter.filter(oversized, handler::sendSignal))
-            .isInstanceOfSatisfying(DslPayloadTooLargeException.class, ex ->
-                    assertThat(ex.getEntityName()).isEqualTo(RequestBodyLimitFilter.ENTITY_NAME));
+            .isInstanceOfSatisfying(DslPayloadTooLargeException.class,
+                    ex -> assertThat(ex.getEntityName())
+                            .isEqualTo(RequestBodyLimitFilter.ENTITY_NAME));
   }
 
   private static String body() {

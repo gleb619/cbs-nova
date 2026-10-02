@@ -41,7 +41,9 @@ import org.springframework.web.servlet.function.ServerResponse;
  */
 @Order(Ordered.HIGHEST_PRECEDENCE + 50)
 @RequiredArgsConstructor
-public class RequestBodyLimitFilter implements HandlerFilterFunction<ServerResponse, ServerResponse> {
+public class RequestBodyLimitFilter
+        implements
+          HandlerFilterFunction<ServerResponse, ServerResponse> {
 
   private static final Set<HttpMethod> BODY_METHODS = Set.of(HttpMethod.POST, HttpMethod.PUT,
           HttpMethod.PATCH);

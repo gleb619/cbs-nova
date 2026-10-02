@@ -53,7 +53,7 @@ class DslDefinitionTestHandlerTest {
   private DslDefinitionTestService service;
   private AuditTestSupport.Harness audit;
   private static RequestBodyLimitFilter requestBodyLimitFilter;
-private MockMvc mockMvc;
+  private MockMvc mockMvc;
 
   private final JsonMapper jackson3 = JsonMapper.builder().build();
 
@@ -76,7 +76,8 @@ private MockMvc mockMvc;
     exceptionResolver.setMessageConverters(List.of(new JacksonJsonHttpMessageConverter()));
     exceptionResolver.afterPropertiesSet();
 
-    mockMvc = MockMvcBuilders.routerFunctions(router.dslDefinitionTestRouter(handler, requestBodyLimitFilter))
+    mockMvc = MockMvcBuilders
+            .routerFunctions(router.dslDefinitionTestRouter(handler, requestBodyLimitFilter))
             .setMessageConverters(new StringHttpMessageConverter(),
                     new JacksonJsonHttpMessageConverter())
             .setHandlerExceptionResolvers(exceptionResolver)

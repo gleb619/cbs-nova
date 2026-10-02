@@ -51,7 +51,7 @@ class ChangeRequestHandlerTest {
   private ChangeRequestService changeRequestService;
   private RoleResolver roleResolver;
   private static RequestBodyLimitFilter requestBodyLimitFilter;
-private MockMvc mockMvc;
+  private MockMvc mockMvc;
   private final ObjectMapper objectMapper = new ObjectMapper();
 
   @BeforeEach
@@ -74,7 +74,8 @@ private MockMvc mockMvc;
     exceptionResolver.setMessageConverters(List.of(new JacksonJsonHttpMessageConverter()));
     exceptionResolver.afterPropertiesSet();
 
-    mockMvc = MockMvcBuilders.routerFunctions(router.changeRequestRouter(handler, requestBodyLimitFilter))
+    mockMvc = MockMvcBuilders
+            .routerFunctions(router.changeRequestRouter(handler, requestBodyLimitFilter))
             .setMessageConverters(new StringHttpMessageConverter(),
                     new JacksonJsonHttpMessageConverter())
             .setHandlerExceptionResolvers(exceptionResolver)

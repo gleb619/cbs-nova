@@ -180,7 +180,8 @@ class DslDocsHandlerTest {
     ServerRequest oversized = ServerRequest.create(req, CONVERTERS);
 
     assertThatThrownBy(() -> filter.filter(oversized, handler::bulkWrite))
-            .isInstanceOfSatisfying(DslPayloadTooLargeException.class, ex ->
-                    assertThat(ex.getEntityName()).isEqualTo(RequestBodyLimitFilter.ENTITY_NAME));
+            .isInstanceOfSatisfying(DslPayloadTooLargeException.class,
+                    ex -> assertThat(ex.getEntityName())
+                            .isEqualTo(RequestBodyLimitFilter.ENTITY_NAME));
   }
 }

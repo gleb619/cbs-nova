@@ -50,7 +50,7 @@ import tools.jackson.databind.ObjectMapper;
 class DslPromoteResourceTest {
 
   private static RequestBodyLimitFilter requestBodyLimitFilter;
-private MockMvc mockMvc;
+  private MockMvc mockMvc;
   private Path devDir;
   private Path stagingDir;
   private Path sourceDir;

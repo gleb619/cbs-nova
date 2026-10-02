@@ -58,7 +58,7 @@ class DslRuntimeResourceTest {
 
   private final DslRuntime dslRuntime = mock(DslRuntime.class);
   private static RequestBodyLimitFilter requestBodyLimitFilter;
-private MockMvc mockMvc;
+  private MockMvc mockMvc;
 
   @BeforeEach
   void setUp() {
@@ -83,7 +83,8 @@ private MockMvc mockMvc;
             Caffeine.newBuilder().build());
     DslRuntimeHandler handler = new DslRuntimeHandler(service, validator, inputValidator);
     DslRuntimeRouterConfiguration router = new DslRuntimeRouterConfiguration();
-    mockMvc = MockMvcBuilders.routerFunctions(router.dslRuntimeRouter(handler, requestBodyLimitFilter)).build();
+    mockMvc = MockMvcBuilders
+            .routerFunctions(router.dslRuntimeRouter(handler, requestBodyLimitFilter)).build();
   }
 
   @AfterEach
