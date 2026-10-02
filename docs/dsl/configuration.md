@@ -157,6 +157,28 @@ or test contexts).
 |-----|------|---------|--------|
 | `cbs.nova.web.max-request-bytes` | `long` | `10485760` (10 MiB) | Max HTTP request body size for any `POST` / `PUT` / `PATCH` under `/api/`. Oversized requests are rejected with HTTP 413 `PAYLOAD_TOO_LARGE`. `0` (or negative, normalised to `0`) disables the cap entirely. |
 
+### `cbs.sse`
+
+Class: `CbsSseProperties` (record). Shared subscriber cap applied independently to both SSE
+services in the starter — `ExecutionSseService` (`/api/executions/{id}/events`) and
+`DryRunLogSseService` (`/api/dsl/dry-run/{traceId}/logs`). Each service keeps one
+`SseEmitter` per id in a `ConcurrentHashMap`; without a cap a client could open an unbounded
+number of distinct long-lived streams (each holding a servlet async context and a map entry)
+because `StarterConstants.SSE_EMITTER_TIMEOUT_MS = 0L` means emitters never time out from the
+server side — only the heartbeat noticing a dead socket frees them.
+
+The cap is enforced per service. A `subscribe` call that would push the service past
+`max-subscribers` is rejected before the `SseEmitter` is created; the controller surfaces this as
+HTTP 429 `SUBSCRIBER_CAP_EXCEEDED` (same `ErrorResponse` shape as every other DSL error). A
+subscriber that re-subscribes with the same id replaces the previous emitter and is **not** counted
+twice. Values `< 1` are clamped to `500` at binding time (the `@Min(1)` annotation rejects them
+and the compact constructor falls back to the default), so a typo in `application.yml` does not
+take the starter down.
+
+| Key | Type | Default | Effect |
+|-----|------|---------|--------|
+| `cbs.sse.max-subscribers` | `int` | `500` | Max concurrent SSE subscribers per service (`@Min(1)`). When the cap is reached, the controller returns `429 SUBSCRIBER_CAP_EXCEEDED` and no emitter is created. Invalid (`< 1`) values are replaced with `500` at startup. |
+
 ### `cbs.nova.logging`
 
 Class: `CbsNovaLoggingProperties` (record). Starter-internal log levels and MDC behaviour.

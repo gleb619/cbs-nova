@@ -41,6 +41,7 @@ public class DryRunLogSseController {
   @Operation(summary = "Stream live dry-run log lines for a single trace/run id")
   @ApiResponse(responseCode = "200", description = "SSE stream of dry-run log events", content = @Content(mediaType = MediaType.TEXT_EVENT_STREAM_VALUE))
   @ApiResponse(responseCode = "404", description = "Malformed trace id", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class)))
+  @ApiResponse(responseCode = "429", description = "Subscriber cap reached; no emitter created", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class)))
   @GetMapping(value = "/api/dsl/dry-run/{traceId}/logs", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
   public ResponseEntity<SseEmitter> logs(
           @Parameter(description = "Trace/run id (X-Request-Id used for the preview/explain call)") @PathVariable("traceId") @NonNull String traceId) {

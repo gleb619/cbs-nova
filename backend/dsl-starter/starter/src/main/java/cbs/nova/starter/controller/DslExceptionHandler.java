@@ -8,6 +8,7 @@ import cbs.nova.starter.converter.DslExceptionMapper;
 import cbs.nova.starter.exception.ApiKeyNotFoundException;
 import cbs.nova.starter.exception.DefinitionNotFoundException;
 import cbs.nova.starter.exception.DslPayloadTooLargeException;
+import cbs.nova.starter.exception.DslSubscriberCapExceededException;
 import cbs.nova.starter.exception.ScheduleConflictException;
 import cbs.nova.dsl.model.ErrorResponse;
 import lombok.RequiredArgsConstructor;
@@ -44,6 +45,15 @@ public class DslExceptionHandler extends ResponseEntityExceptionHandler {
     return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
             .body(new ErrorResponse("PAYLOAD_TOO_LARGE", ex.getMessage(), ex.getEntityName(), null,
                     null, null, null, null, null));
+  }
+
+  @ExceptionHandler(DslSubscriberCapExceededException.class)
+  public ResponseEntity<ErrorResponse> handleSubscriberCap(DslSubscriberCapExceededException ex,
+          WebRequest request) {
+    log.error("SUBSCRIBER_CAP_EXCEEDED: {}", ex.getMessage(), ex);
+    return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+            .body(new ErrorResponse("SUBSCRIBER_CAP_EXCEEDED", ex.getMessage(), null, null, null,
+                    null, null, null, null));
   }
 
   @ExceptionHandler(DslException.class)
