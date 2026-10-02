@@ -1,11 +1,11 @@
 package cbs.nova.starter.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Locale;
@@ -37,8 +37,8 @@ class ConfigurationPropertiesDocsCoverageTest {
           .toAbsolutePath()
           .normalize();
 
-  private static final Path CONFIG_DOC = Path.of("..", "..", "..", "..", "..", "docs", "dsl",
-          "configuration.md")
+  private static final Path DOCS_DIR = Path
+          .of("..", "..", "..", "docs")
           .toAbsolutePath()
           .normalize();
 
@@ -55,14 +55,11 @@ class ConfigurationPropertiesDocsCoverageTest {
 
   @Test
   void everyConfigurationPropertiesPrefixIsDocumented() throws IOException {
-    assumeTrue(Files.isDirectory(PROPERTIES_PKG),
-            () -> "properties package not found at " + PROPERTIES_PKG
-                    + " (running outside the repo layout); skipping doc-drift check");
-    assumeTrue(Files.exists(CONFIG_DOC),
-            () -> "docs/dsl/configuration.md not found at " + CONFIG_DOC
-                    + " (running outside the repo layout); skipping doc-drift check");
+    assertThat(PROPERTIES_PKG).as("properties package (test runs from the starter module dir)")
+            .isDirectory();
+    assertThat(DOCS_DIR).as("docs directory").isDirectory();
 
-    String doc = Files.readString(CONFIG_DOC).toLowerCase(Locale.ROOT);
+    String doc = readAllDocs();
 
     Set<String> declaredPrefixes = collectDeclaredPrefixes();
     List<String> missing = declaredPrefixes.stream()
@@ -71,12 +68,24 @@ class ConfigurationPropertiesDocsCoverageTest {
             .toList();
 
     assertThat(missing)
-            .as("@ConfigurationProperties prefix(es) not documented in docs/dsl/configuration.md"
+            .as("@ConfigurationProperties prefix(es) not mentioned anywhere under docs/**/*.md"
                     + " (declared prefixes: %s)"
-                    + " — add a section to docs/dsl/configuration.md"
+                    + " — add a section (docs/dsl/configuration.md is the reference)"
                     + " or add the prefix to ALLOWED_UNDOCUMENTED with justification",
                     declaredPrefixes)
             .isEmpty();
+  }
+
+  /** All markdown under docs/, lower-cased and concatenated — same scope as the prefix sweep. */
+  private static String readAllDocs() throws IOException {
+    StringBuilder all = new StringBuilder();
+    try (var stream = Files.walk(DOCS_DIR)) {
+      for (Path md : stream.filter(Files::isRegularFile)
+              .filter(p -> p.getFileName().toString().endsWith(".md")).toList()) {
+        all.append(Files.readString(md).toLowerCase(Locale.ROOT)).append('\n');
+      }
+    }
+    return all.toString();
   }
 
   /**
