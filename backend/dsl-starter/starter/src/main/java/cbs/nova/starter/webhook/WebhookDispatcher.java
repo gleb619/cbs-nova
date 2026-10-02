@@ -51,15 +51,15 @@ public class WebhookDispatcher {
   private final Optional<WebhookDeliveryRecordRepository> deliveryRepository;
 
   /**
-   * Optional Micrometer registry. Resolved once at construction so a missing registry (tests,
-   * hosts without actuator) silently turns into a no-op rather than a hot lookup per delivery.
+   * Optional Micrometer registry. Resolved once at construction so a missing registry (tests, hosts
+   * without actuator) silently turns into a no-op rather than a hot lookup per delivery.
    */
   @Nullable
   private final MeterRegistry meterRegistry;
 
   /**
-   * Production wiring constructor — the registry is resolved via {@link ObjectProvider} so
-   * contexts without a {@code MeterRegistry} bean (e.g. tests, minimal hosts) stay working.
+   * Production wiring constructor — the registry is resolved via {@link ObjectProvider} so contexts
+   * without a {@code MeterRegistry} bean (e.g. tests, minimal hosts) stay working.
    */
   public WebhookDispatcher(WebhookProperties properties, ObjectMapper objectMapper,
           ThreadPoolTaskExecutor deliveryExecutor, HttpClient httpClient,

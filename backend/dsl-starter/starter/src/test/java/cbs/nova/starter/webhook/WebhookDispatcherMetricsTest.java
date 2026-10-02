@@ -30,8 +30,9 @@ import tools.jackson.databind.ObjectMapper;
  * {@code rejected}) on both the static-subscription path and the rule-based
  * {@link WebhookDispatcher#dispatchTo} path.
  *
- * <p>Tag discipline: only the {@code outcome} tag is present. URLs, run ids, and rule names are
- * not published to the registry.
+ * <p>
+ * Tag discipline: only the {@code outcome} tag is present. URLs, run ids, and rule names are not
+ * published to the registry.
  */
 class WebhookDispatcherMetricsTest {
 

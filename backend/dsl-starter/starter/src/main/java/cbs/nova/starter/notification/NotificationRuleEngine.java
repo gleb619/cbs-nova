@@ -51,15 +51,15 @@ public class NotificationRuleEngine implements DomainEventListener {
   private final ThreadPoolTaskExecutor notificationExecutor;
 
   /**
-   * Optional Micrometer registry. Resolved once at construction; a missing registry (tests,
-   * minimal hosts) silently turns into a no-op rather than a hot lookup per firing.
+   * Optional Micrometer registry. Resolved once at construction; a missing registry (tests, minimal
+   * hosts) silently turns into a no-op rather than a hot lookup per firing.
    */
   @Nullable
   private final MeterRegistry meterRegistry;
 
   /**
-   * Production wiring constructor — the registry is resolved via {@link ObjectProvider} so
-   * contexts without a {@code MeterRegistry} bean (e.g. tests, minimal hosts) stay working.
+   * Production wiring constructor — the registry is resolved via {@link ObjectProvider} so contexts
+   * without a {@code MeterRegistry} bean (e.g. tests, minimal hosts) stay working.
    */
   public NotificationRuleEngine(NotificationRuleRepository ruleRepository,
           NotificationRuleFiringRepository firingRepository, NotificationRuleService ruleService,
@@ -205,10 +205,9 @@ public class NotificationRuleEngine implements DomainEventListener {
   }
 
   /**
-   * Record one firing against the bounded Micrometer meters. Tags: {@code sink} (sink type
-   * string) and {@code outcome} (closed vocabulary already enforced by {@link FiringOutcome}).
-   * Rule names, URLs and run ids are deliberately NOT published as tags to keep cardinality
-   * bounded.
+   * Record one firing against the bounded Micrometer meters. Tags: {@code sink} (sink type string)
+   * and {@code outcome} (closed vocabulary already enforced by {@link FiringOutcome}). Rule names,
+   * URLs and run ids are deliberately NOT published as tags to keep cardinality bounded.
    */
   private void recordFiringMetric(String sink, FiringOutcome outcome) {
     if (meterRegistry == null) {

@@ -36,7 +36,11 @@ Key metrics (Micrometer, scraped from `/actuator/prometheus` when enabled):
 `dsl.run.duration`, `dsl.run.count`, `dsl.run.cancel` (tagged `processName`, `status`);
 `dsl.preview.calls`, `dsl.preview.external.calls`, `dsl.preview.duration`;
 `dsl.runs.purged`, `dsl.run.transactions.purged`;
-`dsl.run.reconciliation.inspected`, `dsl.run.reconciliation.resolved`.
+`dsl.run.reconciliation.inspected`, `dsl.run.reconciliation.resolved`;
+`cbs.webhook.delivery.count` / `cbs.webhook.delivery.duration` (tagged `outcome` —
+T775 outbound delivery);
+`cbs.notification.firing.count` / `cbs.notification.firing.duration` (tagged `sink`,
+`outcome` — T775 notification rule firings).
 
 Common triage commands:
 
@@ -818,6 +822,8 @@ Prometheus scrapes the Spring Boot actuator at `http://spring-app:8090/actuator/
 | `CbsNovaPreviewLatencyP95` | The 95th percentile of DSL preview durations exceeded 2 seconds for 10 minutes. | Tune the threshold to your observed baseline; investigate if preview compute or helper mocks are slow. The `dsl.preview.outcome` counter (tag `outcome` in `success`/`error`/`timeout`) is the source for preview outcome-rate alerts. |
 | `CbsNovaAppDown` | Prometheus cannot scrape the `cbs-nova` job for 2 minutes. | Verify the app container is running, `SERVER_PORT`, and the `management.endpoints.web.exposure.include` list contains `prometheus`. Temporal-specific reachability alerting rides on the future `dsl_temporal_reachable` gauge (T390). |
 | `CbsNovaSloRunSuccessFastBurn` / `CbsNovaSloRunSuccessSlowBurn` | The run-success SLO (see [docs/slo.md](slo.md)) is burning its 28d error budget at >14.4x (page) or >6x (ticket). | Page (fast burn) or open a reliability ticket (slow burn); check Temporal connectivity and recent deployments. |
+| `CbsNovaWebhookDeliveryFailures` / `CbsNovaWebhookDeliveryRejections` | Outbound webhook deliveries have been recording `outcome="failure"` or `outcome="rejected"` for 10 minutes (T775). | Check `dsl_webhook_deliveries` for the failing URL + status; verify the destination is reachable and that the subscription still matches the consumer schema. `allow-plain-http=false` rejections mean a subscription is pointing at an `http://` URL while the policy forbids it. |
+| `CbsNovaNotificationFiringFailures` | A notification sink (`webhook` / `slack` / `pagerduty` / `email` / …) has been recording `outcome="failure"` for 10 minutes (T775). | Inspect `dsl_notification_rule_firing` rows tagged with the same sink; the detail column has the upstream error. A dead email/Slack/PagerDuty sink hides from operators until they query the UI — this alert is the canary. |
 
 ### First-boot verification checklist
 

@@ -234,6 +234,60 @@ groups:
         annotations:
           summary: "cbs-nova preview-latency SLO is burning its error budget slowly"
           description: "Over the last 6h and 30m, more than 6x the 28d error budget of the preview-latency SLO (p95 ≤ 2s, budget 5%, see docs/slo.md SLO 3) is being burned — the budget would exhaust in ~5 days at this rate. Open a reliability ticket; no page."
+  # T775 — outbound-delivery failure alerts.
+  #
+  # Closed vocabulary on the outcome tag is enforced at registration time
+  # (WebhookDispatcher.classify() / NotificationRuleEngine.recordFiringMetric()):
+  # success | failure | rejected on the webhook series; success | failure | noop |
+  # skipped | rejected on the notification series. Sink tag is the sink type
+  # string ("webhook" | "slack" | "pagerduty" | "email" | "test" | ...) — bounded
+  # by the set of registered NotificationSink beans. No URLs, rule names or run
+  # ids are exposed as tags. Threshold = "any sustained failure for 10 minutes"
+  # — a dead sink is a real outage but not a page-worthy event until it
+  # persists; severity warning matches the run-error-rate precedent.
+  - name: cbs-nova-outbound-delivery
+    rules:
+      # VERIFY series name against a booted app: curl -s :8090/actuator/prometheus | grep cbs_webhook
+      - alert: CbsNovaWebhookDeliveryFailures
+        expr: rate(cbs_webhook_delivery_count_total{outcome="failure"}[10m]) > 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "cbs-nova webhook delivery is failing"
+          description: |
+            Outbound webhook deliveries have been recording `outcome="failure"` for 10 minutes
+            (any non-zero rate). Check `dsl_webhook_deliveries` for the failing URLs and the app
+            log for the failing subscription; verify the destination is reachable and that the
+            payload still matches the schema the consumer expects.
+
+      - alert: CbsNovaWebhookDeliveryRejections
+        expr: rate(cbs_webhook_delivery_count_total{outcome="rejected"}[10m]) > 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "cbs-nova webhook delivery is being rejected"
+          description: |
+            Outbound webhook deliveries have been recording `outcome="rejected"` for 10 minutes
+            (typically: non-https URL while `cbs.dsl.webhooks.allow-plain-http=false`, or
+            `serialization_failed`). Inspect the recent `dsl_webhook_deliveries` rows to find the
+            subscription that violates the transport policy.
+
+      # VERIFY series name against a booted app: curl -s :8090/actuator/prometheus | grep cbs_notification
+      - alert: CbsNovaNotificationFiringFailures
+        expr: sum by (sink) (rate(cbs_notification_firing_count_total{outcome="failure"}[10m])) > 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "cbs-nova notification sink {{ $labels.sink }} is failing"
+          description: |
+            The `{{ $labels.sink }}` notification sink has been recording `outcome="failure"` for
+            10 minutes. Inspect `dsl_notification_rule_firing` rows tagged with the same sink; the
+            detail column carries the upstream error. A dead email / Slack / PagerDuty sink hides
+            from operators until they query the UI — this alert is the canary.
+
   # T714 — authoring-health alert group.
   #
   # Pre-check (T708 lesson: dsl_change_request, dsl_definition_tests, dsl_compile_diagnostics are
