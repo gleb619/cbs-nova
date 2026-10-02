@@ -10,18 +10,24 @@ import cbs.nova.starter.model.NotificationRuleModels.NotificationActionDto;
 import cbs.nova.starter.model.NotificationRuleModels.TestEventResponse;
 import cbs.nova.starter.persistence.NotificationRuleFiringRepository;
 import cbs.nova.starter.persistence.NotificationRuleRepository;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tags;
+import io.micrometer.core.instrument.Timer;
+import cbs.nova.starter.core.StarterConstants;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.nio.file.PathMatcher;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 /**
@@ -34,7 +40,6 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
  * delivery and firing inserts are all individually guarded.
  */
 @Slf4j
-@RequiredArgsConstructor
 public class NotificationRuleEngine implements DomainEventListener {
 
   private static final int DETAIL_MAX_LENGTH = 1024;
@@ -44,6 +49,48 @@ public class NotificationRuleEngine implements DomainEventListener {
   private final NotificationRuleService ruleService;
   private final List<NotificationSink> sinks;
   private final ThreadPoolTaskExecutor notificationExecutor;
+
+  /**
+   * Optional Micrometer registry. Resolved once at construction; a missing registry (tests,
+   * minimal hosts) silently turns into a no-op rather than a hot lookup per firing.
+   */
+  @Nullable
+  private final MeterRegistry meterRegistry;
+
+  /**
+   * Production wiring constructor — the registry is resolved via {@link ObjectProvider} so
+   * contexts without a {@code MeterRegistry} bean (e.g. tests, minimal hosts) stay working.
+   */
+  public NotificationRuleEngine(NotificationRuleRepository ruleRepository,
+          NotificationRuleFiringRepository firingRepository, NotificationRuleService ruleService,
+          List<NotificationSink> sinks, ThreadPoolTaskExecutor notificationExecutor,
+          ObjectProvider<MeterRegistry> meterRegistryProvider) {
+    this(ruleRepository, firingRepository, ruleService, sinks, notificationExecutor,
+            meterRegistryProvider.getIfAvailable());
+  }
+
+  /**
+   * Convenience constructor for callers without a Micrometer registry. Keeps existing unit tests
+   * green (none of them wire a registry).
+   */
+  public NotificationRuleEngine(NotificationRuleRepository ruleRepository,
+          NotificationRuleFiringRepository firingRepository, NotificationRuleService ruleService,
+          List<NotificationSink> sinks, ThreadPoolTaskExecutor notificationExecutor) {
+    this(ruleRepository, firingRepository, ruleService, sinks, notificationExecutor,
+            (MeterRegistry) null);
+  }
+
+  public NotificationRuleEngine(NotificationRuleRepository ruleRepository,
+          NotificationRuleFiringRepository firingRepository, NotificationRuleService ruleService,
+          List<NotificationSink> sinks, ThreadPoolTaskExecutor notificationExecutor,
+          @Nullable MeterRegistry meterRegistry) {
+    this.ruleRepository = ruleRepository;
+    this.firingRepository = firingRepository;
+    this.ruleService = ruleService;
+    this.sinks = sinks;
+    this.notificationExecutor = notificationExecutor;
+    this.meterRegistry = meterRegistry;
+  }
 
   @Override
   public void onEvent(DomainEvent event, long eventRowId) {
@@ -139,6 +186,7 @@ public class NotificationRuleEngine implements DomainEventListener {
   private void fireAndRecord(NotificationRuleEntity rule, NotificationActionDto action,
           DomainEvent event, long eventRowId) {
     FiringOutcome outcome = deliver(rule, action, event, sinksByType());
+    recordFiringMetric(action.sink(), outcome);
     try {
       firingRepository.insert(new NotificationRuleFiringEntity(
               null,
@@ -154,6 +202,34 @@ public class NotificationRuleEngine implements DomainEventListener {
       log.warn("[DSL notifications] failed to record firing of rule {} sink {}: {}", rule.id(),
               action.sink(), ex.getMessage());
     }
+  }
+
+  /**
+   * Record one firing against the bounded Micrometer meters. Tags: {@code sink} (sink type
+   * string) and {@code outcome} (closed vocabulary already enforced by {@link FiringOutcome}).
+   * Rule names, URLs and run ids are deliberately NOT published as tags to keep cardinality
+   * bounded.
+   */
+  private void recordFiringMetric(String sink, FiringOutcome outcome) {
+    if (meterRegistry == null) {
+      return;
+    }
+    Tags tags = Tags.of(StarterConstants.SINK_TAG, sink,
+            StarterConstants.OUTCOME_TAG, outcome.outcome());
+    Counter.builder(StarterConstants.NOTIFICATION_FIRING_COUNT_COUNTER)
+            .description("Notification rule firing outcomes recorded by NotificationRuleEngine "
+                    + "when a FiringOutcome is turned into a row in dsl_notification_rule_firing. "
+                    + "Tags: sink (sink type string), outcome (success | failure | noop | "
+                    + "skipped | rejected).")
+            .tags(tags)
+            .register(meterRegistry)
+            .increment();
+    Timer.builder(StarterConstants.NOTIFICATION_FIRING_DURATION_TIMER)
+            .description("Wall-clock duration of a notification sink delivery. "
+                    + "Tags: sink (sink type string).")
+            .tags(Tags.of(StarterConstants.SINK_TAG, sink))
+            .register(meterRegistry)
+            .record(Duration.ofMillis(Math.max(0L, outcome.durationMs())));
   }
 
   private FiringOutcome deliver(NotificationRuleEntity rule, NotificationActionDto action,
