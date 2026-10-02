@@ -9,6 +9,7 @@ import cbs.nova.starter.annotation.SpringHelper;
 import cbs.nova.starter.helper.model.JsonExtractIn;
 import cbs.nova.starter.helper.model.JsonExtractOut;
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
@@ -40,7 +41,7 @@ public class JsonExtractHelper implements Executable<JsonExtractIn, JsonExtractO
     }
 
     String[] segments = tokenize(input.path());
-    if (segments.length == 0) {
+    if (segments == null || segments.length == 0) {
       return Result.success(new JsonExtractOut(null, false));
     }
     JsonValue terminal = navigate(value, segments);
@@ -68,9 +69,11 @@ public class JsonExtractHelper implements Executable<JsonExtractIn, JsonExtractO
    * {@code items[x]} or {@code items[} also resolve to {@code present = false} without throwing.
    */
   @NonNull
-  static String[] tokenize(@NonNull String path) {
+  static String @Nullable [] tokenize(@NonNull String path) {
     String p = path;
-    if (p.startsWith("$")) {
+    // `$` is the JSONPath root marker only when it stands alone or is followed by `.` / `[`;
+    // keys that merely start with `$` (`$ref`, `$schema`, `$id`) stay literal as they always did.
+    if (p.startsWith("$") && (p.length() == 1 || p.charAt(1) == '.' || p.charAt(1) == '[')) {
       p = p.substring(1);
       if (p.startsWith(".")) {
         p = p.substring(1);
@@ -95,11 +98,11 @@ public class JsonExtractHelper implements Executable<JsonExtractIn, JsonExtractO
         }
         int close = p.indexOf(']', i + 1);
         if (close < 0) {
-          return new String[]{"__malformed__"};
+          return null;
         }
         String inside = p.substring(i + 1, close);
         if (inside.isEmpty() || !inside.chars().allMatch(Character::isDigit)) {
-          return new String[]{"__malformed__"};
+          return null;
         }
         out.add(inside);
         i = close;
@@ -116,7 +119,7 @@ public class JsonExtractHelper implements Executable<JsonExtractIn, JsonExtractO
   private @NonNull JsonValue navigate(@NonNull JsonValue root, @NonNull String[] segments) {
     JsonValue current = root;
     for (String segment : segments) {
-      if (segment.isBlank() || "__malformed__".equals(segment)) {
+      if (segment.isBlank()) {
         return JsonValues.missing();
       }
       if (current.isArray()) {

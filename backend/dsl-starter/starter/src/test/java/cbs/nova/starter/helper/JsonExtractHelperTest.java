@@ -172,4 +172,40 @@ class JsonExtractHelperTest {
     assertThat(result.value().present()).isFalse();
     assertThat(result.value().value()).isNull();
   }
+
+  @Test
+  void keysStartingWithDollarStayLiteralWhenNotJsonPathRoot() {
+    // Backward compatibility: `$ref` / `$schema` were literal keys before `$` root support.
+    for (String key : new String[]{"$ref", "$schema", "$id"}) {
+      var ctx = SimpleContext.<JsonExtractIn>builder()
+              .body(new JsonExtractIn("{\"" + key + "\":\"v\"}", key))
+              .mode(ExecutionMode.PREVIEW).build();
+      Result<JsonExtractOut> result = helper.execute(ctx);
+      assertThat(result.isSuccess()).isTrue();
+      assertThat(result.value().present()).as(key).isTrue();
+      assertThat(result.value().value()).as(key).isEqualTo("v");
+    }
+  }
+
+  @Test
+  void dollarRootStillWorksBeforeBracketIndex() {
+    var ctx = SimpleContext.<JsonExtractIn>builder()
+            .body(new JsonExtractIn("[{\"id\":3}]", "$[0].id"))
+            .mode(ExecutionMode.PREVIEW).build();
+    Result<JsonExtractOut> result = helper.execute(ctx);
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(result.value().present()).isTrue();
+    assertThat(result.value().value()).isEqualTo("3");
+  }
+
+  @Test
+  void keyLiterallyNamedMalformedSentinelIsExtractable() {
+    var ctx = SimpleContext.<JsonExtractIn>builder()
+            .body(new JsonExtractIn("{\"__malformed__\":\"ok\"}", "__malformed__"))
+            .mode(ExecutionMode.PREVIEW).build();
+    Result<JsonExtractOut> result = helper.execute(ctx);
+    assertThat(result.isSuccess()).isTrue();
+    assertThat(result.value().present()).isTrue();
+    assertThat(result.value().value()).isEqualTo("ok");
+  }
 }
