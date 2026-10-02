@@ -180,6 +180,38 @@ Class: `DslRunPersistenceProperties` (record). The `dsl_runs` persistence layer.
 
 ---
 
+## `cbs.vhs.*`
+
+### `cbs.vhs.replay`
+
+Class: `CbsVhsReplayProperties` (record). VHS replay engine configuration. Replay is opt-in and off by default; see
+[docs/runbook.md §VHS replay](../runbook.md#vhs-replay) for the production opt-in flow. The in-memory status map that
+backs `VhsReplayJob` is bounded by `status-limit`; in-flight (`accepted`/`running`) entries are never evicted before
+they finish, finished entries are evicted oldest-first, and a transient overshoot is tolerated when every tracked
+job is in-flight (so a stuck replay never silently disappears from `GET .../replay/{id}`).
+
+| Key | Type | Default | Effect |
+|-----|------|---------|--------|
+| `cbs.vhs.replay.enabled` | `boolean` | `false` | Master switch; when `false` no `VhsReplayJob` bean is created and `POST .../replay` returns 503. |
+| `cbs.vhs.replay.target` | `String` | `dry-run` | Default replay target; `dry-run` / blank is a side-effect-free stub. Production-like targets require `allow-production=true`. |
+| `cbs.vhs.replay.allow-production` | `boolean` | `false` | Second opt-in key required to replay against a real target; both this and the corresponding env flag must agree. |
+| `cbs.vhs.replay.mode` | `ReplayMode` (`exact\|load`) | `exact` | Default replay mode. |
+| `cbs.vhs.replay.copies` | `int` | `1` | Default number of tape copies (`@Min(1)`). |
+| `cbs.vhs.replay.speed` | `double` | `1.0` | Default replay speed multiplier (`> 0`). |
+| `cbs.vhs.replay.concurrency` | `int` | `4` | Default concurrent in-flight calls per replay (`@Min(1)`). |
+| `cbs.vhs.replay.max-duration-ms` | `long` | `0` | Global duration cap across all load-mode copies in ms (`0` = unlimited). |
+| `cbs.vhs.replay.compare-output` | `boolean` | `false` | Compare recorded vs replayed response bodies and fail on drift. |
+| `cbs.vhs.replay.min-wait-ms` | `long` | `0` | Floor applied to every recorded wait step. |
+| `cbs.vhs.replay.request-timeout-ms` | `long` | `30000` | Per-call replay timeout in ms. |
+| `cbs.vhs.replay.local-base-url` | `String` | `http://localhost:8080` | Base URL used for `local` target replays. |
+| `cbs.vhs.replay.faking.enabled` | `boolean` | `false` | Master switch for replay-time faking; see the nested `Faking` record. |
+| `cbs.vhs.replay.faking.rules` | `List<FakeRule>` | `[]` (empty) | Ordered fake rules; empty list is a no-op. |
+| `cbs.vhs.replay.faking.lookup-table` | `Map<String, String>` | `{}` (empty) | Pre-seeded real→synthetic mappings for identifiers that must be stable across runs. |
+| `cbs.vhs.replay.faking.seed` | `String` | `vhs-replay` | Seed for the `synthetic_hash` generator; blank falls back to the default. |
+| `cbs.vhs.replay.status-limit` | `int` | `200` | Max tracked replay-job statuses kept in memory. Non-positive values fall back to the default. In-flight (`accepted`/`running`) entries are never evicted before they finish; a late completion update replaces the existing entry in place. When every tracked job is in-flight the map can temporarily exceed this cap rather than drop a job. |
+
+---
+
 ## `cbs.security.*`
 
 ### `cbs.security.ratelimit`

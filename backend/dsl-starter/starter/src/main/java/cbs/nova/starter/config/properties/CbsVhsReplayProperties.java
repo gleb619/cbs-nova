@@ -5,6 +5,7 @@ import cbs.nova.starter.vhs.replay.fake.FakeRule;
 import java.util.List;
 import java.util.Map;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.bind.ConstructorBinding;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 import org.springframework.validation.annotation.Validated;
 
@@ -37,8 +38,40 @@ public record CbsVhsReplayProperties(
         @DefaultValue("0") long minWaitMs,
         @DefaultValue("30000") long requestTimeoutMs,
         @DefaultValue("http://localhost:8080") String localBaseUrl,
-        @DefaultValue Faking faking) {
+        @DefaultValue Faking faking,
+        @DefaultValue("200") int statusLimit) {
 
+  /**
+   * Default size of the in-memory replay-status map; capped to keep long-running services bounded.
+   */
+  public static final int DEFAULT_STATUS_LIMIT = 200;
+
+  /**
+   * Backwards-compatible constructor used by tests and other call sites that predate the
+   * {@code status-limit} field; defaults to {@link #DEFAULT_STATUS_LIMIT}.
+   */
+  public CbsVhsReplayProperties(
+          boolean enabled,
+          String target,
+          boolean allowProduction,
+          ReplayMode mode,
+          int copies,
+          double speed,
+          int concurrency,
+          long maxDurationMs,
+          boolean compareOutput,
+          long minWaitMs,
+          long requestTimeoutMs,
+          String localBaseUrl,
+          Faking faking) {
+    this(enabled, target, allowProduction, mode, copies, speed, concurrency, maxDurationMs,
+            compareOutput, minWaitMs, requestTimeoutMs, localBaseUrl, faking,
+            DEFAULT_STATUS_LIMIT);
+  }
+
+  // Two public constructors exist (this canonical one + the 13-arg compatibility overload), so
+  // Spring Boot needs an explicit binding constructor or the context fails to start.
+  @ConstructorBinding
   public CbsVhsReplayProperties {
     if (copies < 1) {
       throw new IllegalArgumentException("cbs.vhs.replay.copies must be >= 1, was " + copies);
@@ -57,6 +90,12 @@ public record CbsVhsReplayProperties(
     if (maxDurationMs < 0) {
       throw new IllegalArgumentException(
               "cbs.vhs.replay.max-duration-ms must be >= 0 (0 = unlimited), was " + maxDurationMs);
+    }
+    // Fall back to default for non-positive values so operators can disable the cap with 0
+    // without crashing startup; an in-flight (accepted/running) entry is never evicted, so when
+    // every slot is in-flight the map can temporarily exceed the cap rather than drop a job.
+    if (statusLimit <= 0) {
+      statusLimit = DEFAULT_STATUS_LIMIT;
     }
     faking = faking == null ? Faking.disabled() : faking;
   }
