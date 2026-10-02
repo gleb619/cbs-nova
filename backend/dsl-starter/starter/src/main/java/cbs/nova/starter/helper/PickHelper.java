@@ -29,8 +29,8 @@ import org.jspecify.annotations.NonNull;
  * </ul>
  *
  * <p>
- * Dotted keys ({@code "a.b"}) are split into nested {@code Map} segments: {@code pick "a.b"} produces
- * {@code {a: {b: <value>}}}, multiple paths sharing a prefix merge into one nested map
+ * Dotted keys ({@code "a.b"}) are split into nested {@code Map} segments: {@code pick "a.b"}
+ * produces {@code {a: {b: <value>}}}, multiple paths sharing a prefix merge into one nested map
  * ({@code "a.b"}, {@code "a.c"} → {@code {a: {b, c}}}), absent paths are silently skipped,
  * present-but-null leaves are kept, and a non-{@code Map} intermediate is treated as absent (no
  * error). A flat key that literally contains {@code "."} takes precedence over a path split — so
@@ -161,9 +161,9 @@ public class PickHelper implements Executable<PickIn, PickOut> {
   }
 
   /**
-   * Walk {@code map} along {@code segments}. Returns the leaf value (which may be {@code null}
-   * when present-but-null) or {@link #ABSENT_LEAF} if any segment is missing or an intermediate is
-   * not a {@code Map}.
+   * Walk {@code map} along {@code segments}. Returns the leaf value (which may be {@code null} when
+   * present-but-null) or {@link #ABSENT_LEAF} if any segment is missing or an intermediate is not a
+   * {@code Map}.
    */
   private static Object resolveLeaf(Map<String, Object> map, List<String> segments) {
     Object current = map;

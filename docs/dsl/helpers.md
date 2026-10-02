@@ -479,6 +479,16 @@ HttpCallOut response = ctx.runHelper("httpCall",
 PickOut publicView = ctx.runHelper("pick",
         new PickIn(order, List.of("internalNotes", "costBasis"), "omit"))
         .as(PickOut.class);
+
+// Or drill into nested structures with dotted paths — handy for stripping
+// secrets right before an outbound httpCall/webhook:
+Map<String, Object> authed = ...; // { auth: { token: "Bearer ...", scope: "..." }, ... }
+PickOut redacted = ctx.runHelper("pick",
+        new PickIn(authed, List.of("auth.token"), "omit"))
+        .as(PickOut.class);
+HttpCallOut response = ctx.runHelper("httpCall",
+        new HttpCallIn("https://partner.example/intake", "POST", null, redacted.result(), null))
+        .as(HttpCallOut.class);
 ```
 
 `mode` is matched case-insensitively and defaults to `"pick"` when null/blank. In `pick`
@@ -488,8 +498,15 @@ is kept (`null` is a value, not absence). In `omit` mode you get a copy of `sour
 (insertion order preserved) minus every listed key. The input map is never mutated, and
 nested values are copied by reference (shallow — deep projection is a follow-up).
 `null` `source` fails (`"pick.source is required"`); `null`/empty `keys` fails
-(`"pick.keys must be non-empty"`). Only flat top-level keys — dotted paths (`"a.b"`) are a
-follow-up.
+(`"pick.keys must be non-empty"`).
+
+**Dotted paths.** Keys containing `.` are split into nested segments: `pick "a.b"` yields
+`{a: {b: <value>}}`, multiple paths sharing a prefix merge into one nested map
+(`"a.b"`, `"a.c"` → `{a: {b, c}}`), absent paths are silently skipped, present-but-null
+leaves are kept, and a non-`Map` intermediate is treated as absent (no error). A flat
+key that literally contains `.` still matches before any path split, so existing flat
+callers are unaffected. Lists are not traversed — `"a[0]"` / `"a[*]"` are out of scope
+(use the dedicated path helpers if you need array addressing).
 
 ## Numeric aggregations
 

@@ -150,7 +150,8 @@ class PickHelperTest {
   @Test
   void pickNestedPathRebuildsNestedStructure() {
     Map<String, Object> source = nestedSource();
-    Map<String, Object> result = execute(new PickIn(source, List.of("customer.address.city"), "pick"));
+    Map<String, Object> result = execute(
+            new PickIn(source, List.of("customer.address.city"), "pick"));
     assertThat(result).hasSize(1);
     assertThat(result).containsKey("customer");
     assertThat(result.get("customer")).isInstanceOf(Map.class);
