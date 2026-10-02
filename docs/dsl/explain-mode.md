@@ -192,3 +192,10 @@ mode** is a read-only documentation layer on top of the hierarchy graph that nev
 - [Runtime Engine](runtime.md) — `DslRuntime`, `GlobalManager`, and the mode-agnostic REST surface.
 - `ADR 0004` — Preview, dry-run, and Explain execution modes (since removed in commit c88753e6; see git history)
 - [Authoring DSL Flows](authoring.md) — `dslRuntime.explain(...)` call shape.
+
+## See also
+
+- [`PreviewExplainDsl`](../../backend/dsl-starter/dsl-examples/src/dsl/PreviewExplainDsl.java) — example DSL that
+  wires a **custom `.explain(...)`** lambda returning an `ExplainReport` built entirely in code (name, description,
+  markdown body, plus a child section for the reachable `persistPlan` transaction). Companion to the custom
+  `.preview(...)` example in [Preview Mode](preview-mode.md#see-also).
