@@ -240,9 +240,18 @@ BLOCKED_BY        ?=
 PLAN              ?=
 DESCRIPTION       ?=
 
-.PHONY: kanban-install
-kanban-install: ## Install kanban CLI Node dependencies
-	@cd scripts/kanban && pnpm install --silent
+KANBAN_MODULES_STAMP := scripts/kanban/node_modules/.modules.yaml
+KANBAN_PKG          := scripts/kanban/package.json
+KANBAN_LOCK         := scripts/kanban/pnpm-lock.yaml
+
+## Install kanban CLI Node dependencies. Non-interactive; skipped when up to date.
+## Stamp is node_modules/.modules.yaml (rewritten by pnpm on every install).
+## Reinstalls when package.json or pnpm-lock.yaml is newer than the stamp,
+## or when node_modules is missing entirely.
+kanban-install: $(KANBAN_MODULES_STAMP)
+
+$(KANBAN_MODULES_STAMP): $(KANBAN_PKG) $(KANBAN_LOCK)
+	@cd scripts/kanban && CI=true pnpm install --silent --frozen-lockfile --config.confirmModulesPurge=false
 
 .PHONY: kanban-list
 kanban-list: kanban-install ## List kanban tasks
