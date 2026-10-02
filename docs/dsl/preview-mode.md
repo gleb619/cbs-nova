@@ -165,3 +165,10 @@ public record PreviewReport(
   historical context) — non-authoritative brainstorm, superseded by `ADR 0004` (also removed).
 - `docs/plans/T146-*` through `T151-*` — implementation tasks for external call capture, call-tree collection, dry-run
   logs, and the integration test.
+
+## See also
+
+- [`PreviewExplainDsl`](../../backend/dsl-starter/dsl-examples/src/dsl/PreviewExplainDsl.java) — example DSL that
+  wires a **custom `.preview(...)`** lambda returning a computed plan (line items + totals) without invoking the
+  side-effecting `persistPlan` transaction. The smoke test asserts the persist counter is unchanged after a preview
+  call, proving the preview path never reached the side-effecting `execute` body.

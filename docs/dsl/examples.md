@@ -21,7 +21,7 @@ backend/dsl-starter/dsl-examples/src/
 │   ├── PricingFunctionsDsl.java
 │   ├── SimpleGreetingDsl.java
 │   ├── SimpleValidationDsl.java
-│   └── ... (run `ls backend/dsl-starter/dsl-examples/src/dsl/` for the current set — 42 files)
+│   └── ... (run `ls backend/dsl-starter/dsl-examples/src/dsl/` for the current set — 47 files)
 └── models/                   # Typed records (@Json / Avaje Jsonb) shared by the DSL sources
     └── ... (one `*Models.java` per process/transaction that declares typed I/O)
 ```
@@ -1402,6 +1402,51 @@ the pinned after). An invalid expression like `"0 0 12 32 * *"` short-circuits o
 validate pass: the DSL still succeeds, but `valid = false`, `fireTimes = null`, and
 `errorMessage` carries the parser's complaint so the operator message can be routed back
 verbatim.
+
+## Custom preview and explain outputs with `PreviewExplainDsl`
+
+Most examples either rely on the engine's default preview (delegating to `execute`) or wire
+their documentation via `.explainVia(resource)`. `PreviewExplainDsl` instead demonstrates
+both custom shapes on the same `Dsl.process(...)`:
+
+- a custom `.preview(...)` lambda that returns a **computed plan** (line items + totals)
+  without invoking the side-effecting transaction, and
+- a custom `.explain(...)` lambda that returns an `ExplainReport` **built entirely in code**
+  (name + description + markdown body, plus a child section for the reachable transaction).
+
+The run path computes the same plan and persists it through a `persistPlan` transaction. A
+static `PERSIST_COUNTER` is incremented from inside that transaction's `execute` body, so
+the smoke test can assert it stays at `0` after a preview or explain call (proof that those
+paths never reached the side-effecting lambda).
+
+See `backend/dsl-starter/dsl-examples/src/dsl/PreviewExplainDsl.java` (input/output models
+in `backend/dsl-starter/dsl-examples/src/models/PreviewExplainModels.java`):
+
+```java
+var process = Dsl.process("PreviewExplain")
+    .input(PreviewExplainIn.class)
+    .output(PreviewExplainOut.class)
+    .execute(ctx -> {
+      PreviewExplainIn in = ctx.body();
+      PreviewExplainOut plan = buildPlan(in);
+      var ack = ctx.runTransaction("persistPlan", new PersistPlanIn(plan.orderId()));
+      return ack.isSuccess() ? Result.success(plan) : Result.failure(ack.cause());
+    })
+    .preview(ctx -> Result.success(buildPlan(ctx.body()))) // no persistPlan call
+    .explain(ctx -> Result.success(ExplainReport.builder()
+        .name("PreviewExplain")
+        .description("Compute a price plan ...")
+        .markdown("# PreviewExplain (process)\n\n...")
+        .children(List.of(persistChild))
+        .build()))
+    .build();
+```
+
+The test mirrors the `AdvancedDslExamplesTest` pattern: load the compact DSLs through
+`DefinitionLoader`, then run the process once per mode (run / preview / explain) and assert
+on the plan shape, the counter, and the `ExplainReport` returned by explain mode (name,
+description, markdown contains the input echo, one child section for `persistPlan`). See
+`PreviewExplainDslTest` for the full assertions.
 
 ## Exercising OpenTelemetry with `DistributedTracingDsl`
 
