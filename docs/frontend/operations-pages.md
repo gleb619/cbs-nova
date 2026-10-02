@@ -164,7 +164,7 @@ Pager: `webhook-deliveries-pager` with `Prev` (`webhook-deliveries-pager-prev`) 
 
 ### BFF routes
 
-Hand-written, spec-covered (backend `GET /api/dsl/webhooks/deliveries` is annotated on
+Hand-written, not yet in the spec (backend `GET /api/dsl/webhooks/deliveries` is annotated on
 `WebhookRouterConfiguration` but absent from `docs/openapi.json` — stale spec; regen tracked in T767):
 
 - `GET /api/v1/dsl/webhooks/deliveries` (`frontend/admin-ui-plugin/server/api/v1/dsl/webhooks/deliveries.get.ts`) proxies `/api/dsl/webhooks/deliveries` with optional `offset`, `limit`, `subscriptionId`.
