@@ -20,6 +20,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcOperations;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.datasource.init.ScriptUtils;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.transaction.PlatformTransactionManager;
 import tools.jackson.databind.ObjectMapper;
 
@@ -102,6 +103,30 @@ public final class AuditTestSupport {
 
       @Override
       public DslAuditService getIfUnique() {
+        return null;
+      }
+    };
+  }
+
+  /**
+   * Test-only stub for an absent {@link JavaMailSender} bean — mirrors the absent-bean state
+   * exercised by {@code EmailRuleSinkTest} and the wiring smoke checks in
+   * {@code NotificationConfigurationTest}.
+   */
+  public static ObjectProvider<JavaMailSender> emptyMailSenderProvider() {
+    return new ObjectProvider<>() {
+      @Override
+      public JavaMailSender getObject() {
+        return null;
+      }
+
+      @Override
+      public JavaMailSender getIfAvailable() {
+        return null;
+      }
+
+      @Override
+      public JavaMailSender getIfUnique() {
         return null;
       }
     };

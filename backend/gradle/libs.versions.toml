@@ -114,6 +114,13 @@ spring-boot-starter-data-jdbc = { module = "org.springframework.boot:spring-boot
 spring-boot-starter-data-redis = { module = "org.springframework.boot:spring-boot-starter-data-redis" }
 spring-boot-starter-webmvc-test = { module = "org.springframework.boot:spring-boot-starter-webmvc-test" }
 spring-boot-starter-amqp = { module = "org.springframework.boot:spring-boot-starter-amqp" }
+# -- Mail (T769) --
+# JavaMailSender lives in spring-context-support, but referencing the interface pulls jakarta.mail
+# (for MimeMessage / MimeMessagePreparator signatures inherited from MailSender → JavaMailSender).
+# Declared as compileOnly so apps that do not declare their own mail transport do not have mail
+# jars on their runtime classpath; apps that want it declare spring-boot-starter-mail themselves
+# and publish a JavaMailSender bean.
+spring-boot-starter-mail = { module = "org.springframework.boot:spring-boot-starter-mail" }
 spring-boot-starter-oauth2-resource-server = { module = "org.springframework.boot:spring-boot-starter-oauth2-resource-server" }
 spring-security-test = { module = "org.springframework.security:spring-security-test" }
 spring-kafka = { module = "org.springframework.kafka:spring-kafka" }
