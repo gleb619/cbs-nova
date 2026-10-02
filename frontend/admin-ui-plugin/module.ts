@@ -277,6 +277,21 @@ export default defineNuxtModule<ModuleOptions>({
     nuxt.options.css.push(resolve('./assets/css/main.css'))
 
     // -----------------------------------------------------------------------
+    // Default <html lang> + <title> (T777 — axe `html-has-lang` /
+    // `document-title`). Host apps may override via their own nuxt.config.
+    // -----------------------------------------------------------------------
+    nuxt.options.app.head = nuxt.options.app.head || {}
+    const head = nuxt.options.app.head as {
+      htmlAttrs?: Record<string, string>
+      title?: string
+      titleTemplate?: string
+      meta?: Array<Record<string, string>>
+    }
+    head.htmlAttrs = { ...(head.htmlAttrs || {}), lang: 'en' }
+    head.titleTemplate = head.titleTemplate || '%s — CBS Nova'
+    head.title = head.title || 'CBS Nova'
+
+    // -----------------------------------------------------------------------
     // Component resolution — plugin-local components and @cbs/components SFCs
     // Use the components:dirs hook so Nuxt actually scans directories added
     // by a module. The @cbs/components library references its child SFCs by
