@@ -1,0 +1,89 @@
+{
+  "events": [
+    {
+      "eventId": "1",
+      "eventTime": "2026-10-02T06:31:22.386Z",
+      "eventType": "EVENT_TYPE_WORKFLOW_EXECUTION_STARTED",
+      "workflowExecutionStartedEventAttributes": {
+        "workflowType": {
+          "name": "SimpleOrderProcessWorkflow"
+        },
+        "taskQueue": {
+          "name": "t770-replay"
+        },
+        "input": {
+          "payloads": [
+            {
+              "metadata": {
+                "encoding": "anNvbi9wbGFpbg\u003d\u003d"
+              },
+              "data": "eyJydW5JZCI6InJpZC1vcmRlciIsInBheWxvYWQiOnsidmFsdWVzIjp7Im9yZGVySWQiOiJvcmQtNDIifX19"
+            }
+          ]
+        },
+        "workflowExecutionTimeout": "60s",
+        "workflowRunTimeout": "60s",
+        "workflowTaskTimeout": "10s",
+        "originalExecutionRunId": "16294520-6407-4efe-8a75-c2f372b862fe",
+        "identity": "291349@velichko-nitroan51752",
+        "firstExecutionRunId": "16294520-6407-4efe-8a75-c2f372b862fe",
+        "attempt": 1,
+        "header": {}
+      }
+    },
+    {
+      "eventId": "2",
+      "eventTime": "2026-10-02T06:31:22.386Z",
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_SCHEDULED",
+      "workflowTaskScheduledEventAttributes": {
+        "taskQueue": {
+          "name": "t770-replay"
+        },
+        "startToCloseTimeout": "10s",
+        "attempt": 1
+      }
+    },
+    {
+      "eventId": "3",
+      "eventTime": "2026-10-02T06:31:22.408Z",
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_STARTED",
+      "workflowTaskStartedEventAttributes": {
+        "scheduledEventId": "2",
+        "identity": "291349@velichko-nitroan51752"
+      }
+    },
+    {
+      "eventId": "4",
+      "eventTime": "2026-10-02T06:31:22.571Z",
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_COMPLETED",
+      "workflowTaskCompletedEventAttributes": {
+        "scheduledEventId": "2",
+        "identity": "291349@velichko-nitroan51752",
+        "sdkMetadata": {
+          "langUsedFlags": [
+            1
+          ]
+        },
+        "meteringMetadata": {}
+      }
+    },
+    {
+      "eventId": "5",
+      "eventTime": "2026-10-02T06:31:22.571Z",
+      "eventType": "EVENT_TYPE_WORKFLOW_EXECUTION_COMPLETED",
+      "workflowExecutionCompletedEventAttributes": {
+        "result": {
+          "payloads": [
+            {
+              "metadata": {
+                "encoding": "anNvbi9wbGFpbg\u003d\u003d"
+              },
+              "data": "eyJ2YWx1ZXMiOnsib3JkZXJJZCI6Im9yZC00MiIsIm1lc3NhZ2UiOiJPcmRlciBvcmQtNDIgY29uZmlybWVkIChydW5JZD1yaWQtb3JkZXIpIn19"
+            }
+          ]
+        },
+        "workflowTaskCompletedEventId": "3"
+      }
+    }
+  ]
+}

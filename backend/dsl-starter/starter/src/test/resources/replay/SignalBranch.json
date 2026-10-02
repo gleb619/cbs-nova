@@ -1,0 +1,108 @@
+{
+  "events": [
+    {
+      "eventId": "1",
+      "eventTime": "2026-10-02T06:31:23.603Z",
+      "eventType": "EVENT_TYPE_WORKFLOW_EXECUTION_STARTED",
+      "workflowExecutionStartedEventAttributes": {
+        "workflowType": {
+          "name": "SignalBranchProcessWorkflow"
+        },
+        "taskQueue": {
+          "name": "t770-replay"
+        },
+        "input": {
+          "payloads": [
+            {
+              "metadata": {
+                "encoding": "anNvbi9wbGFpbg\u003d\u003d"
+              },
+              "data": "eyJydW5JZCI6InJpZC1zaWduYWwiLCJwYXlsb2FkIjp7InJlcXVlc3RJZCI6InJlcS03NyIsImFtb3VudCI6MjUwfX0\u003d"
+            }
+          ]
+        },
+        "workflowExecutionTimeout": "60s",
+        "workflowRunTimeout": "60s",
+        "workflowTaskTimeout": "10s",
+        "originalExecutionRunId": "739cad7b-2ce7-4227-b80b-daf2a072e74e",
+        "identity": "291349@velichko-nitroan51752",
+        "firstExecutionRunId": "739cad7b-2ce7-4227-b80b-daf2a072e74e",
+        "attempt": 1,
+        "header": {}
+      }
+    },
+    {
+      "eventId": "2",
+      "eventTime": "2026-10-02T06:31:23.603Z",
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_SCHEDULED",
+      "workflowTaskScheduledEventAttributes": {
+        "taskQueue": {
+          "name": "t770-replay"
+        },
+        "startToCloseTimeout": "10s",
+        "attempt": 1
+      }
+    },
+    {
+      "eventId": "3",
+      "eventTime": "2026-10-02T06:31:23.604Z",
+      "eventType": "EVENT_TYPE_WORKFLOW_EXECUTION_SIGNALED",
+      "workflowExecutionSignaledEventAttributes": {
+        "signalName": "decision",
+        "input": {
+          "payloads": [
+            {
+              "metadata": {
+                "encoding": "anNvbi9wbGFpbg\u003d\u003d"
+              },
+              "data": "eyJhcHByb3ZlZCI6dHJ1ZX0\u003d"
+            }
+          ]
+        },
+        "identity": "291349@velichko-nitroan51752"
+      }
+    },
+    {
+      "eventId": "4",
+      "eventTime": "2026-10-02T06:31:23.605Z",
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_STARTED",
+      "workflowTaskStartedEventAttributes": {
+        "scheduledEventId": "2",
+        "identity": "291349@velichko-nitroan51752"
+      }
+    },
+    {
+      "eventId": "5",
+      "eventTime": "2026-10-02T06:31:23.617Z",
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_COMPLETED",
+      "workflowTaskCompletedEventAttributes": {
+        "scheduledEventId": "2",
+        "identity": "291349@velichko-nitroan51752",
+        "sdkMetadata": {
+          "langUsedFlags": [
+            1
+          ]
+        },
+        "meteringMetadata": {}
+      }
+    },
+    {
+      "eventId": "6",
+      "eventTime": "2026-10-02T06:31:23.617Z",
+      "eventType": "EVENT_TYPE_WORKFLOW_EXECUTION_COMPLETED",
+      "workflowExecutionCompletedEventAttributes": {
+        "result": {
+          "payloads": [
+            {
+              "metadata": {
+                "encoding": "anNvbi9wbGFpbg\u003d\u003d"
+              },
+              "data": "eyJkZWNpc2lvbiI6IkFQUFJPVkVEOjI1MCIsInJlcXVlc3RJZCI6InJlcS03NyIsInNpZ25hbFNlZW4iOnRydWV9"
+            }
+          ]
+        },
+        "workflowTaskCompletedEventId": "4"
+      }
+    }
+  ]
+}
