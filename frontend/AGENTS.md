@@ -16,7 +16,8 @@ frontend/
 │   │   └── pages/            # file-based routes registered by the module
 │   └── server/               # Nitro BFF: JWT, proxy to Spring Boot
 │       ├── api/v1/           # proxy routes merged into the host Nitro server
-│       └── utils/            # config helpers, HTTP client
+│       ├── middleware/       # Nitro auto-picked-up middlewares (e.g. T773 securityHeaders)
+│       └── utils/            # config helpers, HTTP client, header builders
 └── components/               # reusable Vue 3 + Vite library
     └── src/
         ├── components/       # exported SFCs
@@ -195,6 +196,7 @@ Run it once after `pnpm install` if the sandbox blocks the auto-download.
 - **Add client state**: Add a composable in `admin-ui-plugin/app/composables/`.
 - **Move code to components**: Update internal imports to relative paths, update `components/src/index.ts` exports, adjust `admin-ui-plugin` imports.
 - **Add module option**: Extend `ModuleOptions` in `module.ts` and wire it in the `setup()` function.
+- **Add BFF response header**: Update `server/utils/securityHeaders.ts` (pure policy) and `server/middleware/securityHeaders.ts` (Nitro wiring). New `server/middleware/*.ts` files are picked up automatically by Nitro because `module.ts` adds `server/` to `nitro.scanDirs` — no explicit registration is needed. Never read or buffer the response body in middleware: SSE streams (`/api/v1/executions/:id/events`) and `text/event-stream` exports must pass through unchanged.
 - **Change route prefix**: Set `routePrefix` in the host app's `adminUiPlugin` config key.
 
 ## Key Docs
