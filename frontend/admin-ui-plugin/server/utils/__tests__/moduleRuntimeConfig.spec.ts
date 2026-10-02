@@ -19,6 +19,10 @@ describe('resolveRuntimeConfig', () => {
       authSessionAbsoluteTimeoutSeconds: 0,
       authSessionSecureCookies: '',
       authSessionRotateOnRefresh: '',
+      // T773 — undefined is the documented "use defaults" sentinel for the
+      // security-headers middleware. The shape is asserted in
+      // securityHeaders.spec.ts.
+      securityHeaders: undefined,
     })
     expect(publicConfig).toEqual({
       authEnabled: false,
@@ -33,8 +37,7 @@ describe('resolveRuntimeConfig', () => {
     })
   })
 
-  it('lets an options value win over the default', () => {
-    const options: ModuleOptions = {
+  it('lets an options value win over the default', () => {    const options: ModuleOptions = {
       backendBaseUrl: 'http://options-backend:9090',
       backendApiKey: 'options-key',
       backendTimeoutMs: 2500,
@@ -66,6 +69,7 @@ describe('resolveRuntimeConfig', () => {
       authSessionAbsoluteTimeoutSeconds: 3600,
       authSessionSecureCookies: 'true',
       authSessionRotateOnRefresh: 'false',
+      securityHeaders: undefined,
     })
     expect(publicConfig).toEqual({
       authEnabled: true,
@@ -153,6 +157,25 @@ describe('resolveRuntimeConfig', () => {
     ).toBe(true)
     expect(resolveRuntimeConfig({ authIssuer: '' }, {}).publicConfig.authEnabled).toBe(false)
     expect(resolveRuntimeConfig({}, {}).publicConfig.authEnabled).toBe(false)
+  })
+
+  it('resolves securityHeaders (T773): existing → options → undefined', () => {
+    // existing wins
+    expect(
+      resolveRuntimeConfig(
+        { securityHeaders: { 'X-Frame-Options': 'DENY' } },
+        { securityHeaders: { 'X-Frame-Options': 'SAMEORIGIN' } },
+      ).config.securityHeaders,
+    ).toEqual({ 'X-Frame-Options': 'DENY' })
+
+    // options wins over the documented "use defaults" sentinel
+    expect(
+      resolveRuntimeConfig({}, { securityHeaders: { 'X-Frame-Options': null } }).config
+        .securityHeaders,
+    ).toEqual({ 'X-Frame-Options': null })
+
+    // preserves explicit false (kill-switch) — not coerced to undefined
+    expect(resolveRuntimeConfig({}, { securityHeaders: false }).config.securityHeaders).toBe(false)
   })
 
   it('resolves callback url, post-logout redirect, appName and temporalNamespace defaults', () => {

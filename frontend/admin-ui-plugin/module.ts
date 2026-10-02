@@ -12,6 +12,7 @@ import {
 import {
   parseForwardedHeadersEnv,
 } from './server/utils/parseForwardedHeadersEnv'
+import { parseSecurityHeadersEnv } from './server/utils/parseSecurityHeadersEnv'
 import { resolveRuntimeConfig } from './server/utils/moduleRuntimeConfig'
 
 // ---------------------------------------------------------------------------
@@ -180,6 +181,26 @@ export interface ModuleOptions {
    * Surfaced as `useRuntimeConfig().public.workbenchServerSaveDebounceMs`.
    */
   workbenchServerSaveDebounceMs?: number
+
+  /**
+   * BFF response security headers (T773). Attaches a conservative set
+   * (`X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options`,
+   * `Permissions-Policy`, plus `Strict-Transport-Security` when the request
+   * is over HTTPS) to every response. No enforced CSP — the admin UI embeds
+   * Monaco and host-app scripts that would break under one.
+   *
+   *   - `false`          ⇒ disable the entire layer
+   *   - `undefined`/omitted ⇒ apply defaults
+   *   - object           ⇒ per-header override/add; set a key to `null` to
+   *                        remove that header from the defaults
+   *
+   * The middleware (in `server/middleware/securityHeaders.ts`) never
+   * overwrites a header the host app has already set unless the override
+   * for that header is a non-null string. Set via
+   * `adminUiPlugin.securityHeaders` or the matching `NUXT_SECURITY_HEADERS`
+   * env var (JSON).
+   */
+  securityHeaders?: Record<string, string | null> | false
 }
 
 export default defineNuxtModule<ModuleOptions>({
@@ -220,6 +241,16 @@ export default defineNuxtModule<ModuleOptions>({
     workbenchDraftTtlMs: Number(process.env.WORKBENCH_DRAFT_TTL_MS ?? 24 * 60 * 60 * 1000),
     workbenchSaveDebounceMs: Number(process.env.WORKBENCH_SAVE_DEBOUNCE_MS ?? 250),
     workbenchServerSaveDebounceMs: Number(process.env.WORKBENCH_SERVER_SAVE_DEBOUNCE_MS ?? 3000),
+    // T773 — security response headers. The middleware that consumes this
+    // value is in `server/middleware/securityHeaders.ts`; it is registered
+    // automatically by Nitro because the file lives under `server/middleware/`
+    // and the module's `nitro:config` hook adds `server/` to `scanDirs`.
+    // The default value is the same `undefined` shape that the pure builder
+    // (`server/utils/securityHeaders.ts`) treats as "apply defaults". A host
+    // can disable the layer by passing `adminUiPlugin.securityHeaders = false`
+    // or by setting `NUXT_SECURITY_HEADERS=false` in the environment. A JSON
+    // object overrides individual headers.
+    securityHeaders: parseSecurityHeadersEnv(process.env.NUXT_SECURITY_HEADERS),
   },
 
   async setup(options, nuxt) {

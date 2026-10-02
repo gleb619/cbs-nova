@@ -70,6 +70,12 @@ const defaultRuntimeConfig = {
   authSessionAbsoluteTimeoutSeconds: 0,
   authSessionSecureCookies: '',
   authSessionRotateOnRefresh: '',
+  // T773 — BFF response security headers. The middleware that consumes this
+  // value is in server/middleware/securityHeaders.ts; it is mocked per-spec
+  // when relevant. The default matches the "use defaults" sentinel so any
+  // helper that reads useRuntimeConfig().securityHeaders sees the documented
+  // shape without extra stubbing.
+  securityHeaders: undefined,
   public: { appName: 'CBS Nova Admin', authEnabled: false },
 }
 g.useRuntimeConfig = vi.fn(() => defaultRuntimeConfig)

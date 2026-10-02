@@ -1,4 +1,5 @@
 import type { ModuleOptions } from '../../module'
+import type { SecurityHeadersConfig } from './parseSecurityHeadersEnv'
 
 // ---------------------------------------------------------------------------
 // Pure runtimeConfig merge (T468).
@@ -32,6 +33,12 @@ export interface AdminUiRuntimeConfig {
   authSessionAbsoluteTimeoutSeconds: number
   authSessionSecureCookies: string | boolean
   authSessionRotateOnRefresh: string
+  /**
+   * BFF response security headers (T773). `false` disables the layer,
+   * `undefined` applies the default set, an object is the per-header
+   * override/add/remove map. The middleware is the only consumer.
+   */
+  securityHeaders?: SecurityHeadersConfig
 }
 
 /** Public runtime config keys owned by the admin UI module. */
@@ -80,6 +87,7 @@ export interface ExistingRuntimeConfig {
   authSessionAbsoluteTimeoutSeconds?: number
   authSessionSecureCookies?: string | boolean
   authSessionRotateOnRefresh?: string
+  securityHeaders?: SecurityHeadersConfig
   public?: {
     authEnabled?: boolean
     appName?: string
@@ -133,6 +141,12 @@ export function resolveRuntimeConfig(
       existing.authSessionSecureCookies ?? options.authSessionSecureCookies ?? '',
     authSessionRotateOnRefresh:
       existing.authSessionRotateOnRefresh ?? options.authSessionRotateOnRefresh ?? '',
+    // T773 — nullish-only merge so the explicit kill-switch `false` is
+    // preserved. `??` would never pick up `false`; `||` would swallow `''`.
+    // The triple-fallback (existing → options → undefined) mirrors the
+    // `backendForwardedHeaders` pattern above, and `undefined` is the
+    // documented "use defaults" sentinel for the middleware.
+    securityHeaders: existing.securityHeaders ?? options.securityHeaders ?? undefined,
   }
 
   const publicConfig: AdminUiPublicRuntimeConfig = {
