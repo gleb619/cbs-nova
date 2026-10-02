@@ -253,6 +253,31 @@ class PickHelperTest {
     assertThat(source).isEqualTo(snapshot);
   }
 
+  @Test
+  void pickOverlappingPathsInAnyOrderNeverMutateSourceNorFail() {
+    for (List<String> keys : List.of(
+            List.of("customer.address", "customer.address.city"),
+            List.of("customer.address.city", "customer.address"),
+            List.of("customer", "customer.address.city"),
+            List.of("customer.address.city", "customer"))) {
+      Map<String, Object> source = nestedSource();
+      Map<String, Object> snapshot = deepCopy(source);
+      Map<String, Object> out = execute(new PickIn(source, keys, "pick"));
+      assertThat(source).as("source after pick %s", keys).isEqualTo(snapshot);
+      assertThat(out).as("result for %s", keys).containsKey("customer");
+    }
+  }
+
+  @Test
+  void pickDottedPathMissesWhenLeafOfEarlierPathIsNotAMap() {
+    // `customer.email` is a scalar leaf; a deeper path under it is absent, not an error.
+    Map<String, Object> source = nestedSource();
+    Map<String, Object> out = execute(new PickIn(source,
+            List.of("customer.email", "customer.email.domain"), "pick"));
+    assertThat(source).isEqualTo(deepCopy(nestedSource()));
+    assertThat(out).containsKey("customer");
+  }
+
   // --- omit dotted paths ---
 
   @Test
