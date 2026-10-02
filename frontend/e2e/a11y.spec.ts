@@ -7,7 +7,7 @@
 //   - `MONACO`: third-party DOM under `.monaco-editor` — excluded at source
 //     via AxeBuilder.exclude('.monaco-editor'); axe cannot reason about
 //     virtualised/shadow DOM and flags false positives.
-//   - `NUXT_DEVTOOLS`: dev-only inspector frame (`nuxt-devtools-frame`) —
+//   - `NUXT_DEVTOOLS`: dev-only inspector (`nuxt-devtools-frame`, `#nuxt-devtools-*`) —
 //     same reasoning: third-party DOM, not shipped to production.
 //   - `color-contrast`: tokens/contrast are owned by T453 color migration.
 //     Many hits come from neutral-500 placeholder text on neutral-50
@@ -20,25 +20,54 @@
 import { AxeBuilder } from '@axe-core/playwright'
 import { expect, test } from './fixtures'
 
-const ROUTES = ['/', '/executions', '/runner', '/dsl-workbench', '/schedules'] as const
+const ROUTES = [
+  '/',
+  '/executions',
+  '/runner',
+  '/dsl-workbench',
+  '/schedules',
+  // T741 pages
+  '/activity',
+  '/approvals',
+  '/notifications',
+  '/promote',
+  '/webhooks',
+] as const
 
+// Ratchet allowlist: a rule may appear on a route up to `maxNodes` times. Anything above that (a
+// new offending element) fails, so the baseline can only shrink. Counts measured with
+// `A11Y_REPORT=1` on 2026-10-02 against the dead-backend dev server.
 const ALLOWLIST: ReadonlyArray<{
   ruleId: string
-  pages: ReadonlyArray<(typeof ROUTES)[number]>
+  maxNodes: Readonly<Record<(typeof ROUTES)[number], number>>
   reason: string
 }> = [
   {
     ruleId: 'color-contrast',
-    pages: ['/', '/executions', '/runner', '/dsl-workbench', '/schedules'],
+    maxNodes: {
+      '/': 9,
+      '/executions': 7,
+      '/runner': 11,
+      '/dsl-workbench': 12,
+      '/schedules': 8,
+      '/activity': 8,
+      '/approvals': 9,
+      '/notifications': 8,
+      '/promote': 11,
+      '/webhooks': 8,
+    },
     reason:
-      'T453 owns color tokens / contrast. Hits are neutral-500 placeholder ' +
-      'chrome + sidebar-link text. Re-run after T453 lands.',
+      'T453 owns color tokens / contrast (raw Tailwind neutral-500 placeholder + sidebar-link ' +
+      'text). Lower these numbers, never raise them; delete the entry once T453 lands.',
   },
 ]
 
 function describeViolations(violations: { id: string; nodes: { target: string[] }[] }[]) {
   return violations
-    .map((v) => `    ${v.id} (${v.nodes.length})  ${v.nodes.map((n) => n.target.join(' ')).join(' | ')}`)
+    .map(
+      (v) =>
+        `    ${v.id} (${v.nodes.length})  ${v.nodes.map((n) => n.target.join(' ')).join(' | ')}`,
+    )
     .join('\n')
 }
 
@@ -52,15 +81,27 @@ for (const route of ROUTES) {
       .withTags(['wcag2a', 'wcag2aa'])
       // Third-party / dev-only DOM axe cannot reason about.
       .exclude('.monaco-editor')
-      .exclude('.nuxt-devtools-frame')
+      .exclude('nuxt-devtools-frame')
+      .exclude('#nuxt-devtools-anchor')
+      .exclude('#nuxt-devtools-container')
+      .exclude('.nuxt-devtools-label-main')
 
     const { violations } = await builder.analyze()
 
+    // `A11Y_REPORT=1 pnpm exec playwright test e2e/a11y.spec.ts` prints every serious/critical
+    // finding (allowlisted or not) as `route rule impact nodes` — used to size the ratchet below.
+    if (process.env.A11Y_REPORT) {
+      for (const v of violations) {
+        if (v.impact === 'serious' || v.impact === 'critical') {
+          console.log(`A11Y ${route} ${v.id} ${v.impact} nodes=${v.nodes.length}`)
+        }
+      }
+    }
+
     const blocking = violations.filter((v) => {
       if (v.impact !== 'serious' && v.impact !== 'critical') return false
-      return !ALLOWLIST.some(
-        (entry) => entry.ruleId === v.id && entry.pages.includes(route),
-      )
+      const entry = ALLOWLIST.find((e) => e.ruleId === v.id)
+      return !entry || v.nodes.length > entry.maxNodes[route]
     })
 
     if (blocking.length > 0) {
