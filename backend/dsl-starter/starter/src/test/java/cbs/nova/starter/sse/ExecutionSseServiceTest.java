@@ -169,8 +169,7 @@ class ExecutionSseServiceTest {
     Field f = org.springframework.web.servlet.mvc.method.annotation.ResponseBodyEmitter.class
             .getDeclaredField("errorCallback");
     f.setAccessible(true);
-    java.util.function.Consumer<Throwable> cb =
-            (java.util.function.Consumer<Throwable>) f.get(a);
+    java.util.function.Consumer<Throwable> cb = (java.util.function.Consumer<Throwable>) f.get(a);
     cb.accept(new IOException("client disconnected"));
     assertThat(cappedService.activeSubscriberCount()).isEqualTo(1);
     SseEmitter c = cappedService.subscribe("c");
