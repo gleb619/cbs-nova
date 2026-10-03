@@ -29,6 +29,7 @@ public class ExecutionSseController {
   @Operation(summary = "Stream status events for a single execution run")
   @ApiResponse(responseCode = "200", description = "SSE stream of execution status changes", content = @Content(mediaType = MediaType.TEXT_EVENT_STREAM_VALUE))
   @ApiResponse(responseCode = "404", description = "No run with the given id", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class)))
+  @ApiResponse(responseCode = "429", description = "Subscriber cap reached; no emitter created", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class)))
   @GetMapping(value = "/api/executions/{id}/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
   public ResponseEntity<SseEmitter> events(
           @Parameter(description = "Run id") @PathVariable("id") @NonNull String id) {
