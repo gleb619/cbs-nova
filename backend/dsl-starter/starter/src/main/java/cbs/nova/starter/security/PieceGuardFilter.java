@@ -21,10 +21,12 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.Comparator;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.LongSupplier;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -90,6 +92,11 @@ public final class PieceGuardFilter extends OncePerRequestFilter {
   static final String FAIL_MODE_AUDIT_ONLY = "audit-only";
 
   private static final long NANOS_PER_SECOND = 1_000_000_000L;
+  /** Floor for the idle window: a bucket is swept only after 60 s of inactivity at minimum. */
+  private static final long MIN_IDLE_NANOS = 60L * NANOS_PER_SECOND;
+  /** Amortized sweep cadence: every Nth consume, plus whenever the cap is exceeded. */
+  private static final int SWEEP_INTERVAL = 1024;
+  static final int DEFAULT_MAX_BUCKETS = 100_000;
 
   private final PieceManifestService manifestService;
   private final RoleResolver roleResolver;
@@ -101,6 +108,8 @@ public final class PieceGuardFilter extends OncePerRequestFilter {
   private final @Nullable PieceCheckPipeline postCheckPipeline;
   private final @Nullable PieceCheckBlockRegistry blockRegistry;
   private final ConcurrentHashMap<String, Bucket> buckets = new ConcurrentHashMap<>();
+  private final AtomicLong consumeCount = new AtomicLong();
+  private int maxBuckets = DEFAULT_MAX_BUCKETS;
 
   @Deprecated(forRemoval = true)
   public PieceGuardFilter(
@@ -230,16 +239,59 @@ public final class PieceGuardFilter extends OncePerRequestFilter {
   private boolean consume(String key, CbsDslManifestProperties.RateClass config) {
     long now = nanoTime.getAsLong();
     Bucket bucket = buckets.compute(key, (k, current) -> {
-      Bucket baseline = current == null ? new Bucket(config.capacity(), now, false) : current;
+      Bucket baseline = current == null
+              ? new Bucket(config.capacity(), now, false,
+                      config.capacity(), config.refillPerSecond())
+              : current;
       long elapsedNanos = now - baseline.lastRefillNanos();
       double refill = elapsedNanos * config.refillPerSecond() / NANOS_PER_SECOND;
       double tokens = Math.min(config.capacity(), baseline.tokens() + refill);
       if (tokens >= 1.0) {
-        return new Bucket(tokens - 1.0, now, true);
+        return new Bucket(tokens - 1.0, now, true,
+                baseline.capacity(), baseline.refillPerSecond());
       }
-      return new Bucket(tokens, now, false);
+      return new Bucket(tokens, now, false, baseline.capacity(), baseline.refillPerSecond());
     });
+    sweepIfDue(now);
     return bucket.consumed();
+  }
+
+  /**
+   * Drops buckets idle for at least their full-refill window (behaviour-neutral: such a bucket
+   * holds exactly the tokens a fresh one would). Lazy and amortized — every
+   * {@value #SWEEP_INTERVAL}th consume, or immediately when over the cap — and lock-free: removals
+   * are conditional {@code remove(key, value)} calls. When still over the cap after the idle pass,
+   * the oldest {@code lastRefillNanos} entries are evicted.
+   */
+  private void sweepIfDue(long now) {
+    long count = consumeCount.incrementAndGet();
+    if (count % SWEEP_INTERVAL != 0 && buckets.size() <= maxBuckets) {
+      return;
+    }
+    buckets.forEach((k, bucket) -> {
+      if (now - bucket.lastRefillNanos() >= bucket.idleWindowNanos()) {
+        buckets.remove(k, bucket);
+      }
+    });
+    int overflow = buckets.size() - maxBuckets;
+    if (overflow <= 0) {
+      return;
+    }
+    // 10% headroom below the cap so the sort does not rerun on every new key.
+    buckets.entrySet().stream()
+            .sorted(Comparator.comparingLong(entry -> entry.getValue().lastRefillNanos()))
+            .limit((long) overflow + maxBuckets / 10)
+            .forEach(entry -> buckets.remove(entry.getKey(), entry.getValue()));
+  }
+
+  /** Package-private: test hook for the hard cap. */
+  void maxBuckets(int maxBuckets) {
+    this.maxBuckets = maxBuckets;
+  }
+
+  /** Package-private test accessor — not part of the public API. */
+  int bucketCount() {
+    return buckets.size();
   }
 
   /**
@@ -315,6 +367,19 @@ public final class PieceGuardFilter extends OncePerRequestFilter {
   private record CheckFailure(String checkType, String detail) {
   }
 
-  private record Bucket(double tokens, long lastRefillNanos, boolean consumed) {
+  private record Bucket(double tokens, long lastRefillNanos, boolean consumed,
+          double capacity, double refillPerSecond) {
+
+    /**
+     * Time of inactivity after which this bucket is guaranteed fully refilled and therefore
+     * behaviour-neutral to evict.
+     */
+    long idleWindowNanos() {
+      if (refillPerSecond <= 0.0) {
+        return Long.MAX_VALUE;
+      }
+      long window = (long) Math.ceil(capacity / refillPerSecond * NANOS_PER_SECOND);
+      return Math.max(MIN_IDLE_NANOS, window);
+    }
   }
 }

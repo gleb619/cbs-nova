@@ -500,7 +500,94 @@ class PieceGuardFilterTest {
     verify(pipeline, never()).onSuccess(any(), any(), any(), any(), any());
   }
 
+  // --- idle-bucket eviction (T791) ---------------------------------------------------
+
+  @Test
+  void idleRateClassBucketIsEvictedAfterFullRefillWindow() throws Exception {
+    pieceWith(List.of(new PreCheck.RateClassCheck("control-plane")));
+    // Full-refill window = max(60s floor, 20/5 = 4s) = 60s.
+    CbsDslManifestProperties properties = new CbsDslManifestProperties(true,
+            "classpath:piece-manifest.yaml", null,
+            Map.of("control-plane", new CbsDslManifestProperties.RateClass(20, 5.0)), null, null,
+            null);
+    filter = newFilter(properties, new PropertiesFeatureFlagSource(properties));
+
+    MockHttpServletRequest first = requestFrom("10.0.0.1");
+    assertThat(invoke(first, chainWriting(200, "ok")).chainRan()).isTrue();
+    assertThat(filter.bucketCount()).isEqualTo(1);
+
+    // Idle past the full-refill window, then force the amortized sweep.
+    clock.addAndGet(61_000_000_000L);
+    forceSweep();
+
+    assertThat(filter.bucketCount()).isEqualTo(1);
+
+    // Behaviour-neutral: the evicted key behaves exactly like a fresh bucket.
+    for (int i = 1; i <= 20; i++) {
+      assertThat(invoke(requestFrom("10.0.0.1"), chainWriting(200, "ok")).chainRan())
+              .as("hit %d/20 after eviction", i)
+              .isTrue();
+    }
+    assertThat(invoke(requestFrom("10.0.0.1"), chainWriting(200, "ok")).chainRan()).isFalse();
+  }
+
+  @Test
+  void exhaustedRateClassBucketIsNotEvictedBeforeItWouldHaveRefilled() throws Exception {
+    pieceWith(List.of(new PreCheck.RateClassCheck("control-plane")));
+    CbsDslManifestProperties properties = new CbsDslManifestProperties(true,
+            "classpath:piece-manifest.yaml", null,
+            Map.of("control-plane", new CbsDslManifestProperties.RateClass(1, 1.0)), null, null,
+            null);
+    filter = newFilter(properties, new PropertiesFeatureFlagSource(properties));
+
+    assertThat(invoke(requestFrom("10.0.0.1"), chainWriting(200, "ok")).chainRan()).isTrue();
+    assertThat(invoke(requestFrom("10.0.0.1"), chainWriting(200, "ok")).chainRan()).isFalse();
+
+    // Half the refill time — far below the 60s idle floor: must NOT be evicted.
+    clock.addAndGet(500_000_000L);
+    forceSweep();
+
+    assertThat(filter.bucketCount()).isEqualTo(2);
+    // Partial refill (0.5 token) preserved — still denied, not reset to a fresh bucket.
+    assertThat(invoke(requestFrom("10.0.0.1"), chainWriting(200, "ok")).chainRan()).isFalse();
+  }
+
+  @Test
+  void hardCapEvictsOldestRateClassBucket() throws Exception {
+    pieceWith(List.of(new PreCheck.RateClassCheck("control-plane")));
+    CbsDslManifestProperties properties = new CbsDslManifestProperties(true,
+            "classpath:piece-manifest.yaml", null,
+            Map.of("control-plane", new CbsDslManifestProperties.RateClass(1, 1.0)), null, null,
+            null);
+    filter = newFilter(properties, new PropertiesFeatureFlagSource(properties));
+    filter.maxBuckets(1);
+
+    assertThat(invoke(requestFrom("10.0.0.1"), chainWriting(200, "ok")).chainRan()).isTrue();
+    clock.addAndGet(1_000_000L); // 1ms
+    // Second bucket exceeds the cap -> eager sweep evicts the oldest (10.0.0.1).
+    assertThat(invoke(requestFrom("10.0.0.2"), chainWriting(200, "ok")).chainRan()).isTrue();
+
+    assertThat(filter.bucketCount()).isEqualTo(1);
+    // 10.0.0.2 kept -> ~1ms refill (0.001 tokens) is not enough for a hit.
+    assertThat(invoke(requestFrom("10.0.0.2"), chainWriting(200, "ok")).chainRan()).isFalse();
+    // 10.0.0.1 evicted -> fresh bucket allows exactly one hit.
+    assertThat(invoke(requestFrom("10.0.0.1"), chainWriting(200, "ok")).chainRan()).isTrue();
+  }
+
   // --- helpers ----------------------------------------------------------------------
+
+  private MockHttpServletRequest requestFrom(String remoteAddr) {
+    MockHttpServletRequest request = new MockHttpServletRequest("POST", ROUTE);
+    request.setRemoteAddr(remoteAddr);
+    return request;
+  }
+
+  /** 1024 rate-class consumes force the amortized sweep at least once. */
+  private void forceSweep() throws Exception {
+    for (int i = 0; i < 1024; i++) {
+      invoke(requestFrom("10.255.255.255"), chainWriting(200, "ok"));
+    }
+  }
 
   private PieceGuardFilter newFilter(CbsDslManifestProperties properties,
           FeatureFlagSource flagSource) {
