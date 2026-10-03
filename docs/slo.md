@@ -50,21 +50,21 @@ dashboard (provisioned by T481 from `app/compose/grafana/dashboards/dsl-overview
 - **Target**: p95 ≤ **60 s**. <!-- TEAM: confirm target -->
 - **Window**: 28-day rolling.
 - **Error budget**: share of runs whose duration exceeds the target (derived from the
-  histogram once buckets exist).
+  `dsl_run_duration_seconds_bucket` series).
 - **How we picked this**: starting value — revisit after 28d of real data.
 - **Note**: this timer is **end-to-end**, not just compute — it includes Temporal queue wait
   plus activity execution time from dispatch to terminal status, so the target must absorb
   Temporal-side queuing.
-- **Prerequisite — read before trusting the SLI**: `dsl.run.duration` is a plain Micrometer
-  Timer and percentile histograms are **not enabled** (no `management.metrics.distribution`
-  config, no `publishPercentileHistogram`). Until T403 enables them, the `_bucket` series do
-  **not exist** and `histogram_quantile` returns nothing. Until then the observable
-  approximation is the mean: `sum(rate(dsl_run_duration_seconds_sum[1h])) /
-  sum(rate(dsl_run_duration_seconds_count[1h]))` — watch it on the
-  `cbs-nova-dsl-overview` dashboard and do not alert on p95 yet.
+- **Histograms — shipped (T403)**: `RunDurationMetricsCollector` registers the timer with
+  `publishPercentileHistogram(true)` and `serviceLevelObjectives(60s)`, so the
+  `dsl_run_duration_seconds_bucket` series exist and `histogram_quantile` above is live.
+  The SLO bucket boundary (`le="60"`) **is** the target: if a custom p95 target is set, it
+  must match a `serviceLevelObjectives` bucket boundary — otherwise the burn-rate
+  expressions in `app/compose/alerts.yml`, which compare `le="60"`, silently measure the
+  wrong threshold.
 - **Dashboard panel**: `cbs-nova-dsl-overview` → run duration panel.
-- **Alerts**: deferred — no burn-rate alert for this SLO in phase 1 (success-rate SLO
-  carried the burn-rate work). Add once T403 lands and 28d of bucket data exists.
+- **Alerts**: `CbsNovaSloRunDurationFastBurn` (page) and `CbsNovaSloRunDurationSlowBurn`
+  (ticket) in `app/compose/alerts.yml`, group `cbs-nova-run-duration-slo-burn-rate`.
 
 ## SLO 3 — Preview latency (p95)
 
@@ -80,12 +80,16 @@ dashboard (provisioned by T481 from `app/compose/grafana/dashboards/dsl-overview
 - **How we picked this**: starting value — revisit after 28d of real data. Deliberately
   tighter than the run-latency target: preview is the interactive authoring path (Workbench),
   where authors feel every second directly, unlike batch production runs.
-- **Prerequisite**: same caveat as SLO 2 — `dsl.preview.duration` exports count/sum/max only
-  until percentile histograms are enabled (T403). Interim observable is the mean
-  (`dsl_preview_duration_seconds_sum` / `dsl_preview_duration_seconds_count`), already
-  threshold-alerted by `CbsNovaPreviewLatencyP95`.
+- **Histograms — shipped (T403)**: `MetricsStage` registers the timer with
+  `publishPercentileHistogram(true)` and `serviceLevelObjectives(2s)`, so the
+  `dsl_preview_duration_seconds_bucket` series exist. Same caveat as SLO 2: the bucket
+  boundary (`le="2"`) must equal any custom p95 target, or the burn-rate expressions
+  break. `CbsNovaPreviewLatencyP95` is no longer a mean/threshold approximation — it
+  alerts on the true `histogram_quantile(0.95, ...)`.
 - **Dashboard panel**: `cbs-nova-dsl-overview` → preview duration panel.
-- **Alerts**: deferred — same phase-1 deferral as SLO 2.
+- **Alerts**: `CbsNovaSloPreviewLatencyFastBurn` (page) and `CbsNovaSloPreviewLatencySlowBurn`
+  (ticket) in `app/compose/alerts.yml`, group `cbs-nova-preview-latency-slo-burn-rate`,
+  alongside the threshold-based `CbsNovaPreviewLatencyP95`.
 
 ---
 
