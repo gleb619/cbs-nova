@@ -131,9 +131,14 @@ alerts in `app/compose/alerts.yml` (T490). A unified `DslMaintenanceService` run
 reconciliation and audit-log maintenance tasks. `rid` / `correlation_id` flows through backend and
 BFF logs (T384).
 
-**Deferred.** Percentile histograms on `dsl.run.duration` and `dsl.preview.duration` timers (T403) are
-not enabled, so p95 latency burn-rate alerts for SLO 2 and SLO 3 remain deferred; the current alerts
-use mean/threshold approximations.
+**Also shipped (T403).** Percentile histograms are enabled on `dsl.run.duration`
+(`RunDurationMetricsCollector`, SLO bucket 60 s) and `dsl.preview.duration` (`MetricsStage`,
+SLO bucket 2 s), so the p95 latency burn-rate alerts for SLO 2 and SLO 3 shipped too:
+`CbsNovaSloRunDurationFastBurn` / `SlowBurn` and `CbsNovaSloPreviewLatencyFastBurn` / `SlowBurn`
+in `app/compose/alerts.yml`. `CbsNovaPreviewLatencyP95` now alerts on the true
+`histogram_quantile` instead of a mean/threshold approximation. Any custom p95 target must
+match the `serviceLevelObjectives` bucket boundary (`le="60"` / `le="2"`), or the burn-rate
+expressions measure the wrong threshold (see `docs/slo.md`).
 
 **Problem.** Metrics (Micrometer), tracing (OTel, opt-in), and health checks exist but are
 disconnected. No dashboards ship. Tracing is no-op unless an OTLP endpoint is set. Compile
