@@ -277,9 +277,10 @@ public final class PieceGuardFilter extends OncePerRequestFilter {
     if (overflow <= 0) {
       return;
     }
+    // 10% headroom below the cap so the sort does not rerun on every new key.
     buckets.entrySet().stream()
             .sorted(Comparator.comparingLong(entry -> entry.getValue().lastRefillNanos()))
-            .limit(overflow)
+            .limit((long) overflow + maxBuckets / 10)
             .forEach(entry -> buckets.remove(entry.getKey(), entry.getValue()));
   }
 

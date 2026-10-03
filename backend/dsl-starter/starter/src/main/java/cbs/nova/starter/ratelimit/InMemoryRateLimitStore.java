@@ -77,10 +77,11 @@ public final class InMemoryRateLimitStore implements RateLimitStore {
     if (overflow <= 0) {
       return;
     }
-    // Still over the cap after dropping idle buckets: evict the oldest lastRefillNanos entries.
+    // Still over the cap after dropping idle buckets: evict the oldest lastRefillNanos entries,
+    // with 10% headroom so the O(n log n) sort does not rerun on every new key at the cap.
     buckets.entrySet().stream()
             .sorted(Comparator.comparingLong(entry -> entry.getValue().lastRefillNanos()))
-            .limit(overflow)
+            .limit((long) overflow + maxBuckets / 10)
             .forEach(entry -> buckets.remove(entry.getKey(), entry.getValue()));
   }
 
