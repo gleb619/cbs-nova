@@ -210,4 +210,99 @@ class InMemoryRateLimitStoreTest {
     assertThat(store.consume("manifest-default", manifestDefaults).allowed()).isTrue();
     assertThat(store.consume("manifest-default", manifestDefaults).allowed()).isFalse();
   }
+
+  // --- idle-bucket eviction (T791) -----------------------------------------------------
+
+  /** 1024 consumes on a dedicated key force the amortized sweep at least once. */
+  private static void forceSweep(InMemoryRateLimitStore store, RateLimit limit) {
+    for (int i = 0; i < 1024; i++) {
+      store.consume("__sweep__", limit);
+    }
+  }
+
+  @Test
+  void idleBucketIsEvictedAfterFullRefillWindow() {
+    FakeClock clock = new FakeClock();
+    InMemoryRateLimitStore store = newStore(clock);
+    // Full-refill window = max(60s floor, 20/5 = 4s) = 60s.
+    RateLimit limit = new RateLimit(20, 5.0);
+
+    assertThat(store.consume("idle", limit).allowed()).isTrue();
+    clock.advanceNanos(61L * nanosPerSecond());
+
+    forceSweep(store, limit);
+
+    // "idle" evicted; only the sweep-probe bucket remains.
+    assertThat(store.bucketCount()).isEqualTo(1);
+
+    // Behaviour-neutral: evicted-after-full-refill behaves exactly like a fresh bucket.
+    for (int i = 1; i <= 20; i++) {
+      assertThat(store.consume("idle", limit).allowed())
+              .as("hit %d/20 after eviction", i + 1)
+              .isTrue();
+    }
+    assertThat(store.consume("idle", limit).allowed()).isFalse();
+  }
+
+  @Test
+  void activeBucketIsKeptBySweep() {
+    FakeClock clock = new FakeClock();
+    InMemoryRateLimitStore store = newStore(clock);
+    RateLimit limit = new RateLimit(20, 5.0);
+
+    assertThat(store.consume("active", limit).allowed()).isTrue();
+    // 10s < 60s floor: bucket is still inside its idle window.
+    clock.advanceNanos(10L * nanosPerSecond());
+
+    forceSweep(store, limit);
+
+    assertThat(store.bucketCount()).isEqualTo(2);
+    // Refill accrued during the 10s idle is preserved (tokens clamped at capacity).
+    for (int i = 1; i <= 20; i++) {
+      assertThat(store.consume("active", limit).allowed())
+              .as("hit %d/20", i)
+              .isTrue();
+    }
+    assertThat(store.consume("active", limit).allowed()).isFalse();
+  }
+
+  @Test
+  void exhaustedBucketIsNotEvictedBeforeItWouldHaveRefilled() {
+    FakeClock clock = new FakeClock();
+    InMemoryRateLimitStore store = newStore(clock);
+    RateLimit limit = new RateLimit(1, 1.0);
+
+    assertThat(store.consume("k", limit).allowed()).isTrue(); // tokens -> 0
+    assertThat(store.consume("k", limit).allowed()).isFalse(); // denied, lastRefill = now
+
+    // Half the (1s) refill time, far below the 60s idle floor: must NOT be evicted.
+    clock.advanceNanos(nanosPerSecond() / 2);
+
+    forceSweep(store, limit);
+
+    assertThat(store.bucketCount()).isEqualTo(2);
+    // Partial refill (0.5 token) is preserved — not reset to a fresh full bucket.
+    Consumption denied = store.consume("k", limit);
+    assertThat(denied.allowed()).isFalse();
+    assertThat(denied.retryAfterSeconds()).isEqualTo(1L);
+  }
+
+  @Test
+  void hardCapEvictsOldestBucketWhenExceeded() {
+    FakeClock clock = new FakeClock();
+    InMemoryRateLimitStore store = new InMemoryRateLimitStore(clock::nanoTime, 2);
+    RateLimit limit = new RateLimit(1, 1.0);
+
+    assertThat(store.consume("a", limit).allowed()).isTrue(); // t=0, oldest
+    clock.advanceNanos(1_000_000L); // 1ms
+    assertThat(store.consume("b", limit).allowed()).isTrue(); // t=1ms
+    clock.advanceNanos(1_000_000L); // 1ms
+    assertThat(store.consume("c", limit).allowed()).isTrue(); // size 3 > cap 2 -> eager sweep
+
+    assertThat(store.bucketCount()).isEqualTo(2);
+    // "b" kept -> ~2ms refill (0.002 tokens) is not enough for a hit.
+    assertThat(store.consume("b", limit).allowed()).isFalse();
+    // "a" (oldest lastRefillNanos) was evicted -> fresh bucket allows exactly one hit.
+    assertThat(store.consume("a", limit).allowed()).isTrue();
+  }
 }
