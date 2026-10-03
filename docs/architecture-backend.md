@@ -503,7 +503,7 @@ Both are explicit Nitro files (no generic catch-all); `curl http://localhost:300
 
 #### FE pointer
 
-The signals panel is not yet a dedicated page/section in [`architecture-ui.md`](architecture-ui.md). It currently surfaces inside the **Executions detail** view — [`frontend/admin-ui-plugin/app/pages/executions/[id].vue`](../frontend/admin-ui-plugin/app/pages/executions/[id].vue) at `data-testid="signal-panel"` carries a two-input form (`signalName`, JSON `signalPayload`), a `querySignalState` button, and a `sendSignal` button that calls the BFF routes above. A dedicated `docs/architecture-ui.md` subsection for signals is the T610 page-sync follow-up.
+The signals panel is documented in [`architecture-ui.md` § Signals panel](architecture-ui.md#signals-panel).
 
 #### Known gaps
 

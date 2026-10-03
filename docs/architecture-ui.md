@@ -247,6 +247,22 @@ The Executions page lists past and in-flight DSL runs. Before `T200` it had no w
   fires one immediate re-check when the tab becomes visible again. As soon as a poll observes any status other than
   `Stale`, the composable pushes the new status into the caller's ref and stops — no further polling for that run.
 
+### Signals panel
+
+The Executions detail view surfaces a signal operator panel for **Running** runs only.
+
+- **Page (`frontend/admin-ui-plugin/app/pages/executions/[id].vue`)** — renders `data-testid="signal-panel"` with a two-field form (`signalName` and a JSON `signalPayload`) plus **Query state** and **Send signal** buttons.
+- **Declared-signal hints (`T722`)** — the page loads the definition's declared signals via `useDslApi().fetchDeclaredSignals(entityType, entity)` and renders them as chips with `payloadType` tooltips and a matching `<datalist>`. `signalNameIsUnknown` shows a non-blocking warning when the typed name is not in the declared set; Temporal still accepts undeclared names, so this is UX guidance, not enforcement.
+- **Actions** — `sendSignal` posts `signalName` and a parsed JSON payload to `POST /api/v1/dsl/signals/{runId}` and auto-runs `querySignalState` on success. `querySignalState` calls `GET /api/v1/dsl/queries/{runId}` and displays the returned `signalState` JSON. Result and error messages are rendered under the buttons.
+- **BFF routes** — explicit Nitro proxies to `DslSignalsHandler`:
+  - `POST /api/v1/dsl/signals/{runId}` (`frontend/admin-ui-plugin/server/api/v1/dsl/signals/[runId].post.ts`) → `POST /api/dsl/signals/{runId}` (`sendSignal`).
+  - `GET /api/v1/dsl/queries/{runId}` (`frontend/admin-ui-plugin/server/api/v1/dsl/queries/[runId].get.ts`) → `GET /api/dsl/queries/{runId}` (`querySignalState`).
+
+  Error mapping mirrors the backend: `NOT_FOUND` → 404 run-not-found, `NOT_RUNNING` → 409 not-running, `UNKNOWN_SIGNAL` → 400 bad-request.
+- **OpenAPI coverage** — both routes are already present in `docs/openapi.json` as `sendSignal` and `querySignalState`.
+
+See [Authoring DSL Flows — Signals](dsl/authoring.md#signals) for how signals are declared.
+
 ## Schedules page
 
 The Schedules page lists Temporal cron schedules keyed by a published DSL definition. Schedules are the operator-facing
