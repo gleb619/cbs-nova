@@ -68,6 +68,18 @@ vi.mock('~/server/utils/oidcSession', async (importOriginal) => {
         name: 'Dev User',
       }),
     ),
+    clearOidcSession: vi.fn((...args: Parameters<typeof actual.clearOidcSession>) =>
+      actual.clearOidcSession(...args),
+    ),
+    clearOidcTxn: vi.fn((...args: Parameters<typeof actual.clearOidcTxn>) =>
+      actual.clearOidcTxn(...args),
+    ),
+    writeSession: vi.fn((...args: Parameters<typeof actual.writeSession>) =>
+      actual.writeSession(...args),
+    ),
+    detectRefreshReuse: vi.fn((...args: Parameters<typeof actual.detectRefreshReuse>) =>
+      actual.detectRefreshReuse(...args),
+    ),
   }
 })
 
@@ -76,6 +88,8 @@ const callbackHandler = (await import('../callback.get')).default
 const logoutHandler = (await import('../logout.get')).default
 const logoutPostHandler = (await import('../logout.post')).default
 const sessionHandler = (await import('../session.get')).default
+
+import * as oidcSession from '~/server/utils/oidcSession'
 
 const fakeEvent = {} as Parameters<typeof loginHandler>[0]
 
@@ -120,6 +134,7 @@ beforeEach(() => {
   setCookies = []
   requestHeaders = {}
   setRuntimeConfig()
+  vi.clearAllMocks()
 })
 
 describe('login.get', () => {
@@ -225,6 +240,58 @@ describe('callback.get', () => {
     await callbackHandler(fakeEvent)
 
     expect(redirectUrl).toBe('/')
+  })
+})
+
+describe('callback.get security branches', () => {
+  it('returns 403 when code is missing', async () => {
+    setRuntimeConfig({ authIssuer: 'http://keycloak:8080/realms/cbs-nova' })
+    cookieJar.cbs_oidc_txn = JSON.stringify({ state: 'state-xyz', verifier: 'v', redirect: '/' })
+    queryValue = { state: 'state-xyz' }
+
+    await expect(callbackHandler(fakeEvent)).rejects.toMatchObject({
+      statusCode: 403,
+      statusMessage: 'Invalid OIDC state',
+    })
+  })
+
+  it('returns 403 when state is missing', async () => {
+    setRuntimeConfig({ authIssuer: 'http://keycloak:8080/realms/cbs-nova' })
+    cookieJar.cbs_oidc_txn = JSON.stringify({ state: 'state-xyz', verifier: 'v', redirect: '/' })
+    queryValue = { code: 'auth-code' }
+
+    await expect(callbackHandler(fakeEvent)).rejects.toMatchObject({
+      statusCode: 403,
+      statusMessage: 'Invalid OIDC state',
+    })
+  })
+
+  it('returns 403 when txn cookie is missing', async () => {
+    setRuntimeConfig({ authIssuer: 'http://keycloak:8080/realms/cbs-nova' })
+    queryValue = { code: 'auth-code', state: 'state-xyz' }
+
+    await expect(callbackHandler(fakeEvent)).rejects.toMatchObject({
+      statusCode: 403,
+      statusMessage: 'Invalid OIDC state',
+    })
+  })
+
+  it('propagates exchangeCode rejection without writing session or clearing txn', async () => {
+    setRuntimeConfig({ authIssuer: 'http://keycloak:8080/realms/cbs-nova' })
+    cookieJar.cbs_oidc_txn = JSON.stringify({
+      state: 'state-xyz',
+      verifier: 'verifier-xyz',
+      redirect: '/runner',
+    })
+    queryValue = { code: 'auth-code', state: 'state-xyz' }
+    vi.mocked(oidcSession.exchangeCode).mockRejectedValueOnce(new Error('token exchange failed'))
+
+    await expect(callbackHandler(fakeEvent)).rejects.toThrow('token exchange failed')
+
+    expect(oidcSession.writeSession).not.toHaveBeenCalled()
+    expect(oidcSession.clearOidcTxn).not.toHaveBeenCalled()
+    expect(cookieJar.cbs_oidc_txn).toBeDefined()
+    expect(cookieJar.cbs_at).toBeUndefined()
   })
 })
 
@@ -342,5 +409,114 @@ describe('session.get', () => {
       authenticated: true,
       user: { sub: 'u-2', preferred_username: 'refreshed' },
     })
+  })
+})
+
+describe('session.get security branches', () => {
+  it('absolute timeout clears session and returns 401 without fetching userinfo', async () => {
+    const callbackUrl = 'http://localhost:3000/api/v1/auth/callback'
+    setRuntimeConfig({
+      authIssuer: 'http://keycloak:8080/realms/cbs-nova',
+      authSessionAbsoluteTimeoutSeconds: 60,
+      authCallbackUrl: callbackUrl,
+    })
+    cookieJar.cbs_sess_start = String(Math.floor(Date.now() / 1000) - 61)
+    cookieJar.cbs_at = 'access-xyz'
+
+    await expect(sessionHandler(fakeEvent)).rejects.toMatchObject({
+      statusCode: 401,
+      statusMessage: 'Unauthorized',
+    })
+
+    expect(oidcSession.clearOidcSession).toHaveBeenCalledWith(fakeEvent, callbackUrl)
+    expect(oidcSession.fetchUserInfo).not.toHaveBeenCalled()
+    expect(cookieJar.cbs_at).toBeUndefined()
+  })
+
+  it('detects refresh-token reuse on userinfo 401 and returns 401 session revoked', async () => {
+    const callbackUrl = 'http://localhost:3000/api/v1/auth/callback'
+    setRuntimeConfig({ authIssuer: 'http://keycloak:8080/realms/cbs-nova', authCallbackUrl: callbackUrl })
+    cookieJar.cbs_at = 'old-access'
+    cookieJar.cbs_rt = 'refresh-xyz'
+    cookieJar.cbs_rt_prev = await oidcSession.sha256b64url('refresh-xyz')
+    vi.mocked(oidcSession.fetchUserInfo).mockRejectedValueOnce({ response: { status: 401 } })
+
+    await expect(sessionHandler(fakeEvent)).rejects.toMatchObject({
+      statusCode: 401,
+      statusMessage: 'session revoked',
+    })
+
+    expect(oidcSession.detectRefreshReuse).toHaveBeenCalledWith(fakeEvent, 'refresh-xyz')
+    expect(oidcSession.refreshTokens).not.toHaveBeenCalled()
+    expect(oidcSession.writeSession).not.toHaveBeenCalled()
+    expect(oidcSession.clearOidcSession).toHaveBeenCalledWith(fakeEvent, callbackUrl)
+  })
+
+  it('skips reuse detection when sessionRotateOnRefresh is false', async () => {
+    setRuntimeConfig({
+      authIssuer: 'http://keycloak:8080/realms/cbs-nova',
+      authSessionRotateOnRefresh: 'false',
+    })
+    cookieJar.cbs_at = 'old-access'
+    cookieJar.cbs_rt = 'refresh-xyz'
+    cookieJar.cbs_rt_prev = await oidcSession.sha256b64url('refresh-xyz')
+    vi.mocked(oidcSession.fetchUserInfo)
+      .mockRejectedValueOnce({ response: { status: 401 } })
+      .mockResolvedValueOnce({ sub: 'u-2', preferred_username: 'refreshed' })
+
+    const result = await sessionHandler(fakeEvent)
+
+    expect(result).toEqual({
+      authenticated: true,
+      user: { sub: 'u-2', preferred_username: 'refreshed' },
+    })
+    expect(oidcSession.detectRefreshReuse).not.toHaveBeenCalled()
+  })
+
+  it('returns 401 when refresh throws', async () => {
+    setRuntimeConfig({ authIssuer: 'http://keycloak:8080/realms/cbs-nova' })
+    cookieJar.cbs_at = 'old-access'
+    cookieJar.cbs_rt = 'refresh-xyz'
+    vi.mocked(oidcSession.fetchUserInfo).mockRejectedValueOnce({ response: { status: 401 } })
+    vi.mocked(oidcSession.refreshTokens).mockRejectedValueOnce(new Error('refresh failed'))
+
+    await expect(sessionHandler(fakeEvent)).rejects.toMatchObject({
+      statusCode: 401,
+      statusMessage: 'Unauthorized',
+    })
+
+    expect(oidcSession.writeSession).not.toHaveBeenCalled()
+  })
+
+  it('returns 401 on userinfo 401 without refresh token and does not attempt refresh', async () => {
+    setRuntimeConfig({ authIssuer: 'http://keycloak:8080/realms/cbs-nova' })
+    cookieJar.cbs_at = 'old-access'
+    vi.mocked(oidcSession.fetchUserInfo).mockRejectedValueOnce({ response: { status: 401 } })
+
+    await expect(sessionHandler(fakeEvent)).rejects.toMatchObject({
+      statusCode: 401,
+      statusMessage: 'Unauthorized',
+    })
+
+    expect(oidcSession.refreshTokens).not.toHaveBeenCalled()
+    expect(oidcSession.writeSession).not.toHaveBeenCalled()
+  })
+
+  it('attempts refresh on userinfo 403 when refresh token exists', async () => {
+    setRuntimeConfig({ authIssuer: 'http://keycloak:8080/realms/cbs-nova' })
+    cookieJar.cbs_at = 'old-access'
+    cookieJar.cbs_rt = 'refresh-xyz'
+    vi.mocked(oidcSession.fetchUserInfo)
+      .mockRejectedValueOnce({ response: { status: 403 } })
+      .mockResolvedValueOnce({ sub: 'u-2', preferred_username: 'refreshed' })
+
+    const result = await sessionHandler(fakeEvent)
+
+    expect(result).toEqual({
+      authenticated: true,
+      user: { sub: 'u-2', preferred_username: 'refreshed' },
+    })
+    expect(oidcSession.refreshTokens).toHaveBeenCalledWith('refresh-xyz')
+    expect(oidcSession.writeSession).toHaveBeenCalled()
   })
 })
