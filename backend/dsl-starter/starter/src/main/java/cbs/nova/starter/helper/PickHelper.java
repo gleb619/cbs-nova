@@ -39,7 +39,7 @@ import org.jspecify.annotations.NonNull;
  * reference). Lists are not traversed — {@code "a[0]"} / {@code "a[*]"} are out of scope for this
  * helper. The input {@code source} map is never mutated.
  */
-@Helper(name = "pick")
+@Helper(name = "pick", description = "Projects a Map down to or removes a list of keys.")
 public class PickHelper implements Executable<PickIn, PickOut> {
 
   @Override

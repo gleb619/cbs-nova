@@ -38,7 +38,7 @@ import org.jspecify.annotations.NonNull;
  * {@code RFC_1123_DATE_TIME}. Any other value is treated as a raw
  * {@link java.time.format.DateTimeFormatter#ofPattern(String, Locale)} string.
  */
-@Helper(name = "formatDate")
+@Helper(name = "formatDate", description = "Formats an instant into a human-readable date/time string using a preset or custom pattern.")
 public class FormatDateHelper implements Executable<FormatDateIn, FormatDateOut> {
 
   private static final Pattern EPOCH_MILLIS_PATTERN = Pattern.compile(

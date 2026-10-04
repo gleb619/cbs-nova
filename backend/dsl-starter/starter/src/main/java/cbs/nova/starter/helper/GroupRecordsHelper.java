@@ -24,7 +24,7 @@ import org.jspecify.annotations.NonNull;
  * <p>
  * Both group order and record order within groups are stable (insertion order).
  */
-@Helper(name = "groupRecords")
+@Helper(name = "groupRecords", description = "Groups a list of records by one or more dot-separated key paths.")
 public class GroupRecordsHelper implements Executable<GroupRecordsIn, GroupRecordsOut> {
 
   private static final String NULL_KEY = "__null__";

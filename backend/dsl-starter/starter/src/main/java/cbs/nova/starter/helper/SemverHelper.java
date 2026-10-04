@@ -43,7 +43,7 @@ import org.jspecify.annotations.NonNull;
  * {@code bumpType}, malformed versions and malformed ranges all yield an
  * {@link IllegalArgumentException}.
  */
-@Helper(name = "semver")
+@Helper(name = "semver", description = "Parses, compares, range-checks, bumps, and formats semantic versions.")
 public class SemverHelper implements Executable<SemverIn, SemverOut> {
 
   // Official semver.org-recommended regex

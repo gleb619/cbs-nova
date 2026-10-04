@@ -38,7 +38,7 @@ import org.jspecify.annotations.NonNull;
  * letters, e.g. {@code BATCH} → {@code b-a-t-c-h}) and never splits at digit boundaries, which does
  * not match the word semantics above.
  */
-@Helper(name = "caseConvert")
+@Helper(name = "caseConvert", description = "Converts a string between camel, kebab, snake, and title case.")
 public class CaseConvertHelper implements Executable<CaseConvertIn, CaseConvertOut> {
 
   @Override

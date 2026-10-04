@@ -1,5 +1,6 @@
 List<DslObject> define() {
   var greetFn = Dsl.function("greetFn")
+      .description("Greets a caller by name, defaulting to world.")
       .input(Map.class)
       .output(String.class)
       .execute(ctx -> {

@@ -37,7 +37,7 @@ import org.jspecify.annotations.NonNull;
  * Unknown or null {@code mode} yields an {@link IllegalArgumentException}.
  */
 @Slf4j
-@Helper(name = "queryString")
+@Helper(name = "queryString", description = "Builds and parses application/x-www-form-urlencoded query strings.")
 public class QueryStringHelper implements Executable<QueryStringIn, QueryStringOut> {
 
   @Override

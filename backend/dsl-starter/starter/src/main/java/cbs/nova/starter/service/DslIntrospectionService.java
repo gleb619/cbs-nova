@@ -24,6 +24,7 @@ import cbs.nova.starter.converter.DslIntrospectionMapper;
 import cbs.nova.starter.model.DslIntrospectionModels.ConstructPathType;
 import cbs.nova.starter.model.DslIntrospectionModels.ConstructSchemaMode;
 import cbs.nova.starter.model.DslIntrospectionModels.DefinitionMetaDto;
+import cbs.nova.starter.model.DslIntrospectionModels.HelperCatalogEntry;
 import cbs.nova.starter.model.DslIntrospectionModels.DefinitionStatus;
 import cbs.nova.starter.model.DslIntrospectionModels.ConstructBodyDto;
 import cbs.nova.starter.model.DslIntrospectionModels.ConstructSchemaDto;
@@ -39,6 +40,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Objects;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -77,6 +79,21 @@ public class DslIntrospectionService {
             .limit(size)
             .toList();
     return new PageResponse<>(paged, total, offset, size);
+  }
+
+  public List<HelperCatalogEntry> helperCatalog() {
+    var gm = GlobalManager.globalManager();
+    return gm.helperNames().stream()
+            .map(n -> helperCatalogEntry(gm, n))
+            .filter(Objects::nonNull)
+            .toList();
+  }
+
+  private HelperCatalogEntry helperCatalogEntry(GlobalManager gm, String name) {
+    return gm.describeHelper(name)
+            .map(d -> mapper.toHelperCatalogEntry(name, d))
+            .or(() -> gm.describeFunction(name).map(mapper::toHelperCatalogEntry))
+            .orElse(null);
   }
 
   public Optional<ConstructBodyDto> constructBody(ConstructPathType type, String name) {

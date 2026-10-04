@@ -49,7 +49,7 @@ import org.jspecify.annotations.NonNull;
  * Malformed base64 or compressed payloads are reported as {@link IllegalArgumentException} via
  * {@link Result#failure(Throwable)}.
  */
-@Helper(name = "compression")
+@Helper(name = "compression", description = "Compresses and decompresses UTF-8 strings using gzip or raw DEFLATE.")
 public class CompressionHelper implements Executable<CompressionIn, CompressionOut> {
 
   @Override

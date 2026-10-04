@@ -34,6 +34,10 @@ import java.util.Objects;
 @Slf4j
 @RequiredArgsConstructor
 public class HttpCallHelper implements Executable<HttpCallIn, HttpCallOut> {
+  @Override
+  public @NonNull String description() {
+    return "Performs an outbound HTTP call with URL safety validation, redirects, and retries.";
+  }
 
   private static final List<Integer> REDIRECT_STATUSES = List.of(301, 302, 303, 307, 308);
 

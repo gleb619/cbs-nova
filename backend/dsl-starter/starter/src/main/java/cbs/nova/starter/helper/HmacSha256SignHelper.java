@@ -21,7 +21,7 @@ import org.jspecify.annotations.NonNull;
  * encodings (case-insensitive) are {@code "hex"} (default), {@code "base64"}, and
  * {@code "base64url"}. The returned signature is encoded with the requested format.
  */
-@Helper(name = "hmacSha256Sign")
+@Helper(name = "hmacSha256Sign", description = "Signs a message using HMAC-SHA256.")
 public class HmacSha256SignHelper implements Executable<HmacSha256SignIn, HmacSha256SignOut> {
 
   @Override

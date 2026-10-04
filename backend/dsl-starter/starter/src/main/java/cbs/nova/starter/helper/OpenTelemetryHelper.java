@@ -94,7 +94,7 @@ import org.jspecify.annotations.NonNull;
  * requires no null-check or no-op branch — disabled tracing simply produces no exported spans,
  * which is the desired behavior.
  */
-@SpringHelper(name = "otel")
+@SpringHelper(name = "otel", description = "Exposes OpenTelemetry tracing operations (span, attribute, log) to DSL authors.")
 public class OpenTelemetryHelper implements Executable<OtelIn, OtelOut> {
 
   private static final Set<String> STATUS_CODES = Set.of("OK", "ERROR", "UNSET");

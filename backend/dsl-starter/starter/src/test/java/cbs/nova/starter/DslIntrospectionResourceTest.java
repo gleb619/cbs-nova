@@ -70,6 +70,17 @@ class DslIntrospectionResourceTest {
   }
 
   @Test
+  void helpersCatalogReturnsNonBlankInputAndOutputTypes() throws Exception {
+    GlobalManager.globalManager().registerHelper("typedHelper", new TypedHelper());
+
+    mockMvc.perform(get("/api/dsl/helpers").accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[?(@.name=='typedHelper')].inputType")
+                    .value(org.hamcrest.Matchers.contains("String")))
+            .andExpect(jsonPath("$[?(@.name=='typedHelper')].outputType")
+                    .value(org.hamcrest.Matchers.contains("Integer")));
+  }
+
   void objectsSearchReturnsEmptyPageWhenNothingRegistered() throws Exception {
     GlobalManager.globalManager().resetForTests();
 
@@ -506,4 +517,11 @@ class DslIntrospectionResourceTest {
               List.of());
     }
   }
+  private static class TypedHelper implements Executable<String, Integer> {
+    @Override
+    public Result<Integer> execute(Context<String> ctx) {
+      return Result.success(1);
+    }
+  }
+
 }

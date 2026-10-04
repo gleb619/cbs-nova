@@ -11,6 +11,15 @@ public @interface Helper {
 
   String name();
 
+  /**
+   * One-line, human-readable summary of what the helper does. Rendered in the generated helpers
+   * catalog and in {@code /api/dsl/objects/search}. Defaults to {@code ""} so existing helpers keep
+   * compiling; when blank the catalog falls back to {@link cbs.nova.dsl.Executable#description()}.
+   *
+   * @return one-line description, never {@code null}
+   */
+  String description() default "";
+
   ComponentModel componentModel() default ComponentModel.STANDARD;
 
   CreationStrategy creationStrategy() default CreationStrategy.STANDARD;

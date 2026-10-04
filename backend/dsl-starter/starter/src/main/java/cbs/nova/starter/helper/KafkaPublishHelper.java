@@ -36,7 +36,7 @@ import tools.jackson.databind.ObjectMapper;
  * dependency, then expose a {@code KafkaTemplate} bean (Spring Boot auto-configures one when
  * {@code spring.kafka.bootstrap-servers} is set).
  */
-@SpringHelper(name = "kafkaPublish")
+@SpringHelper(name = "kafkaPublish", description = "Publishes an arbitrary JSON payload to a Kafka topic.")
 public class KafkaPublishHelper implements Executable<KafkaPublishIn, KafkaPublishOut> {
 
   private static final long SEND_TIMEOUT_MILLIS = 5_000L;

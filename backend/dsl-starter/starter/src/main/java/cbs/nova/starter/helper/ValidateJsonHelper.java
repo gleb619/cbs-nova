@@ -22,7 +22,7 @@ import tools.jackson.databind.ObjectMapper;
  * items and a convenience {@code valid} flag that is {@code true} when the error list is empty.
  * Validation is pure: the payload is not modified and no external call is made.
  */
-@Helper(name = "validateJson")
+@Helper(name = "validateJson", description = "Validates a JSON payload against a JSON Schema.")
 public class ValidateJsonHelper implements Executable<ValidateJsonIn, ValidateJsonOut> {
 
   private final ObjectMapper mapper = new ObjectMapper();

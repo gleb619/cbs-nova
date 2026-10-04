@@ -21,7 +21,7 @@ import org.jspecify.annotations.NonNull;
  * when {@code true} spaces are encoded as {@code +} for {@code application/x-www-form-urlencoded}
  * bodies, otherwise spaces are encoded as {@code %20} per RFC 3986.
  */
-@Helper(name = "urlEncode")
+@Helper(name = "urlEncode", description = "Percent-encodes a string for use in URLs or form payloads.")
 public class UrlEncodeHelper implements Executable<UrlEncodeIn, UrlEncodeOut> {
 
   @Override

@@ -36,7 +36,7 @@ import java.util.concurrent.ThreadLocalRandom;
  * Thread-safety is provided by synchronizing the monotonic counter; uniqueness across threads is
  * guaranteed for unique timestamp/counter combinations.
  */
-@Helper(name = "uuidV7")
+@Helper(name = "uuidV7", description = "Generates RFC 9562 version-7, time-sortable UUIDs.")
 public class UuidV7Helper implements Executable<UuidV7In, UuidV7Out> {
 
   private final Object lock = new Object();

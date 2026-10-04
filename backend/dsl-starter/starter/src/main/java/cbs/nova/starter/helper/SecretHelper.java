@@ -40,7 +40,7 @@ import org.jspecify.annotations.NonNull;
  * with an {@link IllegalArgumentException}. {@link SecureRandom} is thread-safe, so the shared
  * instance needs no synchronization.
  */
-@Helper(name = "secret")
+@Helper(name = "secret", description = "Generates cryptographic random values for security-sensitive use cases.")
 public class SecretHelper implements Executable<SecretIn, SecretOut> {
 
   private static final SecureRandom SECURE_RANDOM = new SecureRandom();

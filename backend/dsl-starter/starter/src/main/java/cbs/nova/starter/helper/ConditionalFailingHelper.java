@@ -8,7 +8,7 @@ import cbs.nova.starter.helper.model.ConditionalFailIn;
 import cbs.nova.starter.helper.model.ConditionalFailOut;
 import org.jspecify.annotations.NonNull;
 
-@Helper(name = "conditionalFailing")
+@Helper(name = "conditionalFailing", description = "Fails execution only while its latch condition is armed.")
 public class ConditionalFailingHelper implements Executable<ConditionalFailIn, ConditionalFailOut> {
 
   @Override

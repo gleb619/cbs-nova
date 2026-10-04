@@ -13,7 +13,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 
-@Helper(name = "currentTimestamp")
+@Helper(name = "currentTimestamp", description = "Returns the current ISO offset timestamp in a requested time zone.")
 public class CurrentTimestampHelper implements Executable<CurrentTimestampIn, CurrentTimestampOut> {
 
   @Override

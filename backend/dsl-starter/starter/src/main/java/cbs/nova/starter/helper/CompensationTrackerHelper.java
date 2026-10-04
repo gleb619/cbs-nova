@@ -14,7 +14,7 @@ import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 
-@Helper(name = "compensationTracker")
+@Helper(name = "compensationTracker", description = "Records compensation callbacks for saga/transaction tests.")
 @RequiredArgsConstructor
 public class CompensationTrackerHelper
         implements

@@ -16,7 +16,7 @@ import java.time.Duration;
 import java.util.concurrent.atomic.AtomicReference;
 import org.jspecify.annotations.NonNull;
 
-@Helper(name = "fileLatch")
+@Helper(name = "fileLatch", description = "File-based latch used to synchronize/verify steps across executions.")
 public class FileLatchHelper implements Executable<FileLatchIn, FileLatchOut> {
 
   private static final Path LATCH_DIR = Path

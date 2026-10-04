@@ -54,4 +54,7 @@ public class DslIntrospectionHandler {
     WorkingSetResponse response = service.workingSet(q);
     return ServerResponse.ok().body(response);
   }
+  public ServerResponse helpers(ServerRequest request) {
+    return ServerResponse.ok().body(service.helperCatalog());
+  }
 }

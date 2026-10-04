@@ -24,7 +24,7 @@ import org.yaml.snakeyaml.error.YAMLException;
  * Empty or {@code null} input is rejected as a typed helper error. Top-level scalars are permitted;
  * they serialize as plain YAML scalars.
  */
-@Helper(name = "formatYaml")
+@Helper(name = "formatYaml", description = "Emits a nested Map, List, or scalar tree as a canonical YAML 1.2 block-style string.")
 public class FormatYamlHelper implements Executable<FormatYamlIn, FormatYamlOut> {
 
   @Override

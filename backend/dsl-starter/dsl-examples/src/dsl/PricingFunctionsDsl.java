@@ -6,6 +6,7 @@ import java.util.List;
 
 List<DslObject> define() {
   var lineTotalFn = Dsl.function("lineTotalFn")
+      .description("Calculates line-level subtotals from order lines.")
       .input(OrderIn.class)
       .output(LineTotalsOut.class)
       .execute(ctx -> {
@@ -24,6 +25,7 @@ List<DslObject> define() {
       .build();
 
   var orderPricingFn = Dsl.function("orderPricingFn")
+      .description("Prices an order with subtotal, VIP discount, tax, and total.")
       .input(OrderIn.class)
       .output(PricedOrder.class)
       .execute(ctx -> {

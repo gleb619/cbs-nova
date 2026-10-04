@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-@Helper(name = "filterRecords")
+@Helper(name = "filterRecords", description = "Filters a list of records by a predicate on dot-separated key paths.")
 public class FilterRecordsHelper implements Executable<FilterRecordsIn, FilterRecordsOut> {
 
   @Override

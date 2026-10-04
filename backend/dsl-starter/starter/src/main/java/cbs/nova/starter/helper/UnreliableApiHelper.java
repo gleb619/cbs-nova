@@ -14,7 +14,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 
-@Helper(name = "unreliableApi")
+@Helper(name = "unreliableApi", description = "Simulates a flaky downstream API for resilience tests.")
 @RequiredArgsConstructor
 public class UnreliableApiHelper implements Executable<UnreliableApiIn, UnreliableApiOut> {
 

@@ -17,7 +17,7 @@ import java.util.List;
 import java.util.Locale;
 import org.jspecify.annotations.NonNull;
 
-@Helper(name = "arithmetic")
+@Helper(name = "arithmetic", description = "Performs arithmetic operations (sum, product, round, compare, etc.) on a list of numbers.")
 public class ArithmeticHelper
         implements
           Executable<ArithmeticIn, ArithmeticOut>,

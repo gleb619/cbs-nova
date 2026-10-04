@@ -30,7 +30,7 @@ import tools.jackson.databind.ObjectMapper;
  * carrying a JSONPath-style {@code path} and a human-readable {@code message}. When
  * {@code failFast} is {@code true}, validation stops at the first reported error.
  */
-@Helper(name = "schemaValidate")
+@Helper(name = "schemaValidate", description = "Validates a JSON payload against a JSON Schema and returns structured errors.")
 public class SchemaValidateHelper implements Executable<SchemaValidateIn, SchemaValidateOut> {
 
   private final ObjectMapper mapper = new ObjectMapper();
