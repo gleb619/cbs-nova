@@ -14,6 +14,8 @@ jobs:
           fetch-depth: 0
 
       - name: Kanban append-only guard
+        # PRs only: github.event.before is unreliable on push-to-main after merges.
+        if: github.event_name == 'pull_request'
         env:
           BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: python3 scripts/cbs_cli.py lint-kanban --base "$BASE"
@@ -54,9 +56,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # No explicit version — pnpm/action-setup reads the packageManager field
-      # (pnpm@9.0.0) from frontend/package.json.
+      # Explicit version: reading packageManager from frontend/package.json is
+      # only reliable when the action runs with the repo checked out first.
       - uses: pnpm/action-setup@v4
+        with:
+          version: 9
 
       - uses: actions/setup-node@v4
         with:
@@ -103,9 +107,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Same pnpm/node setup as build-frontend — action-setup reads
-      # packageManager (pnpm@9.0.0) from frontend/package.json.
+      # Same pnpm/node setup as build-frontend — explicit pnpm version instead
+      # of relying on packageManager resolution.
       - uses: pnpm/action-setup@v4
+        with:
+          version: 9
 
       - uses: actions/setup-node@v4
         with:
@@ -159,9 +165,11 @@ jobs:
           java-version: '25'
           cache: gradle
 
-      # No explicit version — pnpm/action-setup reads the packageManager field
-      # (pnpm@9.0.0) from frontend/package.json.
+      # Explicit version: reading packageManager from frontend/package.json is
+      # only reliable when the action runs with the repo checked out first.
       - uses: pnpm/action-setup@v4
+        with:
+          version: 9
 
       - uses: actions/setup-node@v4
         with:
@@ -205,10 +213,10 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.x'
+          python-version: '3.12'
 
       - name: Install pytest
-        run: pip install pytest
+        run: pip install pytest pyyaml
 
       - name: Run scripts pytest suite
         run: python3 -m pytest scripts/test/ -q
