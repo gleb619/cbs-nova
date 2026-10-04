@@ -1,12 +1,33 @@
 name: CI
 
+# Job timeouts (2026-10-04, feat/T804): sized to clear recent run durations
+# with margin. Backend jobs that publish to Maven Local + boot Docker
+# containers (integration-backend, openapi-drift) get 60 min — historical
+# worst-case is ~40 min when the Gradle cache is cold. supply-chain's NVD
+# dependency-check fetch can spike on a fresh DB; 45 min is enough.
+# secret-scan runs gitleaks on full history via Docker; 20 min is plenty.
 on:
   push:
+    branches: [main]
   pull_request:
+  workflow_dispatch:
+
+# Least-privilege: this workflow only reads the repo and uploads build
+# artifacts (actions/upload-artifact@v7 uses OIDC, so no extra token scope
+# is needed beyond the default `contents: read`).
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  # Don't cancel a run that's already on main — that wastes the gate we
+  # rely on for merges.
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   build-backend:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       # fetch-depth 0 so the kanban guard can resolve the PR base / push-before ref.
       - uses: actions/checkout@v7
@@ -59,6 +80,7 @@ jobs:
 
   build-frontend:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
 
@@ -110,6 +132,7 @@ jobs:
   # the in-tree frontend job can't see. Own job: the pack step is slow.
   operator-portal:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
 
@@ -160,6 +183,7 @@ jobs:
 
   lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
 
@@ -194,6 +218,7 @@ jobs:
 
   dsl-plugins-test:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
 
@@ -214,6 +239,7 @@ jobs:
     # test_lint_kanban, test_openapi_diff). No Docker / network — runs entirely
     # off pip + the repo's own fixtures.
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
 
@@ -238,6 +264,7 @@ jobs:
   # be redundant and would not match the testcontainers-managed host/port.
   integration-backend:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
 
@@ -286,6 +313,7 @@ jobs:
   # defaults the launcher expects (localhost:5432 / localhost:7233).
   openapi-drift:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
 
@@ -394,6 +422,7 @@ jobs:
   # triage when the soft gate trips.
   supply-chain:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
 
@@ -443,6 +472,7 @@ jobs:
     # which extends the upstream default and whitelists the dummies
     # in three unit-test fixtures (each entry comments the fixture).
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       # fetch-depth: 0 lets gitleaks scan the full branch history
       # instead of just HEAD; actions/checkout gives it a clean
