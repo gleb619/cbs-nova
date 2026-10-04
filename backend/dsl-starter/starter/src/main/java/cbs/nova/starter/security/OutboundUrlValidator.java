@@ -23,7 +23,16 @@ public final class OutboundUrlValidator {
             true,
             properties.blockPrivateAddresses(),
             true);
-    UrlSafetyValidator.validate(url, config, LABEL);
+    validate(url, config, LABEL);
+  }
+
+  /**
+   * Generic entry point for callers that already own a {@link UrlSafetyValidator.Config}. Used by
+   * the webhook/notification-sink guard ({@code WebhookUrlGuard}) so the SSRF rules live in exactly
+   * one place.
+   */
+  public static void validate(String url, UrlSafetyValidator.Config config, String label) {
+    UrlSafetyValidator.validate(url, config, label);
   }
 
   /**

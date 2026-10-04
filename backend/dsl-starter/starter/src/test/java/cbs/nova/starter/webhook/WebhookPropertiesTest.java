@@ -1,10 +1,11 @@
 package cbs.nova.starter.webhook;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.boot.context.properties.source.MapConfigurationPropertySource;
@@ -24,6 +25,9 @@ class WebhookPropertiesTest {
     assertThat(properties.getTimeout()).isEqualTo(Duration.ofSeconds(5));
     assertThat(properties.getRetryBackoff()).isEqualTo(Duration.ofSeconds(2));
     assertThat(properties.isAllowPlainHttp()).isFalse();
+    assertThat(properties.getAllowedSchemes()).containsExactly("https", "http");
+    assertThat(properties.getAllowedHosts()).isEmpty();
+    assertThat(properties.isBlockPrivateAddresses()).isFalse();
   }
 
   @Test
@@ -34,6 +38,9 @@ class WebhookPropertiesTest {
             Map.entry("cbs.nova.dsl.webhooks.timeout", "PT10S"),
             Map.entry("cbs.nova.dsl.webhooks.retry-backoff", "PT3S"),
             Map.entry("cbs.nova.dsl.webhooks.allow-plain-http", "true"),
+            Map.entry("cbs.nova.dsl.webhooks.allowed-schemes[0]", "https"),
+            Map.entry("cbs.nova.dsl.webhooks.allowed-hosts[0]", "example.com"),
+            Map.entry("cbs.nova.dsl.webhooks.block-private-addresses", "true"),
             Map.entry("cbs.nova.dsl.webhooks.subscriptions[0].definition-pattern", "orders-*"),
             Map.entry("cbs.nova.dsl.webhooks.subscriptions[0].url", "https://example.com/hook"),
             Map.entry("cbs.nova.dsl.webhooks.subscriptions[0].secret", "secret"),
@@ -48,6 +55,9 @@ class WebhookPropertiesTest {
     assertThat(properties.getTimeout()).isEqualTo(Duration.ofSeconds(10));
     assertThat(properties.getRetryBackoff()).isEqualTo(Duration.ofSeconds(3));
     assertThat(properties.isAllowPlainHttp()).isTrue();
+    assertThat(properties.getAllowedSchemes()).containsExactly("https");
+    assertThat(properties.getAllowedHosts()).containsExactly("example.com");
+    assertThat(properties.isBlockPrivateAddresses()).isTrue();
     assertThat(properties.getSubscriptions()).hasSize(2);
 
     WebhookSubscription first = properties.getSubscriptions().get(0);
@@ -71,9 +81,38 @@ class WebhookPropertiesTest {
     assertThat(properties.getSubscriptions()).isEmpty();
   }
 
+  @Test
+  void validateRejectsUnsafeSubscriptionUrl() {
+    WebhookProperties properties = new WebhookProperties();
+    properties.setAllowPlainHttp(true);
+    properties.setBlockPrivateAddresses(true);
+    properties.setSubscriptions(List.of(
+            new WebhookSubscription("*", "http://169.254.169.254/metadata", null, null)));
+
+    assertThatThrownBy(properties::validate)
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("webhook subscription url")
+            .hasMessageContaining("link-local");
+  }
+
+  @Test
+  void validateRedactsUserinfoInRejectionMessage() {
+    WebhookProperties properties = new WebhookProperties();
+    properties.setBlockPrivateAddresses(true);
+    properties.setSubscriptions(List.of(
+            new WebhookSubscription("*", "https://user:secret@127.0.0.1/hook", null, null)));
+
+    assertThatThrownBy(properties::validate)
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageNotContaining("secret")
+            .hasMessageNotContaining("user:secret@");
+  }
+
   private WebhookProperties bind(Map<String, String> map) {
-    return new Binder(new MapConfigurationPropertySource(map))
+    WebhookProperties properties = new Binder(new MapConfigurationPropertySource(map))
             .bind("cbs.nova.dsl.webhooks", WebhookProperties.class)
             .orElse(new WebhookProperties());
+    properties.validate();
+    return properties;
   }
 }

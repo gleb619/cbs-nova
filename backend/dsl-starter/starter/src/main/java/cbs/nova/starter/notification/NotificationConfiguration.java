@@ -62,8 +62,9 @@ public class NotificationConfiguration {
   @Bean
   @ConditionalOnBean(NotificationRuleRepository.class)
   NotificationRuleService notificationRuleService(NotificationRuleRepository repository,
-          ObjectMapper objectMapper, ObjectProvider<DslAuditService> auditService) {
-    return new NotificationRuleService(repository, objectMapper, auditService);
+          ObjectMapper objectMapper, ObjectProvider<DslAuditService> auditService,
+          WebhookProperties webhookProperties) {
+    return new NotificationRuleService(repository, objectMapper, auditService, webhookProperties);
   }
 
   @Bean
@@ -83,7 +84,7 @@ public class NotificationConfiguration {
   GenericJsonRuleSink slackRuleSink(@Qualifier("webhookHttpClient") HttpClient webhookHttpClient,
           ObjectMapper objectMapper, WebhookProperties properties) {
     return new GenericJsonRuleSink("slack", webhookHttpClient, objectMapper,
-            properties.getTimeout());
+            properties.getTimeout(), properties);
   }
 
   @Bean
@@ -92,7 +93,7 @@ public class NotificationConfiguration {
           @Qualifier("webhookHttpClient") HttpClient webhookHttpClient,
           ObjectMapper objectMapper, WebhookProperties properties) {
     return new GenericJsonRuleSink("pagerduty", webhookHttpClient, objectMapper,
-            properties.getTimeout());
+            properties.getTimeout(), properties);
   }
 
   @Bean(name = "cbsNovaNotificationExecutor", destroyMethod = "shutdown")

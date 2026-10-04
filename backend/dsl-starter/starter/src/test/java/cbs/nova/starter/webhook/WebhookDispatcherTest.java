@@ -18,6 +18,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.Optional;
 import javax.crypto.Mac;
@@ -281,6 +282,55 @@ class WebhookDispatcherTest {
     await().atMost(Duration.ofSeconds(3))
             .untilAsserted(() -> assertThat(wireMock.findAll(postRequestedFor(urlEqualTo("/hook"))))
                     .hasSize(1));
+  }
+
+  @Test
+  void privateAddressStaticSubscriptionIsRejectedAtDispatch() {
+    WebhookProperties properties = enabledProperties(
+            new WebhookSubscription("*", "http://169.254.169.254/metadata", null, null));
+    properties.setBlockPrivateAddresses(true);
+    WebhookDispatcher dispatcher = newDispatcher(properties);
+
+    dispatcher.onRunComplete("run-private", "demo", "COMPLETED", Instant.now(), Instant.now(),
+            null);
+
+    WebhookDeliveryInfo outcome = singleOutcome(dispatcher);
+    assertThat(outcome.lastStatus()).isEqualTo("rejected");
+    assertThat(outcome.lastError())
+            .contains("webhook subscription url")
+            .contains("link-local");
+  }
+
+  @Test
+  void dispatchToRejectsPrivateAddress() {
+    WebhookProperties properties = enabledProperties(
+            new WebhookSubscription("*", "https://example.com/never", null, null));
+    properties.setBlockPrivateAddresses(true);
+    WebhookDispatcher dispatcher = newDispatcher(properties);
+
+    WebhookDeliveryResult result = dispatcher.dispatchTo("http://169.254.169.254/metadata", null,
+            "RunCompleted", Map.of("k", "v"));
+
+    assertThat(result.status()).isEqualTo("rejected");
+    assertThat(result.error())
+            .contains("notification sink url")
+            .contains("link-local");
+  }
+
+  @Test
+  void rejectedUrlDoesNotLeakUserinfo() {
+    WebhookProperties properties = enabledProperties(
+            new WebhookSubscription("*", "https://example.com/never", null, null));
+    properties.setBlockPrivateAddresses(true);
+    WebhookDispatcher dispatcher = newDispatcher(properties);
+
+    WebhookDeliveryResult result = dispatcher.dispatchTo(
+            "https://user:secret@127.0.0.1/internal", null, "RunCompleted", Map.of("k", "v"));
+
+    assertThat(result.status()).isEqualTo("rejected");
+    assertThat(result.error())
+            .doesNotContain("secret")
+            .doesNotContain("user:secret@");
   }
 
   private WebhookDispatcher newDispatcher(WebhookProperties properties,

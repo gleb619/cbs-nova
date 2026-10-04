@@ -351,6 +351,30 @@ hot-reload toggles.
 | `cbs.dsl.reload.enabled` | `boolean` | `false` | Whether hot reload of DSL definitions is enabled. |
 | `cbs.dsl.auth.api-key` | `String` | — (unset; no initializer) | API key for authenticated DSL endpoints (e.g. reload). |
 
+### `cbs.nova.dsl.webhooks`
+
+Class: `WebhookProperties` (`@Data` class). Static run-completion webhooks and the shared SSRF
+rules that also apply to notification-rule URL-bearing sinks (`webhook`, `slack`, `pagerduty`).
+The same guard (`UrlSafetyValidator`) backs `httpCall`, so the scheme/host/private-address logic
+is identical; only the property prefix and the default behaviour differ.
+
+| Key | Type | Default | Effect |
+|-----|------|---------|--------|
+| `cbs.nova.dsl.webhooks.enabled` | `boolean` | `false` | Master switch. `false` skips the webhook dispatcher entirely. |
+| `cbs.nova.dsl.webhooks.subscriptions` | `List<WebhookSubscription>` | `[]` | Static subscriptions fired on run completion. Each entry has `definition-pattern` (glob), `url`, optional `secret`, optional `statuses`. |
+| `cbs.nova.dsl.webhooks.max-retries` | `int` | `3` | Max delivery attempts for a single webhook notification. |
+| `cbs.nova.dsl.webhooks.timeout` | `Duration` | `PT5S` | Per-attempt HTTP timeout. |
+| `cbs.nova.dsl.webhooks.retry-backoff` | `Duration` | `PT2S` | Backoff multiplier between retries. |
+| `cbs.nova.dsl.webhooks.allow-plain-http` | `boolean` | `false` | When `false`, only `https://` URLs are accepted; set to `true` only in trusted/dev environments. |
+| `cbs.nova.dsl.webhooks.allowed-schemes` | `List<String>` | `["https", "http"]` | Scheme allowlist. Empty/missing falls back to `["https"]`. |
+| `cbs.nova.dsl.webhooks.allowed-hosts` | `List<String>` | `[]` (empty) | Optional host allowlist; exact or `*.suffix` match. Empty means any host is allowed (subject to other checks). |
+| `cbs.nova.dsl.webhooks.block-private-addresses` | `boolean` | `false` | When `true`, loopback / link-local / site-local / wildcard addresses are rejected. Defaults to `false` so local WireMock/container targets used in dev/tests keep working; enable in production. |
+
+> **SSRF guard behaviour.** URLs are validated when the property bean is created and again at
+dispatch time (stored rows may predate the guard and DNS can change). A rejection is recorded as a
+delivery/`FiringOutcome` failure, never thrown on the publish path. Credentials in URL userinfo
+are stripped from every error message and persisted row.
+
 ### `dsl.builder.git`
 
 Class: `DslBuilderProperties.Git` (record). Git wiring of the dsl-builder workspace repo (worktree

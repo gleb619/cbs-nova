@@ -20,6 +20,8 @@ import cbs.nova.starter.model.NotificationRuleModels.NotificationRuleDto;
 import cbs.nova.starter.model.NotificationRuleModels.ToggleEnabledRequest;
 import cbs.nova.starter.notification.NotificationRuleEngine;
 import cbs.nova.starter.notification.NotificationRuleService;
+import cbs.nova.starter.security.WebhookUrlGuard;
+import cbs.nova.starter.webhook.WebhookProperties;
 import cbs.nova.starter.persistence.CrudRepositories;
 import cbs.nova.starter.persistence.NotificationRuleFiringRepository;
 import cbs.nova.starter.persistence.NotificationRuleRepository;
@@ -75,7 +77,7 @@ class NotificationRuleHandlerTest {
             repos.notificationRuleFirings(), repos.dslQueries());
 
     ruleService = new NotificationRuleService(ruleRepository, objectMapper,
-            new NullProvider<>(() -> null));
+            new NullProvider<>(() -> null), WebhookUrlGuard.permissiveProperties());
 
     var executor = new ThreadPoolTaskExecutor();
     executor.initialize();
