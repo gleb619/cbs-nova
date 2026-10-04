@@ -32,7 +32,7 @@ import org.jspecify.annotations.NonNull;
  * The result is always an ISO-8601 instant string ending in {@code Z}, making {@code parseDate} the
  * symmetric counterpart of {@link FormatDateHelper}.
  */
-@Helper(name = "parseDate")
+@Helper(name = "parseDate", description = "Parses a date/time string into a normalized ISO-8601 instant.")
 public class ParseDateHelper implements Executable<ParseDateIn, ParseDateOut> {
 
   @Override

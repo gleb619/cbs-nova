@@ -9,7 +9,7 @@ import cbs.nova.starter.helper.model.MaskOut;
 import java.util.Locale;
 import org.jspecify.annotations.NonNull;
 
-@Helper(name = "mask")
+@Helper(name = "mask", description = "Masks sensitive fields in a Map or record according to a configurable policy.")
 public class MaskHelper implements Executable<MaskIn, MaskOut> {
 
   static final int DEFAULT_FIXED_WIDTH = 8;

@@ -14,7 +14,7 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 @Deprecated
-@SpringHelper(name = "jsonExtract")
+@SpringHelper(name = "jsonExtract", description = "Extracts a value from a JSON document using a JSONPointer path.")
 public class JsonExtractHelper implements Executable<JsonExtractIn, JsonExtractOut> {
 
   private final @NonNull ObjectMapper mapper;

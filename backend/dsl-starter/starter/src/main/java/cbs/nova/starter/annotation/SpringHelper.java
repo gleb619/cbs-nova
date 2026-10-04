@@ -11,11 +11,18 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 @Component
-@Helper(name = "#name", componentModel = ComponentModel.LAZY, creationStrategy = CreationStrategy.STANDARD)
+@Helper(name = "#name", description = "#description", componentModel = ComponentModel.LAZY, creationStrategy = CreationStrategy.STANDARD)
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 public @interface SpringHelper {
 
   String name();
+
+  /**
+   * One-line description propagated to the helper catalog.
+   *
+   * @return description, empty by default
+   */
+  String description() default "";
 
 }

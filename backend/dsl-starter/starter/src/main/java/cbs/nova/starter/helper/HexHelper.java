@@ -11,7 +11,7 @@ import java.util.HexFormat;
 import java.util.Locale;
 import org.jspecify.annotations.NonNull;
 
-@Helper(name = "hex")
+@Helper(name = "hex", description = "Encodes and decodes strings to and from hexadecimal.")
 public class HexHelper implements Executable<HexIn, HexOut> {
 
   @Override

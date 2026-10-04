@@ -17,7 +17,7 @@ import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import org.jspecify.annotations.NonNull;
 
-@Helper(name = "regex")
+@Helper(name = "regex", description = "Matches, extracts, replaces, or splits text with a regular expression.")
 public class RegexHelper implements Executable<RegexIn, RegexOut> {
 
   private static final Map<String, Pattern> CACHE = Collections.synchronizedMap(

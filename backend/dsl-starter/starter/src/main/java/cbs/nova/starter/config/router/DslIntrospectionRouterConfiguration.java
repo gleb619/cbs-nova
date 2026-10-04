@@ -8,6 +8,7 @@ import cbs.nova.starter.model.DslIntrospectionModels.ConstructSchemaDto;
 import cbs.nova.starter.model.PageResponse;
 import cbs.nova.starter.model.DslIntrospectionModels.ObjectStructureDto;
 import cbs.nova.starter.model.DslIntrospectionModels.WorkingSetResponse;
+import cbs.nova.starter.model.DslIntrospectionModels.HelperCatalogEntry;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.function.RouterFunction;
@@ -34,6 +35,8 @@ public class DslIntrospectionRouterConfiguration {
 
   @Bean
   @RouterOperations({
+      @RouterOperation(path = "/api/dsl/helpers", beanClass = DslIntrospectionHandler.class, beanMethod = "helpers", method = RequestMethod.GET, operation = @Operation(operationId = "getHelperCatalog", summary = "Get DSL helper catalog", tags = {
+          "DSL Introspection"}, responses = @ApiResponse(responseCode = "200", description = "Helper catalog", content = @Content(mediaType = "application/json", schema = @Schema(implementation = HelperCatalogEntry.class))))),
       @RouterOperation(path = "/api/dsl/working-set", beanClass = DslIntrospectionHandler.class, beanMethod = "workingSet", method = RequestMethod.GET, operation = @Operation(operationId = "getWorkingSet", summary = "Get DSL working set", tags = {
           "DSL Introspection"}, parameters = {@Parameter(name = "page", in = ParameterIn.QUERY),
               @Parameter(name = "size", in = ParameterIn.QUERY),
@@ -62,6 +65,7 @@ public class DslIntrospectionRouterConfiguration {
   })
   public RouterFunction<ServerResponse> dslIntrospectionRouter(DslIntrospectionHandler handler) {
     return RouterFunctions.route()
+            .GET("/api/dsl/helpers", handler::helpers)
             .GET("/api/dsl/working-set", handler::workingSet)
             .GET("/api/dsl/objects/search", handler::searchObjects)
             .GET("/api/dsl/{type}/{name}/construct", handler::constructBody)

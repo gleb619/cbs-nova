@@ -27,7 +27,7 @@ import org.jspecify.annotations.NonNull;
  * returns the hash of the empty byte sequence. A new {@link MessageDigest} instance is created for
  * each call because {@code MessageDigest} is not thread-safe.
  */
-@Helper(name = "sha256")
+@Helper(name = "sha256", description = "Computes a plain SHA-256 content hash for a string.")
 public class Sha256Helper implements Executable<Sha256In, Sha256Out> {
 
   @Override

@@ -54,7 +54,7 @@ import org.springframework.beans.factory.ObjectProvider;
  * of the Spring context. Don't pick high-cardinality tag combinations (gauge per order id etc.) —
  * the helper will pin one atomic per (name, tags) tuple for the life of the JVM.
  */
-@SpringHelper(name = "metric")
+@SpringHelper(name = "metric", description = "Emits a Micrometer meter (counter, timer, gauge) from a DSL process.")
 public class MetricHelper implements Executable<MetricIn, MetricOut> {
 
   private final @Nullable MeterRegistry registry;

@@ -35,7 +35,7 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
  * helper class cannot be loaded at all; when the SDK is present but no {@code S3Client} bean
  * exists, calls fail with an explicit error (logged once) instead of silently dropping the object.
  */
-@SpringHelper(name = "s3Storage")
+@SpringHelper(name = "s3Storage", description = "Stores and retrieves objects in S3-compatible object storage.")
 public class S3StorageHelper implements Executable<S3StorageIn, S3StorageOut> {
 
   private static final Logger LOG = LoggerFactory.getLogger(S3StorageHelper.class);

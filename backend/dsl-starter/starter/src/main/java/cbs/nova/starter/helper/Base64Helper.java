@@ -26,7 +26,7 @@ import org.jspecify.annotations.NonNull;
  * retained. A null or blank input encodes/decodes to an empty string; a null input is rejected with
  * an {@link IllegalArgumentException}.
  */
-@Helper(name = "base64")
+@Helper(name = "base64", description = "Encodes and decodes strings using standard or URL-safe Base64.")
 public class Base64Helper implements Executable<Base64In, Base64Out> {
 
   @Override

@@ -49,7 +49,7 @@ import org.jspecify.annotations.NonNull;
  * {@link IllegalArgumentException} naming the missing argument. Unknown {@code mode} also yields an
  * {@link IllegalArgumentException}.
  */
-@Helper(name = "listOps")
+@Helper(name = "listOps", description = "Performs common list/record operations (deduplicate, flatten, reverse, slice).")
 public class ListOpsHelper implements Executable<ListOpsIn, ListOpsOut> {
 
   @Override

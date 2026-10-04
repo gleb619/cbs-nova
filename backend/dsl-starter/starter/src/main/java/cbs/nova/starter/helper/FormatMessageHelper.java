@@ -11,7 +11,7 @@ import org.jspecify.annotations.NonNull;
 import java.math.BigDecimal;
 import java.util.Map;
 
-@Helper(name = "formatMessage")
+@Helper(name = "formatMessage", description = "Evaluates a SpEL template with parameters and returns the formatted string.")
 public class FormatMessageHelper implements Executable<FormatMessageIn, FormatMessageOut> {
 
   @Override

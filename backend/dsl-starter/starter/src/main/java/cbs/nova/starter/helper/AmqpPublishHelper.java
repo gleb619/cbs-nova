@@ -27,7 +27,7 @@ import tools.jackson.databind.ObjectMapper;
  * helper validates that {@code payload} is valid JSON before sending it with content-type
  * {@code application/json}.
  */
-@SpringHelper(name = "amqpPublish")
+@SpringHelper(name = "amqpPublish", description = "Publishes an arbitrary JSON payload to a RabbitMQ exchange/routing key.")
 public class AmqpPublishHelper implements Executable<AmqpPublishIn, AmqpPublishOut> {
 
   private final @Nullable AmqpTemplate amqpTemplate;

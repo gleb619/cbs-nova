@@ -33,7 +33,7 @@ import org.xml.sax.SAXException;
  * XML parsing is hardened against XXE: {@code DOCTYPE} declarations, external general entities,
  * external parameter entities, and XInclude processing are all disabled.
  */
-@Helper(name = "extractXml")
+@Helper(name = "extractXml", description = "Extracts a single value from an XML payload using an XPath 1.0 expression.")
 public class XmlExtractHelper implements Executable<XmlExtractIn, XmlExtractOut> {
 
   @Override

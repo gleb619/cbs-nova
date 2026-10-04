@@ -11,6 +11,7 @@ import cbs.nova.dsl.explain.ExplainResourceProvider;
 import cbs.nova.dsl.explain.ExplainResourceRegistry;
 import cbs.nova.dsl.function.FunctionDslObject;
 import cbs.nova.dsl.helper.HelperManager;
+import cbs.nova.dsl.helper.HelperDescriptors;
 import cbs.nova.dsl.helper.HelperResolver;
 import cbs.nova.dsl.process.ProcessCompensation;
 import cbs.nova.dsl.process.ProcessDslObject;
@@ -249,7 +250,7 @@ public final class GlobalManager {
   @SuppressWarnings("unchecked")
   public @NonNull Optional<ExecutableDescriptor> describeHelper(@NonNull String name) {
     return helperManager.findHelper(name)
-            .map(Executable::describe);
+            .map(HelperDescriptors::describe);
   }
 
   public @NonNull Optional<Executable<?, ?>> findHelper(@NonNull String name) {

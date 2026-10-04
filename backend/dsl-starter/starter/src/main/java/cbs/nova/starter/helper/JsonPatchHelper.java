@@ -31,7 +31,7 @@ import tools.jackson.databind.node.ObjectNode;
  * Both {@code source} and either {@code patch} (apply) or {@code target} (diff) must be valid JSON
  * object strings; any deviation yields an {@link IllegalArgumentException}.
  */
-@Helper(name = "jsonPatch")
+@Helper(name = "jsonPatch", description = "Applies or computes an RFC 7396 JSON Merge Patch.")
 @RequiredArgsConstructor
 public class JsonPatchHelper implements Executable<JsonPatchIn, JsonPatchOut> {
 

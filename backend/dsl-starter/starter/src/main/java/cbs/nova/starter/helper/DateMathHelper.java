@@ -55,7 +55,7 @@ import org.jspecify.annotations.NonNull;
  * {@code add("2026-03-08T06:00:00Z", 1, "days", "America/New_York")} lands on
  * {@code 2026-03-09T05:00:00Z} — 23 h later, not 24 h).
  */
-@Helper(name = "dateMath")
+@Helper(name = "dateMath", description = "Performs date/time arithmetic (add, diff, before/after, startOf).")
 public class DateMathHelper implements Executable<DateMathIn, DateMathOut> {
 
   @Override

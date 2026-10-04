@@ -40,7 +40,7 @@ import org.springframework.scheduling.support.CronExpression;
  * accepted. Times are evaluated as UTC wall-clock times; the returned instants are
  * {@code Z}-normalized ISO-8601 strings.
  */
-@Helper(name = "cronParse")
+@Helper(name = "cronParse", description = "Validates cron expressions and previews their next fire times.")
 public class CronParseHelper implements Executable<CronParseIn, CronParseOut> {
 
   private static final int UNIX_FIELD_COUNT = 5;

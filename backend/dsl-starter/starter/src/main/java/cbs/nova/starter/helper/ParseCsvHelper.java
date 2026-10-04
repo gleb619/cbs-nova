@@ -17,7 +17,7 @@ import org.jspecify.annotations.NonNull;
  * Options default to delimiter {@code ","}, {@code withHeader = false}, and line separator
  * {@code "\r\n"}. Setting {@code withHeader = true} drops the first parsed row.
  */
-@Helper(name = "parseCsv")
+@Helper(name = "parseCsv", description = "Parses an RFC 4180 CSV payload into a list of rows.")
 public class ParseCsvHelper implements Executable<ParseCsvIn, ParseCsvOut> {
 
   @Override

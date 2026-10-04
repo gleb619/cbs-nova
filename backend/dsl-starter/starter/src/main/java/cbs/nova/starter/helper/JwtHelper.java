@@ -24,7 +24,7 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ObjectNode;
 
-@Helper(name = "jwt")
+@Helper(name = "jwt", description = "Signs or verifies JWT tokens with configurable claims and algorithms.")
 @RequiredArgsConstructor
 public class JwtHelper implements Executable<JwtIn, JwtOut> {
 

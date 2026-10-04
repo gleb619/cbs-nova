@@ -30,7 +30,7 @@ import org.jspecify.annotations.NonNull;
  * {@code a}, or {@code b} yields an {@link IllegalArgumentException} via {@link Result#failure}
  * rather than throwing.
  */
-@Helper(name = "similarity")
+@Helper(name = "similarity", description = "Computes a normalized string similarity score in [0.0, 1.0].")
 public class SimilarityHelper implements Executable<SimilarityIn, SimilarityOut> {
 
   private static final double WINKLER_SCALING = 0.1;

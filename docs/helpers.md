@@ -4,66 +4,69 @@
 > For how to author and call helpers from DSL code, see the
 > [helpers authoring guide](dsl/helpers.md).
 
-59 helpers, sorted by name.
+62 helpers, sorted by name.
 
 | Name | Description | Input | Output |
 |---|---|---|---|
-| amqpPublish |  |  |  |
-| arithmetic |  |  |  |
-| backoff |  |  |  |
-| base64 |  |  |  |
-| caseConvert |  |  |  |
-| compensationTracker |  |  |  |
-| compression |  |  |  |
-| conditionalFailing |  |  |  |
-| cronParse |  |  |  |
-| currentTimestamp |  |  |  |
-| dateMath |  |  |  |
-| extractXml |  |  |  |
-| fileLatch |  |  |  |
-| filterRecords |  |  |  |
-| formatCsv |  |  |  |
-| formatDate |  |  |  |
-| formatMessage |  |  |  |
-| formatNumber |  |  |  |
-| formatYaml |  |  |  |
-| greetFn |  | Map | String |
-| groupRecords |  |  |  |
-| hex |  |  |  |
-| hmacSha256Sign |  |  |  |
-| hmacSha256Verify |  |  |  |
-| htmlEscape |  |  |  |
-| httpAuth |  |  |  |
-| httpCall |  |  |  |
-| interpolate |  |  |  |
-| jsonExtract |  |  |  |
-| jsonPatch |  |  |  |
-| jwt |  |  |  |
-| lineTotalFn |  | OrderIn | LineTotalsOut |
-| listOps |  |  |  |
-| mask |  |  |  |
-| math |  |  |  |
-| mergeRecords |  |  |  |
-| metric |  |  |  |
-| orderPricingFn |  | OrderIn | PricedOrder |
-| otel |  |  |  |
-| parseCsv |  |  |  |
-| parseDate |  |  |  |
-| parseDuration |  |  |  |
-| parseYaml |  |  |  |
-| pick |  |  |  |
-| queryString |  |  |  |
-| random |  |  |  |
-| regex |  |  |  |
-| s3Storage |  |  |  |
-| schemaValidate |  |  |  |
-| secret |  |  |  |
-| semver |  |  |  |
-| sha256 |  |  |  |
-| sortRecords |  |  |  |
-| unreliableApi |  |  |  |
-| urlDecode |  |  |  |
-| urlEncode |  |  |  |
-| uuidV7 |  |  |  |
-| validateJson |  |  |  |
-| xmlEscape |  |  |  |
+| amqpPublish | Publishes an arbitrary JSON payload to a RabbitMQ exchange/routing key. | AmqpPublishIn | AmqpPublishOut |
+| arithmetic | Performs arithmetic operations (sum, product, round, compare, etc.) on a list of numbers. | ArithmeticIn | ArithmeticOut |
+| backoff | Computes an exponential/backoff delay with optional jitter for retries. | BackoffIn | BackoffOut |
+| base64 | Encodes and decodes strings using standard or URL-safe Base64. | Base64In | Base64Out |
+| caseConvert | Converts a string between camel, kebab, snake, and title case. | CaseConvertIn | CaseConvertOut |
+| compensationTracker | Records compensation callbacks for saga/transaction tests. | Map | String |
+| compression | Compresses and decompresses UTF-8 strings using gzip or raw DEFLATE. | CompressionIn | CompressionOut |
+| conditionalFailing | Fails execution only while its latch condition is armed. | ConditionalFailIn | ConditionalFailOut |
+| cronParse | Validates cron expressions and previews their next fire times. | CronParseIn | CronParseOut |
+| currentTimestamp | Returns the current ISO offset timestamp in a requested time zone. | CurrentTimestampIn | CurrentTimestampOut |
+| dateMath | Performs date/time arithmetic (add, diff, before/after, startOf). | DateMathIn | DateMathOut |
+| extractXml | Extracts a single value from an XML payload using an XPath 1.0 expression. | XmlExtractIn | XmlExtractOut |
+| fileLatch | File-based latch used to synchronize/verify steps across executions. | FileLatchIn | FileLatchOut |
+| filterRecords | Filters a list of records by a predicate on dot-separated key paths. | FilterRecordsIn | FilterRecordsOut |
+| formatCsv | Formats a list of rows into an RFC 4180 CSV string. | FormatCsvIn | FormatCsvOut |
+| formatDate | Formats an instant into a human-readable date/time string using a preset or custom pattern. | FormatDateIn | FormatDateOut |
+| formatMessage | Evaluates a SpEL template with parameters and returns the formatted string. | FormatMessageIn | FormatMessageOut |
+| formatNumber | Formats a numeric value into a locale-aware string using a preset or custom pattern. | FormatNumberIn | FormatNumberOut |
+| formatYaml | Emits a nested Map, List, or scalar tree as a canonical YAML 1.2 block-style string. | FormatYamlIn | FormatYamlOut |
+| greetFn | Greets a caller by name, defaulting to world. | Map | String |
+| groupRecords | Groups a list of records by one or more dot-separated key paths. | GroupRecordsIn | GroupRecordsOut |
+| hex | Encodes and decodes strings to and from hexadecimal. | HexIn | HexOut |
+| hmacSha256Sign | Signs a message using HMAC-SHA256. | HmacSha256SignIn | HmacSha256SignOut |
+| hmacSha256Verify | Verifies a message signature using HMAC-SHA256. | HmacSha256VerifyIn | HmacSha256VerifyOut |
+| htmlEscape | Escapes a string so it can be safely interpolated into HTML text and attribute content. | HtmlEscapeIn | HtmlEscapeOut |
+| httpAuth | Builds HTTP authentication header maps (bearer, basic, apiKey, custom). | HttpAuthIn | HttpAuthOut |
+| httpCall | Performs an outbound HTTP call with URL safety validation, redirects, and retries. | HttpCallIn | HttpCallOut |
+| interpolate | Safe literal ${key} string templating with defaults and dotted key paths. | InterpolateIn | InterpolateOut |
+| jsonDiff | Computes a flat, JSONPointer-style diff between two JSON documents. | JsonDiffIn | JsonDiffOut |
+| jsonExtract | Extracts a value from a JSON document using a JSONPointer path. | JsonExtractIn | JsonExtractOut |
+| jsonPatch | Applies or computes an RFC 7396 JSON Merge Patch. | JsonPatchIn | JsonPatchOut |
+| jwt | Signs or verifies JWT tokens with configurable claims and algorithms. | JwtIn | JwtOut |
+| kafkaPublish | Publishes an arbitrary JSON payload to a Kafka topic. | KafkaPublishIn | KafkaPublishOut |
+| lineTotalFn | Calculates line-level subtotals from order lines. | OrderIn | LineTotalsOut |
+| listOps | Performs common list/record operations (deduplicate, flatten, reverse, slice). | ListOpsIn | ListOpsOut |
+| mask | Masks sensitive fields in a Map or record according to a configurable policy. | MaskIn | MaskOut |
+| math | Performs arithmetic operations (sum, product, round, compare, etc.) on a list of numbers. | ArithmeticIn | ArithmeticOut |
+| mergeRecords | Merges two or more Map<String, Object> records with nested override. | MergeRecordsIn | MergeRecordsOut |
+| metric | Emits a Micrometer meter (counter, timer, gauge) from a DSL process. | MetricIn | MetricOut |
+| orderPricingFn | Prices an order with subtotal, VIP discount, tax, and total. | OrderIn | PricedOrder |
+| otel | Exposes OpenTelemetry tracing operations (span, attribute, log) to DSL authors. | OtelIn | OtelOut |
+| parseCsv | Parses an RFC 4180 CSV payload into a list of rows. | ParseCsvIn | ParseCsvOut |
+| parseDate | Parses a date/time string into a normalized ISO-8601 instant. | ParseDateIn | ParseDateOut |
+| parseDuration | Parses a duration string into milliseconds, seconds, and ISO format. | ParseDurationIn | ParseDurationOut |
+| parseYaml | Parses a YAML 1.2 document into a nested Map<String, Object>. | ParseYamlIn | ParseYamlOut |
+| pick | Projects a Map down to or removes a list of keys. | PickIn | PickOut |
+| queryString | Builds and parses application/x-www-form-urlencoded query strings. | QueryStringIn | QueryStringOut |
+| random | Generates non-cryptographic pseudo-random values (string, integer, UUID). | RandomIn | RandomOut |
+| regex | Matches, extracts, replaces, or splits text with a regular expression. | RegexIn | RegexOut |
+| s3Storage | Stores and retrieves objects in S3-compatible object storage. | S3StorageIn | S3StorageOut |
+| schemaValidate | Validates a JSON payload against a JSON Schema and returns structured errors. | SchemaValidateIn | SchemaValidateOut |
+| secret | Generates cryptographic random values for security-sensitive use cases. | SecretIn | SecretOut |
+| semver | Parses, compares, range-checks, bumps, and formats semantic versions. | SemverIn | SemverOut |
+| sha256 | Computes a plain SHA-256 content hash for a string. | Sha256In | Sha256Out |
+| similarity | Computes a normalized string similarity score in [0.0, 1.0]. | SimilarityIn | SimilarityOut |
+| sortRecords | Sorts a list of records by one or more dot-separated key paths. | SortRecordsIn | SortRecordsOut |
+| unreliableApi | Simulates a flaky downstream API for resilience tests. | UnreliableApiIn | UnreliableApiOut |
+| urlDecode | Percent-decodes a URL-encoded or form-encoded string. | UrlDecodeIn | UrlDecodeOut |
+| urlEncode | Percent-encodes a string for use in URLs or form payloads. | UrlEncodeIn | UrlEncodeOut |
+| uuidV7 | Generates RFC 9562 version-7, time-sortable UUIDs. | UuidV7In | UuidV7Out |
+| validateJson | Validates a JSON payload against a JSON Schema. | ValidateJsonIn | ValidateJsonOut |
+| xmlEscape | Escapes a string so it can be safely interpolated into XML text and attribute content. | XmlEscapeIn | XmlEscapeOut |

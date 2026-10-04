@@ -14,7 +14,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
-@Helper(name = "sortRecords")
+@Helper(name = "sortRecords", description = "Sorts a list of records by one or more dot-separated key paths.")
 public class SortRecordsHelper implements Executable<SortRecordsIn, SortRecordsOut> {
 
   @Override

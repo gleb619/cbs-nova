@@ -18,7 +18,7 @@ import org.jspecify.annotations.NonNull;
  * An optional {@code headerRow} is prepended to the output. All rows (and the header, if present)
  * must have the same width; ragged input is rejected.
  */
-@Helper(name = "formatCsv")
+@Helper(name = "formatCsv", description = "Formats a list of rows into an RFC 4180 CSV string.")
 public class FormatCsvHelper implements Executable<FormatCsvIn, FormatCsvOut> {
 
   @Override

@@ -29,7 +29,7 @@ import org.yaml.snakeyaml.error.YAMLException;
  * {@code TagInspector} that rejects every global tag (snakeyaml CVE-2017-18640 mitigation). A
  * payload like {@code !!javax.scripting.ScriptEngineManager {}} never instantiates the engine.
  */
-@Helper(name = "parseYaml")
+@Helper(name = "parseYaml", description = "Parses a YAML 1.2 document into a nested Map<String, Object>.")
 public class ParseYamlHelper implements Executable<ParseYamlIn, ParseYamlOut> {
 
   @Override

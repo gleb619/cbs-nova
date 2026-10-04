@@ -41,7 +41,7 @@ import org.jspecify.annotations.NonNull;
  * Unknown or {@code null} {@code mode}, or any missing/invalid required argument, yields an
  * {@link IllegalArgumentException} describing the problem.
  */
-@Helper(name = "httpAuth")
+@Helper(name = "httpAuth", description = "Builds HTTP authentication header maps (bearer, basic, apiKey, custom).")
 public class HttpAuthHelper implements Executable<HttpAuthIn, HttpAuthOut> {
 
   @Override

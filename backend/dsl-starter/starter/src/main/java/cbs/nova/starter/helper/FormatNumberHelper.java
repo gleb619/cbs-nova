@@ -36,7 +36,7 @@ import org.jspecify.annotations.NonNull;
  * Rounding follows {@link RoundingMode#HALF_UP}. Invalid locale tags, invalid patterns and
  * non-numeric input produce a failed {@link Result} instead of throwing raw.
  */
-@Helper(name = "formatNumber")
+@Helper(name = "formatNumber", description = "Formats a numeric value into a locale-aware string using a preset or custom pattern.")
 public class FormatNumberHelper implements Executable<FormatNumberIn, FormatNumberOut> {
 
   @Override

@@ -21,7 +21,7 @@ import org.jspecify.annotations.NonNull;
  * when {@code true} {@code +} is decoded to a space for {@code application/x-www-form-urlencoded}
  * bodies, otherwise a literal {@code +} is preserved.
  */
-@Helper(name = "urlDecode")
+@Helper(name = "urlDecode", description = "Percent-decodes a URL-encoded or form-encoded string.")
 public class UrlDecodeHelper implements Executable<UrlDecodeIn, UrlDecodeOut> {
 
   @Override

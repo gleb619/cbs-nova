@@ -25,7 +25,7 @@ import org.jspecify.annotations.NonNull;
  * the provided signature using a constant-time byte comparison. A malformed provided signature does
  * not raise an error; it simply yields {@code valid=false}.
  */
-@Helper(name = "hmacSha256Verify")
+@Helper(name = "hmacSha256Verify", description = "Verifies a message signature using HMAC-SHA256.")
 public class HmacSha256VerifyHelper implements Executable<HmacSha256VerifyIn, HmacSha256VerifyOut> {
 
   @Override

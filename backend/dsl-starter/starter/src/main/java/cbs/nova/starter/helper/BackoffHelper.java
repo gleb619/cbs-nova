@@ -10,7 +10,7 @@ import java.util.Locale;
 import java.util.concurrent.ThreadLocalRandom;
 import org.jspecify.annotations.NonNull;
 
-@Helper(name = "backoff")
+@Helper(name = "backoff", description = "Computes an exponential/backoff delay with optional jitter for retries.")
 public class BackoffHelper implements Executable<BackoffIn, BackoffOut> {
 
   @Override

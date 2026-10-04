@@ -41,6 +41,8 @@ public final class FunctionBuilder<I, O> implements ObjectBuilder<FunctionDslObj
   @Nullable
   private Function<FunctionContext<I>, Result<ExplainReport>> explainLogic;
   @Nullable
+  private String description;
+  @Nullable
   private DslDescriptor descriptor;
 
   @SuppressWarnings("unchecked")
@@ -85,6 +87,11 @@ public final class FunctionBuilder<I, O> implements ObjectBuilder<FunctionDslObj
     return this;
   }
 
+  public FunctionBuilder<I, O> description(@Nullable String description) {
+    this.description = description;
+    return this;
+  }
+
   public FunctionBuilder<I, O> describe(@NonNull DslDescriptor desc) {
     this.descriptor = desc;
     return this;
@@ -126,7 +133,7 @@ public final class FunctionBuilder<I, O> implements ObjectBuilder<FunctionDslObj
           @NonNull List<ParameterDescriptor> parameters) {
     return descriptor != null
             ? descriptor
-            : defaultDescriptor(name, parameters, inputType, outputType, null);
+            : defaultDescriptor(name, parameters, inputType, outputType, description);
   }
 
   private @NonNull Function<FunctionContext<?>, Result<ExplainReport>> defaultExplain() {

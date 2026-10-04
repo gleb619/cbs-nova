@@ -29,7 +29,7 @@ import org.jspecify.annotations.NonNull;
  * {@code records} must contain at least one non-null record. Unknown {@code mode} yields an
  * {@link IllegalArgumentException}.
  */
-@Helper(name = "mergeRecords")
+@Helper(name = "mergeRecords", description = "Merges two or more Map<String, Object> records with nested override.")
 public class MergeRecordsHelper implements Executable<MergeRecordsIn, MergeRecordsOut> {
 
   @Override

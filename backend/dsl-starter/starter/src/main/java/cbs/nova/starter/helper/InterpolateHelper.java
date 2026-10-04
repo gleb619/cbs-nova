@@ -44,7 +44,7 @@ import java.util.Set;
  * {@code ${a${b}} substitutes key {@code a${b}.</li>
  * </ul>
  */
-@Helper(name = "interpolate")
+@Helper(name = "interpolate", description = "Safe literal ${key} string templating with defaults and dotted key paths.")
 public class InterpolateHelper implements Executable<InterpolateIn, InterpolateOut> {
 
   private static final Object ABSENT = new Object();

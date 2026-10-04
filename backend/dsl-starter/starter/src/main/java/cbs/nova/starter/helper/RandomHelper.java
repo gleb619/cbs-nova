@@ -40,7 +40,7 @@ import org.jspecify.annotations.NonNull;
  * <li>{@code "choice"} — uniformly random element of {@code list}.</li>
  * </ul>
  */
-@Helper(name = "random")
+@Helper(name = "random", description = "Generates non-cryptographic pseudo-random values (string, integer, UUID).")
 public class RandomHelper implements Executable<RandomIn, RandomOut> {
 
   @Override

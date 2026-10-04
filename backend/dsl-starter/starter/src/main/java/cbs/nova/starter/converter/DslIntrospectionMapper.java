@@ -5,6 +5,7 @@ import cbs.nova.dsl.ExecutableDescriptor;
 import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.transaction.TransactionDslObject;
 import cbs.nova.starter.model.DslIntrospectionModels.DefinitionMetaDto;
+import cbs.nova.starter.model.DslIntrospectionModels.HelperCatalogEntry;
 import cbs.nova.starter.model.DslIntrospectionModels.DefinitionStatus;
 import cbs.nova.starter.model.DslIntrospectionModels.ObjectSearchResult;
 import java.util.Map;
@@ -133,4 +134,16 @@ public interface DslIntrospectionMapper {
   @Mapping(target = "filePath", source = "filePath")
   DefinitionMetaDto toHelperDefinitionMeta(String name, ExecutableDescriptor descriptor,
           Map<String, Object> inputSchema, DefinitionStatus status, String filePath);
+  @Mapping(target = "description", source = "descriptor.description")
+  @Mapping(target = "inputType", expression = "java(typeName(descriptor.inputType()))")
+  @Mapping(target = "outputType", expression = "java(typeName(descriptor.outputType()))")
+  @Mapping(target = "name", source = "name")
+
+  HelperCatalogEntry toHelperCatalogEntry(String name, ExecutableDescriptor descriptor);
+
+  @Mapping(target = "name", expression = "java(source.objectDescriptor().name())")
+  @Mapping(target = "description", expression = "java(source.objectDescriptor().description())")
+  @Mapping(target = "inputType", expression = "java(typeName(source.inputType()))")
+  @Mapping(target = "outputType", expression = "java(typeName(source.outputType()))")
+  HelperCatalogEntry toHelperCatalogEntry(DslDescriptor source);
 }

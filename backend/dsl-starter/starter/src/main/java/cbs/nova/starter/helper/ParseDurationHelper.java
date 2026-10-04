@@ -34,7 +34,7 @@ import org.jspecify.annotations.NonNull;
  * months; and signed/negative durations are rejected in this phase. See the follow-up item for
  * signed offsets. Overflow past {@link Long#MAX_VALUE} milliseconds is rejected cleanly.
  */
-@Helper(name = "parseDuration")
+@Helper(name = "parseDuration", description = "Parses a duration string into milliseconds, seconds, and ISO format.")
 public class ParseDurationHelper implements Executable<ParseDurationIn, ParseDurationOut> {
 
   private static final Pattern WHITESPACE = Pattern.compile("\\s+");

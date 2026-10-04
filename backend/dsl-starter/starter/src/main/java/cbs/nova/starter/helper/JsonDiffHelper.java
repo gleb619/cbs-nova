@@ -40,7 +40,7 @@ import tools.jackson.databind.ObjectMapper;
  * {@code null} or blank input also fails with a clear message — empty-string JSON is treated as a
  * missing value rather than an empty document.
  */
-@Helper(name = "jsonDiff")
+@Helper(name = "jsonDiff", description = "Computes a flat, JSONPointer-style diff between two JSON documents.")
 public class JsonDiffHelper implements Executable<JsonDiffIn, JsonDiffOut> {
 
   static final String OP_ADDED = "added";

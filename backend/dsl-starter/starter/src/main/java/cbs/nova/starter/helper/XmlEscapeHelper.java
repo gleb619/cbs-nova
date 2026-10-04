@@ -16,7 +16,7 @@ import org.jspecify.annotations.NonNull;
  * {@code >} {@code "} and {@code '} become {@code &amp;} {@code &lt;} {@code &gt;} {@code &quot;}
  * and {@code &apos;}. Input is required and must be non-empty.
  */
-@Helper(name = "xmlEscape")
+@Helper(name = "xmlEscape", description = "Escapes a string so it can be safely interpolated into XML text and attribute content.")
 public class XmlEscapeHelper implements Executable<XmlEscapeIn, XmlEscapeOut> {
 
   @Override

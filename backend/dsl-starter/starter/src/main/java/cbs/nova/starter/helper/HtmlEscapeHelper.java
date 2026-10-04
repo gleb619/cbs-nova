@@ -16,7 +16,7 @@ import org.jspecify.annotations.NonNull;
  * {@code >} {@code "} and {@code '} become {@code &amp;} {@code &lt;} {@code &gt;} {@code &quot;}
  * and {@code &#39;}. Input is required and must be non-empty.
  */
-@Helper(name = "htmlEscape")
+@Helper(name = "htmlEscape", description = "Escapes a string so it can be safely interpolated into HTML text and attribute content.")
 public class HtmlEscapeHelper implements Executable<HtmlEscapeIn, HtmlEscapeOut> {
 
   @Override
