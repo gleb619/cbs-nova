@@ -24,9 +24,6 @@ class DslPropertiesTest {
       assertThat(properties.files().enabled()).isTrue();
       assertThat(properties.files().flushIntervalSeconds()).isEqualTo(5);
       assertThat(properties.files().maxQueueSize()).isEqualTo(100);
-      assertThat(properties.files().readBulkheadPermits()).isEqualTo(32);
-      assertThat(properties.files().writeBulkheadPermits()).isEqualTo(8);
-      assertThat(properties.files().acquireTimeoutSeconds()).isEqualTo(5L);
       assertThat(properties.git().enabled()).isTrue();
       assertThat(properties.git().statusCacheTtlSeconds()).isEqualTo(5);
       assertThat(properties.fileBuffer().maxEntries()).isEqualTo(1000);

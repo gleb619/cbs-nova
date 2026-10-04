@@ -1,7 +1,6 @@
 package cbs.nova.starter.service;
 
 import cbs.nova.starter.builder.DslBuilderClient;
-import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.model.DslFileModels.FileContentRequest;
 import cbs.nova.starter.model.DslFileModels.FileContentResponse;
 import cbs.nova.starter.model.DslFileModels.FileEntry;
@@ -17,7 +16,6 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class DslFileService {
 
-  private final DslProperties dslProperties;
   private final DslBuilderClient builderClient;
 
   public List<FileEntry> listFiles(String prefix) {

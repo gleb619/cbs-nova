@@ -56,7 +56,7 @@ public record DslProperties(
     worker = worker == null ? new Worker(false) : worker;
     reload = reload == null ? new Reload(false) : reload;
     auth = auth == null ? new Auth(false, null, 60, new Rbac(false, "roles")) : auth;
-    files = files == null ? new Files(true, 5, 100, 32, 8, 5L) : files;
+    files = files == null ? new Files(true, 5, 100) : files;
     docs = docs == null ? new Docs(true, "docs") : docs;
     git = git == null ? new Git(true, null, 5) : git;
     fileBuffer = fileBuffer == null ? new FileBuffer(1000, 3600L) : fileBuffer;
@@ -148,30 +148,12 @@ public record DslProperties(
           /**
            * Maximum number of staged writes before an automatic flush is triggered.
            */
-          @DefaultValue("100") Integer maxQueueSize,
-
-          /**
-           * Maximum concurrent file read operations.
-           */
-          @DefaultValue("32") Integer readBulkheadPermits,
-
-          /**
-           * Maximum concurrent file write operations.
-           */
-          @DefaultValue("8") Integer writeBulkheadPermits,
-
-          /**
-           * Seconds to wait for a bulkhead permit before failing the file operation.
-           */
-          @DefaultValue("5") Long acquireTimeoutSeconds) {
+          @DefaultValue("100") Integer maxQueueSize) {
 
     public Files {
       enabled = enabled == null ? true : enabled;
       flushIntervalSeconds = flushIntervalSeconds == null ? 5 : flushIntervalSeconds;
       maxQueueSize = maxQueueSize == null ? 100 : maxQueueSize;
-      readBulkheadPermits = readBulkheadPermits == null ? 32 : readBulkheadPermits;
-      writeBulkheadPermits = writeBulkheadPermits == null ? 8 : writeBulkheadPermits;
-      acquireTimeoutSeconds = acquireTimeoutSeconds == null ? 5L : acquireTimeoutSeconds;
     }
   }
 

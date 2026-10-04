@@ -27,7 +27,6 @@ import cbs.nova.starter.resolver.SpringBeanHelperInstanceResolver;
 import cbs.nova.starter.resolver.SpringBeanResolver;
 import cbs.nova.starter.resolver.SpringExplainResourceResolver;
 import cbs.nova.starter.service.DefaultDslWorkspaceResolver;
-import cbs.nova.starter.service.DslFileBulkhead;
 import cbs.nova.starter.service.DslWorkspaceResolver;
 import cbs.nova.starter.resolver.SpringOrGeneratedHelperInstanceResolver;
 import cbs.nova.starter.helper.ArithmeticHelper;
@@ -41,7 +40,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.ServiceLoader;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Semaphore;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.core.Ordered;
@@ -188,17 +186,6 @@ public class DslConfiguration {
   @ConditionalOnMissingBean(HttpClient.class)
   public HttpClient httpClient() {
     return HttpClient.newHttpClient();
-  }
-
-  @Bean
-  public DslFileBulkhead dslFileBulkhead(DslProperties properties) {
-    int readPermits = properties.files().readBulkheadPermits();
-    int writePermits = properties.files().writeBulkheadPermits();
-    var readSemaphore = new Semaphore(Math.max(1, readPermits));
-    var writeSemaphore = new Semaphore(Math.max(1, writePermits));
-
-    return new DslFileBulkhead(readSemaphore, writeSemaphore,
-            properties.files().acquireTimeoutSeconds());
   }
 
   private void initRegistry() {

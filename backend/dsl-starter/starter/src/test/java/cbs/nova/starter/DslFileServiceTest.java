@@ -6,32 +6,21 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import cbs.nova.starter.builder.DslBuilderClient;
-import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.model.DslFileModels.FileContentResponse;
 import cbs.nova.starter.model.FileEntityKind;
 import cbs.nova.starter.service.DslFileService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-
-import java.nio.file.Path;
 
 class DslFileServiceTest {
-
-  @TempDir
-  Path sourceDir;
 
   private DslFileService service;
   private DslBuilderClient builderClient;
 
   @BeforeEach
   void setUp() {
-    DslProperties properties = DslProperties.builder()
-            .sourceDir(sourceDir.toString())
-            .build();
-
     builderClient = mock(DslBuilderClient.class);
-    service = new DslFileService(properties, builderClient);
+    service = new DslFileService(builderClient);
   }
 
   @Test
