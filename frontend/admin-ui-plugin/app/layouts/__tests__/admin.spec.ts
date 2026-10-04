@@ -2,7 +2,7 @@ import { resetSavedDraftsState, useSavedDrafts } from '@cbs/components'
 import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest'
 import { defineComponent, h, nextTick, Suspense, type VNode } from 'vue'
-import AdminLayout from '../admin.vue'
+import AdminLayout from '../cbs-admin.vue'
 
 const { dslApi } = vi.hoisted(() => ({
   dslApi: { getDraftsMetadata: vi.fn(), listDrafts: vi.fn() },

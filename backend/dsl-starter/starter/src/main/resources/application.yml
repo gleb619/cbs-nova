@@ -148,17 +148,47 @@ logging:
 #   spring.security.oauth2.resourceserver.jwt.issuer-uri: https://idp.example/realms/cbs-nova
 
 # cbs.dsl.auth.* — DSL REST-API authentication & authorization (T408, T410)
-
 cbs:
   nova:
+    index-page:
+      enabled: false
+
     explain:
       budget-chars: 4000
       name-max-tokens: 128
       description-max-tokens: 256
       mermaid-max-tokens: 4096
 
-# cbs.dsl.helper.* — DSL helper tunables (T494)
-cbs:
+    # cbs.nova.schedule.* — Temporal schedules created via the DSL schedule API
+    # (DslScheduleService).
+    schedule:
+      # How long after a missed fire Temporal still catches it up. Fires missed beyond this
+      # window (e.g. during a Temporal outage longer than 1 minute) are silently dropped —
+      # they do not backfill when Temporal recovers. Default 1m.
+      catchup-window: 1m
+
+    # cbs.nova.tracing.* — OpenTelemetry identity and OTLP export.
+    tracing:
+      # service.name attached to every exported span.
+      service-name: cbs-nova
+      otlp:
+        # OTLP HTTP trace endpoint (e.g. http://localhost:4318/v1/traces). Leave blank to fall
+        # back to the OTEL_EXPORTER_OTLP_ENDPOINT environment variable; if neither is set,
+        # tracing is disabled and a noop OpenTelemetry instance is used.
+        endpoint:
+
+    # cbs.nova.dry-run.* — log capture for preview/explain runs.
+    dry-run:
+      # How the current run id is propagated to the logback appender:
+      #   mdc       — via the org.slf4j.MDC key used by MdcDryRunLoggingContext (default)
+      #   threadlocal — via ThreadLocalDryRunLoggingContext
+      context:
+        type: mdc
+      log:
+        # Maximum log events retained per preview/explain run. Once the bound is reached the
+        # oldest events are evicted; this cap prevents an unbounded buffer if a run logs heavily.
+        max-events-per-run: 1000
+  # cbs.dsl.helper.* — DSL helper tunables (T494)
   dsl:
     helper:
       json-patch:
@@ -166,6 +196,28 @@ cbs:
       jwt:
         default-algorithm: HS256
         default-ttl-seconds: 3600
+
+    # DSL builder HTTP client resilience (T498).
+    # The circuit breaker, bulkhead and request queue are Resilience4j core primitives.
+    # Note: the request queue's offerTimeoutMillis is kept for backwards compatibility but is
+    # ignored — ThreadPoolBulkhead rejects immediately when its bounded queue is full.
+    builder-client:
+      base-url: http://localhost:8091
+      http2: true
+      queue:
+        capacity: 100
+        offer-timeout-millis: 5000
+        workers: 4
+      bulkhead:
+        permits: 8
+        acquire-timeout-seconds: 5
+      breaker:
+        failure-threshold: 5
+        open-duration-seconds: 30
+        half-open-probes: 3
+      timeouts:
+        connect-millis: 5000
+        read-millis: 60000
 
     # Piece-manifest loader (T548). Enabled by default; if the configured path is missing the
     # service starts with an empty snapshot so existing deployments are unaffected.
@@ -202,63 +254,6 @@ cbs:
       # Production default policy for unlisted helpers/processes/functions: permissive
       # allows and audits; strict denies-by-default. Preview is always deny-by-default.
       object-mode: permissive
-
-# DSL builder HTTP client resilience (T498).
-# The circuit breaker, bulkhead and request queue are Resilience4j core primitives.
-cbs:
-# Note: the request queue's offerTimeoutMillis is kept for backwards compatibility but is
-# ignored — ThreadPoolBulkhead rejects immediately when its bounded queue is full.
-  dsl:
-    builder-client:
-      base-url: http://localhost:8091
-      http2: true
-      queue:
-        capacity: 100
-        offer-timeout-millis: 5000
-        workers: 4
-      bulkhead:
-        permits: 8
-        acquire-timeout-seconds: 5
-      breaker:
-        failure-threshold: 5
-        open-duration-seconds: 30
-        half-open-probes: 3
-      timeouts:
-        connect-millis: 5000
-        read-millis: 60000
-
-# cbs.nova.dry-run.* — log capture for preview/explain runs.
-cbs:
-  nova:
-    dry-run:
-      # How the current run id is propagated to the logback appender:
-      #   mdc       — via the org.slf4j.MDC key used by MdcDryRunLoggingContext (default)
-      #   threadlocal — via ThreadLocalDryRunLoggingContext
-      context:
-        type: mdc
-      log:
-        # Maximum log events retained per preview/explain run. Once the bound is reached the
-        # oldest events are evicted; this cap prevents an unbounded buffer if a run logs heavily.
-        max-events-per-run: 1000
-
-# cbs.nova.schedule.* — Temporal schedules created via the DSL schedule API
-# (DslScheduleService).
-# cbs.nova.tracing.* — OpenTelemetry identity and OTLP export.
-cbs:
-  nova:
-    schedule:
-      # How long after a missed fire Temporal still catches it up. Fires missed beyond this
-      # window (e.g. during a Temporal outage longer than 1 minute) are silently dropped —
-      # they do not backfill when Temporal recovers. Default 1m.
-      catchup-window: 1m
-    tracing:
-      # service.name attached to every exported span.
-      service-name: cbs-nova
-      otlp:
-        # OTLP HTTP trace endpoint (e.g. http://localhost:4318/v1/traces). Leave blank to fall
-        # back to the OTEL_EXPORTER_OTLP_ENDPOINT environment variable; if neither is set,
-        # tracing is disabled and a noop OpenTelemetry instance is used.
-        endpoint:
 
 # cbs.vhs.scrub.* — record-time scrubbing of VHS tape events (T556). Master switch is OFF by
 # default (scrub.enabled=false), which makes the redactor a reference-equality no-op with zero

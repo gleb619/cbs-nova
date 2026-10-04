@@ -103,6 +103,9 @@ cbs:
             code: myCustomHelper
             response:
               value: "fake-value"
+
+    index-page:
+      enabled: true
   # DSL authoring workbench
   dsl:
     git:

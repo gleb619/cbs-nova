@@ -348,6 +348,26 @@ export default defineNuxtModule<ModuleOptions>({
     const prefix = (options.routePrefix ?? '/').replace(/\/$/, '')
 
     extendPages((pages) => {
+      // Remove any auto-discovered pages that would collide with our pushed
+      // entries (same path). Without this, Nuxt's app/pages/ scan registers a
+      // meta-less route first; router then matches it and our cbs-admin
+      // layout meta is ignored.
+      const added = [
+        `${prefix}/`,
+        `${prefix}/runner`,
+        `${prefix}/schedules`,
+        `${prefix}/activity`,
+        `${prefix}/webhooks`,
+        `${prefix}/notifications`,
+        `${prefix}/approvals`,
+        `${prefix}/promote`,
+        `${prefix}/dsl-workbench`,
+        `${prefix}/executions`,
+        `${prefix}/executions/:id`,
+      ]
+      for (let i = pages.length - 1; i >= 0; i--) {
+        if (added.includes(pages[i].path)) pages.splice(i, 1)
+      }
       pages.push(
         {
           name: 'cbs-admin-dashboard',

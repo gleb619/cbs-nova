@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>cbs-nova</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; max-width: 760px; margin: 2rem auto; padding: 0 1rem; background: #f3f4f6; color: #1f2937; line-height: 1.5; }
+    h1 { font-weight: 600; margin-bottom: 1rem; }
+    .card { background: #fff; border-radius: .5rem; padding: 1.25rem; margin: 1rem 0; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+    .status { color: #16a34a; font-weight: 600; }
+    ul.routes { list-style: none; padding: 0; margin: 0; }
+    ul.routes li { padding: .4rem 0; border-bottom: 1px solid #f3f4f6; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .9rem; }
+    .error { color: #dc2626; }
+    footer { margin-top: 2rem; font-size: .8rem; color: #6b7280; }
+    @media (prefers-color-scheme: dark) {
+      body { background: #111827; color: #e5e7eb; }
+      .card { background: #1f2937; }
+      ul.routes li { border-color: #374151; }
+    }
+  </style>
+</head>
+<body>
+  <h1 id="app-name">cbs-nova</h1>
+  <div class="card">
+    <p>Port: <strong id="app-port">-</strong></p>
+    <p>Health: <span id="app-health" class="status">-</span></p>
+    <p>Uptime: <span id="app-uptime">-</span></p>
+  </div>
+  <div class="card">
+    <h2>Active routes</h2>
+    <ul class="routes" id="app-routes"><li>Loading…</li></ul>
+  </div>
+  <p id="app-error" class="error" style="display:none"></p>
+  <footer>cbs-nova starter</footer>
+
+  <script>
+    (function(){
+      var start = null;
+      function pad(n){ return n < 10 ? '0'+n : n; }
+      function fmt(s){
+        var d = Math.floor(s/86400), h = Math.floor((s%86400)/3600), m = Math.floor((s%3600)/60), sec = s%60;
+        return (d ? d + 'd ' : '') + pad(h) + ':' + pad(m) + ':' + pad(sec);
+      }
+      function tick(){
+        if(start == null) return;
+        document.getElementById('app-uptime').textContent = fmt(Math.floor((Date.now() - start)/1000));
+      }
+      function esc(s){ return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+      fetch('/', { headers: { 'Accept': 'application/json' }})
+        .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+        .then(function(data){
+          document.getElementById('app-name').textContent = esc(data.name);
+          document.getElementById('app-port').textContent = esc(data.port);
+          document.getElementById('app-health').textContent = esc(data.health);
+          start = data.startedAt;
+          tick();
+          setInterval(tick, 1000);
+          document.getElementById('app-routes').innerHTML = data.routes.map(function(r){ return '<li>'+esc(r)+'</li>'; }).join('');
+        })
+        .catch(function(e){
+          document.getElementById('app-error').style.display = 'block';
+          document.getElementById('app-error').textContent = e.message;
+        });
+    })();
+  </script>
+</body>
+</html>
