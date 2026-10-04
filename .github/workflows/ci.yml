@@ -13,6 +13,12 @@ jobs:
         with:
           fetch-depth: 0
 
+      # T803: validate the tracked gradle-wrapper.jar matches the published
+      # distribution. Catches tampered jars and verifies the wrapper-properties
+      # `distributionSha256Sum` pin. See docs/plans/T803-*.md.
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@v4
+
       - name: Kanban append-only guard
         # PRs only: github.event.before is unreliable on push-to-main after merges.
         if: github.event_name == 'pull_request'
