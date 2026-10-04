@@ -41,6 +41,8 @@ public class NotificationRuleService {
 
   private static final Set<String> URL_SINKS = Set.of("webhook", "slack", "pagerduty");
 
+  private static final Set<String> REQUIRED_URL_SINKS = Set.of("webhook", "slack");
+
   private final NotificationRuleRepository repository;
   private final ObjectMapper objectMapper;
   private final ObjectProvider<DslAuditService> auditService;
@@ -162,7 +164,7 @@ public class NotificationRuleService {
       if (action.sink() == null || action.sink().isBlank()) {
         throw new IllegalArgumentException("every action requires a non-blank 'sink'");
       }
-      if (URL_SINKS.contains(action.sink())
+      if (REQUIRED_URL_SINKS.contains(action.sink())
               && (action.url() == null || action.url().isBlank())) {
         throw new IllegalArgumentException(
                 "sink '" + action.sink() + "' requires a non-blank 'url'");

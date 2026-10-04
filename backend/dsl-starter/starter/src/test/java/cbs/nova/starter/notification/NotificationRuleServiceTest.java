@@ -2,6 +2,7 @@ package cbs.nova.starter.notification;
 
 import static cbs.nova.starter.core.StarterConstants.OUTCOME_SUCCESS;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -245,7 +246,7 @@ class NotificationRuleServiceTest {
 
   @Test
   void validateRejectsUrlRequiredSinksWithoutUrl() {
-    for (String sink : List.of("webhook", "slack", "pagerduty")) {
+    for (String sink : List.of("webhook", "slack")) {
       NotificationRuleDto request = ruleDto("r", true, "RunFailed",
               List.of(new NotificationActionDto(sink, null, null, null)));
 
@@ -253,6 +254,14 @@ class NotificationRuleServiceTest {
               .isInstanceOf(IllegalArgumentException.class)
               .hasMessage("sink '" + sink + "' requires a non-blank 'url'");
     }
+  }
+
+  @Test
+  void validateAcceptsPagerDutyActionWithoutUrl() {
+    NotificationRuleDto request = ruleDto("r", true, "RunFailed",
+            List.of(new NotificationActionDto("pagerduty", null, "routing-key", null)));
+
+    assertThatCode(() -> service.create(request)).doesNotThrowAnyException();
   }
 
   @Test
