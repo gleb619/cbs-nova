@@ -30,6 +30,7 @@ single-writer-per-file by routing edits through one replica or accepting overwri
 | Temporal UI | `http://localhost:8233` | server gRPC `7233` |
 | Bugsink (error tracking) | `http://localhost:8000` | Spring app ships errors via `BUGSINK_DSN` |
 | Grafana | `http://localhost:3000` (compose) | Micrometer metrics |
+| Loki (logs) | `http://localhost:3100` (compose, internal) | backend logs shipped via the OpenTelemetry logback appender (T842); queryable from the Grafana Loki panel |
 | Postgres | `localhost:5432` | shared by app, Keycloak, Temporal, Bugsink |
 
 Key metrics (Micrometer, scraped from `/actuator/prometheus` when enabled):

@@ -17,6 +17,8 @@ sentry = "8.26.0"
 lombok = "1.18.46"
 mapstruct = "1.6.3"
 opentelemetry = "1.55.0"
+# T842: matches the OTel 1.55.0 API used by libs.opentelemetry.*
+opentelemetry-instrumentation-logback-appender = "2.21.0-alpha"
 mvel = "2.5.2.Final"
 keycloak-admin-client = "22.0.0"
 rest-assured = "5.5.0"
@@ -150,8 +152,10 @@ mapstruct-processor = { module = "org.mapstruct:mapstruct-processor", version.re
 # -- OpenTelemetry --
 opentelemetry-api = { module = "io.opentelemetry:opentelemetry-api", version.ref = "opentelemetry" }
 opentelemetry-sdk = { module = "io.opentelemetry:opentelemetry-sdk", version.ref = "opentelemetry" }
+opentelemetry-sdk-logs = { module = "io.opentelemetry:opentelemetry-sdk-logs", version.ref = "opentelemetry" }
 opentelemetry-exporter-otlp = { module = "io.opentelemetry:opentelemetry-exporter-otlp", version.ref = "opentelemetry" }
 opentelemetry-sdk-testing = { module = "io.opentelemetry:opentelemetry-sdk-testing", version.ref = "opentelemetry" }
+opentelemetry-instrumentation-logback-appender = { module = "io.opentelemetry.instrumentation:opentelemetry-logback-appender-1.0", version.ref = "opentelemetry-instrumentation-logback-appender" }
 sentry-spring-boot-jakarta = { module = "io.sentry:sentry-spring-boot-4", version.ref = "sentry" }
 
 # -- OTLP export wiring (T744) --

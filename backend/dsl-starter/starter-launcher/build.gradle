@@ -34,6 +34,15 @@ dependencies {
   // SMTP stays inactive until spring.mail.host is set.
   implementation libs.spring.boot.starter.mail
 
+  //T842 backend log pipeline ships through otel-collector logs exporter
+  //OtlpLoggingConfiguration builds the SDK and invokes the appender install hook
+  //logback-spring.xml declares the appender reference; installation is a no-op when no endpoint set
+  //versions track the Spring Boot 4.0 BOM (opentelemetry 1.55.0)
+  implementation libs.opentelemetry.sdk
+  implementation libs.opentelemetry.sdk.logs
+  implementation libs.opentelemetry.exporter.otlp
+  implementation libs.opentelemetry.instrumentation.logback.appender
+
   testImplementation libs.bundles.spring.test
 }
 
