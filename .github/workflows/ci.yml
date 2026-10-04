@@ -1,20 +1,18 @@
 name: CI
 
-# Job timeouts (2026-10-04, feat/T804): sized to clear recent run durations
-# with margin. Backend jobs that publish to Maven Local + boot Docker
-# containers (integration-backend, openapi-drift) get 60 min — historical
-# worst-case is ~40 min when the Gradle cache is cold. supply-chain's NVD
-# dependency-check fetch can spike on a fresh DB; 45 min is enough.
-# secret-scan runs gitleaks on full history via Docker; 20 min is plenty.
+# Job timeouts: no Actions run history was consulted; values are the sizing
+# defaults from docs/plans/T804 (backend 45, frontend/lint 20, plugins 30,
+# scripts 10) with 60 for the Docker-heavy integration/openapi jobs, 45 for the
+# NVD-fetching supply-chain job and 20 for secret-scan. Tighten once real run
+# durations are known.
 on:
   push:
     branches: [main]
   pull_request:
   workflow_dispatch:
 
-# Least-privilege: this workflow only reads the repo and uploads build
-# artifacts (actions/upload-artifact@v7 uses OIDC, so no extra token scope
-# is needed beyond the default `contents: read`).
+# Least-privilege: this workflow only reads the repo; uploading artifacts
+# does not need extra GITHUB_TOKEN scopes.
 permissions:
   contents: read
 
