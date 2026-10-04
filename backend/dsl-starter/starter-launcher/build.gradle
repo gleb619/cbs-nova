@@ -25,7 +25,14 @@ dependencies {
   // T754: same reason for S3StorageHelper (compileOnly in the starter) — without the SDK on the
   // launcher classpath @SpringHelper instantiation fails with NoClassDefFoundError: S3Client
   implementation libs.awssdk.s3
-  //implementation libs.spring.kafka
+  // T739: KafkaPublishHelper is compileOnly in the starter; the launcher carries spring-kafka so
+  // @SpringHelper instantiation finds KafkaTemplate classes. KafkaAutoConfiguration stays excluded
+  // (application.yml), so no broker connection is made until a KafkaTemplate bean is published.
+  implementation libs.spring.kafka
+  // T769: NotificationRuleHandler/EmailRuleSink carry ObjectProvider<JavaMailSender> signatures;
+  // the launcher must ship spring-context-support so generic type introspection finds the class.
+  // SMTP stays inactive until spring.mail.host is set.
+  implementation libs.spring.boot.starter.mail
 
   testImplementation libs.bundles.spring.test
 }

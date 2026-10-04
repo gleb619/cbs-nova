@@ -38,6 +38,7 @@ const construct: DslConstruct = {
 
 import ExplainTab from '../dsl/ExplainTab.vue'
 import HierarchyTab from '../dsl/HierarchyTab.vue'
+import ModelsTab from '../dsl/ModelsTab.vue'
 import PreviewTab from '../dsl/PreviewTab.vue'
 import RunResultPanel from '../dsl/RunResultPanel.vue'
 
@@ -53,6 +54,7 @@ function mountBodyEditor(props: Record<string, unknown>, fetchMock = defaultFetc
       components: {
         StructureTab,
         CodeTab,
+        ModelsTab,
         PreviewTab,
         RunResultPanel,
         ExplainTab,
@@ -215,14 +217,16 @@ describe('BodyEditor', () => {
     )
   })
 
-  it('renders the Docs tab after Code and shows the doc form when clicked', async () => {
+  it('renders the Docs tab after Code and Models and shows the doc form when clicked', async () => {
     const wrapper = mountBodyEditor({
       construct,
       doc: '---\nname: CreateOrder\ndescription: Creates orders\n---\n\n# Docs\n',
     })
 
     const buttons = wrapper.findAll('[data-testid="body-editor-tabs"] button').map((b) => b.text())
-    expect(buttons.indexOf('Docs')).toBe(buttons.indexOf('Code') + 1)
+    // Models is the new tab sitting between Code and Docs.
+    expect(buttons.indexOf('Docs')).toBe(buttons.indexOf('Models') + 1)
+    expect(buttons.indexOf('Models')).toBe(buttons.indexOf('Code') + 1)
 
     await wrapper.find('[data-testid="body-editor-tab-docs"]').trigger('click')
 
@@ -278,6 +282,65 @@ describe('BodyEditor', () => {
     expect(wrapper.find('[data-testid="doc-tab-header"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="doc-tab-footer"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="md-heading-text-0"]').attributes('readonly')).toBeDefined()
+  })
+
+  it('shows the Models tab button between Code and Docs', () => {
+    const wrapper = mountBodyEditor({ construct })
+
+    const buttons = wrapper.findAll('[data-testid="body-editor-tabs"] button').map((b) => b.text())
+    expect(buttons).toContain('Models')
+    expect(buttons.indexOf('Models')).toBe(buttons.indexOf('Code') + 1)
+    expect(buttons.indexOf('Docs')).toBe(buttons.indexOf('Models') + 1)
+  })
+
+  it('renders the Models tab with the header label when clicked', async () => {
+    const wrapper = mountBodyEditor({
+      construct,
+      models: 'public class CreateOrderModel {}',
+    })
+
+    await wrapper.find('[data-testid="body-editor-tab-models"]').trigger('click')
+
+    expect(wrapper.find('[data-testid="models-tab"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="models-tab-header-label"]').text()).toBe(
+      'Models for CreateOrder',
+    )
+  })
+
+  it('emits update:models and save-models from the Models tab', async () => {
+    const wrapper = mountBodyEditor({
+      construct,
+      models: 'public class CreateOrderModel {}',
+    })
+
+    await wrapper.find('[data-testid="body-editor-tab-models"]').trigger('click')
+    const textarea = wrapper.find('[data-testid="models-tab"] textarea')
+    await textarea.setValue('public class Renamed {}')
+
+    expect(wrapper.emitted('update:models')?.at(-1)?.[0]).toBe('public class Renamed {}')
+
+    await wrapper.find('[data-testid="models-tab-save"]').trigger('click')
+    expect(wrapper.emitted('save-models')?.at(-1)?.[0]).toBe('public class Renamed {}')
+  })
+
+  it('marks the Models tab read-only when no construct is selected', async () => {
+    const wrapper = mountBodyEditor({ construct: null, models: 'public class Foo {}' })
+
+    await wrapper.find('[data-testid="body-editor-tab-models"]').trigger('click')
+
+    expect(wrapper.find('[data-testid="models-tab-toolbar"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="models-tab"] textarea').attributes('readonly')).toBeDefined()
+  })
+
+  it('keeps the Models tab functional without a controlled models prop', async () => {
+    const wrapper = mountBodyEditor({ construct })
+
+    await wrapper.find('[data-testid="body-editor-tab-models"]').trigger('click')
+    const textarea = wrapper.find('[data-testid="models-tab"] textarea')
+    await textarea.setValue('public class Internal {}')
+
+    expect(wrapper.emitted('update:models')).toBeUndefined()
+    expect((textarea.element as HTMLTextAreaElement).value).toBe('public class Internal {}')
   })
 
   it('pulls in externally changed controlled code via keyed remount when the construct changes', async () => {

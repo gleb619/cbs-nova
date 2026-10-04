@@ -3,7 +3,6 @@ package cbs.nova.starter.config;
 import cbs.nova.starter.builder.BuilderCache;
 import cbs.nova.starter.builder.BuilderRequestExecutor;
 import cbs.nova.starter.builder.DslBuilderClient;
-import cbs.nova.starter.builder.DslBuilderDocsClient;
 import cbs.nova.starter.config.properties.CbsNovaCacheProperties;
 import cbs.nova.starter.config.properties.DslBuilderClientProperties;
 import cbs.nova.starter.controller.BuilderApiErrorHandler;
@@ -31,7 +30,6 @@ import tools.jackson.databind.ObjectMapper;
 @EnableConfigurationProperties(DslBuilderClientProperties.class)
 public class BuilderClientConfiguration {
 
-  @Bean
   public RestClient dslBuilderRestClient(ObjectProvider<RestClient.Builder> builderProvider,
           DslBuilderClientProperties properties, BuilderApiErrorHandler errorHandler) {
     var builder = builderProvider.getIfAvailable(RestClient::builder);
@@ -59,12 +57,10 @@ public class BuilderClientConfiguration {
             .build();
   }
 
-  @Bean
   public BuilderApiErrorHandler builderApiErrorHandler(ObjectMapper objectMapper) {
     return new BuilderApiErrorHandler(objectMapper);
   }
 
-  @Bean
   public CircuitBreaker dslBuilderCircuitBreaker(DslBuilderClientProperties properties) {
     var breaker = properties.breaker();
     return CircuitBreaker.of("dsl-builder-breaker", CircuitBreakerConfig.custom()
@@ -84,7 +80,6 @@ public class BuilderClientConfiguration {
             .build());
   }
 
-  @Bean
   public Bulkhead dslBuilderBulkhead(DslBuilderClientProperties properties) {
     var bulkhead = properties.bulkhead();
     return Bulkhead.of("dsl-builder-bulkhead", BulkheadConfig.custom()
@@ -106,7 +101,6 @@ public class BuilderClientConfiguration {
             .build());
   }
 
-  @Bean
   public BuilderCache builderCache(CbsNovaCacheProperties cacheProperties) {
     var spec = cacheProperties.specFor(StarterConstants.BUILDER_READS);
     return new BuilderCache(Caffeine.newBuilder()
@@ -116,25 +110,17 @@ public class BuilderClientConfiguration {
             .build());
   }
 
-  @Bean
   public BuilderRequestExecutor builderRequestExecutor(ThreadPoolBulkhead dslBuilderQueue,
           Bulkhead dslBuilderBulkhead, CircuitBreaker dslBuilderCircuitBreaker) {
     return new BuilderRequestExecutor(dslBuilderQueue, dslBuilderBulkhead,
             dslBuilderCircuitBreaker);
   }
 
-  @Bean
   public DslBuilderClient dslBuilderClient(RestClient dslBuilderRestClient,
           ThreadPoolBulkhead dslBuilderQueue, Bulkhead dslBuilderBulkhead,
           CircuitBreaker dslBuilderCircuitBreaker, BuilderCache builderCache) {
     return new DslBuilderClient(dslBuilderRestClient, dslBuilderQueue, dslBuilderBulkhead,
             dslBuilderCircuitBreaker, builderCache);
-  }
-
-  @Bean
-  public DslBuilderDocsClient dslBuilderDocsClient(RestClient dslBuilderRestClient,
-          BuilderRequestExecutor builderRequestExecutor, BuilderCache builderCache) {
-    return new DslBuilderDocsClient(dslBuilderRestClient, builderRequestExecutor, builderCache);
   }
 
 }

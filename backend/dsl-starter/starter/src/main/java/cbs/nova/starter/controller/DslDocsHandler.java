@@ -10,8 +10,9 @@ import cbs.nova.starter.model.DslFileModels.FileContentResponse;
 import cbs.nova.starter.model.DslFileModels.FileEntry;
 import cbs.nova.starter.model.DslFileModels.FlushResult;
 import cbs.nova.starter.model.DslFileModels.PendingWritesStatus;
-import cbs.nova.starter.service.DslDocsService;
+import cbs.nova.starter.model.FileEntityKind;
 import cbs.nova.starter.service.DocTemplateService;
+import cbs.nova.starter.service.DslFileService;
 import jakarta.servlet.ServletException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -33,8 +34,10 @@ import tools.jackson.databind.ObjectMapper;
 @RequiredArgsConstructor
 public class DslDocsHandler {
 
+  private static final String MARKDOWN_SUFFIX = ".md";
+
   private final DslProperties dslProperties;
-  private final DslDocsService docsService;
+  private final DslFileService fileService;
   private final DocTemplateService docTemplateService;
   private final ObjectMapper objectMapper;
 
@@ -44,7 +47,7 @@ public class DslDocsHandler {
       return dirCheck.response();
     }
     String prefix = request.param("prefix").orElse(null);
-    List<FileEntry> files = docsService.listDocs(prefix);
+    List<FileEntry> files = fileService.listFiles(prefix, FileEntityKind.DOC);
     return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(files);
   }
 
@@ -70,7 +73,7 @@ public class DslDocsHandler {
       return badRequest("path is required");
     }
     String content = readBody(request);
-    docsService.stageDocWrite(path, content);
+    fileService.stageWrite(path, content, FileEntityKind.DOC);
     log.info("[DSL docs] staged write for {}", path);
     return accepted(
             new FileContentResponse(path, content, FileContentResponse.crc32(content)));
@@ -86,7 +89,7 @@ public class DslDocsHandler {
       return badRequest("name is required");
     }
     try {
-      FileContentResponse response = docsService.readDocByName(name);
+      FileContentResponse response = fileService.readFileByName(name, FileEntityKind.DOC);
       return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(response);
     } catch (BuilderApiException e) {
       if (e.getStatusCode().value() == 404) {
@@ -111,8 +114,8 @@ public class DslDocsHandler {
     // New doc creation: guarantee the doc carries its name in the frontmatter
     // (search) and a `# <name>` section in the body (view) before it hits disk.
     try {
-      FileContentResponse result = docsService.stageDocWriteByName(name,
-              docTemplateService.ensureDocStructure(name, content));
+      FileContentResponse result = fileService.stageWriteByName(name,
+              docTemplateService.ensureDocStructure(name, content), FileEntityKind.DOC);
       log.info("[DSL docs] staged write for {} (resolved from {})", result.path(), name);
       return accepted(result);
     } catch (BuilderApiException e) {
@@ -132,13 +135,13 @@ public class DslDocsHandler {
     if (path == null || path.isBlank()) {
       return badRequest("path is required");
     }
-    boolean exists = docsService.docExists(path);
+    boolean exists = fileService.exists(path, FileEntityKind.DOC);
     return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(exists);
   }
 
   private ServerResponse doReadDoc(String path) throws IOException {
     try {
-      FileContentResponse response = docsService.readDoc(path);
+      FileContentResponse response = fileService.readFile(path, FileEntityKind.DOC);
       return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(response);
     } catch (IllegalStateException e) {
       return serviceUnavailable(e.getMessage());
@@ -160,7 +163,7 @@ public class DslDocsHandler {
     if (body == null || body.files() == null || body.files().isEmpty()) {
       return badRequest("files list is required");
     }
-    int staged = docsService.stageDocAll(body.files());
+    int staged = fileService.stageAll(body.files(), FileEntityKind.DOC);
     List<String> errors = new ArrayList<>();
     if (staged < body.files().size()) {
       errors.add("some entries skipped because path was blank");
@@ -174,7 +177,7 @@ public class DslDocsHandler {
     if (dirCheck.isError()) {
       return dirCheck.response();
     }
-    FlushResult result = docsService.flushDocs();
+    FlushResult result = fileService.flushPending(FileEntityKind.DOC);
     log.info("[DSL docs] flush requested: {} flushed, {} failed", result.flushed(),
             result.failed());
     return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(result);
@@ -185,7 +188,7 @@ public class DslDocsHandler {
     if (dirCheck.isError()) {
       return dirCheck.response();
     }
-    int pending = docsService.pendingDocs();
+    int pending = fileService.pendingCount(FileEntityKind.DOC);
     return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON)
             .body(new PendingWritesStatus(pending));
   }
@@ -194,6 +197,9 @@ public class DslDocsHandler {
     String path = request.pathVariable("path")
             .replace('\\', '/').replaceAll("^/+", "");
     if (path.contains("..")) {
+      return null;
+    }
+    if (!path.endsWith(MARKDOWN_SUFFIX)) {
       return null;
     }
     return path;

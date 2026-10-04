@@ -1,6 +1,7 @@
 package cbs.nova.starter.builder;
 
 import cbs.nova.starter.exception.BuilderApiException;
+
 import cbs.nova.starter.model.CompileModels.CompileRequest;
 import cbs.nova.starter.model.CompileModels.CompileResult;
 import cbs.nova.starter.model.DslFileModels.BulkWriteRequest;
@@ -10,6 +11,7 @@ import cbs.nova.starter.model.DslFileModels.FileContentResponse;
 import cbs.nova.starter.model.DslFileModels.FileEntry;
 import cbs.nova.starter.model.DslFileModels.FlushResult;
 import cbs.nova.starter.model.DslFileModels.PendingWritesStatus;
+import cbs.nova.starter.model.FileEntityKind;
 import cbs.nova.starter.model.VcsModels.CommitRequest;
 import cbs.nova.starter.model.VcsModels.CommitResult;
 import cbs.nova.starter.model.VcsModels.DiscardRequest;
@@ -60,50 +62,87 @@ public class DslBuilderClient {
   }
 
   public List<FileEntry> listFiles(String prefix) {
-    return cache.listFiles(prefix, () -> execute(() -> doListFiles(prefix)));
+    return listFiles(prefix, FileEntityKind.DSL);
+  }
+
+  public List<FileEntry> listFiles(String prefix, FileEntityKind kind) {
+    return cache.listFiles(cacheKey(prefix, kind), () -> execute(() -> doListFiles(prefix, kind)));
   }
 
   public FileContentResponse readFile(String path) {
-    return cache.readFile(path, () -> execute(() -> doReadFile(path)));
+    return readFile(path, FileEntityKind.DSL);
+  }
+
+  public FileContentResponse readFile(String path, FileEntityKind kind) {
+    return cache.readFile(cacheKey(path, kind), () -> execute(() -> doReadFile(path, kind)));
   }
 
   public FileContentResponse readFileByName(String name) {
-    return cache.readFileByName(name, () -> execute(() -> doReadFileByName(name)));
+    return readFileByName(name, FileEntityKind.DSL);
+  }
+
+  public FileContentResponse readFileByName(String name, FileEntityKind kind) {
+    return cache.readFileByName(cacheKey(name, kind),
+            () -> execute(() -> doReadFileByName(name, kind)));
   }
 
   public boolean fileExists(String path) {
-    return cache.fileExists(path, () -> execute(() -> doFileExists(path)));
+    return fileExists(path, FileEntityKind.DSL);
+  }
+
+  public boolean fileExists(String path, FileEntityKind kind) {
+    return cache.fileExists(cacheKey(path, kind), () -> execute(() -> doFileExists(path, kind)));
   }
 
   public void stageWrite(String path, String content) {
-    execute(() -> doStageWrite(path, content));
+    stageWrite(path, content, FileEntityKind.DSL);
+  }
+
+  public void stageWrite(String path, String content, FileEntityKind kind) {
+    execute(() -> doStageWrite(path, content, kind));
     cache.invalidateFile(path);
     cache.invalidateVcsStatus();
   }
 
   public FileContentResponse stageWriteByName(String name, String content) {
-    FileContentResponse result = execute(() -> doStageWriteByName(name, content));
-    cache.invalidateFileByName(name, result == null ? null : result.path());
+    return stageWriteByName(name, content, FileEntityKind.DSL);
+  }
+
+  public FileContentResponse stageWriteByName(String name, String content, FileEntityKind kind) {
+    FileContentResponse result = execute(() -> doStageWriteByName(name, content, kind));
+    cache.invalidateFileByName(cacheKey(name, kind), result == null ? null : result.path());
     cache.invalidateVcsStatus();
     return result;
   }
 
   public BulkWriteResult stageAll(List<FileContentRequest> files) {
-    BulkWriteResult result = execute(() -> doStageAll(files));
+    return stageAll(files, FileEntityKind.DSL);
+  }
+
+  public BulkWriteResult stageAll(List<FileContentRequest> files, FileEntityKind kind) {
+    BulkWriteResult result = execute(() -> doStageAll(files, kind));
     cache.invalidateFiles();
     cache.invalidateVcsStatus();
     return result;
   }
 
   public FlushResult flushFiles() {
-    FlushResult result = execute(this::doFlushFiles);
+    return flushFiles(FileEntityKind.DSL);
+  }
+
+  public FlushResult flushFiles(FileEntityKind kind) {
+    FlushResult result = execute(() -> doFlushFiles(kind));
     cache.invalidateFiles();
     cache.invalidateVcsStatus();
     return result;
   }
 
   public int pendingCount() {
-    return execute(this::doPendingCount);
+    return pendingCount(FileEntityKind.DSL);
+  }
+
+  public int pendingCount(FileEntityKind kind) {
+    return execute(() -> doPendingCount(kind));
   }
 
   public Optional<RepoStatus> vcsStatus() {
@@ -209,55 +248,78 @@ public class DslBuilderClient {
             .body(byte[].class);
   }
 
-  private List<FileEntry> doListFiles(String prefix) {
+  private List<FileEntry> doListFiles(String prefix, FileEntityKind kind) {
     return restClient.get().uri(uriBuilder -> {
       var builder = uriBuilder.path("/api/dsl/files");
+      if (kind != null && kind != FileEntityKind.DSL) {
+        builder.queryParam("kind", kind.name());
+      }
       return prefix == null || prefix.isBlank()
               ? builder.build()
               : builder.queryParam("prefix", prefix).build();
     }).retrieve().body(FILE_ENTRIES_TYPE);
   }
 
-  private FileContentResponse doReadFile(String path) {
-    return restClient.get().uri(uriBuilder -> fileUri(uriBuilder, path)).retrieve()
+  private FileContentResponse doReadFile(String path, FileEntityKind kind) {
+    return restClient.get().uri(uriBuilder -> fileUri(uriBuilder, path, kind)).retrieve()
             .body(FileContentResponse.class);
   }
 
-  private FileContentResponse doReadFileByName(String name) {
-    return restClient.get().uri(uriBuilder -> fileByNameUri(uriBuilder, name)).retrieve()
+  private FileContentResponse doReadFileByName(String name, FileEntityKind kind) {
+    return restClient.get().uri(uriBuilder -> fileByNameUri(uriBuilder, name, kind)).retrieve()
             .body(FileContentResponse.class);
   }
 
-  private boolean doFileExists(String path) {
+  private boolean doFileExists(String path, FileEntityKind kind) {
     Boolean exists = restClient.get()
             .uri(uriBuilder -> uriBuilder.path("/api/dsl/files/exists/")
-                    .pathSegment(path.split("/")).build())
+                    .pathSegment(path.split("/"))
+                    .queryParamIfPresent("kind", Optional.ofNullable(kind))
+                    .build())
             .retrieve().body(Boolean.class);
     return Boolean.TRUE.equals(exists);
   }
 
-  private Void doStageWrite(String path, String content) {
-    return restClient.post().uri(uriBuilder -> fileUri(uriBuilder, path)).body(content).retrieve()
+  private Void doStageWrite(String path, String content, FileEntityKind kind) {
+    return restClient.post().uri(uriBuilder -> fileUri(uriBuilder, path, kind)).body(content)
+            .retrieve()
             .body(Void.class);
   }
 
-  private FileContentResponse doStageWriteByName(String name, String content) {
-    return restClient.post().uri(uriBuilder -> fileByNameUri(uriBuilder, name)).body(content)
+  private FileContentResponse doStageWriteByName(String name, String content,
+          FileEntityKind kind) {
+    return restClient.post().uri(uriBuilder -> fileByNameUri(uriBuilder, name, kind)).body(content)
             .retrieve().body(FileContentResponse.class);
   }
 
-  private BulkWriteResult doStageAll(List<FileContentRequest> files) {
-    return restClient.post().uri("/api/dsl/files/bulk")
-            .body(new BulkWriteRequest(files)).retrieve().body(BulkWriteResult.class);
+  private BulkWriteResult doStageAll(List<FileContentRequest> files, FileEntityKind kind) {
+    return restClient.post().uri(uriBuilder -> {
+      var builder = uriBuilder.path("/api/dsl/files/bulk");
+      if (kind != null && kind != FileEntityKind.DSL) {
+        builder.queryParam("kind", kind.name());
+      }
+      return builder.build();
+    }).body(new BulkWriteRequest(files)).retrieve().body(BulkWriteResult.class);
   }
 
-  private FlushResult doFlushFiles() {
-    return restClient.post().uri("/api/dsl/files/flush").retrieve().body(FlushResult.class);
+  private FlushResult doFlushFiles(FileEntityKind kind) {
+    return restClient.post().uri(uriBuilder -> {
+      var builder = uriBuilder.path("/api/dsl/files/flush");
+      if (kind != null && kind != FileEntityKind.DSL) {
+        builder.queryParam("kind", kind.name());
+      }
+      return builder.build();
+    }).retrieve().body(FlushResult.class);
   }
 
-  private Integer doPendingCount() {
-    var status = restClient.get().uri("/api/dsl/files/status").retrieve()
-            .body(PendingWritesStatus.class);
+  private Integer doPendingCount(FileEntityKind kind) {
+    var status = restClient.get().uri(uriBuilder -> {
+      var builder = uriBuilder.path("/api/dsl/files/status");
+      if (kind != null && kind != FileEntityKind.DSL) {
+        builder.queryParam("kind", kind.name());
+      }
+      return builder.build();
+    }).retrieve().body(PendingWritesStatus.class);
     return status == null ? 0 : status.pending();
   }
 
@@ -309,12 +371,24 @@ public class DslBuilderClient {
             .retrieve().body(String.class);
   }
 
-  private static URI fileUri(UriBuilder uriBuilder, String path) {
-    return uriBuilder.path("/api/dsl/files/").pathSegment(path.split("/")).build();
+  private static URI fileUri(UriBuilder uriBuilder, String path, FileEntityKind kind) {
+    var builder = uriBuilder.path("/api/dsl/files/").pathSegment(path.split("/"));
+    if (kind != null && kind != FileEntityKind.DSL) {
+      builder.queryParam("kind", kind.name());
+    }
+    return builder.build();
   }
 
-  private static URI fileByNameUri(UriBuilder uriBuilder, String name) {
-    return uriBuilder.path("/api/dsl/files/by-name/").pathSegment(name).build();
+  private static URI fileByNameUri(UriBuilder uriBuilder, String name, FileEntityKind kind) {
+    var builder = uriBuilder.path("/api/dsl/files/by-name/").pathSegment(name);
+    if (kind != null && kind != FileEntityKind.DSL) {
+      builder.queryParam("kind", kind.name());
+    }
+    return builder.build();
+  }
+
+  private static String cacheKey(String key, FileEntityKind kind) {
+    return kind == null || kind == FileEntityKind.DSL ? key : kind.name() + ":" + key;
   }
 
   private <T> T execute(Callable<T> call) {

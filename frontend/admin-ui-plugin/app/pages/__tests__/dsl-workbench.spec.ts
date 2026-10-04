@@ -24,6 +24,13 @@ afterEach(() => {
   }
   document.body.innerHTML = ''
 })
+beforeEach(() => {
+  dslApi.readDslModel.mockReset()
+  dslApi.readDslModel.mockResolvedValue(null)
+  dslApi.writeDslModel.mockReset()
+  dslApi.writeDslModel.mockResolvedValue({ ok: true })
+})
+
 
 // ---------------------------------------------------------------------------
 // Mocks for composables imported by the page
@@ -89,6 +96,8 @@ const { dslApi, useDslApiMock, useDslWorkbenchMock, useApprovalsMock } = vi.hois
     deleteSchedule: vi.fn(),
     readDraft: vi.fn(),
     readDslFile: vi.fn(),
+    readDslModel: vi.fn(),
+    writeDslModel: vi.fn(),
     writeDslFile: vi.fn(),
     listPublishHistory: vi.fn(),
     getHistoryEntry: vi.fn(),
@@ -396,6 +405,11 @@ describe('dsl-workbench.vue unsaved-changes guard', () => {
     dslApi.writeDslFile.mockReset()
     dslApi.writeDslFile.mockResolvedValue({ ok: true })
 
+    dslApi.readDslModel.mockReset()
+    dslApi.readDslModel.mockResolvedValue(null)
+    dslApi.writeDslModel.mockReset()
+    dslApi.writeDslModel.mockResolvedValue({ ok: true })
+
     addSpy = vi.spyOn(window, 'addEventListener')
     removeSpy = vi.spyOn(window, 'removeEventListener')
     confirmSpy = vi.spyOn(window, 'confirm') as any
@@ -520,6 +534,11 @@ describe('dsl-workbench.vue saved drafts store', () => {
     dslApi.readDslFile.mockResolvedValue('class LoanDsl {}')
     dslApi.writeDslFile.mockReset()
     dslApi.writeDslFile.mockResolvedValue({ ok: true })
+
+    dslApi.readDslModel.mockReset()
+    dslApi.readDslModel.mockResolvedValue(null)
+    dslApi.writeDslModel.mockReset()
+    dslApi.writeDslModel.mockResolvedValue({ ok: true })
   })
 
   afterEach(() => {
@@ -692,6 +711,11 @@ describe('dsl-workbench.vue new definition flow', () => {
     dslApi.readDslFile.mockResolvedValue('class LoanDsl {}')
     dslApi.writeDslFile.mockReset()
     dslApi.writeDslFile.mockResolvedValue({ ok: true })
+
+    dslApi.readDslModel.mockReset()
+    dslApi.readDslModel.mockResolvedValue(null)
+    dslApi.writeDslModel.mockReset()
+    dslApi.writeDslModel.mockResolvedValue({ ok: true })
   })
 
   it('opens the new-definition panel when the New button is clicked', async () => {
@@ -863,6 +887,11 @@ describe('dsl-workbench.vue save-status pill and Ctrl+S', () => {
     dslApi.readDslFile.mockResolvedValue('class LoanDsl {}')
     dslApi.writeDslFile.mockReset()
     dslApi.writeDslFile.mockResolvedValue({ ok: true })
+
+    dslApi.readDslModel.mockReset()
+    dslApi.readDslModel.mockResolvedValue(null)
+    dslApi.writeDslModel.mockReset()
+    dslApi.writeDslModel.mockResolvedValue({ ok: true })
   })
 
   function findEditorSaveStatus(wrapper: ReturnType<typeof mountPage>) {
@@ -1104,6 +1133,11 @@ describe('dsl-workbench.vue file-backed construct', () => {
     dslApi.readDslFile.mockResolvedValue('public class LoanDsl {}')
     dslApi.writeDslFile.mockReset()
     dslApi.writeDslFile.mockResolvedValue({ ok: true })
+
+    dslApi.readDslModel.mockReset()
+    dslApi.readDslModel.mockResolvedValue(null)
+    dslApi.writeDslModel.mockReset()
+    dslApi.writeDslModel.mockResolvedValue({ ok: true })
   })
 
   it('loads source file content when a file-backed construct is selected', async () => {
@@ -1246,6 +1280,11 @@ describe('dsl-workbench.vue history panel persistence', () => {
     dslApi.readDslFile.mockResolvedValue('class LoanDsl {}')
     dslApi.writeDslFile.mockReset()
     dslApi.writeDslFile.mockResolvedValue({ ok: true })
+
+    dslApi.readDslModel.mockReset()
+    dslApi.readDslModel.mockResolvedValue(null)
+    dslApi.writeDslModel.mockReset()
+    dslApi.writeDslModel.mockResolvedValue({ ok: true })
   })
 
   afterEach(() => {

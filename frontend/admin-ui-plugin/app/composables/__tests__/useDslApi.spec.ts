@@ -597,6 +597,32 @@ describe('useDslApi', () => {
     })
     expect(result).toEqual({ ok: true })
   })
+  it('readDslModel GETs /api/v1/dsl/files/by-name/{name} with kind=MODEL and returns content', async () => {
+    fetchMock.mockResolvedValueOnce({ path: 'BatchModels.java', content: 'record BatchIn {}' })
+    const api = useDslApi()
+
+    const result = await api.readDslModel('Batch')
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/files/by-name/Batch', {
+      query: { kind: 'MODEL' },
+    })
+    expect(result).toBe('record BatchIn {}')
+  })
+
+  it('writeDslModel POSTs content with kind=MODEL to the file API', async () => {
+    fetchMock.mockResolvedValueOnce({ ok: true })
+    const api = useDslApi()
+
+    const result = await api.writeDslModel('Batch', 'record BatchIn {}')
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/files/by-name/Batch', {
+      method: 'POST',
+      body: { content: 'record BatchIn {}' },
+      query: { kind: 'MODEL' },
+    })
+    expect(result).toEqual({ ok: true })
+  })
+
 
   it('readDslDoc GETs /api/v1/dsl/docs/by-name/{name} and returns content', async () => {
     fetchMock.mockResolvedValueOnce({ path: 'batch-processing.md', content: '# Batch' })

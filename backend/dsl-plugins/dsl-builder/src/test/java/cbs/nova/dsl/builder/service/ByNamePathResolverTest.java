@@ -1,5 +1,7 @@
 package cbs.nova.dsl.builder.service;
 
+import cbs.nova.dsl.builder.model.FileEntityKind;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 import cbs.nova.dsl.builder.config.BuilderServiceConfiguration;
@@ -398,6 +400,39 @@ class ByNamePathResolverTest {
 
     assertThat(firstSource.getIfPresent("x")).isEqualTo("src/dsl/XDsl.java");
     assertThat(secondDoc.getIfPresent("x")).isNull();
+  }
+
+  @Test
+  void resolvesModelByModelsNamingConvention() throws IOException {
+    write(workTree.resolve("src/models/BatchModels.java"), "model holder");
+
+    assertThat(resolver.resolveModelPath("Batch"))
+            .contains("src/models/BatchModels.java");
+  }
+
+  @Test
+  void fallsBackToPlainJavaNameForModel() throws IOException {
+    write(workTree.resolve("src/models/Plain.java"), "plain model");
+
+    assertThat(resolver.resolveModelPath("Plain")).contains("src/models/Plain.java");
+  }
+
+  @Test
+  void resolvesModelByTypeDeclarationFallback() throws IOException {
+    write(workTree.resolve("src/models/Holders.java"), """
+            public class Holders {
+              public record BatchItem(String id) {
+              }
+            }
+            """);
+
+    assertThat(resolver.resolveModelPath("BatchItem")).contains("src/models/Holders.java");
+  }
+
+  @Test
+  void defaultModelPathUsesModelsSuffix() {
+    assertThat(resolver.defaultPath("Batch", FileEntityKind.MODEL))
+            .isEqualTo("src/models/BatchModels.java");
   }
 
   private static void write(Path file, String content) throws IOException {

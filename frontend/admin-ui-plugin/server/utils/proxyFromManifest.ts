@@ -1,4 +1,4 @@
-import { getRouterParam, type H3Event, readBody } from 'h3'
+import { getQuery, getRouterParam, type H3Event, readBody } from 'h3'
 import { type ProxyOptions, proxyToBackend } from './httpClient'
 
 /**
@@ -32,6 +32,10 @@ export interface BffRouteSpec {
  * router params into the backend path (verbatim, matching the legacy
  * hand-written `${param}` interpolation) and reuses `proxyToBackend` for
  * headers, auth refresh, error mapping and logging.
+ *
+ * Inbound query parameters are forwarded so the same generated route can serve
+ * operations that accept query flags (e.g. `?kind=MODEL` on the generic file
+ * API).
  */
 export async function proxyFromManifest(event: H3Event, spec: BffRouteSpec): Promise<unknown> {
   let backendPath = spec.backendPath
@@ -40,11 +44,17 @@ export async function proxyFromManifest(event: H3Event, spec: BffRouteSpec): Pro
     backendPath = backendPath.replace(`{${param}}`, value ?? '')
   }
 
+  const query = getQuery(event)
+  const hasQuery = Object.keys(query).length > 0
+
   if (spec.method === 'GET' && !spec.explicitMethod) {
-    return proxyToBackend(event, backendPath)
+    return proxyToBackend(event, backendPath, hasQuery ? { query } : {})
   }
 
   const options: ProxyOptions = { method: spec.method }
+  if (hasQuery) {
+    options.query = query
+  }
   if (spec.hasBody) {
     options.body = await readBody(event)
   }

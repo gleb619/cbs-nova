@@ -1,6 +1,7 @@
 package cbs.nova.dsl.builder.service;
 
 import cbs.nova.dsl.builder.config.DslBuilderProperties;
+import cbs.nova.dsl.builder.model.FileEntityKind;
 import cbs.nova.dsl.builder.model.DslFileModels.FileEntry;
 import cbs.nova.dsl.utils.Strings;
 import com.github.benmanes.caffeine.cache.Cache;
@@ -14,36 +15,28 @@ import java.util.regex.Pattern;
 import org.springframework.stereotype.Service;
 
 /**
- * Maps a DSL construct {@code name} (the Workbench key, e.g. {@code "BatchProcessing"}) to a path
- * inside this builder's own work tree, so by-name endpoints never depend on the caller's filesystem
- * view of the workspace.
+ * Maps a DSL construct/model/doc {@code name} to a workspace-relative path.
  *
  * <p>
- * The workspace layout is fixed: DSL sources live in {@code src/dsl} and {@code src/models}, docs
- * markdown lives flat under the docs sub-directory ({@code properties.docs().subDir()}). Resolution
- * tries the naming conventions first (first hit wins), then falls back to content scans: a type
- * declaration in any {@code src/models} file for sources, a yaml frontmatter {@code name:} field in
- * any docs file for docs.
- *
- * <p>
- * Reads and existence checks go through {@link FileService} so buffer-staged (not yet flushed)
- * content is respected. Scan results are cached per name in bounded Caffeine caches
- * ({@code sourcePaths}, {@code docPaths}); each entry carries its buffer version, so a stage or
- * flush forces the next resolve to re-scan.
+ * Resolution is cached per kind/name and invalidated when the staged file buffer changes, so
+ * callers always see the latest unflushed edits.
  */
 @Service
 public class ByNamePathResolver {
 
   private static final String DSL_FILE_SUFFIX = "Dsl.java";
+  private static final String MODELS_FILE_SUFFIX = "Models.java";
   private static final String JAVA_SUFFIX = ".java";
   private static final String MARKDOWN_SUFFIX = ".md";
+  private static final String DSL_DIR = "src/dsl";
   private static final String MODELS_DIR = "src/models";
-  private static final List<String> SOURCE_DIRS = List.of("src/dsl", MODELS_DIR);
+  private static final List<String> SOURCE_DIRS = List.of(DSL_DIR, MODELS_DIR);
   private static final String TYPE_DECLARATION = "\\b(?:record|class|interface|enum)\\s+%s\\b";
 
   private final DslBuilderProperties properties;
   private final FileService fileService;
   private final Cache<String, CachedPath> sourcePaths;
+  private final Cache<String, CachedPath> modelPaths;
   private final Cache<String, CachedPath> docPaths;
 
   public ByNamePathResolver(DslBuilderProperties properties, FileService fileService) {
@@ -51,13 +44,10 @@ public class ByNamePathResolver {
     this.fileService = fileService;
     Caffeine<Object, Object> builder = pathCacheBuilder(properties.pathCache());
     this.sourcePaths = builder.<String, CachedPath>build();
+    this.modelPaths = builder.<String, CachedPath>build();
     this.docPaths = builder.<String, CachedPath>build();
   }
 
-  /**
-   * Visible for testing: rebuild the caches with knobs supplied via the pathCache config so a test
-   * can drive a fake ticker or shrink the bound to inspect eviction.
-   */
   static Caffeine<Object, Object> pathCacheBuilder(DslBuilderProperties.PathCache pathCache) {
     int maxEntries = Math.max(1, pathCache.maxEntries());
     long ttlSeconds = Math.max(1L, pathCache.expireAfterWriteSeconds());
@@ -67,34 +57,60 @@ public class ByNamePathResolver {
   }
 
   /**
-   * @param name
-   *          construct name.
-   * @return work-tree-relative forward-slash path of the DSL source file, or empty when no
-   *         candidate exists.
+   * Resolves a name to a workspace-relative path for the given kind.
+   */
+  public Optional<String> resolvePath(String name, FileEntityKind kind) {
+    if (name == null || name.isBlank()) {
+      return Optional.empty();
+    }
+    return switch (kind) {
+      case DSL -> cached(sourcePaths, name, () -> resolveSource(name));
+      case MODEL -> cached(modelPaths, name, () -> resolveModel(name));
+      case DOC -> cached(docPaths, name, () -> resolveDoc(name));
+    };
+  }
+
+  /**
+   * Legacy DSL/source resolution (searches {@code src/dsl} first, then {@code src/models}).
    */
   public Optional<String> resolveSourcePath(String name) {
-    if (name == null || name.isBlank()) {
-      return Optional.empty();
-    }
-    return cached(sourcePaths, name, () -> resolveSource(name));
+    return resolvePath(name, FileEntityKind.DSL);
   }
 
   /**
-   * @param name
-   *          construct name.
-   * @return docs-root-relative forward-slash path of the existing doc, or empty when no candidate
-   *         exists.
+   * Model-only resolution (searches {@code src/models}).
+   */
+  public Optional<String> resolveModelPath(String name) {
+    return resolvePath(name, FileEntityKind.MODEL);
+  }
+
+  /**
+   * Legacy docs resolution: returns a path relative to the docs sub-directory.
    */
   public Optional<String> resolveDocPath(String name) {
-    if (name == null || name.isBlank()) {
-      return Optional.empty();
-    }
-    return cached(docPaths, name, () -> resolveDoc(name));
+    return resolvePath(name, FileEntityKind.DOC)
+            .map(path -> {
+              String docsSubDir = properties.docs().subDir();
+              if (path.startsWith(docsSubDir + "/")) {
+                return path.substring(docsSubDir.length() + 1);
+              }
+              return path;
+            });
   }
 
   /**
-   * Docs-root-relative path a brand-new doc for {@code name} is written to: the kebab-case
-   * convention path.
+   * Default workspace-relative path for a new entity of the given kind.
+   */
+  public String defaultPath(String name, FileEntityKind kind) {
+    return switch (kind) {
+      case DSL -> DSL_DIR + "/" + name + DSL_FILE_SUFFIX;
+      case MODEL -> MODELS_DIR + "/" + name + MODELS_FILE_SUFFIX;
+      case DOC -> properties.docs().subDir() + "/" + Strings.toKebabCase(name) + MARKDOWN_SUFFIX;
+    };
+  }
+
+  /**
+   * Default docs path relative to the docs sub-directory.
    */
   public String defaultDocPath(String name) {
     return Strings.toKebabCase(name) + MARKDOWN_SUFFIX;
@@ -109,12 +125,38 @@ public class ByNamePathResolver {
         }
       }
     }
-    return findTypeDeclaration(name);
+    return findTypeDeclaration(name, MODELS_DIR);
   }
 
-  private Optional<String> findTypeDeclaration(String name) {
+  private Optional<String> resolveModel(String name) {
+    String holderCandidate = MODELS_DIR + "/" + name + MODELS_FILE_SUFFIX;
+    if (fileService.exists(holderCandidate)) {
+      return Optional.of(holderCandidate);
+    }
+    String plainCandidate = MODELS_DIR + "/" + name + JAVA_SUFFIX;
+    if (fileService.exists(plainCandidate)) {
+      return Optional.of(plainCandidate);
+    }
+    return findTypeDeclaration(name, MODELS_DIR);
+  }
+
+  private Optional<String> resolveDoc(String name) {
+    String docsSubDir = properties.docs().subDir();
+    for (String candidate : List.of(defaultDocPath(name), name + MARKDOWN_SUFFIX)) {
+      String workspacePath = docsSubDir + "/" + candidate;
+      if (fileService.exists(workspacePath)) {
+        return Optional.of(workspacePath);
+      }
+    }
+    return fileService.listAllFiles(FileEntityKind.DOC, null).stream()
+            .map(entry -> docsSubDir + "/" + entry.path())
+            .filter(path -> name.equals(FrontmatterNameParser.name(readQuietly(path))))
+            .findFirst();
+  }
+
+  private Optional<String> findTypeDeclaration(String name, String searchDir) {
     Pattern declaration = Pattern.compile(TYPE_DECLARATION.formatted(Pattern.quote(name)));
-    return fileService.listAllFiles(MODELS_DIR, JAVA_SUFFIX).stream()
+    return fileService.listAllFiles(FileEntityKind.MODEL, null).stream()
             .map(FileEntry::path)
             .filter(path -> declaresType(path, declaration))
             .findFirst();
@@ -123,20 +165,6 @@ public class ByNamePathResolver {
   private boolean declaresType(String relativePath, Pattern declaration) {
     String content = readQuietly(relativePath);
     return content != null && declaration.matcher(content).find();
-  }
-
-  private Optional<String> resolveDoc(String name) {
-    String docsSubDir = properties.docs().subDir();
-    for (String candidate : List.of(defaultDocPath(name), name + MARKDOWN_SUFFIX)) {
-      if (fileService.exists(docsSubDir + "/" + candidate)) {
-        return Optional.of(candidate);
-      }
-    }
-    return fileService.listAllFiles(docsSubDir, MARKDOWN_SUFFIX).stream()
-            .map(FileEntry::path)
-            .filter(path -> name.equals(FrontmatterNameParser.name(readQuietly(path))))
-            .map(path -> path.substring(docsSubDir.length() + 1))
-            .findFirst();
   }
 
   private String readQuietly(String relativePath) {

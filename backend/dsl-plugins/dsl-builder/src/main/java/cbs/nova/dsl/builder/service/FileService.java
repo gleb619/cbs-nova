@@ -5,6 +5,7 @@ import cbs.nova.dsl.builder.model.DslFileModels.FileContentRequest;
 import cbs.nova.dsl.builder.model.DslFileModels.FileContentResponse;
 import cbs.nova.dsl.builder.model.DslFileModels.FileEntry;
 import cbs.nova.dsl.builder.model.DslFileModels.FlushResult;
+import cbs.nova.dsl.builder.model.FileEntityKind;
 import cbs.nova.dsl.builder.repository.FileRepository;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -28,6 +29,9 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 public class FileService {
+
+  private static final String JAVA_SUFFIX = ".java";
+  private static final String MARKDOWN_SUFFIX = ".md";
 
   private final DslBuilderProperties properties;
   private final FileRepository repository;
@@ -69,21 +73,24 @@ public class FileService {
     flushPending();
   }
 
+  /**
+   * Legacy list: all {@code .java} files under the workspace root.
+   */
   public List<FileEntry> listFiles(String prefix) {
     ensureRoot();
     return repository.list(workspaceRoot(), prefix);
   }
 
-  public List<FileEntry> listAllFiles(String prefix, String suffix) {
+  /**
+   * List files for a specific entity kind. Paths are returned relative to the kind's root directory
+   * (workspace root for DSL/MODEL, the configured docs subdir for DOC).
+   */
+  public List<FileEntry> listFiles(FileEntityKind kind, String prefix) {
     ensureRoot();
-    Map<String, FileEntry> byPath = new TreeMap<>();
-    repository.list(workspaceRoot(), prefix, suffix)
-            .forEach(entry -> byPath.put(entry.path(), entry));
-    buffer.stagedPaths().stream()
-            .filter(path -> path.endsWith(suffix))
-            .filter(path -> prefix == null || prefix.isBlank() || path.startsWith(prefix))
-            .forEach(path -> byPath.putIfAbsent(path, stagedEntry(path)));
-    return List.copyOf(byPath.values());
+    var profile = FileEntityProfiles.of(kind, properties);
+    Path root = profile.rootPath(workspaceRoot());
+    String effectivePrefix = effectiveListPrefix(profile, prefix);
+    return repository.list(root, effectivePrefix, profile.suffix());
   }
 
   public long bufferVersion() {
@@ -166,9 +173,6 @@ public class FileService {
         }
       }
       log.info("[DSL files] flushed {} files, {} failed", flushed, failed);
-      // Invariant I5 / gap G6: a just-flushed edit must show as a draft on the next status
-      // read. Invalidate the per-root snapshot so the caller rescans git. Skip when nothing
-      // landed — a no-op flush shouldn't drop a still-fresh snapshot.
       if (flushed > 0) {
         invalidateGitStatus();
       }
@@ -187,6 +191,57 @@ public class FileService {
 
   public int pendingCount() {
     return buffer.pendingCount();
+  }
+
+  /**
+   * Visible for {@link ByNamePathResolver}: list files of a kind including staged buffer entries
+   * that have not been flushed yet. Paths are relative to the kind's root directory.
+   */
+  public List<FileEntry> listAllFiles(FileEntityKind kind, String prefix) {
+    ensureRoot();
+    var profile = FileEntityProfiles.of(kind, properties);
+    Path root = profile.rootPath(workspaceRoot());
+    String effectivePrefix = effectiveListPrefix(profile, prefix);
+    String suffix = profile.suffix();
+    String rootPrefix = profile.rootPrefix();
+
+    Map<String, FileEntry> byPath = new TreeMap<>();
+    repository.list(root, effectivePrefix, suffix)
+            .forEach(entry -> byPath.put(entry.path(), entry));
+
+    buffer.stagedPaths().stream()
+            .filter(path -> path.endsWith(suffix))
+            .filter(path -> {
+              String kindRelative = rootPrefix.isBlank()
+                      ? path
+                      : path.substring(rootPrefix.length() + 1);
+              return prefix == null || prefix.isBlank() || kindRelative.startsWith(prefix);
+            })
+            .forEach(path -> {
+              String kindRelative = rootPrefix.isBlank()
+                      ? path
+                      : path.substring(rootPrefix.length() + 1);
+              String content = buffer.get(path);
+              byPath.putIfAbsent(kindRelative,
+                      new FileEntry(kindRelative, content == null ? 0L : content.length(), 0L));
+            });
+    return List.copyOf(byPath.values());
+  }
+
+  /**
+   * Legacy overload used by older callers that already know the concrete directory and suffix to
+   * scan.
+   */
+  public List<FileEntry> listAllFiles(String prefix, String suffix) {
+    ensureRoot();
+    Map<String, FileEntry> byPath = new TreeMap<>();
+    repository.list(workspaceRoot(), prefix, suffix)
+            .forEach(entry -> byPath.put(entry.path(), entry));
+    buffer.stagedPaths().stream()
+            .filter(path -> path.endsWith(suffix))
+            .filter(path -> prefix == null || prefix.isBlank() || path.startsWith(prefix))
+            .forEach(path -> byPath.putIfAbsent(path, stagedEntry(path)));
+    return List.copyOf(byPath.values());
   }
 
   private void triggerFlushIfFull() {
@@ -216,5 +271,12 @@ public class FileService {
         throw new IllegalStateException("cannot create workspace root: " + root, e);
       }
     }
+  }
+
+  private static String effectiveListPrefix(FileEntityProfiles.Profile profile, String prefix) {
+    if (prefix != null && !prefix.isBlank()) {
+      return prefix;
+    }
+    return profile.searchDirs().isEmpty() ? "" : profile.searchDirs().get(0);
   }
 }

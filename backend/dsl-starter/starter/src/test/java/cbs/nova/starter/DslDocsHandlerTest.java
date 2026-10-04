@@ -12,7 +12,8 @@ import cbs.nova.starter.controller.DslDocsHandler;
 import cbs.nova.starter.exception.BuilderApiException;
 import cbs.nova.starter.exception.DslPayloadTooLargeException;
 import cbs.nova.starter.model.DslFileModels.FileContentResponse;
-import cbs.nova.starter.service.DslDocsService;
+import cbs.nova.starter.model.FileEntityKind;
+import cbs.nova.starter.service.DslFileService;
 import cbs.nova.starter.service.DocTemplateService;
 import cbs.nova.starter.web.RequestBodyLimitFilter;
 import java.io.IOException;
@@ -38,20 +39,20 @@ class DslDocsHandlerTest {
           new JacksonJsonHttpMessageConverter());
 
   private DslDocsHandler handler;
-  private DslDocsService docsService;
+  private DslFileService fileService;
 
   @BeforeEach
   void setUp() {
-    docsService = mock(DslDocsService.class);
+    fileService = mock(DslFileService.class);
     DslProperties properties = DslProperties.builder().sourceDir("/tmp/dsl").build();
-    handler = new DslDocsHandler(properties, docsService, new DocTemplateService(),
+    handler = new DslDocsHandler(properties, fileService, new DocTemplateService(),
             new ObjectMapper());
   }
 
   @Test
   void readByNameReturnsDocContent() throws Exception {
-    when(docsService.readDocByName("BatchProcessing"))
-            .thenReturn(new FileContentResponse("batch-processing.md", "# Batch",
+    when(fileService.readFileByName("BatchProcessing", FileEntityKind.DOC))
+            .thenReturn(new FileContentResponse("docs/batch-processing.md", "# Batch",
                     FileContentResponse.crc32("# Batch")));
 
     ServerResponse response = handler.readByName(
@@ -63,9 +64,9 @@ class DslDocsHandlerTest {
 
   @Test
   void readByNameReturns404WhenBuilderReportsNotFound() throws IOException {
-    when(docsService.readDocByName("Missing"))
+    when(fileService.readFileByName("Missing", FileEntityKind.DOC))
             .thenThrow(new BuilderApiException(HttpStatusCode.valueOf(404), "NOT_FOUND",
-                    "no DSL doc for name: Missing"));
+                    "no doc for name: Missing"));
 
     ServerResponse response = handler.readByName(
             request("GET", "/api/dsl/docs/by-name/Missing", "Missing"));
@@ -76,7 +77,7 @@ class DslDocsHandlerTest {
   @Test
   void readByNameReturns409WhenSourceDirNotConfigured() throws IOException {
     DslProperties properties = DslProperties.builder().build();
-    handler = new DslDocsHandler(properties, docsService, new DocTemplateService(),
+    handler = new DslDocsHandler(properties, fileService, new DocTemplateService(),
             new ObjectMapper());
 
     ServerResponse response = handler.readByName(
@@ -89,8 +90,9 @@ class DslDocsHandlerTest {
   void writeByNameStagesStructuredContentAndReturnsBuilderResolvedPath() throws Exception {
     String structured = "---\nname: BatchProcessing\ndescription: \"\"\n---\n\n"
             + "# BatchProcessing\n\nnew doc\n";
-    when(docsService.stageDocWriteByName(eq("BatchProcessing"), eq(structured)))
-            .thenReturn(new FileContentResponse("batch-processing.md", structured,
+    when(fileService.stageWriteByName(eq("BatchProcessing"), eq(structured),
+            eq(FileEntityKind.DOC)))
+            .thenReturn(new FileContentResponse("docs/batch-processing.md", structured,
                     FileContentResponse.crc32(structured)));
 
     ServerResponse response = handler.writeByName(
@@ -98,41 +100,43 @@ class DslDocsHandlerTest {
                     "new doc"));
 
     assertThat(response.statusCode().value()).isEqualTo(202);
-    verify(docsService).stageDocWriteByName("BatchProcessing", structured);
-    assertThat(renderBody(response)).contains("\"path\":\"batch-processing.md\"");
+    verify(fileService).stageWriteByName("BatchProcessing", structured, FileEntityKind.DOC);
+    assertThat(renderBody(response)).contains("\"path\":\"docs/batch-processing.md\"");
   }
 
   @Test
   void writeByNameFillsNameAndBodyHeadingForANewDoc() throws IOException {
     String structured = "---\nname: BatchProcessing\ndescription: \"\"\n---\n\n"
             + "# BatchProcessing\n";
-    when(docsService.stageDocWriteByName(eq("BatchProcessing"), eq(structured)))
-            .thenReturn(new FileContentResponse("batch-processing.md", structured,
+    when(fileService.stageWriteByName(eq("BatchProcessing"), eq(structured),
+            eq(FileEntityKind.DOC)))
+            .thenReturn(new FileContentResponse("docs/batch-processing.md", structured,
                     FileContentResponse.crc32(structured)));
 
     handler.writeByName(requestWithBody("POST", "/api/dsl/docs/by-name/BatchProcessing",
             "BatchProcessing", ""));
 
-    verify(docsService).stageDocWriteByName("BatchProcessing", structured);
+    verify(fileService).stageWriteByName("BatchProcessing", structured, FileEntityKind.DOC);
   }
 
   @Test
   void writeByNameKeepsAUserSuppliedHeading() throws IOException {
     String structured = "---\nname: BatchProcessing\ndescription: \"\"\n---\n\n"
             + "# My own title\n\nprose\n";
-    when(docsService.stageDocWriteByName(eq("BatchProcessing"), eq(structured)))
-            .thenReturn(new FileContentResponse("batch-processing.md", structured,
+    when(fileService.stageWriteByName(eq("BatchProcessing"), eq(structured),
+            eq(FileEntityKind.DOC)))
+            .thenReturn(new FileContentResponse("docs/batch-processing.md", structured,
                     FileContentResponse.crc32(structured)));
 
     handler.writeByName(requestWithBody("POST", "/api/dsl/docs/by-name/BatchProcessing",
             "BatchProcessing", "# My own title\n\nprose\n"));
 
-    verify(docsService).stageDocWriteByName("BatchProcessing", structured);
+    verify(fileService).stageWriteByName("BatchProcessing", structured, FileEntityKind.DOC);
   }
 
   @Test
   void listReturnsDocEntries() throws IOException {
-    when(docsService.listDocs(null)).thenReturn(List.of());
+    when(fileService.listFiles(null, FileEntityKind.DOC)).thenReturn(List.of());
 
     ServerResponse response = handler.list(request("GET", "/api/dsl/docs", null));
 

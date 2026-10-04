@@ -5,9 +5,8 @@ import cbs.nova.dsl.builder.model.DslFileModels.FileContentRequest;
 import cbs.nova.dsl.builder.model.DslFileModels.FileContentResponse;
 import cbs.nova.dsl.builder.model.DslFileModels.FileEntry;
 import cbs.nova.dsl.builder.model.DslFileModels.FlushResult;
-import cbs.nova.dsl.builder.repository.FileRepository;
+import cbs.nova.dsl.builder.model.FileEntityKind;
 import java.io.IOException;
-import java.nio.file.Path;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -16,14 +15,11 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class DocsService {
 
-  private static final String MARKDOWN_SUFFIX = ".md";
-
   private final DslBuilderProperties properties;
   private final FileService fileService;
-  private final FileRepository repository;
 
   public List<FileEntry> listDocs(String prefix) {
-    return repository.list(docsRoot(), prefix, MARKDOWN_SUFFIX);
+    return fileService.listFiles(FileEntityKind.DOC, prefix);
   }
 
   public FileContentResponse readDoc(String relativePath) throws IOException {
@@ -39,15 +35,9 @@ public class DocsService {
   }
 
   public int stageDocAll(List<FileContentRequest> files) {
-    int staged = 0;
-    for (FileContentRequest file : files) {
-      if (file.path() == null || file.path().isBlank()) {
-        continue;
-      }
-      stageDocWrite(file.path(), file.content() == null ? "" : file.content());
-      staged++;
-    }
-    return staged;
+    return fileService.stageAll(files.stream()
+            .map(f -> new FileContentRequest(prefixed(f.path()), f.content()))
+            .toList());
   }
 
   public FlushResult flushDocs() {
@@ -58,11 +48,14 @@ public class DocsService {
     return fileService.pendingCount();
   }
 
-  private Path docsRoot() {
-    return properties.workspaceDir().resolve(properties.docs().subDir());
-  }
-
   private String prefixed(String relativePath) {
-    return properties.docs().subDir() + "/" + relativePath;
+    String docsSubDir = properties.docs().subDir();
+    if (relativePath == null || relativePath.isBlank()) {
+      return docsSubDir;
+    }
+    if (relativePath.startsWith(docsSubDir + "/")) {
+      return relativePath;
+    }
+    return docsSubDir + "/" + relativePath;
   }
 }

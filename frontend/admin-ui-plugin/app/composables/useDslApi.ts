@@ -203,6 +203,16 @@ export function useDslApi() {
     log.info('writeDslFile request', { name })
     return bffWriteDslFileByName(name, { body: { content } })
   }
+  async function readDslModel(name: string) {
+    log.info('readDslModel request', { name })
+    const result = await bffReadDslFileByName(name, { query: { kind: 'MODEL' } })
+    return (result as { content?: string }).content ?? ''
+  }
+
+  async function writeDslModel(name: string, content: string) {
+    log.info('writeDslModel request', { name })
+    return bffWriteDslFileByName(name, { body: { content }, query: { kind: 'MODEL' } })
+  }
 
   async function readDslDoc(name: string): Promise<string | null> {
     log.info('readDslDoc request', { name })
@@ -694,6 +704,8 @@ export function useDslApi() {
     deleteDraft,
     readDslFile,
     writeDslFile,
+    readDslModel,
+    writeDslModel,
     readDslDoc,
     writeDslDoc,
     listDrafts,

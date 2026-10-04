@@ -8,6 +8,7 @@ import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.controller.DslFileHandler;
 import cbs.nova.starter.exception.BuilderApiException;
 import cbs.nova.starter.model.DslFileModels.FileContentResponse;
+import cbs.nova.starter.model.FileEntityKind;
 import cbs.nova.starter.service.DslFileService;
 import java.util.List;
 import java.util.Map;
@@ -44,7 +45,7 @@ class DslFileHandlerTest {
 
   @Test
   void readByNameReturnsFileContent() throws Exception {
-    when(fileService.readFileByName("LoanDisbursement"))
+    when(fileService.readFileByName("LoanDisbursement", FileEntityKind.DSL))
             .thenReturn(new FileContentResponse("dsl/LoanDisbursementDsl.java", "step A {}",
                     FileContentResponse.crc32("step A {}")));
 
@@ -56,8 +57,22 @@ class DslFileHandlerTest {
   }
 
   @Test
+  void readByNameReturnsModelContentWhenKindIsModel() throws Exception {
+    when(fileService.readFileByName("BatchProcessing", FileEntityKind.MODEL))
+            .thenReturn(new FileContentResponse("src/models/BatchModels.java", "record BatchIn {}",
+                    FileContentResponse.crc32("record BatchIn {}")));
+
+    ServerResponse response = handler.readByName(
+            requestWithQuery("GET", "/api/dsl/files/by-name/BatchProcessing", "BatchProcessing",
+                    "kind=MODEL"));
+
+    assertThat(response.statusCode().value()).isEqualTo(200);
+    assertThat(renderBody(response)).contains("\"content\":\"record BatchIn {}\"");
+  }
+
+  @Test
   void readByNameReturns404WhenBuilderReportsNotFound() throws IOException {
-    when(fileService.readFileByName("Missing"))
+    when(fileService.readFileByName("Missing", FileEntityKind.DSL))
             .thenThrow(builderNotFound("no DSL file for name: Missing"));
 
     ServerResponse response = handler.readByName(
@@ -79,7 +94,7 @@ class DslFileHandlerTest {
 
   @Test
   void writeByNameStagesWriteAndReturnsBuilderResolvedPath() throws Exception {
-    when(fileService.stageWriteByName("ReserveInventory", "new content"))
+    when(fileService.stageWriteByName("ReserveInventory", "new content", FileEntityKind.DSL))
             .thenReturn(new FileContentResponse("dsl/ReserveInventoryDsl.java", "new content",
                     FileContentResponse.crc32("new content")));
 
@@ -92,8 +107,22 @@ class DslFileHandlerTest {
   }
 
   @Test
+  void writeByNameStagesModelWriteWhenKindIsModel() throws Exception {
+    when(fileService.stageWriteByName("BatchProcessing", "record BatchIn {}", FileEntityKind.MODEL))
+            .thenReturn(new FileContentResponse("src/models/BatchModels.java", "record BatchIn {}",
+                    FileContentResponse.crc32("record BatchIn {}")));
+
+    ServerResponse response = handler.writeByName(
+            requestWithBodyAndQuery("POST", "/api/dsl/files/by-name/BatchProcessing",
+                    "BatchProcessing", "record BatchIn {}", "kind=MODEL"));
+
+    assertThat(response.statusCode().value()).isEqualTo(202);
+    assertThat(renderBody(response)).contains("\"path\":\"src/models/BatchModels.java\"");
+  }
+
+  @Test
   void writeByNameReturns404WhenBuilderReportsNotFound() throws IOException {
-    when(fileService.stageWriteByName("Missing", "x"))
+    when(fileService.stageWriteByName("Missing", "x", FileEntityKind.DSL))
             .thenThrow(builderNotFound("no DSL file for name: Missing"));
 
     ServerResponse response = handler.writeByName(
@@ -106,8 +135,29 @@ class DslFileHandlerTest {
     return new BuilderApiException(HttpStatusCode.valueOf(404), "NOT_FOUND", message);
   }
 
+  private static void applyQueryParams(MockHttpServletRequest req, String query) {
+    if (query == null || query.isBlank()) {
+      return;
+    }
+    for (String pair : query.split("&")) {
+      int idx = pair.indexOf('=');
+      if (idx > 0) {
+        req.setParameter(pair.substring(0, idx), pair.substring(idx + 1));
+      }
+    }
+  }
+
   private static ServerRequest request(String method, String path, String name) {
     MockHttpServletRequest req = new MockHttpServletRequest(method, path);
+    req.setAttribute(RouterFunctions.URI_TEMPLATE_VARIABLES_ATTRIBUTE, Map.of("name", name));
+    return ServerRequest.create(req, CONVERTERS);
+  }
+
+  private static ServerRequest requestWithQuery(String method, String path, String name,
+          String query) {
+    MockHttpServletRequest req = new MockHttpServletRequest(method, path + "?" + query);
+    req.setQueryString(query);
+    applyQueryParams(req, query);
     req.setAttribute(RouterFunctions.URI_TEMPLATE_VARIABLES_ATTRIBUTE, Map.of("name", name));
     return ServerRequest.create(req, CONVERTERS);
   }
@@ -115,6 +165,17 @@ class DslFileHandlerTest {
   private static ServerRequest requestWithBody(String method, String path, String name,
           String body) {
     MockHttpServletRequest req = new MockHttpServletRequest(method, path);
+    req.setAttribute(RouterFunctions.URI_TEMPLATE_VARIABLES_ATTRIBUTE, Map.of("name", name));
+    req.setContent(body.getBytes());
+    req.setContentType("text/plain");
+    return ServerRequest.create(req, CONVERTERS);
+  }
+
+  private static ServerRequest requestWithBodyAndQuery(String method, String path, String name,
+          String body, String query) {
+    MockHttpServletRequest req = new MockHttpServletRequest(method, path + "?" + query);
+    req.setQueryString(query);
+    applyQueryParams(req, query);
     req.setAttribute(RouterFunctions.URI_TEMPLATE_VARIABLES_ATTRIBUTE, Map.of("name", name));
     req.setContent(body.getBytes());
     req.setContentType("text/plain");

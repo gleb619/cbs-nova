@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import {
   addImportsDir,
-    addPlugin,
+  addPlugin,
   createResolver,
   defineNuxtModule,
   extendPages,

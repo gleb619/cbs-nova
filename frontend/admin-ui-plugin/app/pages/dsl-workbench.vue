@@ -12,6 +12,7 @@ import { useWorkbenchDelete } from '@cbs/admin-ui-plugin/composables/useWorkbenc
 import { useWorkbenchDoc } from '@cbs/admin-ui-plugin/composables/useWorkbenchDoc'
 import { useWorkbenchDraft } from '@cbs/admin-ui-plugin/composables/useWorkbenchDraft'
 import { useWorkbenchMenus } from '@cbs/admin-ui-plugin/composables/useWorkbenchMenus'
+import { useWorkbenchModels } from '@cbs/admin-ui-plugin/composables/useWorkbenchModels'
 import { useWorkbenchNewDefinition } from '@cbs/admin-ui-plugin/composables/useWorkbenchNewDefinition'
 import { useWorkbenchObjectSearch } from '@cbs/admin-ui-plugin/composables/useWorkbenchObjectSearch'
 import { useWorkbenchPanels } from '@cbs/admin-ui-plugin/composables/useWorkbenchPanels'
@@ -196,6 +197,30 @@ const workbenchDoc = useWorkbenchDoc({
 })
 
 // ---------------------------------------------------------------------------
+// Models tab: Java model classes per selected construct. The backend
+// `ByNamePathResolver` already routes the file-API by-name endpoint to
+// `src/models/<Name>.java` when a matching type declaration exists, so the
+// models tab reuses the same `dslApi.readDslFile` / `writeDslFile` helpers as
+// the Code tab — DSL, models, and docs are three views onto one file API.
+// ---------------------------------------------------------------------------
+
+const workbenchModels = useWorkbenchModels({
+  readModels: async (name) => {
+    try {
+      return await dslApi.readDslModel(name)
+    } catch (err) {
+      // 404 = no model file yet (work-in-progress). Treat as blank so the
+      // operator can author a brand new one from the Models tab.
+      const status = (err as { status?: number }).status
+      if (status === 404) return null
+      throw err
+    }
+  },
+  writeModels: async (name, content) => dslApi.writeDslModel(name, content),
+  logError: (message, fields) => log.error(message, fields),
+})
+
+// ---------------------------------------------------------------------------
 // Structure tab: fetch-on-select with retry.
 // ---------------------------------------------------------------------------
 
@@ -216,6 +241,7 @@ function syncSelectionEffects() {
   void loadSourceFile(selectedConstruct.value)
   void structureApi.loadStructure(state.value.selectedName ?? '')
   void workbenchDoc.loadDoc(state.value.selectedName ?? '')
+  void workbenchModels.loadModels(state.value.selectedName ?? '')
 }
 
 // ---------------------------------------------------------------------------
@@ -414,6 +440,11 @@ function handleSaveDoc(value: string) {
   void workbenchDoc.saveDoc()
 }
 
+function handleSaveModels(value: string) {
+  workbenchModels.updateModels(value)
+  void workbenchModels.saveModels()
+}
+
 // ---------------------------------------------------------------------------
 // Deep-link wiring (mounted hook).
 // ---------------------------------------------------------------------------
@@ -516,6 +547,7 @@ onMounted(async () => {
           <DslBodyEditor
             ref="bodyEditorRef"
             :code="editorCode"
+            :models="workbenchModels.models.value"
             :doc="workbenchDoc.doc.value"
             :construct="selectedConstruct"
             :save-status="draftSave.status.value"
@@ -539,6 +571,8 @@ onMounted(async () => {
             @save="handleEditorSave"
             @update:doc="workbenchDoc.updateDoc"
             @save-doc="handleSaveDoc"
+            @update:models="workbenchModels.updateModels"
+            @save-models="handleSaveModels"
             @retry-structure="structureApi.retryStructure"
           />
         </div>

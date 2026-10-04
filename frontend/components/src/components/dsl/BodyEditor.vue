@@ -17,6 +17,7 @@ import CodeTab from './CodeTab.vue'
 import DocTab from './DocTab.vue'
 import ExplainTab from './ExplainTab.vue'
 import HierarchyTab from './HierarchyTab.vue'
+import ModelsTab from './ModelsTab.vue'
 import type { EditorMarker } from './MonacoEditor.vue'
 import PreviewTab from './PreviewTab.vue'
 import ProblemsPanel from './ProblemsPanel.vue'
@@ -31,6 +32,8 @@ const props = withDefaults(
      * existing callers keep working unchanged.
      */
     code?: string
+    /** Optional controlled Java model source (records/classes under src/models). */
+    models?: string
     /** Optional controlled documentation markdown (frontmatter + body). */
     doc?: string
     saveStatus?: string
@@ -82,8 +85,10 @@ const props = withDefaults(
 const emit = defineEmits<{
   'update:code': [value: string]
   'update:doc': [value: string]
+  'update:models': [value: string]
   save: [value: string]
   'save-doc': [value: string]
+  'save-models': [value: string]
   select: [payload: { index: number; error: ValidationError }]
   'retry-structure': []
 }>()
@@ -91,6 +96,7 @@ const emit = defineEmits<{
 type BodyEditorTab =
   | 'structure'
   | 'code'
+  | 'models'
   | 'docs'
   | 'preview'
   | 'explain'
@@ -99,6 +105,7 @@ type BodyEditorTab =
 const BODY_EDITOR_TABS: readonly BodyEditorTab[] = [
   'structure',
   'code',
+  'models',
   'docs',
   'preview',
   'explain',
@@ -167,6 +174,26 @@ const bodyDoc = computed<string>({
       emit('update:doc', value)
     } else {
       internalDoc.value = value
+    }
+  },
+})
+
+const isModelsControlled = computed(() => props.models !== undefined)
+const internalModelsByName = ref<Record<string, string>>({})
+const internalModels = computed<string>({
+  get: () => internalModelsByName.value[draftName.value] ?? '',
+  set: (value: string) => {
+    internalModelsByName.value[draftName.value] = value
+  },
+})
+
+const bodyModels = computed<string>({
+  get: () => (isModelsControlled.value ? (props.models ?? '') : internalModels.value),
+  set: (value: string) => {
+    if (isModelsControlled.value) {
+      emit('update:models', value)
+    } else {
+      internalModels.value = value
     }
   },
 })
@@ -265,6 +292,15 @@ defineExpose({ revealPosition, insertAtCursor, selectProblem })
       <button
         type="button"
         class="px-3 py-2 text-sm font-medium border-b-2 transition-colors"
+        :class="tab === 'models' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'"
+        data-testid="body-editor-tab-models"
+        @click="tab = 'models'"
+      >
+        Models
+      </button>
+      <button
+        type="button"
+        class="px-3 py-2 text-sm font-medium border-b-2 transition-colors"
         :class="tab === 'docs' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'"
         data-testid="body-editor-tab-docs"
         @click="tab = 'docs'"
@@ -341,6 +377,21 @@ defineExpose({ revealPosition, insertAtCursor, selectProblem })
         :validate="validate"
         :busy="busy"
         @save="emit('save', $event)"
+      />
+      <ModelsTab
+        v-if="tab === 'models'"
+        :key="`${construct?.name ?? 'none'}:${codeEpoch}`"
+        v-model:code="bodyModels"
+        :name="construct?.name ?? ''"
+        :read-only="!construct"
+        :save-status="saveStatus"
+        :last-saved-at="lastSavedAt"
+        :helper-catalog-fetch="helperCatalogFetch"
+        :constructs-fetch="constructsFetch"
+        :refresh="refresh"
+        :validate="validate"
+        :busy="busy"
+        @save="emit('save-models', $event)"
       />
       <DocTab
         v-if="tab === 'docs'"
