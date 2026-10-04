@@ -437,7 +437,9 @@ function formatRelativeTime(iso: string): string {
           v-if="formError"
           data-testid="notification-rule-form-error"
           class="text-xs text-red-600"
-          >{{ formError }}</span
+          >{{
+            formError
+          }}</span
         >
         <button
           type="submit"

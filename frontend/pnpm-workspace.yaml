@@ -1,3 +1,10 @@
 packages:
   - 'admin-ui-plugin'
   - 'components'
+
+overrides:
+  # openapi-typescript 7.x builds its output through the legacy ts.factory compiler
+  # API that TypeScript 7 removed, so the workspace-wide TS 7 leaves it crashing.
+  # Scope a TypeScript 5 copy to openapi-typescript only; the rest of the repo
+  # stays on TypeScript 7.
+  openapi-typescript>typescript: 5.9.3

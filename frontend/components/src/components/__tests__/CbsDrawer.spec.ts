@@ -34,7 +34,7 @@ describe('CbsDrawer', () => {
 
     await wrapper.get('[aria-hidden="true"]').trigger('click')
 
-    expect(wrapper.emitted('update:open')!.at(-1)).toEqual([false])
+    expect(wrapper.emitted('update:open')?.at(-1)).toEqual([false])
   })
 
   it('emits update:open false when the close button is clicked', async () => {
@@ -42,7 +42,7 @@ describe('CbsDrawer', () => {
 
     await wrapper.get('[data-testid="drawer-close-button"]').trigger('click')
 
-    expect(wrapper.emitted('update:open')!.at(-1)).toEqual([false])
+    expect(wrapper.emitted('update:open')?.at(-1)).toEqual([false])
   })
 
   it('falls back to the title for the aria-label when ariaLabel is omitted', () => {
@@ -155,7 +155,7 @@ describe('CbsDrawer', () => {
       )
       await nextTick()
 
-      expect(w.emitted('update:open')!.at(-1)).toEqual([false])
+      expect(w.emitted('update:open')?.at(-1)).toEqual([false])
     })
 
     it('moves focus to the first tabbable element when opened', async () => {

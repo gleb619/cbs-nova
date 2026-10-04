@@ -53,21 +53,19 @@ describe('ASTDiffNode', () => {
     { status: 'added', icon: '+', label: 'added', borderClass: 'border-green-400' },
     { status: 'removed', icon: '−', label: 'removed', borderClass: 'border-red-400' },
     { status: 'modified', icon: '~', label: 'modified', borderClass: 'border-yellow-400' },
-  ])('maps status $status to icon/icon-label and border class', ({
-    status,
-    icon,
-    label,
-    borderClass,
-  }) => {
-    const wrapper = mountNode(makeNode({ status }))
+  ])(
+    'maps status $status to icon/icon-label and border class',
+    ({ status, icon, label, borderClass }) => {
+      const wrapper = mountNode(makeNode({ status }))
 
-    const statusBadge = wrapper.find('[data-testid="ast-diff-status"]')
-    expect(statusBadge.text()).toBe(icon)
-    expect(statusBadge.attributes('aria-label')).toBe(label)
+      const statusBadge = wrapper.find('[data-testid="ast-diff-status"]')
+      expect(statusBadge.text()).toBe(icon)
+      expect(statusBadge.attributes('aria-label')).toBe(label)
 
-    const root = wrapper.find('[data-testid="ast-diff-node"]')
-    expect(root.classes().some((c) => c.includes(borderClass))).toBe(true)
-  })
+      const root = wrapper.find('[data-testid="ast-diff-node"]')
+      expect(root.classes().some((c) => c.includes(borderClass))).toBe(true)
+    },
+  )
 
   it('applies an ml- indent class scaled by depth and capped at 16', () => {
     const wrapperShallow = mountNode(makeNode(), 0)

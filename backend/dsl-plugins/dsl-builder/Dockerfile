@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # -----------------------------------------------------------------------------
-# DSL Builder: single-stage image on `gradle:9.4.1-jdk25`.
+# DSL Builder: single-stage image on `gradle:9.7.1-jdk25`.
 #
 # Runtime must be a JDK + Gradle distribution because the service drives the
 # Gradle Tooling API (`GradleService`) to compile user DSL on demand. A bare
@@ -13,7 +13,7 @@
 # project that resolves `cbs.nova:*` artifacts and the plugin from
 # `mavenLocal()`, so the repository must be seeded at image build time.
 # -----------------------------------------------------------------------------
-FROM gradle:9.4.1-jdk25
+FROM gradle:9.7.1-jdk25
 
 WORKDIR /build
 

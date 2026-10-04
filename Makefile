@@ -49,7 +49,7 @@ publish: ## Publish the DSL platform to Maven Local
 	@python3 $(SCRIPT) publish
 
 # Minimum number of paths expected in /v3/api-docs. Bump when new DSL routes are added.
-MIN_OPENAPI_PATHS := 37
+MIN_OPENAPI_PATHS := 83
 
 .PHONY: openapi
 openapi: ## Regenerate docs/openapi.json from the live /v3/api-docs (needs Postgres; Temporal optional)
@@ -60,6 +60,9 @@ openapi: ## Regenerate docs/openapi.json from the live /v3/api-docs (needs Postg
 	cleanup() { pkill -f 'cbs.nova.starter.[S]tarterApplication' 2>/dev/null || true; rm -f "$$LOG"; }; \
 	trap cleanup EXIT; \
 	env SERVER_PORT=$$PORT \
+		MANAGEMENT_HEALTH_RABBIT_ENABLED=false \
+		CBS_WEBHOOK_ENABLED=true \
+		CBS_VHS_ENABLED=true \
 		backend/dsl-platform/gradlew -p backend/dsl-starter :starter-launcher:bootRun --console=plain >"$$LOG" 2>&1 & \
 	up=0; for i in $$(seq 1 40); do \
 		if curl -sf --max-time 2 "$$BASE/actuator/health" 2>/dev/null | grep -q '"status":"UP"'; then up=1; break; fi; \
@@ -347,3 +350,15 @@ task-status: ## List worktrees and matching branches for TASK_ID
 	@test -n "$(TASK_ID)" || (echo "TASK_ID is required" && exit 1)
 	@echo "== worktrees =="; git worktree list | grep "$(TASK_ID)" || true
 	@echo "== branches =="; git branch | grep "$(BRANCH_NAME)" || true
+
+.PHONY: quality-up
+quality-up: ## Start SonarQube and Dependency-Track quality containers
+	@python3 $(SCRIPT) quality up
+
+.PHONY: quality-down
+quality-down: ## Stop SonarQube and Dependency-Track quality containers
+	@python3 $(SCRIPT) quality down
+
+.PHONY: quality-scan
+quality-scan: ## Run Spotless, SpotBugs, SBOM, SonarQube, and Dependency-Track upload
+	@python3 $(SCRIPT) quality scan

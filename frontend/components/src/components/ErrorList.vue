@@ -50,7 +50,9 @@ function isExpanded(i: number): boolean {
               <span
                 v-if="codeStyle === 'badge'"
                 class="text-xs font-mono px-2 py-0.5 rounded bg-red-200 text-red-800"
-                >{{ err.code }}</span
+                >{{
+                  err.code
+                }}</span
               >
               <span v-else class="text-xs text-gray-500"
                 >Code: <span class="font-mono">{{ err.code }}</span></span
@@ -82,9 +84,9 @@ function isExpanded(i: number): boolean {
                 <div class="text-sm font-semibold text-red-700 break-all">{{ err.message }}</div>
                 <div v-if="err.code" class="text-xs text-gray-500 mt-1">
                   <template v-if="codeStyle === 'badge'">
-                    <span class="text-xs font-mono px-2 py-0.5 rounded bg-red-200 text-red-800"
-                      >{{ err.code }}</span
-                    >
+                    <span class="text-xs font-mono px-2 py-0.5 rounded bg-red-200 text-red-800">{{
+                      err.code
+                    }}</span>
                   </template>
                   <template v-else> Code: <span class="font-mono">{{ err.code }}</span> </template>
                 </div>

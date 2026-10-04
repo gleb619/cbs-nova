@@ -87,9 +87,9 @@ describe('DraftMetadataCard', () => {
   it('shows the details by default', () => {
     const wrapper = mountCard()
     const details = wrapper.find('[data-testid="draft-metadata-card-details"]')
-    expect(wrapper.find('[data-testid="draft-metadata-card-toggle"]').attributes('aria-expanded')).toBe(
-      'true',
-    )
+    expect(
+      wrapper.find('[data-testid="draft-metadata-card-toggle"]').attributes('aria-expanded'),
+    ).toBe('true')
     expect(details.attributes('style') ?? '').not.toContain('display: none')
   })
 
@@ -113,9 +113,9 @@ describe('DraftMetadataCard', () => {
     first.unmount()
 
     const second = mountCard()
-    expect(second.find('[data-testid="draft-metadata-card-details"]').attributes('style')).toContain(
-      'display: none',
-    )
+    expect(
+      second.find('[data-testid="draft-metadata-card-details"]').attributes('style'),
+    ).toContain('display: none')
   })
 
   it('shows the loading state when metadata is null and loading is true', () => {

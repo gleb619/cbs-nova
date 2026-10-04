@@ -30,7 +30,7 @@ const props = defineProps<{
   ) => Promise<RunnerOutput> | RunnerOutput
 }>()
 
-const emit = defineEmits<{
+const _emit = defineEmits<{
   submit: []
   format: [formatted: string]
 }>()
@@ -54,7 +54,7 @@ onBeforeUpdate(() => {
 })
 
 const history = useHierarchyHistory(() => props.name)
-const historyEntries = computed(() => history.entries.value)
+const _historyEntries = computed(() => history.entries.value)
 
 function currentOptions(): Record<string, unknown> {
   return {
@@ -135,7 +135,7 @@ async function run() {
   }
 }
 
-function rerun(payload: unknown) {
+function _rerun(payload: unknown) {
   if (payload && typeof payload === 'object' && !Array.isArray(payload)) {
     const p = payload as Record<string, unknown>
     if (typeof p.depth === 'number') depth.value = clampDepth(p.depth)
@@ -222,9 +222,9 @@ const statusLabel = computed(() => {
         </div>
 
         <footer class="flex items-center justify-between px-3 py-2 border-t border-line">
-          <span class="text-xs text-ink-muted" data-testid="hierarchy-status"
-            >{{ statusLabel }}</span
-          >
+          <span class="text-xs text-ink-muted" data-testid="hierarchy-status">{{
+            statusLabel
+          }}</span>
           <span class="text-xs text-ink-muted font-mono">
             payload {{ JSON.stringify(currentOptions()) }}
           </span>
@@ -238,9 +238,9 @@ const statusLabel = computed(() => {
         <header class="flex items-center justify-between px-3 py-2 border-b border-line">
           <div class="flex items-center gap-2">
             <span class="text-xs font-medium text-ink">Result · hierarchy</span>
-            <span class="text-xs text-ink-muted" data-testid="hierarchy-result-status"
-              >{{ statusLabel }}</span
-            >
+            <span class="text-xs text-ink-muted" data-testid="hierarchy-result-status">{{
+              statusLabel
+            }}</span>
           </div>
         </header>
         <div class="flex-1 min-h-0 overflow-auto p-3">

@@ -107,7 +107,7 @@ function onBlur() {
   touched.value = true
 }
 
-function remove() {
+function _remove() {
   if (props.readonly) return
   emit('remove')
 }
@@ -180,7 +180,6 @@ if (fieldEvents) {
     >
 
     <!-- boolean -->
-    <!-- biome-ignore lint/a11y/noLabelWithoutControl: boolean label wraps its checkbox and text -->
     <label
       v-else-if="effectiveType === 'boolean'"
       :for="inputId"

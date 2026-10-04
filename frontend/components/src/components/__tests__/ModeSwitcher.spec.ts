@@ -54,19 +54,20 @@ describe('ModeSwitcher', () => {
     }
   })
 
-  it.each<RunnerMode>(
-    EXPECTED_MODES,
-  )('emits update:modelValue with %s when its button is clicked', async (mode) => {
-    const wrapper = mountSwitcher('run')
-    const label = EXPECTED_LABELS[EXPECTED_MODES.indexOf(mode)]
-    const button = findModeButton(wrapper, label)
-    expect(button).toBeDefined()
+  it.each<RunnerMode>(EXPECTED_MODES)(
+    'emits update:modelValue with %s when its button is clicked',
+    async (mode) => {
+      const wrapper = mountSwitcher('run')
+      const label = EXPECTED_LABELS[EXPECTED_MODES.indexOf(mode)]
+      const button = findModeButton(wrapper, label)
+      expect(button).toBeDefined()
 
-    await button?.trigger('click')
+      await button?.trigger('click')
 
-    const emitted = wrapper.emitted('update:modelValue')
-    expect(emitted).toBeDefined()
-    expect(emitted).toHaveLength(1)
-    expect(emitted?.[0]).toEqual([mode])
-  })
+      const emitted = wrapper.emitted('update:modelValue')
+      expect(emitted).toBeDefined()
+      expect(emitted).toHaveLength(1)
+      expect(emitted?.[0]).toEqual([mode])
+    },
+  )
 })

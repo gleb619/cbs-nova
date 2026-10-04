@@ -14,7 +14,7 @@ test('webhooks page renders shell plus deliveries panel or empty/error state', a
   const banner = page.getByTestId('error-banner')
   const errorPage = page.getByTestId('error-page')
 
-  await expect(
-    table.or(empty).or(loading).or(error).or(banner).or(errorPage).first(),
-  ).toBeVisible({ timeout: 15_000 })
+  await expect(table.or(empty).or(loading).or(error).or(banner).or(errorPage).first()).toBeVisible({
+    timeout: 15_000,
+  })
 })

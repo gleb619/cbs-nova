@@ -4,7 +4,7 @@ import { createEmitter } from '../../utils/createEmitter'
 
 const saveError = new Error('save failed')
 
-const dirtyEmitter = createEmitter<{ dirty: void; clean: void }>()
+const dirtyEmitter = createEmitter<{ dirty: undefined; clean: undefined }>()
 
 const mockWorkbench = {
   state: reactive({ isDirty: false, isSaving: false }),

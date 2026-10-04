@@ -87,7 +87,6 @@ function onBlur() {
       @blur="onBlur"
     >
 
-    <!-- biome-ignore lint/a11y/noLabelWithoutControl: boolean label wraps its checkbox and text -->
     <label
       v-else-if="normalizedType === 'boolean'"
       :for="inputId"

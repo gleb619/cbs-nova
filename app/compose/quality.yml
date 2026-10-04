@@ -1,0 +1,49 @@
+services:
+  sonarqube:
+    image: sonarqube:10.6-community
+    container_name: cbs-nova-sonarqube
+    ports:
+      - "9000:9000"
+    environment:
+      - SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_extensions:/opt/sonarqube/extensions
+      - sonarqube_logs:/opt/sonarqube/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/api/system/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  dtrack-apiserver:
+    image: dependencytrack/apiserver:4.12.2
+    container_name: cbs-nova-dtrack-api
+    ports:
+      - "8081:8080"
+    environment:
+      - ALPINE_DATABASE_MODE=embedded
+    volumes:
+      - dtrack-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/version"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  dtrack-frontend:
+    image: dependencytrack/frontend:4.12.2
+    container_name: cbs-nova-dtrack-frontend
+    ports:
+      - "8082:8080"
+    environment:
+      - API_BASE_URL=http://localhost:8081
+    depends_on:
+      dtrack-apiserver:
+        condition: service_healthy
+
+volumes:
+  sonarqube_data:
+  sonarqube_extensions:
+  sonarqube_logs:
+  dtrack-data:

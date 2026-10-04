@@ -435,7 +435,10 @@ describe('session.get security branches', () => {
 
   it('detects refresh-token reuse on userinfo 401 and returns 401 session revoked', async () => {
     const callbackUrl = 'http://localhost:3000/api/v1/auth/callback'
-    setRuntimeConfig({ authIssuer: 'http://keycloak:8080/realms/cbs-nova', authCallbackUrl: callbackUrl })
+    setRuntimeConfig({
+      authIssuer: 'http://keycloak:8080/realms/cbs-nova',
+      authCallbackUrl: callbackUrl,
+    })
     cookieJar.cbs_at = 'old-access'
     cookieJar.cbs_rt = 'refresh-xyz'
     cookieJar.cbs_rt_prev = await oidcSession.sha256b64url('refresh-xyz')

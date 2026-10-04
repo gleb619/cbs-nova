@@ -169,3 +169,5 @@ __pycache__/
 /dsl-workbench-objectname.png
 /.playwright-mcp/*.yml
 /frontend/admin-ui-plugin/@cbs/components/.nuxt/
+/.playwright-mcp/
+/arms_cache/

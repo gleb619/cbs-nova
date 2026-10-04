@@ -170,7 +170,7 @@ describe('RunConfirmationModal', () => {
     const focusable = wrapper.findAll('button, input:not([type="hidden"])')
     expect(focusable.length).toBeGreaterThan(0)
 
-    const firstTestId = focusable[0].attributes('data-testid')
+    const _firstTestId = focusable[0].attributes('data-testid')
     const last = focusable[focusable.length - 1].element as HTMLElement
 
     last.focus()

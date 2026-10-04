@@ -287,7 +287,7 @@ function extractParams(path: string): string[] {
 function handlerRelPath(spec: BffRouteSpec): string {
   const suffix = spec.bffPath.replace(/^\/api\/v1\//, '')
   const segments = suffix.split('/').map((s) => (s.startsWith('{') ? `[${s.slice(1, -1)}]` : s))
-  return join('routes', ...segments) + `.${spec.method.toLowerCase()}.ts`
+  return `${join('routes', ...segments)}.${spec.method.toLowerCase()}.ts`
 }
 
 // ---------------------------------------------------------------------------
@@ -438,7 +438,7 @@ export interface GenerateResult {
   generatedFiles: string[]
 }
 
-export function generate(specPath: string, pluginDir: string, outDir: string): GenerateResult {
+export function generate(specPath: string, _pluginDir: string, outDir: string): GenerateResult {
   const operations = buildOperations(specPath)
   const generated = operations.filter(({ spec }) => !EXCLUDED_OPERATIONS[spec.operationId])
   const excluded = operations.filter(({ spec }) => EXCLUDED_OPERATIONS[spec.operationId])
@@ -449,7 +449,7 @@ export function generate(specPath: string, pluginDir: string, outDir: string): G
   }
 
   const routesDir = join(outDir, 'server/api/v1/generated')
-  writeFileEnsured(join(routesDir, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n')
+  writeFileEnsured(join(routesDir, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`)
 
   const generatedFiles: string[] = ['server/api/v1/generated/manifest.json']
   for (const { spec } of generated) {

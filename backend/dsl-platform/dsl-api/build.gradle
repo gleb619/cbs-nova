@@ -4,6 +4,7 @@ plugins {
 }
 
 dependencies {
+  compileOnly libs.swagger.annotations.jakarta
   api libs.jspecify
   compileOnly libs.lombok
   annotationProcessor libs.lombok

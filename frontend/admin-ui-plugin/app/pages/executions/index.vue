@@ -39,15 +39,19 @@ function resolveStalePollMs(): number {
 }
 
 const defaultPollMs = resolveStalePollMs()
-const { enabled: isPollingEnabled, intervalMs: pollingIntervalMs, onToggle: onTogglePolling, onIntervalChange } =
-  useLivePollingPreference({
-    storagePrefix: 'executions.livePolling',
-    defaultIntervalMs: defaultPollMs,
-    defaultEnabled: false,
-    isActive: () => true,
-    start: startListPolling,
-    stop: stopListPolling,
-  })
+const {
+  enabled: isPollingEnabled,
+  intervalMs: pollingIntervalMs,
+  onToggle: onTogglePolling,
+  onIntervalChange,
+} = useLivePollingPreference({
+  storagePrefix: 'executions.livePolling',
+  defaultIntervalMs: defaultPollMs,
+  defaultEnabled: false,
+  isActive: () => true,
+  start: startListPolling,
+  stop: stopListPolling,
+})
 
 onMounted(() => {
   if (isPollingEnabled.value) startListPolling(pollingIntervalMs.value)

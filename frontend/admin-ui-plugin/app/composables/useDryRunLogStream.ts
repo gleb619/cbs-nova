@@ -97,7 +97,7 @@ export function useDryRunLogStream(): UseDryRunLogStreamReturn {
           // ignore
         }
       }
-    } catch (err) {
+    } catch (_err) {
       status.value = 'error'
       emitter.emit('error', undefined)
     }

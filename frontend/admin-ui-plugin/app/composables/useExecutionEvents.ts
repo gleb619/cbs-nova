@@ -87,7 +87,7 @@ export function useExecutionEvents(): UseExecutionEventsReturn {
           }
         }
       }
-    } catch (err) {
+    } catch (_err) {
       status.value = 'error'
       emitter.emit('error', undefined)
     }

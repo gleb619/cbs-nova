@@ -2,16 +2,13 @@ import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import {
   addImportsDir,
-  addLayout,
-  addPlugin,
+    addPlugin,
   createResolver,
   defineNuxtModule,
   extendPages,
   resolvePath,
 } from '@nuxt/kit'
-import {
-  parseForwardedHeadersEnv,
-} from './server/utils/parseForwardedHeadersEnv'
+import { parseForwardedHeadersEnv } from './server/utils/parseForwardedHeadersEnv'
 import { parseSecurityHeadersEnv } from './server/utils/parseSecurityHeadersEnv'
 import { resolveRuntimeConfig } from './server/utils/moduleRuntimeConfig'
 
@@ -311,7 +308,7 @@ export default defineNuxtModule<ModuleOptions>({
     nuxt.options.features.devLogs = false
 
     nuxt.hook('vite:extendConfig', (config) => {
-      const cfg = config as any
+      const cfg = config as { plugins?: unknown[] }
       cfg.plugins = cfg.plugins || []
       cfg.plugins.push({
         name: 'cbs-disable-nuxt-hook-debugger',
@@ -344,17 +341,6 @@ export default defineNuxtModule<ModuleOptions>({
     // free of $fetch. Mirrors the sidebarState plugin pattern.
     // -----------------------------------------------------------------------
     addPlugin({ src: resolve('./app/plugins/dslSchemaFetch.ts') })
-
-    // -----------------------------------------------------------------------
-    // Layouts — register the default shell layout from this plugin
-    // -----------------------------------------------------------------------
-    addLayout(
-      {
-        filename: 'cbs-admin.vue',
-        getContents: () => readFileSync(resolve('./app/layouts/admin.vue'), 'utf-8'),
-      },
-      'cbs-admin',
-    )
 
     // -----------------------------------------------------------------------
     // Pages — extend the host router with the admin UI pages
@@ -493,13 +479,15 @@ export default defineNuxtModule<ModuleOptions>({
         })
       }
 
-      // The generated stubs import `~/server/utils/proxyFromManifest`, but `~`
-      // resolves to the host rootDir in a consuming app (and in dist/), not the
-      // plugin directory. Pin a deterministic alias so the import resolves.
+      // The generated stubs and hand-written server routes import `~/server/...`,
+      // but in Nuxt 4 `~` resolves to `<rootDir>/app` and the plugin's BFF
+      // utils live in `<pluginDir>/server/utils/`. Pin a deterministic alias so
+      // the imports resolve to the plugin directory in both dev (workspace)
+      // and prod (consuming-app) modes.
       nitroConfig.alias = nitroConfig.alias || {}
-      nitroConfig.alias['~/server/utils/proxyFromManifest'] = resolve(
-        './server/utils/proxyFromManifest.ts',
-      )
+      nitroConfig.alias['~/server/utils'] = resolve('./server/utils')
+      nitroConfig.alias['~/server/middleware'] = resolve('./server/middleware')
+      nitroConfig.alias['~/server'] = resolve('./server')
     })
 
     // -----------------------------------------------------------------------

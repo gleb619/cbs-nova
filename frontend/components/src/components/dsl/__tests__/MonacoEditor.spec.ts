@@ -36,10 +36,10 @@ const {
     executeEdits: vi.fn(),
   }
 
-  const create = vi.fn((...args: unknown[]) => editorInstance)
-  const setModelLanguage = vi.fn((...args: unknown[]) => undefined)
-  const setModelMarkers = vi.fn((...args: unknown[]) => undefined)
-  const registerCompletionItemProvider = vi.fn((...args: unknown[]) => ({ dispose: vi.fn() }))
+  const create = vi.fn((..._args: unknown[]) => editorInstance)
+  const setModelLanguage = vi.fn((..._args: unknown[]) => undefined)
+  const setModelMarkers = vi.fn((..._args: unknown[]) => undefined)
+  const registerCompletionItemProvider = vi.fn((..._args: unknown[]) => ({ dispose: vi.fn() }))
 
   return {
     changeHandlers,

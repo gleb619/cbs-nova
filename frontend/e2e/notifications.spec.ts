@@ -13,7 +13,7 @@ test('notifications page renders shell plus rule list or empty/error state', asy
   const banner = page.getByTestId('error-banner')
   const errorPage = page.getByTestId('error-page')
 
-  await expect(
-    loading.or(empty).or(error).or(banner).or(errorPage).first(),
-  ).toBeVisible({ timeout: 15_000 })
+  await expect(loading.or(empty).or(error).or(banner).or(errorPage).first()).toBeVisible({
+    timeout: 15_000,
+  })
 })

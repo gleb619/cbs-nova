@@ -17,14 +17,12 @@ const SAMPLE_STRUCTURE: ObjectStructureDto = {
   ],
 }
 
-function buildHarness(opts: {
-  selected?: { type?: string } | null
-  fetcher?: ReturnType<typeof vi.fn>
-} = {}) {
+function buildHarness(
+  opts: { selected?: { type?: string } | null; fetcher?: ReturnType<typeof vi.fn> } = {},
+) {
   const selectedRef = ref<{ type?: string } | null>(opts.selected ?? null)
   const selectedConstruct = computed(() => selectedRef.value)
-  const fetchObjectStructure =
-    opts.fetcher ?? vi.fn(async () => SAMPLE_STRUCTURE)
+  const fetchObjectStructure = opts.fetcher ?? vi.fn(async () => SAMPLE_STRUCTURE)
   const harness = useWorkbenchStructure({
     selectedConstruct,
     fetchObjectStructure,
@@ -124,7 +122,10 @@ describe('useWorkbenchStructure — loadStructure success', () => {
   it('passes the most recent constructType when selectedConstruct changes mid-call', async () => {
     let resolveFetch!: (value: ObjectStructureDto) => void
     const fetcher = vi.fn(
-      () => new Promise<ObjectStructureDto>((resolve) => { resolveFetch = resolve }),
+      () =>
+        new Promise<ObjectStructureDto>((resolve) => {
+          resolveFetch = resolve
+        }),
     )
     const h = buildHarness({ selected: { type: 'process' }, fetcher })
 
@@ -189,16 +190,15 @@ describe('useWorkbenchStructure — loadStructure cache', () => {
     await flushPromises()
 
     expect(fetcher).toHaveBeenCalledTimes(2)
-    expect(fetcher.mock.calls.map((c) => c[1])).toEqual([
-      'BatchProcessing',
-      'OtherProcess',
-    ])
+    expect(fetcher.mock.calls.map((c) => c[1])).toEqual(['BatchProcessing', 'OtherProcess'])
   })
 })
 
 describe('useWorkbenchStructure — loadStructure error', () => {
   it('captures the error message, nulls structure, and leaves loading false', async () => {
-    const fetcher = vi.fn(async () => { throw new Error('boom') })
+    const fetcher = vi.fn(async () => {
+      throw new Error('boom')
+    })
     const h = buildHarness({ selected: { type: 'process' }, fetcher })
 
     await h.loadStructure('BatchProcessing')

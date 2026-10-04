@@ -43,7 +43,7 @@ describe('DropdownMenu', () => {
     expect(buttons).toHaveLength(items.length)
     expect(buttons[1]?.attributes('disabled')).toBeDefined()
 
-    await buttons[0]!.trigger('click')
+    await buttons[0]?.trigger('click')
     expect(wrapper.emitted('select')?.[0]?.[0]).toEqual(items[0])
     expect(wrapper.find('[role="menu"]').exists()).toBe(false)
 
@@ -75,10 +75,10 @@ describe('DropdownMenu', () => {
     const buttons = wrapper.findAll('[role="menuitem"]')
 
     await menu.trigger('keydown', { key: 'ArrowDown' })
-    expect(document.activeElement).toBe(buttons[2]!.element) // skips disabled Validate
+    expect(document.activeElement).toBe(buttons[2]?.element) // skips disabled Validate
 
     await menu.trigger('keydown', { key: 'ArrowUp' })
-    expect(document.activeElement).toBe(buttons[0]!.element)
+    expect(document.activeElement).toBe(buttons[0]?.element)
 
     wrapper.unmount()
   })
@@ -92,7 +92,7 @@ describe('DropdownMenu', () => {
     const menu = wrapper.find('[role="menu"]')
     await menu.trigger('keydown', { key: 'ArrowDown' }) // moves past disabled Validate → Save
     const buttons = wrapper.findAll('[role="menuitem"]')
-    await buttons[2]!.trigger('keydown', { key: 'Enter' })
+    await buttons[2]?.trigger('keydown', { key: 'Enter' })
 
     expect(wrapper.emitted('select')?.[0]?.[0]).toEqual(items[2])
     wrapper.unmount()
@@ -107,7 +107,7 @@ describe('DropdownMenu', () => {
 
     const buttons = wrapper.findAll('[role="menuitem"]')
     expect(buttons.length).toBeGreaterThan(0)
-    expect(document.activeElement).toBe(buttons[0]!.element)
+    expect(document.activeElement).toBe(buttons[0]?.element)
 
     wrapper.unmount()
   })

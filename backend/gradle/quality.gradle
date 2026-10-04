@@ -1,0 +1,33 @@
+// Quality tooling: SpotBugs per Java subproject; SonarQube at the build root.
+if (project == rootProject) {
+    apply plugin: 'org.sonarqube'
+
+    sonarqube {
+        properties {
+            property "sonar.projectKey", "cbs-nova-${rootProject.name}"
+            property "sonar.projectName", "CBS Nova ${rootProject.name}"
+            property "sonar.host.url", System.getenv("SONAR_HOST_URL") ?: "http://localhost:9000"
+            property "sonar.token", System.getenv("SONAR_TOKEN") ?: "admin"
+            property "sonar.qualitygate.wait", "true"
+        }
+    }
+}
+
+if (project != rootProject) {
+    apply plugin: 'com.github.spotbugs'
+
+    spotbugs {
+        toolVersion = libs.versions.spotbugs.get()
+        ignoreFailures = false
+        effort = 'max'
+        reportLevel = 'high'
+        reportsDir = layout.buildDirectory.dir('reports/spotbugs').get().asFile
+    }
+
+    tasks.matching { it.name == 'spotbugsMain' }.configureEach {
+        reports {
+            xml.required = true
+            html.required = true
+        }
+    }
+}

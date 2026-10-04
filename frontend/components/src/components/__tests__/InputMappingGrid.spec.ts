@@ -43,7 +43,7 @@ describe('InputMappingGrid', () => {
 
     const rows = wrapper.findAll('tbody tr')
     expect(rows).toHaveLength(2)
-    expect(rows[0]!.text()).toContain('a')
-    expect(rows[1]!.text()).toContain('b')
+    expect(rows[0]?.text()).toContain('a')
+    expect(rows[1]?.text()).toContain('b')
   })
 })

@@ -353,25 +353,25 @@ defineExpose({ revealPosition, insertAtCursor, selectProblem })
         @save="emit('save-doc', $event)"
       />
       <PreviewTab
-        v-if="tab === 'preview'"
+        v-if="tab === 'preview' && props.preview"
         :key="construct?.name ?? ''"
         :name="construct?.name ?? ''"
         :type="construct?.type as ConstructType | undefined"
-        :preview="props.preview!"
+        :preview="props.preview"
       />
       <ExplainTab
-        v-if="tab === 'explain'"
+        v-if="tab === 'explain' && props.explain"
         :key="construct?.name ?? ''"
         :name="construct?.name ?? ''"
         :type="construct?.type as ConstructType | undefined"
-        :explain="props.explain!"
+        :explain="props.explain"
       />
       <HierarchyTab
-        v-if="tab === 'hierarchy'"
+        v-if="tab === 'hierarchy' && props.hierarchy"
         :key="construct?.name ?? ''"
         :name="construct?.name ?? ''"
         :type="construct?.type as ConstructType | undefined"
-        :hierarchy="props.hierarchy!"
+        :hierarchy="props.hierarchy"
       />
       <ProblemsPanel
         v-if="diagnosticsFetch && diagnosticsDefinition"

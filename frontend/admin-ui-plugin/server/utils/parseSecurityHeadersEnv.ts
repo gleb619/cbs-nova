@@ -16,7 +16,9 @@
  */
 export type SecurityHeadersConfig = Record<string, string | null> | false
 
-export function parseSecurityHeadersEnv(raw: string | undefined): SecurityHeadersConfig | undefined {
+export function parseSecurityHeadersEnv(
+  raw: string | undefined,
+): SecurityHeadersConfig | undefined {
   if (raw === undefined) return undefined
   const trimmed = raw.trim()
   if (trimmed === '') return undefined

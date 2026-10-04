@@ -29,11 +29,7 @@ import * as loggerModule from '../useClientLogger'
 // eslint-disable-next-line import/first
 import * as apiModule from '../useDslApi'
 // eslint-disable-next-line import/first
-import type {
-  PromoteResult,
-  PromotionDefinition,
-  PromotionEnvironment,
-} from '@cbs/components'
+import type { PromoteResult, PromotionDefinition, PromotionEnvironment } from '@cbs/components'
 
 type ApiMock = {
   fetchPromotionEnvironments: ReturnType<typeof vi.fn>
@@ -67,9 +63,7 @@ function promoteResult(dryRun: boolean, published = 2): PromoteResult {
     reloaded: true,
     published,
     failed: 0,
-    results: [
-      { name: 'LoanDsl', outcome: dryRun ? 'unchanged' : 'published', message: undefined },
-    ],
+    results: [{ name: 'LoanDsl', outcome: dryRun ? 'unchanged' : 'published', message: undefined }],
   }
 }
 

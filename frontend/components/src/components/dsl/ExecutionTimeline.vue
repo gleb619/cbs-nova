@@ -96,7 +96,7 @@ const minStart = computed(() => {
     const s = startMs(tx)
     if (s < min) min = s
   }
-  return isFinite(min) ? min : 0
+  return Number.isFinite(min) ? min : 0
 })
 
 const maxEnd = computed(() => {
@@ -105,7 +105,7 @@ const maxEnd = computed(() => {
     const end = startMs(tx) + durationMs(tx)
     if (end > max) max = end
   }
-  return isFinite(max) ? max : minStart.value
+  return Number.isFinite(max) ? max : minStart.value
 })
 
 const spanMs = computed(() => {

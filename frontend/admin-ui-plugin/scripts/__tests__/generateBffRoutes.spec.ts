@@ -1,20 +1,8 @@
-import {
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import {
-  check,
-  discoverHandRoutes,
-  generate,
-  type GenerateResult,
-} from '../generateBffRoutes'
+import { check, discoverHandRoutes, generate, type GenerateResult } from '../generateBffRoutes'
 
 const TMP_PREFIX = join(tmpdir(), 'gen-bff-routes-test-')
 
@@ -62,11 +50,7 @@ function makeCheckFixture(): CheckFixture {
   return { pluginDir, outDir, result }
 }
 
-function commitGenerated(
-  pluginDir: string,
-  outDir: string,
-  generatedFiles: string[],
-): void {
+function commitGenerated(pluginDir: string, outDir: string, generatedFiles: string[]): void {
   for (const rel of generatedFiles) {
     const fresh = readFileSync(join(outDir, rel), 'utf8')
     const target = join(pluginDir, rel)
@@ -212,9 +196,7 @@ describe('generateBffRoutes — toBffPath + emitClient param templating', () => 
       // deleteDraft is excluded from generated stubs but emitClient iterates ALL operations,
       // so the override must still surface in the generated client function.
       const client = readGenerated(dir, 'app/composables/generated/useBffApi.ts')
-      expect(client).toContain(
-        'return bffFetch(`/api/v1/dsl/drafts/${name}/delete`,',
-      )
+      expect(client).toContain('return bffFetch(`/api/v1/dsl/drafts/${name}/delete`,')
     } finally {
       cleanup(dir)
     }
@@ -266,9 +248,9 @@ describe('generateBffRoutes — emitStub flags', () => {
         '/api/dsl/drafts/{name}': { put: { operationId: 'saveDraft' } },
       })
       generate(specPath, dir, dir)
-      expect(readGenerated(dir, 'server/api/v1/generated/routes/dsl/drafts/[name].put.ts')).toContain(
-        '"hasBody": true',
-      )
+      expect(
+        readGenerated(dir, 'server/api/v1/generated/routes/dsl/drafts/[name].put.ts'),
+      ).toContain('"hasBody": true')
     } finally {
       cleanup(dir)
     }
@@ -284,10 +266,7 @@ describe('generateBffRoutes — emitStub flags', () => {
       })
       generate(specPath, dir, dir)
       expect(
-        readGenerated(
-          dir,
-          'server/api/v1/generated/routes/dsl/publish/[name]/history/[id].get.ts',
-        ),
+        readGenerated(dir, 'server/api/v1/generated/routes/dsl/publish/[name]/history/[id].get.ts'),
       ).toContain('"explicitMethod": true')
     } finally {
       cleanup(dir)
@@ -301,10 +280,7 @@ describe('generateBffRoutes — emitStub flags', () => {
         '/api/dsl/definitions': { get: { operationId: 'listDefs' } },
       })
       generate(specPath, dir, dir)
-      const stub = readGenerated(
-        dir,
-        'server/api/v1/generated/routes/dsl/definitions.get.ts',
-      )
+      const stub = readGenerated(dir, 'server/api/v1/generated/routes/dsl/definitions.get.ts')
       expect(stub).toContain('"hasBody": false')
       expect(stub).toContain('"explicitMethod": false')
     } finally {
@@ -319,9 +295,9 @@ describe('generateBffRoutes — emitStub flags', () => {
         '/api/dsl/drafts/{name}': { put: { operationId: 'saveDraft' } },
       })
       generate(specPath, dir, dir)
-      expect(readGenerated(dir, 'server/api/v1/generated/routes/dsl/drafts/[name].put.ts')).toContain(
-        '"explicitMethod": true',
-      )
+      expect(
+        readGenerated(dir, 'server/api/v1/generated/routes/dsl/drafts/[name].put.ts'),
+      ).toContain('"explicitMethod": true')
     } finally {
       cleanup(dir)
     }
@@ -508,9 +484,9 @@ describe('generateBffRoutes — check', () => {
       const rel = cfg.result.generatedFiles[1]
       rmSync(join(cfg.pluginDir, rel))
       const failures = runCheck(cfg)
-      expect(
-        failures.some((m) => m.includes(rel) && m.includes('missing generated file')),
-      ).toBe(true)
+      expect(failures.some((m) => m.includes(rel) && m.includes('missing generated file'))).toBe(
+        true,
+      )
       expect(exitSpy).toHaveBeenCalledWith(1)
     } finally {
       cleanup(cfg.pluginDir, cfg.outDir)
@@ -526,11 +502,9 @@ describe('generateBffRoutes — check', () => {
       mkdirSync(dirname(staleAbs), { recursive: true })
       writeFileSync(staleAbs, '// leftover from a previous regeneration')
       const failures = runCheck(cfg)
-      expect(
-        failures.some(
-          (m) => m.includes(staleRel) && m.includes('stale generated file'),
-        ),
-      ).toBe(true)
+      expect(failures.some((m) => m.includes(staleRel) && m.includes('stale generated file'))).toBe(
+        true,
+      )
       expect(exitSpy).toHaveBeenCalledWith(1)
     } finally {
       cleanup(cfg.pluginDir, cfg.outDir)
@@ -568,8 +542,7 @@ describe('generateBffRoutes — check', () => {
       expect(
         failures.some(
           (m) =>
-            m.includes('shadows a generated BFF route') &&
-            m.includes('dsl/definitions.get.ts'),
+            m.includes('shadows a generated BFF route') && m.includes('dsl/definitions.get.ts'),
         ),
       ).toBe(true)
       expect(exitSpy).toHaveBeenCalledWith(1)

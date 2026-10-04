@@ -60,9 +60,9 @@ describe('activity page (T662)', () => {
     const wrapper = mountPage()
     await flushPromises()
 
-    const executionLink = wrapper.findComponent(ActivityFeedProbe).props(
-      'executionLink',
-    ) as (aggregateId: string) => string | null
+    const executionLink = wrapper.findComponent(ActivityFeedProbe).props('executionLink') as (
+      aggregateId: string,
+    ) => string | null
     expect(executionLink('agg-123')).toBe('/executions/agg-123')
   })
 

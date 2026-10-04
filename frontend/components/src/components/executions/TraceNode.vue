@@ -32,14 +32,16 @@ function formatDuration(ms?: number) {
     >
       {{ props.step.stepType }}
     </span>
-    <span class="font-medium text-gray-900 truncate" :title="props.step.name"
-      >{{ props.step.name }}</span
-    >
+    <span class="font-medium text-gray-900 truncate" :title="props.step.name">{{
+      props.step.name
+    }}</span>
     <ExecutionsStatusBadge :status="props.step.status" />
     <span
       class="ml-auto text-xs text-gray-500"
       :data-testid="`execution-trace-node-duration-${props.step.id}`"
-      >{{ formatDuration(props.step.duration) }}</span
+      >{{
+        formatDuration(props.step.duration)
+      }}</span
     >
   </div>
 </template>

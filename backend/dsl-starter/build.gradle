@@ -2,6 +2,8 @@ plugins {
   id 'idea'
   alias(libs.plugins.spotless) apply false
   alias(libs.plugins.test.logger) apply false
+  alias(libs.plugins.spotbugs) apply false
+  alias(libs.plugins.sonarqube) apply false
   // T414: SBOM generation (CycloneDX) for the full Spring Boot runtime classpath.
   // Pinned in backend/gradle/libs.versions.toml as `cyclonedx-bom`.
   // Applied at the root to register `:cyclonedxBom` (Aggregate SBOM); the
@@ -18,6 +20,7 @@ ext['lombok.version'] = libs.versions.lombok.get()
 allprojects {
   group = 'cbs.nova'
   version = cbsNovaVersion
+  apply from: "${rootDir}/../gradle/quality.gradle"
 
   /*configurations.all {
     resolutionStrategy {

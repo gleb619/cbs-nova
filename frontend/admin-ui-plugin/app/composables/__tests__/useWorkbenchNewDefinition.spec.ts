@@ -54,8 +54,7 @@ describe('useWorkbenchNewDefinition — panel state', () => {
   })
 
   it('closes the panel and resets state', () => {
-    const { showNewPanel, newName, selectedTemplate, openNewPanel, closeNewPanel } =
-      buildHarness()
+    const { showNewPanel, newName, selectedTemplate, openNewPanel, closeNewPanel } = buildHarness()
     openNewPanel()
     newName.value = 'Alpha'
     selectedTemplate.value = processTemplate

@@ -79,7 +79,7 @@ describe('markdownBlocks', () => {
   })
 
   it('round-trips a 2x2 table with escaped pipes in cells', () => {
-    const md = ['| a | b |', '| --- | --- |', '| 1 | 2 |', '| 3 | 4 |'].join('\n') + '\n'
+    const md = `${['| a | b |', '| --- | --- |', '| 1 | 2 |', '| 3 | 4 |'].join('\n')}\n`
     const blocks = parseBlocks(md)
     expect(blocks[0].kind).toBe('table')
     if (blocks[0].kind === 'table') {

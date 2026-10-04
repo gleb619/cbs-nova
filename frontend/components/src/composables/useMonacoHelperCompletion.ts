@@ -52,7 +52,7 @@ export function useMonacoHelperCompletion(options: UseMonacoHelperCompletionOpti
   }
   if (!state) throw new Error('unreachable: state is defined after init')
 
-  const ownedState: RegisterState = state!
+  const ownedState: RegisterState = state
 
   function register(): Monaco.IDisposable {
     if (ownedState.disposable) return ownedState.disposable

@@ -82,9 +82,9 @@ const childSummary = computed(() => {
         {{ node.kind }}
       </span>
       <span class="text-sm font-medium text-neutral-800">{{ node.name }}</span>
-      <span class="text-xs text-gray-400 ml-auto" v-if="!isOpen && childSummary"
-        >{{ childSummary }}</span
-      >
+      <span class="text-xs text-gray-400 ml-auto" v-if="!isOpen && childSummary">{{
+        childSummary
+      }}</span>
     </button>
 
     <div v-if="isOpen" class="flex flex-col gap-1 mt-1">

@@ -2,6 +2,8 @@ plugins {
   id 'idea'
   alias(libs.plugins.spotless) apply false
   alias(libs.plugins.test.logger) apply false
+  alias(libs.plugins.spotbugs) apply false
+  alias(libs.plugins.sonarqube) apply false
 }
 
 apply from: "${rootDir}/../gradle/task-timer.gradle"
@@ -10,6 +12,7 @@ apply from: "${rootDir}/../gradle/worktree-version.gradle"
 allprojects {
   group = 'cbs.nova'
   version = cbsNovaVersion
+  apply from: "${rootDir}/../gradle/quality.gradle"
 }
 
 subprojects {

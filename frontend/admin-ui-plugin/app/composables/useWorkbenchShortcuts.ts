@@ -81,7 +81,7 @@ export function useWorkbenchShortcuts(options: UseWorkbenchShortcutsOptions) {
   const newShortcut = computed(() => `${MOD.value}+${ALT}+N`)
   const actionsShortcut = computed(() => `${MOD.value}+${ALT}+A`)
   const miscShortcut = computed(() => `${MOD.value}+${ALT}+M`)
-  const objectsShortcut = computed(() => `${MOD.value}+${ALT}+O`)
+  const _objectsShortcut = computed(() => `${MOD.value}+${ALT}+O`)
 
   function handleSaveShortcut(event: KeyboardEvent) {
     if ((event.key !== 's' && event.key !== 'S') || (!event.metaKey && !event.ctrlKey)) {

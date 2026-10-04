@@ -1,10 +1,10 @@
 [versions]
 java = "25"
 cbs-nova = "0.0.1-SNAPSHOT"
-h2 = "2.4.240"
+h2 = "2.5.250"
 
 # plugins
-spring-boot = "4.0.4"
+spring-boot = "4.1.1"
 spring-dm = "1.1.7"
 
 [libraries]

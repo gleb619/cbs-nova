@@ -69,11 +69,13 @@ function formatTime(s: string) {
         <span
           :class="['px-1.5 py-0.5 rounded text-[10px] uppercase font-medium w-14 text-center shrink-0',
                        severityColor[log.severity] ?? 'bg-gray-100 text-gray-800']"
-          >{{ log.severity }}</span
+          >{{
+            log.severity
+          }}</span
         >
-        <span v-if="log.step" class="text-gray-600 w-40 shrink-0 truncate" :title="log.step"
-          >{{ log.step }}</span
-        >
+        <span v-if="log.step" class="text-gray-600 w-40 shrink-0 truncate" :title="log.step">{{
+          log.step
+        }}</span>
         <span class="text-gray-800 break-all">{{ log.message }}</span>
       </div>
     </div>

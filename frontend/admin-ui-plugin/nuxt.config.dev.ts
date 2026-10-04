@@ -14,7 +14,7 @@ export default defineNuxtConfig({
   // plugin pages and the shared @cbs/components SFCs.
   postcss: {
     plugins: {
-      tailwindcss: {},
+      '@tailwindcss/postcss': {},
       autoprefixer: {},
     },
   },

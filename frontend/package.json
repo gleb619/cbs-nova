@@ -30,11 +30,16 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
-    "@biomejs/biome": "^2.5.3",
-    "@cyclonedx/cyclonedx-npm": "6.0.0",
-    "@playwright/test": "^1.49.0",
-    "@types/node": "^26.4.0",
+    "@biomejs/biome": "2.5.14",
+    "@cyclonedx/cyclonedx-npm": "6.0.1",
+    "@playwright/test": "^1.63.0",
+    "@types/node": "26.6.2",
     "openapi-typescript": "7.13.0",
-    "typescript": "^5.4.0"
+    "typescript": "^7.0.2"
+  },
+  "pnpm": {
+    "overrides": {
+      "openapi-typescript>typescript": "npm:typescript@5.9.3"
+    }
   }
 }

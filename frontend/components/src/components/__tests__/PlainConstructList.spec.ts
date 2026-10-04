@@ -69,7 +69,7 @@ describe('PlainConstructList', () => {
     await item.trigger('click')
 
     expect(wrapper.emitted('select')).toBeTruthy()
-    expect(wrapper.emitted('select')![0]).toEqual(['CreateOrder'])
+    expect(wrapper.emitted('select')?.[0]).toEqual(['CreateOrder'])
   })
 
   it('calls onSelect callback when provided', async () => {
@@ -186,6 +186,6 @@ describe('PlainConstructList', () => {
 
     expect(wrapper.emitted('select')).toBeFalsy()
     expect(wrapper.emitted('delete')).toBeTruthy()
-    expect(wrapper.emitted('delete')![0]).toEqual(['SendEmail'])
+    expect(wrapper.emitted('delete')?.[0]).toEqual(['SendEmail'])
   })
 })

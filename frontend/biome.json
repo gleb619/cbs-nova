@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.5.3/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.5.14/schema.json",
   "vcs": {
     "enabled": true,
     "clientKind": "git",
@@ -137,6 +137,39 @@
           "a11y": {
             "useSemanticElements": "off",
             "noNoninteractiveElementToInteractiveRole": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "admin-ui-plugin/scripts/generateBffRoutes.ts",
+        "admin-ui-plugin/scripts/__tests__/generateBffRoutes.spec.ts"
+      ],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noTemplateCurlyInString": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "**/*.spec.ts",
+        "**/*.spec.vue",
+        "**/__tests__/**/*.ts",
+        "**/__tests__/**/*.vue",
+        "admin-ui-plugin/vitest.config.ts",
+        "admin-ui-plugin/vitest.setup.ts"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noNonNullAssertion": "off"
+          },
+          "suspicious": {
+            "noExplicitAny": "off"
           }
         }
       }

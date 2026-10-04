@@ -82,7 +82,7 @@ describe('ScheduleList', () => {
     await wrapper.find('[data-testid="schedule-delete-confirm"]').trigger('click')
 
     expect(wrapper.emitted('delete')).toHaveLength(1)
-    expect(wrapper.emitted('delete')![0]).toEqual(['LoanDisbursement'])
+    expect(wrapper.emitted('delete')?.[0]).toEqual(['LoanDisbursement'])
 
     // After confirm, the row returns to its initial state (delete button visible again).
     const rows = wrapper.findAll('[data-testid="schedule-row"]')
@@ -149,7 +149,7 @@ describe('ScheduleList', () => {
     await wrapper.find('[data-testid="schedule-delete-confirm"]').trigger('click')
 
     expect(wrapper.emitted('delete')).toHaveLength(1)
-    expect(wrapper.emitted('delete')![0]).toEqual(['Repayment'])
+    expect(wrapper.emitted('delete')?.[0]).toEqual(['Repayment'])
   })
 
   it('clears the pending state when the schedules change', async () => {
@@ -180,7 +180,7 @@ describe('ScheduleList', () => {
     await wrapper.find('[data-testid="schedule-create-form"]').trigger('submit')
 
     expect(wrapper.emitted('create')).toHaveLength(1)
-    expect(wrapper.emitted('create')![0]).toEqual([
+    expect(wrapper.emitted('create')?.[0]).toEqual([
       {
         definition: 'LoanDisbursement',
         cron: '0 9 * * *',

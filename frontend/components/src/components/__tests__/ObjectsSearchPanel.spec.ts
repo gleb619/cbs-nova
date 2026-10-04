@@ -85,7 +85,7 @@ describe('ObjectsSearchPanel', () => {
 
     await wrapper.find('input[placeholder="Search query"]').setValue('Pay')
 
-    expect(wrapper.emitted('update:query')!.at(-1)).toEqual(['Pay'])
+    expect(wrapper.emitted('update:query')?.at(-1)).toEqual(['Pay'])
   })
 
   it('emits update:mode when the mode select changes', async () => {
@@ -93,7 +93,7 @@ describe('ObjectsSearchPanel', () => {
 
     await wrapper.get('[data-testid="objects-search-mode-select"]').setValue('fuzzy')
 
-    expect(wrapper.emitted('update:mode')!.at(-1)).toEqual(['fuzzy'])
+    expect(wrapper.emitted('update:mode')?.at(-1)).toEqual(['fuzzy'])
   })
 
   it('emits update:type when the type select changes', async () => {
@@ -104,7 +104,7 @@ describe('ObjectsSearchPanel', () => {
 
     await typeSelect.setValue('process')
 
-    expect(wrapper.emitted('update:type')!.at(-1)).toEqual(['process'])
+    expect(wrapper.emitted('update:type')?.at(-1)).toEqual(['process'])
   })
 
   it('emits search when the Search button is clicked', async () => {
@@ -185,7 +185,7 @@ describe('ObjectsSearchPanel', () => {
 
     await wrapper.get('[aria-label="Close object search"]').trigger('click')
 
-    expect(wrapper.emitted('update:open')!.at(-1)).toEqual([false])
+    expect(wrapper.emitted('update:open')?.at(-1)).toEqual([false])
   })
 
   it('emits select with the clicked result', async () => {
@@ -193,7 +193,7 @@ describe('ObjectsSearchPanel', () => {
 
     await wrapper.get('[data-testid="objects-search-result-row-ParseDate"]').trigger('click')
 
-    expect(wrapper.emitted('select')!.at(-1)).toEqual([results[0]])
+    expect(wrapper.emitted('select')?.at(-1)).toEqual([results[0]])
   })
 
   it('emits select when Enter is pressed on a row', async () => {
@@ -201,7 +201,7 @@ describe('ObjectsSearchPanel', () => {
 
     await wrapper.get('[data-testid="objects-search-result-row-Notify"]').trigger('keydown.enter')
 
-    expect(wrapper.emitted('select')!.at(-1)).toEqual([results[1]])
+    expect(wrapper.emitted('select')?.at(-1)).toEqual([results[1]])
   })
 
   it('keeps the panel open after a select so several helpers can be inserted', async () => {
@@ -290,7 +290,7 @@ describe('ObjectsSearchPanel', () => {
 
     await wrapper.get('[data-testid="objects-search-results"]').trigger('keydown.esc')
 
-    expect(wrapper.emitted('update:open')!.at(-1)).toEqual([false])
+    expect(wrapper.emitted('update:open')?.at(-1)).toEqual([false])
   })
 
   it('resets the active row when a new search runs', async () => {

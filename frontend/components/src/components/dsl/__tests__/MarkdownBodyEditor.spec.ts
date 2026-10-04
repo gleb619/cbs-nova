@@ -2,11 +2,7 @@ import { mount } from '@vue/test-utils'
 import { nextTick } from 'vue'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import MarkdownBodyEditor from '../MarkdownBodyEditor.vue'
-import {
-  parseBlocks,
-  resetBlockIdCounter,
-  serializeBlocks,
-} from '../../../utils/markdownBlocks'
+import { parseBlocks, resetBlockIdCounter, serializeBlocks } from '../../../utils/markdownBlocks'
 
 const mountEditor = (props: Record<string, unknown> = {}) =>
   mount(MarkdownBodyEditor, { props: { body: '', ...props } })
@@ -195,12 +191,12 @@ describe('MarkdownBodyEditor — component wiring', () => {
     it('disables boundary buttons via :disabled binding', () => {
       wrapper = mountEditor({ body: '## A\n\nB text\n' })
 
-      const upFirst = wrapper.find(
-        '[data-testid="md-move-up-0"]',
-      ) as unknown as { element: HTMLButtonElement }
-      const downLast = wrapper.find(
-        '[data-testid="md-move-down-1"]',
-      ) as unknown as { element: HTMLButtonElement }
+      const upFirst = wrapper.find('[data-testid="md-move-up-0"]') as unknown as {
+        element: HTMLButtonElement
+      }
+      const downLast = wrapper.find('[data-testid="md-move-down-1"]') as unknown as {
+        element: HTMLButtonElement
+      }
       expect(upFirst.element.disabled).toBe(true)
       expect(downLast.element.disabled).toBe(true)
     })
@@ -251,8 +247,6 @@ describe('MarkdownBodyEditor — component wiring', () => {
       expect(parseBlocks(payload)).toHaveLength(2)
       expect(payload).toContain('## A')
     })
-
-    
 
     it('does not emit on insert under readOnly', async () => {
       wrapper = mountEditor({ body: '## A\n', readOnly: true })

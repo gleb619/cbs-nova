@@ -39,9 +39,7 @@ const emit = defineEmits<{
 const dropdownOpen = ref(false)
 const rootRef = ref<HTMLElement | null>(null)
 
-const hasAutosave = computed(
-  () => !!props.autosaveOptions && props.autosaveOptions.length > 0,
-)
+const hasAutosave = computed(() => !!props.autosaveOptions && props.autosaveOptions.length > 0)
 
 function requestSave() {
   // Manual save is always available — user decides when to save.

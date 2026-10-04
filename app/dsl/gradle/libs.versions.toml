@@ -1,11 +1,11 @@
 [versions]
 java = "25"
-temporal = "1.27.0"
-avaje-jsonb = "3.4"
-avaje-jsonb-generator = "3.4"
-junit = "5.12.2"
-junit-platform = "1.12.2"
-assertj = "3.27.3"
+temporal = "1.39.0"
+avaje-jsonb = "3.16"
+avaje-jsonb-generator = "3.16"
+junit = "6.1.3"
+junit-platform = "6.1.3"
+assertj = "3.27.7"
 cbs-nova = "0.0.1-SNAPSHOT"
 
 # plugins

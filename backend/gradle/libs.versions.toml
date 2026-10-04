@@ -21,6 +21,7 @@ mvel = "2.5.2.Final"
 keycloak-admin-client = "22.0.0"
 rest-assured = "5.5.0"
 springdoc-openapi = "3.0.2"
+swagger-annotations = "2.2.43"
 avaje-jsonb = "3.4"
 avaje-jsonb-generator = "3.4"
 h2 = "2.4.240"
@@ -41,6 +42,8 @@ spring-boot = "4.0.4"
 spring-cloud = "2025.1.1"
 spring-dm = "1.1.7"
 spotless = "7.0.2"
+spotbugs = "6.0.26"
+sonarqube = "6.0.1.5171"
 test-logger = "4.0.0"
 gradle-git-properties = "2.5.2"
 sentry-plugin = "6.19.0"
@@ -128,6 +131,7 @@ spring-jdbc = { module = "org.springframework:spring-jdbc" }
 spring-cloud-dependencies = { module = "org.springframework.cloud:spring-cloud-dependencies", version.ref = "spring-cloud" }
 
 springdoc-openapi-starter-webmvc-ui = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc-openapi" }
+swagger-annotations-jakarta = { module = "io.swagger.core.v3:swagger-annotations-jakarta", version.ref = "swagger-annotations" }
 
 # -- AWS SDK v2 (T754) -- compileOnly for the opt-in `s3Storage` helper; users who do not
 # declare software.amazon.awssdk:s3 themselves keep a starter without S3 on the classpath.
@@ -188,6 +192,8 @@ spring-test = ["spring-boot-starter-test", "assertj"]
 spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot" }
 spring-dm = { id = "io.spring.dependency-management", version.ref = "spring-dm" }
 spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
+spotbugs = { id = "com.github.spotbugs", version.ref = "spotbugs" }
+sonarqube = { id = "org.sonarqube", version.ref = "sonarqube" }
 test-logger = { id = "com.adarshr.test-logger", version.ref = "test-logger" }
 git-properties = { id = "com.gorylenko.gradle-git-properties", version.ref = "gradle-git-properties" }
 sentry = { id = "io.sentry.jvm.gradle", version.ref = "sentry-plugin" }

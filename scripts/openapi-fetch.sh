@@ -37,6 +37,9 @@ trap cleanup EXIT INT TERM
 
 printf '\n==> Booting starter-launcher headless on port %s...\n' "$PORT"
 env SERVER_PORT="$PORT" \
+    MANAGEMENT_HEALTH_RABBIT_ENABLED=false \
+    CBS_WEBHOOK_ENABLED=true \
+    CBS_VHS_ENABLED=true \
     backend/dsl-platform/gradlew -p backend/dsl-starter \
     :starter-launcher:bootRun --console=plain >"$LOG" 2>&1 &
 

@@ -1,6 +1,6 @@
 import { mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { defineComponent, h, nextTick, type Ref } from 'vue'
+import { defineComponent, h, nextTick } from 'vue'
 import {
   __resetPreviewHistoryForTests,
   PREVIEW_HISTORY_STORAGE_KEY,

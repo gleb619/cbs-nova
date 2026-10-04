@@ -1067,6 +1067,45 @@
         },
         "type": "object"
       },
+      "ReplayMode": {
+        "description": "Replay strategy for a tape.",
+        "enum": [
+          "exact",
+          "load"
+        ],
+        "type": "string"
+      },
+      "ReplayRunResponse": {
+        "description": "Response returned by POST /api/v1/vhs/tapes/{runId}/replay.",
+        "properties": {
+          "mode": {
+            "type": "string"
+          },
+          "replay_run_id": {
+            "type": "string"
+          },
+          "report": {
+            "$ref": "#/components/schemas/VhsReplayReport"
+          },
+          "status": {
+            "type": "string"
+          },
+          "status_url": {
+            "nullable": true,
+            "type": "string"
+          },
+          "target": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "replay_run_id",
+          "status",
+          "target",
+          "mode"
+        ],
+        "type": "object"
+      },
       "SeededSignal": {
         "description": "One entry of a preview-mode signal timeline. A seeded signal becomes visible at the zero-based await-point index given by deliverAt (absent or 0 = visible from the start of the preview). Preview resolves signals from this timeline instead of waiting on wall-clock time.",
         "properties": {
@@ -1121,6 +1160,45 @@
             "type": "string"
           }
         },
+        "type": "object"
+      },
+      "TapeSummary": {
+        "description": "Summary of a recorded VHS tape file discovered by a VhsTapeStore.",
+        "properties": {
+          "correlation_id": {
+            "nullable": true,
+            "type": "string"
+          },
+          "event_count": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "filename": {
+            "type": "string"
+          },
+          "recorded_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "route": {
+            "type": "string"
+          },
+          "run_id": {
+            "type": "string"
+          },
+          "size_bytes": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "filename",
+          "recorded_at",
+          "run_id",
+          "route",
+          "size_bytes",
+          "event_count"
+        ],
         "type": "object"
       },
       "TraceStepDto": {
@@ -1193,6 +1271,174 @@
         },
         "type": "object"
       },
+      "VhsReplayReport": {
+        "description": "Immutable report of a replay run.",
+        "properties": {
+          "failedCalls": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/ReplayMode"
+          },
+          "observations": {
+            "items": {
+              "$ref": "#/components/schemas/VhsReplayReport.CallObservation"
+            },
+            "type": "array"
+          },
+          "skippedCopies": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "successfulCalls": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "tapeCount": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "tapes": {
+            "items": {
+              "$ref": "#/components/schemas/VhsReplayReport.TapeSummary"
+            },
+            "type": "array"
+          },
+          "totalCalls": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "wallClockMs": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "mode",
+          "tapeCount",
+          "totalCalls",
+          "successfulCalls",
+          "failedCalls",
+          "skippedCopies",
+          "wallClockMs",
+          "observations",
+          "tapes"
+        ],
+        "type": "object"
+      },
+      "VhsReplayReport.CallObservation": {
+        "properties": {
+          "callId": {
+            "type": "string"
+          },
+          "error": {
+            "nullable": true,
+            "type": "string"
+          },
+          "latencyMs": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "operation": {
+            "type": "string"
+          },
+          "outputCompared": {
+            "type": "boolean"
+          },
+          "outputMismatch": {
+            "type": "boolean"
+          },
+          "success": {
+            "type": "boolean"
+          },
+          "tapeId": {
+            "type": "string"
+          },
+          "target": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "tapeId",
+          "callId",
+          "type",
+          "target",
+          "operation",
+          "latencyMs",
+          "success",
+          "outputCompared",
+          "outputMismatch"
+        ],
+        "type": "object"
+      },
+      "VhsReplayReport.TapeSummary": {
+        "properties": {
+          "durationMs": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "failedCalls": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "successfulCalls": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "tapeId": {
+            "type": "string"
+          },
+          "totalCalls": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "tapeId",
+          "totalCalls",
+          "successfulCalls",
+          "failedCalls",
+          "durationMs"
+        ],
+        "type": "object"
+      },
+      "WebhookDeliveryInfo": {
+        "properties": {
+          "definitionPattern": {
+            "type": "string"
+          },
+          "lastAttempts": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "lastDeliveredAt": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "lastError": {
+            "nullable": true,
+            "type": "string"
+          },
+          "lastStatus": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "definitionPattern",
+          "lastStatus",
+          "lastAttempts"
+        ],
+        "type": "object"
+      },
       "WorkingSetResponse": {
         "properties": {
           "items": {
@@ -1221,7 +1467,7 @@
   "info": {
     "description": "REST contract for the cbs-nova DSL runtime: introspection, preview / run / explain, and reload of DSL definitions.",
     "title": "cbs-nova DSL API",
-    "version": "0.0.1-T699-SNAPSHOT"
+    "version": "0.0.1-SNAPSHOT"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -4107,6 +4353,44 @@
         ]
       }
     },
+    "/api/dsl/webhooks/deliveries": {
+      "get": {
+        "operationId": "listWebhookDeliveryRows",
+        "parameters": [
+          {
+            "description": "Optional exact subscription id filter (definition pattern)",
+            "in": "query",
+            "name": "subscriptionId"
+          },
+          {
+            "description": "Maximum number of deliveries to return",
+            "in": "query",
+            "name": "limit"
+          },
+          {
+            "description": "Number of matching deliveries to skip before returning results",
+            "in": "query",
+            "name": "offset"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageResponse"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "List persisted webhook delivery outcomes",
+        "tags": [
+          "Webhooks"
+        ]
+      }
+    },
     "/api/dsl/working-set": {
       "get": {
         "operationId": "getWorkingSet",
@@ -4556,6 +4840,222 @@
         "summary": "List transaction executions for a run",
         "tags": [
           "DSL Executions"
+        ]
+      }
+    },
+    "/api/v1/vhs/loadtest": {
+      "post": {
+        "operationId": "vhsLoadTest",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {}
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Run a VHS load test against multiple tapes",
+        "tags": [
+          "VHS Tapes"
+        ]
+      }
+    },
+    "/api/v1/vhs/tapes": {
+      "get": {
+        "operationId": "listVhsTapes",
+        "parameters": [
+          {
+            "description": "Maximum number of tapes to return",
+            "in": "query",
+            "name": "limit"
+          },
+          {
+            "description": "Number of tapes to skip",
+            "in": "query",
+            "name": "offset"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageResponse"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "List recorded VHS tapes",
+        "tags": [
+          "VHS Tapes"
+        ]
+      }
+    },
+    "/api/v1/vhs/tapes/{runId}": {
+      "delete": {
+        "operationId": "deleteVhsTape",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "runId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          }
+        },
+        "summary": "Delete a VHS tape",
+        "tags": [
+          "VHS Tapes"
+        ]
+      },
+      "get": {
+        "operationId": "downloadVhsTape",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "runId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/x-jsonl": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Download a VHS tape",
+        "tags": [
+          "VHS Tapes"
+        ]
+      }
+    },
+    "/api/v1/vhs/tapes/{runId}/replay": {
+      "post": {
+        "operationId": "replayVhsTape",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "runId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReplayRunResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReplayRunResponse"
+                }
+              }
+            },
+            "description": "Accepted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Replay a VHS tape",
+        "tags": [
+          "VHS Tapes"
+        ]
+      }
+    },
+    "/api/webhooks/deliveries": {
+      "get": {
+        "operationId": "listWebhookDeliveries",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/WebhookDeliveryInfo"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "List last webhook delivery outcomes",
+        "tags": [
+          "Webhooks"
         ]
       }
     }

@@ -23,11 +23,18 @@ interface Harness {
   select: ReturnType<typeof useWorkbenchSavedDrafts>['select']
 }
 
-function mountHarness(opts: {
-  fetcher?: () => Promise<unknown>
-  logError?: ReturnType<typeof vi.fn>
-  selectConstruct?: ReturnType<typeof vi.fn>
-} = {}): { harness: Harness; logError: ReturnType<typeof vi.fn>; selectConstruct: ReturnType<typeof vi.fn>; unmount: () => void } {
+function mountHarness(
+  opts: {
+    fetcher?: () => Promise<unknown>
+    logError?: ReturnType<typeof vi.fn>
+    selectConstruct?: ReturnType<typeof vi.fn>
+  } = {},
+): {
+  harness: Harness
+  logError: ReturnType<typeof vi.fn>
+  selectConstruct: ReturnType<typeof vi.fn>
+  unmount: () => void
+} {
   const logError = opts.logError ?? vi.fn()
   const selectConstruct = opts.selectConstruct ?? vi.fn()
   let harnessRef!: Harness
@@ -99,7 +106,10 @@ describe('useWorkbenchSavedDrafts', () => {
   it('toggles loading while a refresh is in flight', async () => {
     let resolveFetch!: (value: SavedDraftSummary[]) => void
     const fetcher = vi.fn(
-      () => new Promise<SavedDraftSummary[]>((resolve) => { resolveFetch = resolve }),
+      () =>
+        new Promise<SavedDraftSummary[]>((resolve) => {
+          resolveFetch = resolve
+        }),
     )
     const { harness } = mountHarness({ fetcher })
 
@@ -130,7 +140,9 @@ describe('useWorkbenchSavedDrafts', () => {
   })
 
   it('reports failures via logError with the "failed to load drafts" label', async () => {
-    const fetcher = vi.fn(async () => { throw new Error('boom') })
+    const fetcher = vi.fn(async () => {
+      throw new Error('boom')
+    })
     const logError = vi.fn()
     const { harness } = mountHarness({ fetcher, logError })
 
@@ -144,7 +156,9 @@ describe('useWorkbenchSavedDrafts', () => {
   })
 
   it('coerces non-Error rejections to a string for both error state and log fields', async () => {
-    const fetcher = vi.fn(async () => { throw 'plain' })
+    const fetcher = vi.fn(async () => {
+      throw 'plain'
+    })
     const logError = vi.fn()
     const { harness } = mountHarness({ fetcher, logError })
 

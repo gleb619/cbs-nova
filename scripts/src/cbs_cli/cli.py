@@ -14,6 +14,7 @@ from .commands.loadtest import LoadtestCommand
 from .commands.openapi_diff import OpenApiDiffCommand
 from .commands.openapi_diff_test import OpenApiDiffTestCommand
 from .commands.openapi_fetch import OpenApiFetchCommand
+from .commands.quality import QualityCommand
 from .commands.seed import SeedCommand
 from .commands.seed_history import SeedHistoryCommand
 from .commands.services import ServicesCommand
@@ -73,6 +74,11 @@ class CLI:
         )
         p.add_argument("--base", help="base git ref — switches to guard mode (fail on dropped rows)")
         p.set_defaults(handler=LintKanbanCommand)
+
+        # Quality
+        p = subparsers.add_parser("quality", help="Manage local code quality infrastructure and scans")
+        QualityCommand.register(p)
+        p.set_defaults(handler=QualityCommand)
 
         # Format
         subparsers.add_parser("fmt", help="Apply formatting everywhere").set_defaults(handler=FormatCommand)

@@ -204,7 +204,9 @@ const auditUrl = computed(() => '/api/v1/dsl/audit?action=PROMOTION')
           </li>
         </ul>
         <p class="mt-2 text-xs text-neutral-500">
-          {{ selected.size === 0 ? 'All definitions will be promoted.' : `${selected.size} selected.` }}
+          {{
+            selected.size === 0 ? 'All definitions will be promoted.' : `${selected.size} selected.`
+          }}
         </p>
       </section>
 

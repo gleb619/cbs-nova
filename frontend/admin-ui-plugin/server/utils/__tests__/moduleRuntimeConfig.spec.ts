@@ -37,7 +37,8 @@ describe('resolveRuntimeConfig', () => {
     })
   })
 
-  it('lets an options value win over the default', () => {    const options: ModuleOptions = {
+  it('lets an options value win over the default', () => {
+    const options: ModuleOptions = {
       backendBaseUrl: 'http://options-backend:9090',
       backendApiKey: 'options-key',
       backendTimeoutMs: 2500,

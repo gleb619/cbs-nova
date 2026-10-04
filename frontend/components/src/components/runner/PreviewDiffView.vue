@@ -197,9 +197,9 @@ const callTimestamp = (ts: unknown): string => {
             </span>
             <span class="text-gray-700 shrink-0">{{ String(row.current.call.target ?? '') }}</span>
             <span class="text-gray-400 shrink-0">—</span>
-            <span class="text-gray-900 break-words"
-              >{{ String(row.current.call.operation ?? '') }}</span
-            >
+            <span class="text-gray-900 break-words">{{
+              String(row.current.call.operation ?? '')
+            }}</span>
             <span class="text-gray-500 shrink-0 ml-auto"
               >[{{ callTimestamp(row.current.call.timestamp) }}]</span
             >
@@ -214,9 +214,9 @@ const callTimestamp = (ts: unknown): string => {
             </span>
             <span class="text-gray-700 shrink-0">{{ String(row.baseline.call.target ?? '') }}</span>
             <span class="text-gray-400 shrink-0">—</span>
-            <span class="text-gray-900 break-words"
-              >{{ String(row.baseline.call.operation ?? '') }}</span
-            >
+            <span class="text-gray-900 break-words">{{
+              String(row.baseline.call.operation ?? '')
+            }}</span>
             <span class="text-gray-500 shrink-0 ml-auto"
               >[{{ callTimestamp(row.baseline.call.timestamp) }}]</span
             >

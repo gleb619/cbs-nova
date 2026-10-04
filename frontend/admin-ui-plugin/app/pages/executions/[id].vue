@@ -58,15 +58,19 @@ const visibleTab = computed<DetailTab>(() =>
 // on a Running execution still gets live updates, but it is now pausable
 // and remembered. The interval defaults to the shared resolved stalePollMs.
 const defaultPollMs = resolveStalePollMs()
-const { enabled: isLivePollingEnabled, intervalMs: livePollingIntervalMs, onToggle: onToggleLivePolling, onIntervalChange: onLivePollingIntervalChange } =
-  useLivePollingPreference({
-    storagePrefix: 'executions.detail.livePolling',
-    defaultIntervalMs: defaultPollMs,
-    defaultEnabled: true,
-    isActive: () => selectedExecution.value?.status === 'Running',
-    start: (intervalMs) => startPolling(id.value, intervalMs),
-    stop: () => stopPolling(),
-  })
+const {
+  enabled: isLivePollingEnabled,
+  intervalMs: livePollingIntervalMs,
+  onToggle: onToggleLivePolling,
+  onIntervalChange: onLivePollingIntervalChange,
+} = useLivePollingPreference({
+  storagePrefix: 'executions.detail.livePolling',
+  defaultIntervalMs: defaultPollMs,
+  defaultEnabled: true,
+  isActive: () => selectedExecution.value?.status === 'Running',
+  start: (intervalMs) => startPolling(id.value, intervalMs),
+  stop: () => stopPolling(),
+})
 
 await loadDetail(id.value)
 if (selectedExecution.value?.status === 'Running' && isLivePollingEnabled.value) {
@@ -219,9 +223,7 @@ watch(
   { immediate: true },
 )
 
-const declaredNames = computed(
-  () => new Set(declaredSignals.value.map((s) => s.name)),
-)
+const declaredNames = computed(() => new Set(declaredSignals.value.map((s) => s.name)))
 const signalNameIsUnknown = computed(() => {
   const trimmed = signalName.value.trim()
   if (!trimmed) return false
@@ -238,7 +240,7 @@ async function sendSignal() {
     let payload: unknown
     try {
       payload = signalPayload.value.trim() ? JSON.parse(signalPayload.value) : undefined
-    } catch (e) {
+    } catch (_e) {
       throw new Error('Payload must be valid JSON')
     }
     await $fetch(`/api/v1/dsl/signals/${selectedExecution.value.id}`, {
@@ -260,7 +262,7 @@ async function querySignalState() {
   try {
     const response = await $fetch(`/api/v1/dsl/queries/${selectedExecution.value.id}`)
     queryResult.value = (response as Record<string, unknown>) ?? null
-  } catch (err) {
+  } catch (_err) {
     queryResult.value = null
   } finally {
     queryBusy.value = false
@@ -375,7 +377,9 @@ onUnmounted(() => {
                            visibleTab === tab ? 'border-accent-500 text-accent-500' : 'border-transparent text-ink-muted hover:text-ink']"
             @click="onTabSelect(tab)"
           >
-            {{ tab === 'payload' ? 'I/O Payload' : tab === 'transactions' ? 'Transactions' : tab[0].toUpperCase() + tab.slice(1) }}
+            {{
+              tab === 'payload' ? 'I/O Payload' : tab === 'transactions' ? 'Transactions' : tab[0].toUpperCase() + tab.slice(1)
+            }}
           </button>
         </div>
         <div class="p-4">
@@ -427,11 +431,7 @@ onUnmounted(() => {
             data-testid="signal-name-input"
           >
           <datalist id="declared-signals-datalist">
-            <option
-              v-for="sig in declaredSignals"
-              :key="sig.name"
-              :value="sig.name"
-            />
+            <option v-for="sig in declaredSignals" :key="sig.name" :value="sig.name" />
           </datalist>
           <button
             type="button"
@@ -460,10 +460,9 @@ onUnmounted(() => {
             @click="signalName = sig.name"
           >
             {{ sig.name }}
-            <span
-              v-if="sig.payloadType"
-              class="ml-1 text-[10px] text-ink-muted"
-            >·{{ sig.payloadType.split('.').pop() }}</span>
+            <span v-if="sig.payloadType" class="ml-1 text-[10px] text-ink-muted"
+              >·{{ sig.payloadType.split('.').pop() }}</span
+            >
           </button>
         </div>
         <p
@@ -472,8 +471,8 @@ onUnmounted(() => {
           data-testid="signal-unknown-warning"
           role="status"
         >
-          Undeclared name — this definition does not list "{{ signalName }}" as a signal.
-          Temporal will still accept it, but the workflow may ignore it.
+          Undeclared name — this definition does not list "{{ signalName }}" as a signal. Temporal
+          will still accept it, but the workflow may ignore it.
         </p>
         <textarea
           v-model="signalPayload"

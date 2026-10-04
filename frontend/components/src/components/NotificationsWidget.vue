@@ -132,7 +132,7 @@ function isEphemeral(note: Notification): boolean {
         <li
           v-for="note in notifications"
           :key="note.id"
-          :data-testid="'notifications-drawer-item-' + note.id"
+          :data-testid="`notifications-drawer-item-${note.id}`"
           :class="[
             'px-3 py-2 flex items-start justify-between gap-2 cursor-pointer hover:bg-gray-800/50',
             note.read ? 'opacity-60' : '',
@@ -154,7 +154,7 @@ function isEphemeral(note: Notification): boolean {
               <span
                 v-if="isEphemeral(note)"
                 class="inline-flex items-center px-1 py-0.5 rounded border border-gray-700 text-[10px] uppercase tracking-wide text-gray-400"
-                :data-testid="'notifications-drawer-toast-' + note.id"
+                :data-testid="`notifications-drawer-toast-${note.id}`"
                 title="This is a transient toast — also shown in the floating stack."
               >
                 toast
@@ -166,8 +166,8 @@ function isEphemeral(note: Notification): boolean {
           <button
             type="button"
             class="shrink-0 px-1 text-gray-500 hover:text-gray-200"
-            :aria-label="'Dismiss ' + note.kind + ' notification'"
-            :data-testid="'notifications-drawer-dismiss-' + note.id"
+            :aria-label="`Dismiss ${note.kind} notification`"
+            :data-testid="`notifications-drawer-dismiss-${note.id}`"
             @click.stop="dismiss(note.id)"
           >
             ✕

@@ -14,6 +14,7 @@ This directory contains the split Compose domain files used by `../docker-compos
 | `gitea.yml` | Gitea git hosting (uses shared Postgres) |
 | `observability.yml` | Grafana, Loki, Jaeger, Prometheus, OpenTelemetry Collector |
 | `rabbitmq.yml` | RabbitMQ broker (AMQP `5672`, management UI `15672`) for the `amqpPublish` @Helper demo |
+| `quality.yml` | SonarQube and OWASP Dependency-Track for local code quality and SBOM analysis |
 
 ## Run everything
 
@@ -58,6 +59,13 @@ the table below).
 | Postgres | localhost:5432 |
 | RabbitMQ AMQP | localhost:5672 |
 | RabbitMQ management UI | http://localhost:15672 |
+
+## Quality Stack Ports
+
+| Service | URL | Default Credentials |
+| --- | --- | --- |
+| SonarQube | http://localhost:9000 | admin / admin |
+| Dependency-Track Frontend | http://localhost:8082 | Create admin user on first run |
 
 ## Observability wiring
 

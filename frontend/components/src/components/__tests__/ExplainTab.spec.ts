@@ -105,8 +105,8 @@ describe('ExplainTab', () => {
     await wrapper.find('[data-testid="json-textarea"]').setValue('{"a":1}')
     await wrapper
       .findAll('button')
-      .find((b) => b.text() === 'Run')!
-      .trigger('click')
+      .find((b) => b.text() === 'Run')
+      ?.trigger('click')
     await flushPromises()
 
     expect(explain).toHaveBeenCalledWith('demo', { a: 1 }, { startedFrom: 'workbench' })
@@ -124,8 +124,8 @@ describe('ExplainTab', () => {
     await wrapper.find('[data-testid="json-textarea"]').setValue('{}')
     await wrapper
       .findAll('button')
-      .find((b) => b.text() === 'Run')!
-      .trigger('click')
+      .find((b) => b.text() === 'Run')
+      ?.trigger('click')
     await flushPromises()
 
     const resultText = wrapper.find('[data-testid="runner-result-tab"]').text()
@@ -144,8 +144,8 @@ describe('ExplainTab', () => {
     await wrapper.find('[data-testid="json-textarea"]').setValue('{}')
     await wrapper
       .findAll('button')
-      .find((b) => b.text() === 'Run')!
-      .trigger('click')
+      .find((b) => b.text() === 'Run')
+      ?.trigger('click')
     await flushPromises()
 
     const output = JSON.parse(wrapper.find('[data-testid="runner-result-tab"]').text())
@@ -163,8 +163,8 @@ describe('ExplainTab', () => {
     await wrapper.find('[data-testid="json-textarea"]').setValue('{}')
     await wrapper
       .findAll('button')
-      .find((b) => b.text() === 'Run')!
-      .trigger('click')
+      .find((b) => b.text() === 'Run')
+      ?.trigger('click')
     await flushPromises()
 
     expect(wrapper.text()).toContain('explain failed')
@@ -189,8 +189,8 @@ describe('ExplainTab', () => {
     await wrapper.find('[data-testid="json-textarea"]').setValue('{}')
     await wrapper
       .findAll('button')
-      .find((b) => b.text() === 'Run')!
-      .trigger('click')
+      .find((b) => b.text() === 'Run')
+      ?.trigger('click')
     await flushPromises()
 
     expect(wrapper.text()).toContain('LinkedHashMap cannot be cast')
@@ -209,8 +209,8 @@ describe('ExplainTab', () => {
     await wrapper.find('[data-testid="json-textarea"]').setValue('{}')
     await wrapper
       .findAll('button')
-      .find((b) => b.text() === 'Run')!
-      .trigger('click')
+      .find((b) => b.text() === 'Run')
+      ?.trigger('click')
     await flushPromises()
 
     expect(wrapper.text()).toContain('Backend request timed out')
@@ -243,8 +243,8 @@ describe('ExplainTab', () => {
 
     await wrapper
       .findAll('button')
-      .find((b) => b.text() === 'Run')!
-      .trigger('click')
+      .find((b) => b.text() === 'Run')
+      ?.trigger('click')
     await flushPromises()
 
     expect(explain).toHaveBeenLastCalledWith(
@@ -260,8 +260,8 @@ describe('ExplainTab', () => {
     await wrapper.find('[data-testid="json-textarea"]').setValue('{"a":1}')
     await wrapper
       .findAll('button')
-      .find((b) => b.text() === 'Run')!
-      .trigger('click')
+      .find((b) => b.text() === 'Run')
+      ?.trigger('click')
     await flushPromises()
 
     const stored = JSON.parse(
@@ -289,8 +289,8 @@ describe('ExplainTab', () => {
     await wrapper.find('[data-testid="json-textarea"]').setValue('{"a":1}')
     await wrapper
       .findAll('button')
-      .find((b) => b.text() === 'Run')!
-      .trigger('click')
+      .find((b) => b.text() === 'Run')
+      ?.trigger('click')
     await flushPromises()
 
     const stored = JSON.parse(
@@ -309,8 +309,8 @@ describe('ExplainTab', () => {
     await wrapper.find('[data-testid="json-textarea"]').setValue('{"a":1}')
     await wrapper
       .findAll('button')
-      .find((b) => b.text() === 'Run')!
-      .trigger('click')
+      .find((b) => b.text() === 'Run')
+      ?.trigger('click')
     await flushPromises()
     explain.mockClear()
 

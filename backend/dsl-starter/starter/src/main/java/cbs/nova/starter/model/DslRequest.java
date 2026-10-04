@@ -1,6 +1,8 @@
 package cbs.nova.starter.model;
 
 import cbs.nova.dsl.process.SeededSignal;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.util.List;
 import java.util.Map;
@@ -19,7 +21,10 @@ import java.util.Map;
  *          {@code run} mode, where the generated Temporal buffer owns signal delivery.
  */
 public record DslRequest(Object body, Map<String, Object> metadata,
-        List<SeededSignal> signals) {
+        @ArraySchema(arraySchema = @Schema(description = "Optional preview-mode signal timeline (T736). "
+                + "Consumed by the preview / hierarchy / explain pipes and ignored by run mode, "
+                + "where Temporal owns signal delivery. Omitting it keeps signals inert "
+                + "exactly as before T736."), schema = @Schema(implementation = SeededSignal.class)) List<SeededSignal> signals) {
 
   /** Backward-compatible constructor for callers that do not seed signals. */
   public DslRequest(Object body, Map<String, Object> metadata) {

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { marked } from 'marked'
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import { useLocalStorageState } from '../../composables/useLocalStorageState'
 import type { DslConstruct } from '../../types/dsl'
 import CbsSpinner from '../CbsSpinner.vue'
@@ -76,14 +76,18 @@ const renderedDescription = computed(() => {
             class="font-semibold truncate"
             :title="construct?.name"
             data-testid="metadata-field-name"
-            >{{ construct?.name }}</span
+            >{{
+              construct?.name
+            }}</span
           >
           <span class="text-neutral-300" aria-hidden="true">|</span>
           <span
             class="text-neutral-600 truncate"
             :title="construct?.type"
             data-testid="metadata-field-type"
-            >{{ construct?.type }}</span
+            >{{
+              construct?.type
+            }}</span
           >
         </div>
       </div>

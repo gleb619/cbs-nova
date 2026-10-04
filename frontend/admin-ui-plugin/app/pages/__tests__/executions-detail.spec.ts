@@ -15,7 +15,13 @@ interface DetailHarness {
   cancelExecution: ReturnType<typeof vi.fn>
 }
 
-const { useExecutionsMock, useExecutionsApiMock, useDslApiMock, fetchDeclaredSignals: fetchDeclaredSignalsMock, navigateTo } = vi.hoisted(() => {
+const {
+  useExecutionsMock,
+  useExecutionsApiMock,
+  useDslApiMock,
+  fetchDeclaredSignals: fetchDeclaredSignalsMock,
+  navigateTo,
+} = vi.hoisted(() => {
   const navigateToSpy = vi.fn()
   const useExecutionsMockFn = vi.fn(() => {
     const harness = (globalThis as unknown as { __detailHarness?: DetailHarness }).__detailHarness
@@ -329,7 +335,10 @@ describe('executions/[id].vue page wiring', () => {
       { name: 'approve', payloadType: 'java.lang.Boolean' },
       { name: 'cancel', payloadType: 'cbs.nova.orders.CancelPayload' },
     ])
-    harness.selectedExecution.value = detailExecution({ status: 'Running', entity: 'OnboardingDsl' })
+    harness.selectedExecution.value = detailExecution({
+      status: 'Running',
+      entity: 'OnboardingDsl',
+    })
 
     const wrapper = mountPage()
     await flush()
@@ -349,10 +358,11 @@ describe('executions/[id].vue page wiring', () => {
   })
 
   it('T722: clicking a chip writes the signal name into the input', async () => {
-    fetchDeclaredSignalsMock.mockResolvedValueOnce([
-      { name: 'approve', payloadType: null },
-    ])
-    harness.selectedExecution.value = detailExecution({ status: 'Running', entity: 'OnboardingDsl' })
+    fetchDeclaredSignalsMock.mockResolvedValueOnce([{ name: 'approve', payloadType: null }])
+    harness.selectedExecution.value = detailExecution({
+      status: 'Running',
+      entity: 'OnboardingDsl',
+    })
 
     const wrapper = mountPage()
     await flush()
@@ -369,12 +379,13 @@ describe('executions/[id].vue page wiring', () => {
   })
 
   it('T722: shows inline warning for an undeclared name but still allows send', async () => {
-    fetchDeclaredSignalsMock.mockResolvedValueOnce([
-      { name: 'approve', payloadType: null },
-    ])
+    fetchDeclaredSignalsMock.mockResolvedValueOnce([{ name: 'approve', payloadType: null }])
     const fetchMock = vi.fn(async () => ({ ok: true }))
     ;(globalThis as unknown as { $fetch?: unknown }).$fetch = fetchMock
-    harness.selectedExecution.value = detailExecution({ status: 'Running', entity: 'OnboardingDsl' })
+    harness.selectedExecution.value = detailExecution({
+      status: 'Running',
+      entity: 'OnboardingDsl',
+    })
 
     const wrapper = mountPage()
     await flush()
@@ -393,7 +404,10 @@ describe('executions/[id].vue page wiring', () => {
 
   it('T722: no chips and no warning when introspection returns no signals', async () => {
     fetchDeclaredSignalsMock.mockResolvedValueOnce([])
-    harness.selectedExecution.value = detailExecution({ status: 'Running', entity: 'OnboardingDsl' })
+    harness.selectedExecution.value = detailExecution({
+      status: 'Running',
+      entity: 'OnboardingDsl',
+    })
 
     const wrapper = mountPage()
     await flush()

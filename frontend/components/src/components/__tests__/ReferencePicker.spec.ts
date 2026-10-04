@@ -70,6 +70,6 @@ describe('ReferencePicker', () => {
     await target.trigger('click')
 
     expect(wrapper.emitted('pick')).toBeTruthy()
-    expect(wrapper.emitted('pick')![0]).toEqual(['CreateOrder'])
+    expect(wrapper.emitted('pick')?.[0]).toEqual(['CreateOrder'])
   })
 })

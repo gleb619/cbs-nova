@@ -20,11 +20,9 @@ const getResponseHeaderMock: Mock = vi.fn()
 // wipe them, and a wiped spy returns `undefined`, which would make the
 // middleware overwrite pre-set host headers.
 const rewireSpies = () => {
-  setResponseHeaderMock.mockImplementation(
-    (_event: unknown, name: string, value: string) => {
-      res.headers[name.toLowerCase()] = value
-    },
-  )
+  setResponseHeaderMock.mockImplementation((_event: unknown, name: string, value: string) => {
+    res.headers[name.toLowerCase()] = value
+  })
   getResponseHeaderMock.mockImplementation((name: string) => res.headers[name.toLowerCase()])
 }
 
@@ -112,12 +110,7 @@ describe('securityHeaders middleware', () => {
     securityHeadersMiddleware(event)
 
     expect(Object.keys(res.headers).sort()).toEqual(
-      [
-        'permissions-policy',
-        'referrer-policy',
-        'x-content-type-options',
-        'x-frame-options',
-      ].sort(),
+      ['permissions-policy', 'referrer-policy', 'x-content-type-options', 'x-frame-options'].sort(),
     )
   })
 

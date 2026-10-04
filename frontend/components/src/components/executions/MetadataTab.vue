@@ -116,7 +116,7 @@ function rowTestId(row: Row): string {
                 data-testid="workflow-id-copy"
                 class="ml-2 inline-flex items-center text-xs text-gray-500 hover:text-gray-800 border border-gray-200 rounded px-1.5 py-0.5"
                 :aria-label="copiedWorkflow ? 'Workflow ID copied' : 'Copy workflow ID'"
-                @click="copyValue(props.execution.workflowId!, 'workflow')"
+                @click="copyValue(props.execution.workflowId, 'workflow')"
               >
                 {{ copiedWorkflow ? 'Copied!' : 'Copy' }}
               </button>

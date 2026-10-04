@@ -41,7 +41,7 @@ function formatTime(s: string): string {
   return new Date(s).toLocaleString()
 }
 
-function formatJson(v: unknown): string {
+function _formatJson(v: unknown): string {
   try {
     return JSON.stringify(v, null, 2)
   } catch {

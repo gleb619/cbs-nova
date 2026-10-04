@@ -9,10 +9,7 @@ const AUTOSAVE: AutosaveOption[] = [
   { value: 'blur', label: 'On blur' },
 ]
 
-const mountAction = (
-  props: Record<string, unknown> = {},
-  options: Record<string, unknown> = {},
-) =>
+const mountAction = (props: Record<string, unknown> = {}, options: Record<string, unknown> = {}) =>
   mount(SaveAction, {
     props: { testidPrefix: 'sa', isDirty: false, ...props },
     attachTo: document.body,

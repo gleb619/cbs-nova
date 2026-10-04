@@ -130,7 +130,7 @@ describe('BodyEditor', () => {
     await wrapper.find('textarea').setValue('edited body')
 
     expect(wrapper.emitted('update:code')).toBeTruthy()
-    expect(wrapper.emitted('update:code')!.at(-1)).toEqual(['edited body'])
+    expect(wrapper.emitted('update:code')?.at(-1)).toEqual(['edited body'])
   })
 
   it('renders Preview and Explain tab buttons when callbacks are provided', () => {

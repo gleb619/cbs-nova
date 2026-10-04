@@ -120,21 +120,17 @@ describe('useWorkbenchPanels — persistence contract', () => {
     expect(window.localStorage.getItem('cbs-nova:dsl-workbench:objects-search-open')).toBe('true')
     expect(window.localStorage.getItem('cbs-nova:dsl-workbench:helper-catalog-open')).toBe('true')
     expect(window.localStorage.getItem('cbs-nova:dsl-workbench:history-panel-open')).toBe('true')
-    expect(window.localStorage.getItem('cbs-nova:dsl-workbench:diagnostics-panel-open')).toBe('true')
+    expect(window.localStorage.getItem('cbs-nova:dsl-workbench:diagnostics-panel-open')).toBe(
+      'true',
+    )
     expect(window.localStorage.getItem('cbs-nova:dsl-workbench:tests-panel-open')).toBe('true')
     expect(window.localStorage.getItem('cbs-nova:dsl-workbench:explorer-open')).toBe('false')
     expect(window.localStorage.getItem('cbs-nova:dsl-workbench:explorer-collapsed')).toBe('true')
   })
 
   it('reads previously stored values back on a fresh mount', () => {
-    window.localStorage.setItem(
-      'cbs-nova:dsl-workbench:objects-search-open',
-      JSON.stringify(true),
-    )
-    window.localStorage.setItem(
-      'cbs-nova:dsl-workbench:tests-panel-open',
-      JSON.stringify(true),
-    )
+    window.localStorage.setItem('cbs-nova:dsl-workbench:objects-search-open', JSON.stringify(true))
+    window.localStorage.setItem('cbs-nova:dsl-workbench:tests-panel-open', JSON.stringify(true))
 
     const { panels } = mountHarness()
     expect(panels.objectsSearchOpen.value).toBe(true)
@@ -176,7 +172,9 @@ describe('useWorkbenchPanels — cookie-backed explorer collapsed flag', () => {
     expect(window.localStorage.getItem('cbs-nova:dsl-workbench:objects-search-open')).toBe('true')
     expect(window.localStorage.getItem('cbs-nova:dsl-workbench:helper-catalog-open')).toBe('true')
     expect(window.localStorage.getItem('cbs-nova:dsl-workbench:history-panel-open')).toBe('true')
-    expect(window.localStorage.getItem('cbs-nova:dsl-workbench:diagnostics-panel-open')).toBe('true')
+    expect(window.localStorage.getItem('cbs-nova:dsl-workbench:diagnostics-panel-open')).toBe(
+      'true',
+    )
     expect(window.localStorage.getItem('cbs-nova:dsl-workbench:tests-panel-open')).toBe('true')
     expect(window.localStorage.getItem('cbs-nova:dsl-workbench:explorer-open')).toBe('false')
 

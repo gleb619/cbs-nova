@@ -91,8 +91,8 @@ describe('PreviewTab', () => {
     await wrapper.find('[data-testid="json-textarea"]').setValue('{"a":1}')
     await wrapper
       .findAll('button')
-      .find((b) => b.text() === 'Run')!
-      .trigger('click')
+      .find((b) => b.text() === 'Run')
+      ?.trigger('click')
     await flushPromises()
 
     expect(preview).toHaveBeenCalledWith('demo', { a: 1 }, { startedFrom: 'workbench' })
@@ -109,8 +109,8 @@ describe('PreviewTab', () => {
     await wrapper.find('[data-testid="json-textarea"]').setValue('{}')
     await wrapper
       .findAll('button')
-      .find((b) => b.text() === 'Run')!
-      .trigger('click')
+      .find((b) => b.text() === 'Run')
+      ?.trigger('click')
     await flushPromises()
 
     expect(wrapper.text()).toContain('preview failed')
@@ -135,8 +135,8 @@ describe('PreviewTab', () => {
     await wrapper.find('[data-testid="json-textarea"]').setValue('{}')
     await wrapper
       .findAll('button')
-      .find((b) => b.text() === 'Run')!
-      .trigger('click')
+      .find((b) => b.text() === 'Run')
+      ?.trigger('click')
     await flushPromises()
 
     // Result panel must show the upstream error rather than "No result yet".
@@ -158,8 +158,8 @@ describe('PreviewTab', () => {
     await wrapper.find('[data-testid="json-textarea"]').setValue('{}')
     await wrapper
       .findAll('button')
-      .find((b) => b.text() === 'Run')!
-      .trigger('click')
+      .find((b) => b.text() === 'Run')
+      ?.trigger('click')
     await flushPromises()
 
     expect(wrapper.text()).toContain('Backend request timed out')
@@ -192,8 +192,8 @@ describe('PreviewTab', () => {
 
     await wrapper
       .findAll('button')
-      .find((b) => b.text() === 'Run')!
-      .trigger('click')
+      .find((b) => b.text() === 'Run')
+      ?.trigger('click')
     await flushPromises()
 
     expect(preview).toHaveBeenLastCalledWith(
@@ -253,8 +253,8 @@ describe('PreviewTab', () => {
     await wrapper.find('[data-testid="json-textarea"]').setValue('{}')
     await wrapper
       .findAll('button')
-      .find((b) => b.text() === 'Run')!
-      .trigger('click')
+      .find((b) => b.text() === 'Run')
+      ?.trigger('click')
     await flushPromises()
 
     const resultText = wrapper.find('[data-testid="runner-result-tab"]').text()
@@ -268,8 +268,8 @@ describe('PreviewTab', () => {
     await wrapper.find('[data-testid="json-textarea"]').setValue('{"a":1}')
     await wrapper
       .findAll('button')
-      .find((b) => b.text() === 'Run')!
-      .trigger('click')
+      .find((b) => b.text() === 'Run')
+      ?.trigger('click')
     await flushPromises()
 
     const stored = JSON.parse(window.localStorage.getItem('cbs-nova:preview:history') ?? '[]')
@@ -294,8 +294,8 @@ describe('PreviewTab', () => {
     await wrapper.find('[data-testid="json-textarea"]').setValue('{"a":1}')
     await wrapper
       .findAll('button')
-      .find((b) => b.text() === 'Run')!
-      .trigger('click')
+      .find((b) => b.text() === 'Run')
+      ?.trigger('click')
     await flushPromises()
 
     const stored = JSON.parse(window.localStorage.getItem('cbs-nova:preview:history') ?? '[]')
@@ -310,8 +310,8 @@ describe('PreviewTab', () => {
     await wrapper.find('[data-testid="json-textarea"]').setValue('{"a":1}')
     await wrapper
       .findAll('button')
-      .find((b) => b.text() === 'Run')!
-      .trigger('click')
+      .find((b) => b.text() === 'Run')
+      ?.trigger('click')
     await flushPromises()
     preview.mockClear()
 

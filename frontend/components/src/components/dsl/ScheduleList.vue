@@ -195,9 +195,9 @@ function onPendingKeydown(event: KeyboardEvent) {
             placeholder='{"amount": 100}'
             class="px-3 py-1.5 text-sm rounded border border-gray-300 focus:outline-none focus:border-blue-500 font-mono"
           ></textarea>
-          <span v-if="inputError" data-testid="schedule-input-error" class="text-xs text-red-600"
-            >{{ inputError }}</span
-          >
+          <span v-if="inputError" data-testid="schedule-input-error" class="text-xs text-red-600">{{
+            inputError
+          }}</span>
         </div>
         <button
           type="submit"

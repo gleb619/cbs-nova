@@ -46,6 +46,7 @@ async function ensureMermaid() {
     mermaid.initialize({ startOnLoad: false, securityLevel: 'loose', theme: 'default' })
     _mermaidRender = async (definition: string) => {
       const id = `explain-mmd-${++mermaidSequence}-${Math.random().toString(36).slice(2, 9)}`
+      // biome-ignore lint/style/noNonNullAssertion: module is loaded inside ensureMermaid
       const { svg } = await _mermaidModule!.render(id, definition)
       return svg
     }
@@ -281,6 +282,7 @@ onUpdated(() => {
 }
 
 .markdown-body [data-testid="explain-mermaid-diagram"] svg {
+  /* biome-ignore lint/complexity/noImportantStyles: needed to override Mermaid's default max-width */
   max-width: none !important;
 }
 </style>

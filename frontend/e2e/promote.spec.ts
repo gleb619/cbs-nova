@@ -13,7 +13,7 @@ test('promote page renders shell plus source select or empty/error state', async
   const banner = page.getByTestId('error-banner')
   const errorPage = page.getByTestId('error-page')
 
-  await expect(
-    placeholder.or(noEnvs).or(envsError).or(banner).or(errorPage).first(),
-  ).toBeVisible({ timeout: 15_000 })
+  await expect(placeholder.or(noEnvs).or(envsError).or(banner).or(errorPage).first()).toBeVisible({
+    timeout: 15_000,
+  })
 })

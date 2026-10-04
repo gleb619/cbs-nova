@@ -108,7 +108,7 @@ describe('HierarchyTab', () => {
     await wrapper.find('[data-testid="run-button"]').trigger('click')
     await flushPromises()
 
-    const payload = hierarchy.mock.calls[0]![1] as Record<string, unknown>
+    const payload = hierarchy.mock.calls[0]?.[1] as Record<string, unknown>
     expect(payload.depth).toBe(7)
     expect(wrapper.find('[data-testid="hierarchy-result-text"]').text()).toContain('children')
   })
