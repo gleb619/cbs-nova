@@ -200,6 +200,8 @@ Known event types surfaced in the rule editor and test form:
 
 Known sink types: `webhook`, `email`, `slack`, `pagerduty`.
 
+> For the `pagerduty` sink, the `Secret` field carries the PagerDuty Events API v2 integration routing key (the URL defaults to `https://events.pagerduty.com/v2/enqueue`).
+
 ### States
 
 - **Loading rules** — panel-level loading row.

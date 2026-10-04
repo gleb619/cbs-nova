@@ -89,11 +89,11 @@ public class NotificationConfiguration {
 
   @Bean
   @ConditionalOnBean(NotificationRuleService.class)
-  GenericJsonRuleSink pagerDutyRuleSink(
+  PagerDutyRuleSink pagerDutyRuleSink(
           @Qualifier("webhookHttpClient") HttpClient webhookHttpClient,
           ObjectMapper objectMapper, WebhookProperties properties) {
-    return new GenericJsonRuleSink("pagerduty", webhookHttpClient, objectMapper,
-            properties.getTimeout(), properties);
+    return new PagerDutyRuleSink(webhookHttpClient, objectMapper, properties.getTimeout(),
+            properties);
   }
 
   @Bean(name = "cbsNovaNotificationExecutor", destroyMethod = "shutdown")
