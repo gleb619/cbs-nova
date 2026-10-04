@@ -17,7 +17,9 @@ import cbs.nova.starter.model.NotificationRuleModels.EventFilterDto;
 import cbs.nova.starter.model.NotificationRuleModels.NotificationActionDto;
 import cbs.nova.starter.model.NotificationRuleModels.NotificationRuleDto;
 import cbs.nova.starter.persistence.NotificationRuleRepository;
+import cbs.nova.starter.security.WebhookUrlGuard;
 import cbs.nova.starter.service.DslAuditService;
+import cbs.nova.starter.webhook.WebhookProperties;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -37,6 +39,7 @@ class NotificationRuleServiceTest {
   private ObjectMapper objectMapper;
   private ObjectProvider<DslAuditService> auditProvider;
   private DslAuditService auditService;
+  private WebhookProperties webhookProperties;
   private NotificationRuleService service;
 
   @BeforeEach
@@ -45,7 +48,9 @@ class NotificationRuleServiceTest {
     objectMapper = new ObjectMapper();
     auditService = mock(DslAuditService.class);
     auditProvider = providerOf(auditService);
-    service = new NotificationRuleService(repository, objectMapper, auditProvider);
+    webhookProperties = WebhookUrlGuard.permissiveProperties();
+    service = new NotificationRuleService(repository, objectMapper, auditProvider,
+            webhookProperties);
   }
 
   @Test
@@ -248,6 +253,66 @@ class NotificationRuleServiceTest {
               .isInstanceOf(IllegalArgumentException.class)
               .hasMessage("sink '" + sink + "' requires a non-blank 'url'");
     }
+  }
+
+  @Test
+  void validateRejectsPrivateAddressForUrlSinks() {
+    webhookProperties.setBlockPrivateAddresses(true);
+    NotificationRuleDto request = ruleDto("r", true, "RunFailed",
+            List.of(new NotificationActionDto("webhook", "http://169.254.169.254/metadata", null,
+                    null)));
+
+    assertThatThrownBy(() -> service.create(request))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("notification sink url")
+            .hasMessageContaining("host resolves to a link-local address");
+  }
+
+  @Test
+  void validateRejectsLoopbackAddressForUrlSinks() {
+    webhookProperties.setBlockPrivateAddresses(true);
+    NotificationRuleDto request = ruleDto("r", true, "RunFailed",
+            List.of(new NotificationActionDto("slack", "https://127.0.0.1/hook", null, null)));
+
+    assertThatThrownBy(() -> service.create(request))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("loopback");
+  }
+
+  @Test
+  void validateRejectsDisallowedSchemeForUrlSinks() {
+    NotificationRuleDto request = ruleDto("r", true, "RunFailed",
+            List.of(new NotificationActionDto("pagerduty", "gopher://pager.example/alert", null,
+                    null)));
+
+    assertThatThrownBy(() -> service.create(request))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("scheme");
+  }
+
+  @Test
+  void validateRedactsUserinfoInRejectionMessage() {
+    webhookProperties.setBlockPrivateAddresses(true);
+    NotificationRuleDto request = ruleDto("r", true, "RunFailed",
+            List.of(new NotificationActionDto("webhook",
+                    "https://user:secret@127.0.0.1/internal", null, null)));
+
+    assertThatThrownBy(() -> service.create(request))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageNotContaining("secret")
+            .hasMessageNotContaining("user:secret@");
+  }
+
+  @Test
+  void validateAcceptsAllowedHostForUrlSinks() {
+    webhookProperties.setAllowedHosts(List.of("hooks.example.com"));
+    NotificationRuleDto request = ruleDto("r", true, "RunFailed",
+            List.of(new NotificationActionDto("webhook", "https://hooks.example.com/hook", null,
+                    null)));
+
+    when(repository.insert(any())).thenReturn(1L);
+
+    assertThat(service.create(request)).isNotNull();
   }
 
   @Test

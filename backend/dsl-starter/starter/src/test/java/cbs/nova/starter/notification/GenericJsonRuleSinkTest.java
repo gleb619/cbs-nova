@@ -12,6 +12,8 @@ import cbs.nova.dsl.history.DslRunStatus;
 import cbs.nova.starter.entity.NotificationRuleEntity;
 import cbs.nova.starter.events.DomainEvent;
 import cbs.nova.starter.model.NotificationRuleModels.NotificationActionDto;
+import cbs.nova.starter.security.WebhookUrlGuard;
+import cbs.nova.starter.webhook.WebhookProperties;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import java.net.http.HttpClient;
@@ -41,15 +43,18 @@ class GenericJsonRuleSinkTest {
 
   private GenericJsonRuleSink pagerDutySink;
 
+  private WebhookProperties properties;
+
   @BeforeEach
   void setUp() {
     wireMock = new WireMockServer(WireMockConfiguration.wireMockConfig().dynamicPort());
     wireMock.start();
     httpClient = HttpClient.newHttpClient();
+    properties = WebhookUrlGuard.permissiveProperties();
     slackSink = new GenericJsonRuleSink("slack", httpClient, new ObjectMapper(),
-            Duration.ofSeconds(5));
+            Duration.ofSeconds(5), properties);
     pagerDutySink = new GenericJsonRuleSink("pagerduty", httpClient, new ObjectMapper(),
-            Duration.ofSeconds(5));
+            Duration.ofSeconds(5), properties);
   }
 
   @AfterEach
@@ -121,6 +126,31 @@ class GenericJsonRuleSinkTest {
     FiringOutcome outcome = slackSink.deliver(rule("r"), action, runFailed());
     assertThat(outcome.outcome()).isEqualTo("failure");
     // detail mirrors the transport exception message, which is JDK-dependent (often null).
+  }
+
+  @Test
+  void unsafeUrlReturnsFailureWithoutCallingHttpClient() {
+    properties.setBlockPrivateAddresses(true);
+    NotificationActionDto action = new NotificationActionDto("slack",
+            "http://169.254.169.254/metadata", null, null);
+
+    FiringOutcome outcome = slackSink.deliver(rule("r"), action, runFailed());
+
+    assertThat(outcome.outcome()).isEqualTo("failure");
+    assertThat(outcome.detail()).contains("notification sink url")
+            .contains("link-local");
+  }
+
+  @Test
+  void userinfoIsNotLeakedInUnsafeUrlFailure() {
+    properties.setBlockPrivateAddresses(true);
+    NotificationActionDto action = new NotificationActionDto("slack",
+            "https://user:secret@127.0.0.1/hook", null, null);
+
+    FiringOutcome outcome = slackSink.deliver(rule("r"), action, runFailed());
+
+    assertThat(outcome.outcome()).isEqualTo("failure");
+    assertThat(outcome.detail()).doesNotContain("secret").doesNotContain("user:secret@");
   }
 
   private String baseUrl() {

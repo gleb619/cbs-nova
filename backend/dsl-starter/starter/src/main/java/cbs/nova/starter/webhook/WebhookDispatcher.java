@@ -2,9 +2,14 @@ package cbs.nova.starter.webhook;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
+import cbs.nova.starter.core.StarterConstants;
+import cbs.nova.starter.security.WebhookUrlGuard;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tags;
+import io.micrometer.core.instrument.Timer;
 import java.io.IOException;
 import java.net.URI;
-import java.net.URL;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -28,11 +33,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
-import cbs.nova.starter.core.StarterConstants;
-import io.micrometer.core.instrument.Counter;
-import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Tags;
-import io.micrometer.core.instrument.Timer;
 import tools.jackson.databind.ObjectMapper;
 
 @Slf4j
@@ -137,18 +137,19 @@ public class WebhookDispatcher {
     try {
       body = objectMapper.writeValueAsBytes(payload);
     } catch (Exception ex) {
-      log.warn("Failed to serialize notification payload for {}", url, ex);
+      log.warn("Failed to serialize notification payload for {}", WebhookUrlGuard.sanitize(url),
+              ex);
       long ms = durationMs(deliveryStarted);
       recordDeliveryMetric("serialization_failed", ms);
       return new WebhookDeliveryResult("serialization_failed", 0, ex.getMessage(), ms);
     }
 
-    if (!isUrlAllowed(url)) {
-      log.warn("Rejecting notification delivery to non-https URL: {}", url);
+    String reason = WebhookUrlGuard.sinkRejectionReason(url, properties);
+    if (reason != null) {
+      log.warn("Rejecting notification delivery: {}", reason);
       long ms = durationMs(deliveryStarted);
       recordDeliveryMetric("rejected", ms);
-      return new WebhookDeliveryResult("rejected", 0,
-              "Non-https URL not allowed: " + truncate(url), ms);
+      return new WebhookDeliveryResult("rejected", 0, reason, ms);
     }
 
     WebhookDeliveryResult result = sendWithRetries(url, secret, eventType, body, deliveryStarted);
@@ -186,16 +187,16 @@ public class WebhookDispatcher {
       long ms = durationMs(deliveryStarted);
       recordOutcome(subscription, "serialization_failed", 0, ex.getMessage(), ms);
       recordDeliveryMetric("failure", ms);
-      log.warn("Failed to serialize webhook payload for {}", url, ex);
+      log.warn("Failed to serialize webhook payload for {}", WebhookUrlGuard.sanitize(url), ex);
       return;
     }
 
-    if (!isUrlAllowed(url)) {
+    String reason = WebhookUrlGuard.subscriptionRejectionReason(url, properties);
+    if (reason != null) {
       long ms = durationMs(deliveryStarted);
-      recordOutcome(subscription, "rejected", 0,
-              "Non-https URL not allowed: " + truncate(url), ms);
+      recordOutcome(subscription, "rejected", 0, reason, ms);
       recordDeliveryMetric("rejected", ms);
-      log.warn("Rejecting webhook delivery to non-https URL: {}", url);
+      log.warn("Rejecting webhook delivery: {}", reason);
       return;
     }
 
@@ -251,19 +252,6 @@ public class WebhookDispatcher {
             maxAttempts,
             lastError,
             durationMs(deliveryStarted));
-  }
-
-  private boolean isUrlAllowed(String url) {
-    try {
-      URL parsed = URI.create(url).toURL();
-      String protocol = parsed.getProtocol();
-      if ("https".equalsIgnoreCase(protocol)) {
-        return true;
-      }
-      return "http".equalsIgnoreCase(protocol) && properties.isAllowPlainHttp();
-    } catch (Exception ex) {
-      return false;
-    }
   }
 
   private HttpRequest buildRequest(String url, @Nullable String secret, String eventType,
@@ -322,9 +310,10 @@ public class WebhookDispatcher {
   private void recordOutcome(WebhookSubscription subscription, String status, int attempts,
           @Nullable String error, long durationMs) {
     Instant occurredAt = Instant.now();
-    SubscriptionKey key = new SubscriptionKey(subscription.url(), subscription.definitionPattern());
+    String safeUrl = WebhookUrlGuard.sanitize(subscription.url());
+    SubscriptionKey key = new SubscriptionKey(safeUrl, subscription.definitionPattern());
     outcomes.put(key, new WebhookDeliveryInfo(
-            subscription.url(),
+            safeUrl,
             subscription.definitionPattern(),
             status,
             attempts,
@@ -334,9 +323,9 @@ public class WebhookDispatcher {
       try {
         // URLs longer than the column width are truncated rather than rejected so that the delivery
         // still leaves an audit trace. The same applies to last_error.
-        String url = subscription.url().length() > StarterConstants.WEBHOOK_URL_MAX_LENGTH
-                ? subscription.url().substring(0, StarterConstants.WEBHOOK_URL_MAX_LENGTH)
-                : subscription.url();
+        String url = safeUrl.length() > StarterConstants.WEBHOOK_URL_MAX_LENGTH
+                ? safeUrl.substring(0, StarterConstants.WEBHOOK_URL_MAX_LENGTH)
+                : safeUrl;
         repository.insert(
                 new WebhookDeliveryRecord(null, occurredAt, subscription.definitionPattern(),
                         StarterConstants.WEBHOOK_EVENT_RUN_COMPLETED,
@@ -349,13 +338,6 @@ public class WebhookDispatcher {
 
   private static long durationMs(Instant started) {
     return Duration.between(started, Instant.now()).toMillis();
-  }
-
-  private static String truncate(String value) {
-    if (value.length() <= StarterConstants.WEBHOOK_URL_MAX_LENGTH) {
-      return value;
-    }
-    return value.substring(0, StarterConstants.WEBHOOK_URL_MAX_LENGTH);
   }
 
   /**

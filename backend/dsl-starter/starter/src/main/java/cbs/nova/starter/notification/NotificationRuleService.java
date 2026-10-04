@@ -8,7 +8,9 @@ import cbs.nova.starter.model.NotificationRuleModels.NotificationActionDto;
 import cbs.nova.starter.model.NotificationRuleModels.NotificationRuleDto;
 import cbs.nova.starter.persistence.NotificationRuleRepository;
 import cbs.nova.starter.persistence.NotificationRuleSearchResult;
+import cbs.nova.starter.security.WebhookUrlGuard;
 import cbs.nova.starter.service.DslAuditService;
+import cbs.nova.starter.webhook.WebhookProperties;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -25,6 +27,11 @@ import tools.jackson.databind.ObjectMapper;
  * CRUD + JSON (de)serialization for notification rules. Validation rejects blank names/event types
  * and url-less webhook/slack/pagerduty actions with {@link IllegalArgumentException}; every
  * mutation is audited through {@link DslAuditService} (fail-safe by design).
+ *
+ * <p>
+ * T811: URL-bearing action sinks are additionally run through the shared {@link WebhookUrlGuard} so
+ * operator-supplied webhook/slack/pagerduty URLs are subject to the same
+ * scheme/host/private-address rules as the {@code httpCall} helper.
  */
 @Slf4j
 @RequiredArgsConstructor
@@ -37,6 +44,7 @@ public class NotificationRuleService {
   private final NotificationRuleRepository repository;
   private final ObjectMapper objectMapper;
   private final ObjectProvider<DslAuditService> auditService;
+  private final WebhookProperties webhookProperties;
 
   public NotificationRuleSearchResult list(int offset, int limit) {
     return repository.findAll(offset, limit);
@@ -137,7 +145,7 @@ public class NotificationRuleService {
     }
   }
 
-  private static void validate(NotificationRuleDto request) {
+  private void validate(NotificationRuleDto request) {
     if (request.name() == null || request.name().isBlank()) {
       throw new IllegalArgumentException("'name' is required and must not be blank");
     }
@@ -158,6 +166,9 @@ public class NotificationRuleService {
               && (action.url() == null || action.url().isBlank())) {
         throw new IllegalArgumentException(
                 "sink '" + action.sink() + "' requires a non-blank 'url'");
+      }
+      if (URL_SINKS.contains(action.sink()) && action.url() != null && !action.url().isBlank()) {
+        WebhookUrlGuard.validateSink(action.url(), webhookProperties);
       }
     }
   }
