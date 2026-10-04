@@ -11,6 +11,9 @@ import java.time.Instant;
 import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+import java.util.function.LongSupplier;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
@@ -65,6 +68,34 @@ public final class ApiKeyStore {
    */
   @Lazy
   private final ObjectProvider<ApiKeyStore> selfProvider;
+
+  /**
+   * Per-key, per-node throttle for {@code last_used_at} writes. Holds the {@link System#nanoTime()}
+   * value of the most recent successful write (or most-recent observed-but-suppressed touch — both
+   * refresh the entry so a steady caller doesn't slip into a runaway frame). Bounded by the number
+   * of distinct keys that hit this node; entries are evicted on {@link #revoke(long)} and never
+   * resurrected because the throttle is skipped entirely when a key is unknown.
+   *
+   * <p>
+   * <b>Multi-node semantics.</b> Throttling is intentionally per node: in a multi-node deployment
+   * the worst case is one {@code last_used_at} write per node per window — which is still orders of
+   * magnitude fewer than the old per-request write.
+   */
+  private final ConcurrentHashMap<Long, Long> lastTouchNanos = new ConcurrentHashMap<>();
+
+  /**
+   * Throttle window in nanoseconds. {@code 0} (or negative) disables throttling — every successful
+   * match writes, matching the pre-throttle behaviour. Configured via
+   * {@code cbs.dsl.auth.last-used-throttle-seconds} and pushed in via
+   * {@link #configureLastUsedThrottle(int, LongSupplier)} at boot.
+   */
+  private volatile long throttleWindowNanos = 0L;
+
+  /**
+   * Nano-time clock used by the throttle. Defaults to {@link System#nanoTime()} and is overridable
+   * for deterministic tests.
+   */
+  private volatile LongSupplier nanoClock = System::nanoTime;
 
   /**
    * Result of a successful lookup — tells the auth filter which row matched so it can update
@@ -139,6 +170,9 @@ public final class ApiKeyStore {
   public boolean revoke(long id) {
     boolean changed = repository.markRevoked(id, Instant.now());
     if (changed) {
+      // Drop the throttle entry so a freshly-rotated replacement (rare id reuse) starts clean and
+      // so the map cannot grow without bound from keys that will never be used again.
+      lastTouchNanos.remove(id);
       log.info("revoked API key id={}", id);
     }
     return changed;
@@ -153,8 +187,36 @@ public final class ApiKeyStore {
   /**
    * Best-effort update of {@code last_used_at}. Failures are logged at WARN and swallowed — the
    * auth filter MUST NOT fail authentication because of a bookkeeping update.
+   *
+   * <p>
+   * Throttling: when {@link #configureLastUsedThrottle(int, LongSupplier) configured} with a
+   * positive window, repeated calls within the window for the same key are coalesced into a single
+   * repository write. Throttling is per node; in a multi-node deployment the worst case is one
+   * write per node per window. The throttle map is keyed by row id and bounded by the number of
+   * distinct keys that hit this node.
    */
   public void touchLastUsed(long id) {
+    long window = throttleWindowNanos;
+    if (window > 0) {
+      long now = nanoClock.getAsLong();
+      // Atomic per-key decision: if the existing entry is still inside the window we keep it and
+      // suppress the write; otherwise we install {@code now} as the new "last attempted touch"
+      // marker. The {@code accepted} flag carries the decision out of the {@code compute} lambda
+      // because comparing the post-compute value to {@code now} would let an in-window call
+      // through whenever the previous entry happens to equal {@code now} (e.g. the prior write
+      // happened on the same clock tick).
+      boolean[] accepted = {false};
+      lastTouchNanos.compute(id, (k, prev) -> {
+        if (prev != null && (now - prev) < window) {
+          return prev;
+        }
+        accepted[0] = true;
+        return now;
+      });
+      if (!accepted[0]) {
+        return;
+      }
+    }
     try {
       // Re-resolve through the proxy so any transactional / scoped behaviour applies on this
       // thread too. If no proxy is configured (e.g. unit tests wire the bean directly), fall
@@ -164,6 +226,41 @@ public final class ApiKeyStore {
     } catch (RuntimeException e) {
       log.warn("failed to update last_used_at for api key id={}: {}", id, e.getMessage());
     }
+  }
+
+  /**
+   * Configure (or disable) the per-node throttle on {@code last_used_at} writes. Called once at
+   * boot from {@link cbs.nova.starter.config.DslRunRepositoryConfiguration} using
+   * {@code cbs.dsl.auth.last-used-throttle-seconds} (default 60s).
+   *
+   * @param throttleWindowSeconds
+   *          minimum gap between writes for the same key, in seconds. {@code 0} (or negative)
+   *          disables throttling and every successful match writes — matching the pre-throttle
+   *          behaviour.
+   * @param nanoClock
+   *          monotonic nano-time source used by the throttle decision. Production callers pass
+   *          {@link System#nanoTime}; tests pass a deterministic {@link LongSupplier} so timing is
+   *          reproducible.
+   */
+  public void configureLastUsedThrottle(int throttleWindowSeconds, LongSupplier nanoClock) {
+    this.throttleWindowNanos = throttleWindowSeconds > 0
+            ? TimeUnit.SECONDS.toNanos(throttleWindowSeconds)
+            : 0L;
+    this.nanoClock = nanoClock;
+  }
+
+  /**
+   * Test seam — lets unit tests substitute a deterministic nano-time source. Not exposed in any
+   * production code path. Tests that need both window and clock should prefer
+   * {@link #configureLastUsedThrottle(int, LongSupplier)}.
+   */
+  void setNanoClockForTesting(LongSupplier nanoClock) {
+    this.nanoClock = nanoClock;
+  }
+
+  /** Test seam — see {@link #setNanoClockForTesting(LongSupplier)}. */
+  void setThrottleWindowNanosForTesting(long throttleWindowNanos) {
+    this.throttleWindowNanos = throttleWindowNanos;
   }
 
   /**

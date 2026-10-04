@@ -55,7 +55,7 @@ public record DslProperties(
     taskQueue = taskQueue == null ? "dsl-task-queue" : taskQueue;
     worker = worker == null ? new Worker(false) : worker;
     reload = reload == null ? new Reload(false) : reload;
-    auth = auth == null ? new Auth(false, null, new Rbac(false, "roles")) : auth;
+    auth = auth == null ? new Auth(false, null, 60, new Rbac(false, "roles")) : auth;
     files = files == null ? new Files(true, 5, 100, 32, 8, 5L) : files;
     docs = docs == null ? new Docs(true, "docs") : docs;
     git = git == null ? new Git(true, null, 5) : git;
@@ -93,10 +93,20 @@ public record DslProperties(
   public record Auth(
           @DefaultValue("false") Boolean enabled,
           String apiKey,
+          /**
+           * Minimum gap (seconds) between two {@code last_used_at} writes for the same stored API
+           * key. When a successful auth happens within the window after the previous one, the write
+           * is suppressed and only the in-memory throttle map moves. {@code 0} disables throttling
+           * and reproduces the old behaviour (every successful match writes). Throttling is
+           * intentionally per-node; in a multi-node deployment the worst case is one write per node
+           * per window — documented on {@link cbs.nova.starter.service.ApiKeyStore#touchLastUsed}.
+           */
+          @DefaultValue("60") Integer lastUsedThrottleSeconds,
           @Valid @DefaultValue Rbac rbac) {
 
     public Auth {
       enabled = enabled == null ? false : enabled;
+      lastUsedThrottleSeconds = lastUsedThrottleSeconds == null ? 60 : lastUsedThrottleSeconds;
       rbac = rbac == null ? new Rbac(false, "roles") : rbac;
     }
   }

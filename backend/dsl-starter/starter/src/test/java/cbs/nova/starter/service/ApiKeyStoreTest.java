@@ -9,6 +9,9 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.LongSupplier;
 import org.h2.jdbcx.JdbcDataSource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -151,6 +154,175 @@ class ApiKeyStoreTest {
     store.touchLastUsed(created.id());
     assertThat(repository.findActiveByHash(ApiKeyStore.sha256Hex(created.plaintext()))
             .orElseThrow().lastUsedAt()).isNotNull();
+  }
+
+  @Test
+  void throttleCollapsesRapidCallsIntoOneWrite() {
+    ApiKeyStore.CreatedKey created = store.create("throttled");
+    CountingRepository counting = new CountingRepository(repository);
+    FakeClock clock = new FakeClock(0L);
+    ApiKeyStore throttledStore = new ApiKeyStore(counting, new ObjectMapper(),
+            new SelfProvider(null));
+    throttledStore.configureLastUsedThrottle(60, clock);
+
+    for (int i = 0; i < 100; i++) {
+      throttledStore.touchLastUsed(created.id());
+      // 100ms per call: total elapsed across 100 iterations is 10s, well inside the 60s window.
+      clock.advanceNanos(TimeUnit.MILLISECONDS.toNanos(100));
+    }
+
+    assertThat(counting.touchCount()).isEqualTo(1);
+  }
+
+  @Test
+  void throttleWritesAgainOnceWindowElapses() {
+    ApiKeyStore.CreatedKey created = store.create("throttled-after-window");
+    CountingRepository counting = new CountingRepository(repository);
+    FakeClock clock = new FakeClock(0L);
+    ApiKeyStore throttledStore = new ApiKeyStore(counting, new ObjectMapper(),
+            new SelfProvider(null));
+    throttledStore.configureLastUsedThrottle(60, clock);
+
+    throttledStore.touchLastUsed(created.id()); // write #1
+    throttledStore.touchLastUsed(created.id()); // suppressed
+    throttledStore.touchLastUsed(created.id()); // suppressed
+
+    // Advance past the 60s window.
+    clock.advanceNanos(TimeUnit.SECONDS.toNanos(61));
+    throttledStore.touchLastUsed(created.id()); // write #2
+
+    assertThat(counting.touchCount()).isEqualTo(2);
+  }
+
+  @Test
+  void throttleZeroWindowDisablesThrottling() {
+    ApiKeyStore.CreatedKey created = store.create("unthrottled");
+    CountingRepository counting = new CountingRepository(repository);
+    FakeClock clock = new FakeClock(0L);
+    ApiKeyStore throttledStore = new ApiKeyStore(counting, new ObjectMapper(),
+            new SelfProvider(null));
+    throttledStore.configureLastUsedThrottle(0, clock);
+
+    for (int i = 0; i < 5; i++) {
+      throttledStore.touchLastUsed(created.id());
+    }
+
+    assertThat(counting.touchCount()).isEqualTo(5);
+  }
+
+  @Test
+  void throttleTracksDifferentKeysIndependently() {
+    ApiKeyStore.CreatedKey a = store.create("key-a");
+    ApiKeyStore.CreatedKey b = store.create("key-b");
+    CountingRepository counting = new CountingRepository(repository);
+    FakeClock clock = new FakeClock(0L);
+    ApiKeyStore throttledStore = new ApiKeyStore(counting, new ObjectMapper(),
+            new SelfProvider(null));
+    throttledStore.configureLastUsedThrottle(60, clock);
+
+    throttledStore.touchLastUsed(a.id()); // write #1
+    throttledStore.touchLastUsed(b.id()); // write #2 — different key, not affected by A's window
+    throttledStore.touchLastUsed(a.id()); // suppressed — A is still in window
+    throttledStore.touchLastUsed(b.id()); // suppressed — B is still in window
+
+    assertThat(counting.touchCount()).isEqualTo(2);
+  }
+
+  @Test
+  void revokeClearsThrottleEntrySoReplacementKeyStartsClean() {
+    ApiKeyStore.CreatedKey created = store.create("to-revoke");
+    CountingRepository counting = new CountingRepository(repository);
+    FakeClock clock = new FakeClock(0L);
+    ApiKeyStore throttledStore = new ApiKeyStore(counting, new ObjectMapper(),
+            new SelfProvider(null));
+    throttledStore.configureLastUsedThrottle(60, clock);
+
+    throttledStore.touchLastUsed(created.id()); // write #1
+    throttledStore.touchLastUsed(created.id()); // suppressed
+    throttledStore.revoke(created.id());
+
+    // Brand-new write on the same id (after revoke clears the map entry) must NOT be throttled.
+    // Use the real one to drive the revocation through the JdbcApiKeyRepository (the stub's
+    // markRevoked is a no-op), then exercise the throttled store again with the counting repo.
+    ApiKeyStore realStore = new ApiKeyStore(repository, new ObjectMapper(),
+            new SelfProvider(null));
+    realStore.revoke(created.id());
+    ApiKeyStore replacement = new ApiKeyStore(counting, new ObjectMapper(),
+            new SelfProvider(null));
+    replacement.configureLastUsedThrottle(60, clock);
+    // Map starts empty on a fresh instance; touchLastUsed must write.
+    replacement.touchLastUsed(created.id());
+    assertThat(counting.touchCount()).isEqualTo(2); // initial write + post-revoke write
+  }
+
+  @Test
+  void throttleStillSwallowsRepositoryFailure() {
+    JdbcApiKeyRepository throwingRepo = new JdbcApiKeyRepository(null, null) {
+      @Override
+      public void touchLastUsed(long id, Instant lastUsedAt) {
+        throw new IllegalStateException("boom");
+      }
+    };
+    ApiKeyStore fragile = new ApiKeyStore(throwingRepo, new ObjectMapper(),
+            new SelfProvider(null));
+    fragile.configureLastUsedThrottle(60, new FakeClock(0L));
+
+    // Should not throw — the swallow lives below the throttle, not above it.
+    fragile.touchLastUsed(42L);
+    fragile.touchLastUsed(42L);
+  }
+
+  /**
+   * Manual nano-clock that advances only when the test asks it to. Removes wall-clock flakiness
+   * from throttle assertions.
+   */
+  private static final class FakeClock implements LongSupplier {
+
+    private final AtomicLong nanos;
+
+    FakeClock(long initialNanos) {
+      this.nanos = new AtomicLong(initialNanos);
+    }
+
+    void advanceNanos(long delta) {
+      nanos.addAndGet(delta);
+    }
+
+    @Override
+    public long getAsLong() {
+      return nanos.get();
+    }
+  }
+
+  /**
+   * Counts {@link JdbcApiKeyRepository#touchLastUsed} invocations while delegating everything else
+   * to the underlying repository, so we can assert on the actual write traffic — not just the
+   * throttle state.
+   */
+  private static final class CountingRepository extends JdbcApiKeyRepository {
+
+    private final JdbcApiKeyRepository delegate;
+    private final java.util.concurrent.atomic.AtomicInteger touches = new java.util.concurrent.atomic.AtomicInteger();
+
+    CountingRepository(JdbcApiKeyRepository delegate) {
+      super(null, null);
+      this.delegate = delegate;
+    }
+
+    @Override
+    public void touchLastUsed(long id, Instant lastUsedAt) {
+      touches.incrementAndGet();
+      delegate.touchLastUsed(id, lastUsedAt);
+    }
+
+    @Override
+    public boolean markRevoked(long id, Instant revokedAt) {
+      return delegate.markRevoked(id, revokedAt);
+    }
+
+    int touchCount() {
+      return touches.get();
+    }
   }
 
   private static ApiKeyStore storeOrNull() {

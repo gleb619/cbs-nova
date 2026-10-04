@@ -29,6 +29,7 @@ import cbs.nova.starter.persistence.JdbcTransactionExecutionRepository;
 import cbs.nova.starter.persistence.NoOpFieldEncryptor;
 import cbs.nova.starter.persistence.TransactionExecutionJdbcRepository;
 import cbs.nova.starter.persistence.WebhookDeliveryCrudRepository;
+import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.service.ApiKeyStore;
 import cbs.nova.starter.service.DomainEventPublisher;
 import cbs.nova.starter.service.DslAuditService;
@@ -189,7 +190,17 @@ public class DslRunRepositoryConfiguration {
   public ApiKeyStore apiKeyStore(
           JdbcApiKeyRepository repository,
           ObjectMapper objectMapper,
-          ObjectProvider<ApiKeyStore> selfProvider) {
-    return new ApiKeyStore(repository, objectMapper, selfProvider);
+          ObjectProvider<ApiKeyStore> selfProvider,
+          ObjectProvider<DslProperties> dslPropertiesProvider) {
+    ApiKeyStore store = new ApiKeyStore(repository, objectMapper, selfProvider);
+    DslProperties properties = dslPropertiesProvider.getIfAvailable();
+    if (properties != null && properties.auth() != null) {
+      store.configureLastUsedThrottle(
+              properties.auth().lastUsedThrottleSeconds() == null
+                      ? 0
+                      : properties.auth().lastUsedThrottleSeconds(),
+              System::nanoTime);
+    }
+    return store;
   }
 }

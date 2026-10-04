@@ -350,6 +350,7 @@ hot-reload toggles.
 | `cbs.dsl.worker.enabled` | `boolean` | `false` | Whether a Temporal worker is started. |
 | `cbs.dsl.reload.enabled` | `boolean` | `false` | Whether hot reload of DSL definitions is enabled. |
 | `cbs.dsl.auth.api-key` | `String` | — (unset; no initializer) | API key for authenticated DSL endpoints (e.g. reload). |
+| `cbs.dsl.auth.last-used-throttle-seconds` | `int` | `60` | Minimum gap (seconds) between two `last_used_at` writes for the same stored API key on a single node. Within the window, repeated authentications are coalesced into one `UPDATE dsl_api_keys SET last_used_at = …` write. `0` reproduces the pre-throttle behaviour (every successful match writes). Throttling is per node: in a multi-node deployment the worst case is one write per node per window. The bookkeeping write still fails soft — JDBC errors are logged at WARN and swallowed so authentication never breaks. |
 
 ### `cbs.nova.dsl.webhooks`
 
