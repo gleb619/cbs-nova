@@ -1,0 +1,10 @@
+{
+  "name": "@cbs/api-types-runner",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Pinned home for openapi-typescript: it builds output through the legacy ts.factory compiler API that TypeScript 7 removed, so it keeps its own TypeScript 5 copy while the workspace runs TypeScript 7.",
+  "dependencies": {
+    "openapi-typescript": "7.13.0",
+    "typescript": "5.9.3"
+  }
+}

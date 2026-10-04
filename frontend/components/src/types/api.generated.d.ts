@@ -118,7 +118,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Export published (and optionally draft) definition metadata as a bundle */
+        /** Export DSL source files as a bundle */
         get: operations["exportDefinitions"];
         put?: never;
         post?: never;
@@ -137,7 +137,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Import a definition metadata bundle, snapshotting history and reloading DSL */
+        /** Import a DSL source bundle, write files, reload DSL and commit */
         post: operations["importDefinitions"];
         delete?: never;
         options?: never;
@@ -197,6 +197,127 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/dsl/docs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List DSL doc files */
+        get: operations["listDslDocs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/dsl/docs/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Stage many DSL doc writes */
+        post: operations["bulkWriteDslDocs"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/dsl/docs/by-name/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read DSL doc markdown by construct name */
+        get: operations["readDslDocByName"];
+        put?: never;
+        /** Stage DSL doc markdown by construct name */
+        post: operations["writeDslDocByName"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/dsl/docs/exists/{path}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Check whether a DSL doc exists */
+        get: operations["dslDocExists"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/dsl/docs/flush": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Flush staged DSL doc writes to disk */
+        post: operations["flushDslDocs"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/dsl/docs/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Pending doc write count */
+        get: operations["dslDocsStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/dsl/docs/{path}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read DSL doc markdown */
+        get: operations["readDslDoc"];
+        put?: never;
+        /** Stage DSL doc markdown */
+        post: operations["writeDslDoc"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/dsl/drafts": {
         parameters: {
             query?: never;
@@ -204,10 +325,95 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Workbench draft summaries from .workbench/drafts */
+        /** List definitions whose source file has a git change */
         get: operations["listDrafts"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/dsl/drafts/commit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Commit the listed definitions' source paths as one atomic commit */
+        post: operations["commitDrafts"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/dsl/drafts/fetch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Fetch the configured git remote for the drafts workspace branch */
+        post: operations["fetchDraftsRepo"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/dsl/drafts/metadata": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Return workspace setup metadata for the drafts folder: number of git-changed source files, total size, current branch, and git/history config */
+        get: operations["getDraftsMetadata"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/dsl/drafts/pull": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Pull the drafts workspace branch per the builder pull strategy */
+        post: operations["pullDraftsRepo"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/dsl/drafts/rebase": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Rebase the drafts workspace branch onto its upstream */
+        post: operations["rebaseDraftsRepo"];
         delete?: never;
         options?: never;
         head?: never;
@@ -221,11 +427,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Read a single Workbench draft payload */
+        /** Read the current DSL source file for a definition */
         get: operations["readDraft"];
         put?: never;
         post?: never;
-        /** Delete a Workbench draft construct */
+        /** Discard working-tree changes for a definition */
         delete: operations["deleteDraft"];
         options?: never;
         head?: never;
@@ -249,6 +455,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/dsl/drafts/{name}/commits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List git commits for a definition's source path */
+        get: operations["listDraftCommits"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/dsl/drafts/{name}/discard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Discard working-tree changes for a definition */
+        post: operations["discardDraft"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/dsl/drafts/{name}/history": {
         parameters: {
             query?: never;
@@ -256,7 +496,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List published metadata snapshots for a construct */
+        /** List git commits for a definition's source path */
         get: operations["listPublishHistory"];
         put?: never;
         post?: never;
@@ -273,7 +513,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Read a single published metadata snapshot's content */
+        /** Read the DSL source file at a git commit */
         get: operations["readPublishHistoryEntry"];
         put?: never;
         post?: never;
@@ -290,7 +530,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Diff a published metadata snapshot against the current published definition */
+        /** Diff a git commit against the current working-tree source */
         get: operations["diffPublishHistoryEntry"];
         put?: never;
         post?: never;
@@ -309,7 +549,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Restore a published metadata snapshot and reload DSL */
+        /** Restore a git commit's source into the working tree */
         post: operations["restorePublishHistory"];
         delete?: never;
         options?: never;
@@ -326,7 +566,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Persist a Workbench construct as published and reload DSL */
+        /** Write supplied source, reload DSL and commit the source file */
         post: operations["publishDraft"];
         delete?: never;
         options?: never;
@@ -343,7 +583,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Persist a Workbench draft construct to disk */
+        /** Write DSL source for a definition to the source file */
         post: operations["saveDraft"];
         delete?: never;
         options?: never;
@@ -885,6 +1125,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/dsl/webhooks/deliveries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List persisted webhook delivery outcomes */
+        get: operations["listWebhookDeliveryRows"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/dsl/working-set": {
         parameters: {
             query?: never;
@@ -1089,6 +1346,92 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/vhs/loadtest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Run a VHS load test against multiple tapes */
+        post: operations["vhsLoadTest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/vhs/tapes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List recorded VHS tapes */
+        get: operations["listVhsTapes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/vhs/tapes/{runId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download a VHS tape */
+        get: operations["downloadVhsTape"];
+        put?: never;
+        post?: never;
+        /** Delete a VHS tape */
+        delete: operations["deleteVhsTape"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/vhs/tapes/{runId}/replay": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Replay a VHS tape */
+        post: operations["replayVhsTape"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/webhooks/deliveries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List last webhook delivery outcomes */
+        get: operations["listWebhookDeliveries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1126,6 +1469,14 @@ export interface components {
             requestedBy?: string;
             /** @enum {string} */
             status?: "PENDING" | "APPROVED" | "REJECTED" | "SUPERSEDED";
+        };
+        CommitResult: {
+            commitId?: string;
+            paths?: string[];
+            pushError?: string;
+            pushed?: boolean;
+            /** Format: int64 */
+            timestampMillis?: number;
         };
         CompileDiagnostic: {
             code?: string;
@@ -1184,7 +1535,7 @@ export interface components {
             name?: string;
             outputType?: string;
             /** @enum {string} */
-            status?: "Published" | "Draft" | "Modified";
+            status?: "Published" | "Modified" | "Added" | "Deleted" | "Conflicting";
             taskQueue?: string;
             type?: string;
             version?: string;
@@ -1238,6 +1589,8 @@ export interface components {
             metadata?: {
                 [key: string]: unknown;
             };
+            /** @description Optional preview-mode signal timeline (T736). Consumed by the preview / hierarchy / explain pipes and ignored by run mode, where Temporal owns signal delivery. Omitting it keeps signals inert exactly as before T736. */
+            signals?: components["schemas"]["SeededSignal"][];
         };
         ErrorEntry: {
             field?: string;
@@ -1264,6 +1617,7 @@ export interface components {
         };
         ExecutionDto: {
             completedAt?: string;
+            contentHash?: string;
             correlationId?: string;
             definitionHash?: string;
             /** Format: int64 */
@@ -1313,6 +1667,15 @@ export interface components {
             description?: string;
             markdown?: string;
             name?: string;
+        };
+        FetchResult: {
+            /** Format: int32 */
+            ahead?: number;
+            /** Format: int32 */
+            behind?: number;
+            branch?: string;
+            fetched?: boolean;
+            remoteHead?: string;
         };
         HierarchyReport: {
             astTree?: components["schemas"]["CallNode"];
@@ -1435,6 +1798,50 @@ export interface components {
         PromotionEnvironment: {
             name?: string;
         };
+        PullResult: {
+            /** Format: int32 */
+            ahead?: number;
+            /** Format: int32 */
+            behind?: number;
+            branch?: string;
+            message?: string;
+            pulled?: boolean;
+            strategy?: string;
+            updatedFrom?: string;
+            updatedTo?: string;
+        };
+        RebaseResult: {
+            /** Format: int32 */
+            ahead?: number;
+            /** Format: int32 */
+            behind?: number;
+            branch?: string;
+            message?: string;
+            rebased?: boolean;
+            updatedFrom?: string;
+            updatedTo?: string;
+        };
+        /**
+         * @description Replay strategy for a tape.
+         * @enum {string}
+         */
+        ReplayMode: "exact" | "load";
+        /** @description Response returned by POST /api/v1/vhs/tapes/{runId}/replay. */
+        ReplayRunResponse: {
+            mode: string;
+            replay_run_id: string;
+            report?: components["schemas"]["VhsReplayReport"];
+            status: string;
+            status_url?: string | null;
+            target: string;
+        };
+        /** @description One entry of a preview-mode signal timeline. A seeded signal becomes visible at the zero-based await-point index given by deliverAt (absent or 0 = visible from the start of the preview). Preview resolves signals from this timeline instead of waiting on wall-clock time. */
+        SeededSignal: {
+            /** Format: int32 */
+            deliverAt?: number | null;
+            name: string;
+            payloadJson?: string | null;
+        };
         ServerResponse: unknown;
         StepDto: {
             id?: string;
@@ -1447,6 +1854,19 @@ export interface components {
             path?: string;
             type?: string;
             value?: string;
+        };
+        /** @description Summary of a recorded VHS tape file discovered by a VhsTapeStore. */
+        TapeSummary: {
+            correlation_id?: string | null;
+            /** Format: int64 */
+            event_count: number;
+            filename: string;
+            /** Format: date-time */
+            recorded_at: string;
+            route: string;
+            run_id: string;
+            /** Format: int64 */
+            size_bytes: number;
         };
         TraceStepDto: {
             id?: string;
@@ -1472,6 +1892,58 @@ export interface components {
         };
         ValidationErrorsResponse: {
             errors?: components["schemas"]["ValidationError"][];
+        };
+        /** @description Immutable report of a replay run. */
+        VhsReplayReport: {
+            /** Format: int64 */
+            failedCalls: number;
+            mode: components["schemas"]["ReplayMode"];
+            observations: components["schemas"]["VhsReplayReport.CallObservation"][];
+            /** Format: int32 */
+            skippedCopies: number;
+            /** Format: int64 */
+            successfulCalls: number;
+            /** Format: int32 */
+            tapeCount: number;
+            tapes: components["schemas"]["VhsReplayReport.TapeSummary"][];
+            /** Format: int64 */
+            totalCalls: number;
+            /** Format: int64 */
+            wallClockMs: number;
+        };
+        "VhsReplayReport.CallObservation": {
+            callId: string;
+            error?: string | null;
+            /** Format: int64 */
+            latencyMs: number;
+            operation: string;
+            outputCompared: boolean;
+            outputMismatch: boolean;
+            success: boolean;
+            tapeId: string;
+            target: string;
+            type: string;
+        };
+        "VhsReplayReport.TapeSummary": {
+            /** Format: int64 */
+            durationMs: number;
+            /** Format: int64 */
+            failedCalls: number;
+            /** Format: int64 */
+            successfulCalls: number;
+            tapeId: string;
+            /** Format: int64 */
+            totalCalls: number;
+        };
+        WebhookDeliveryInfo: {
+            definitionPattern: string;
+            /** Format: int32 */
+            lastAttempts: number;
+            /** Format: date-time */
+            lastDeliveredAt?: string | null;
+            lastError?: string | null;
+            lastStatus: string;
+            url: string;
         };
         WorkingSetResponse: {
             items?: components["schemas"]["DefinitionMetaDto"][];
@@ -1889,6 +2361,348 @@ export interface operations {
             };
         };
     };
+    listDslDocs: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Doc entries */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ServerResponse"];
+                };
+            };
+            /** @description Source directory not configured */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    bulkWriteDslDocs: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Bulk writes staged */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ServerResponse"];
+                };
+            };
+            /** @description Invalid request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Source directory not configured */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    readDslDocByName: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Doc content */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ServerResponse"];
+                };
+            };
+            /** @description Invalid name */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No doc for this construct */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ServerResponse"];
+                };
+            };
+            /** @description Source directory not configured */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Bulkhead saturated */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    writeDslDocByName: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Write staged */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ServerResponse"];
+                };
+            };
+            /** @description Invalid name or body */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Source directory not configured */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    dslDocExists: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Existence flag */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ServerResponse"];
+                };
+            };
+            /** @description Invalid path */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Source directory not configured */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    flushDslDocs: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Flush result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ServerResponse"];
+                };
+            };
+            /** @description Source directory not configured */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    dslDocsStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Pending count */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ServerResponse"];
+                };
+            };
+            /** @description Source directory not configured */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    readDslDoc: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Doc content */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ServerResponse"];
+                };
+            };
+            /** @description Invalid path */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Source directory not configured */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Bulkhead saturated */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    writeDslDoc: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Write staged */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ServerResponse"];
+                };
+            };
+            /** @description Invalid path or body */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Source directory not configured */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     listDrafts: {
         parameters: {
             query?: never;
@@ -1905,6 +2719,160 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PageResponse"];
+                };
+            };
+        };
+    };
+    commitDrafts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Batch commit result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommitResult"];
+                };
+            };
+            /** @description Invalid request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A listed definition has no source path */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Builder not available, source directory not configured, or nothing to commit */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    fetchDraftsRepo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Fetch result with ahead/behind counts */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FetchResult"];
+                };
+            };
+            /** @description Builder not available, source directory not configured, or git remote missing */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    getDraftsMetadata: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Drafts metadata returned */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ServerResponse"];
+                };
+            };
+        };
+    };
+    pullDraftsRepo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Pull result; message carries conflict/abort details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PullResult"];
+                };
+            };
+            /** @description Builder not available, source directory not configured, or git remote missing */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    rebaseDraftsRepo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Rebase result; message carries conflict/abort details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RebaseResult"];
+                };
+            };
+            /** @description Builder not available, source directory not configured, or git remote missing */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
@@ -1927,7 +2895,7 @@ export interface operations {
                     "*/*": components["schemas"]["ServerResponse"];
                 };
             };
-            /** @description Draft not found */
+            /** @description Definition has no source path */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -1947,7 +2915,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Draft deleted */
+            /** @description Changes discarded */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1956,16 +2924,7 @@ export interface operations {
                     "*/*": components["schemas"]["ServerResponse"];
                 };
             };
-            /** @description Invalid request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Draft not found */
+            /** @description Definition has no source path */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -1974,7 +2933,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Source directory not configured or not found */
+            /** @description Builder not available or source directory not configured */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -2014,6 +2973,82 @@ export interface operations {
             };
         };
     };
+    listDraftCommits: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of commit entries */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ServerResponse"];
+                };
+            };
+            /** @description Definition has no source path */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Builder not available or source directory not configured */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    discardDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Changes discarded */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ServerResponse"];
+                };
+            };
+            /** @description Definition has no source path */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Builder not available or source directory not configured */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     listPublishHistory: {
         parameters: {
             query?: never;
@@ -2032,7 +3067,16 @@ export interface operations {
                     "*/*": components["schemas"]["ServerResponse"];
                 };
             };
-            /** @description Source directory not configured or not found */
+            /** @description Definition has no source path */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Source directory not configured or git requires builder */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -2070,7 +3114,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Source directory not configured or not found */
+            /** @description Source directory not configured or git requires builder */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -2090,7 +3134,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Line-level diff of entry vs published */
+            /** @description Line-level diff of entry vs current */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -2108,7 +3152,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Source directory not configured or not found */
+            /** @description Source directory not configured or git requires builder */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -2146,17 +3190,8 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Source directory not configured or not found */
+            /** @description Source directory not configured or git requires builder */
             409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Reload failed */
-            500: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2193,7 +3228,16 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Source directory not configured or not found */
+            /** @description Definition has no source path */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Source directory not configured or not found, or git requires builder */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -2222,7 +3266,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Draft saved */
+            /** @description Source saved */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -2233,6 +3277,15 @@ export interface operations {
             };
             /** @description Invalid request */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Definition has no source path */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2778,7 +3831,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Static channel catalogue; email is a placeholder */
+            /** @description Static channel catalogue; email is active when a JavaMailSender bean is present */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -3491,6 +4544,33 @@ export interface operations {
             };
         };
     };
+    listWebhookDeliveryRows: {
+        parameters: {
+            query?: {
+                /** @description Optional exact subscription id filter (definition pattern) */
+                subscriptionId?: string;
+                /** @description Maximum number of deliveries to return */
+                limit?: string;
+                /** @description Number of matching deliveries to skip before returning results */
+                offset?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageResponse"];
+                };
+            };
+        };
+    };
     getWorkingSet: {
         parameters: {
             query?: {
@@ -3822,6 +4902,191 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    vhsLoadTest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    listVhsTapes: {
+        parameters: {
+            query?: {
+                /** @description Maximum number of tapes to return */
+                limit?: string;
+                /** @description Number of tapes to skip */
+                offset?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageResponse"];
+                };
+            };
+        };
+    };
+    downloadVhsTape: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                runId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/x-jsonl": string;
+                };
+            };
+        };
+    };
+    deleteVhsTape: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                runId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    replayVhsTape: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                runId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReplayRunResponse"];
+                };
+            };
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReplayRunResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    listWebhookDeliveries: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookDeliveryInfo"][];
                 };
             };
         };

@@ -72,6 +72,8 @@ const BFF_PREFIX: Array<[RegExp, string]> = [
   [/^\/api\/dsl\//, '/api/v1/dsl/'],
   [/^\/api\/executions\//, '/api/v1/executions/'],
   [/^\/api\/executions$/, '/api/v1/executions'],
+  [/^\/api\/v1\/vhs\//, '/api/v1/vhs/'],
+  [/^\/api\/webhooks\//, '/api/v1/webhooks/'],
 ]
 
 /**
@@ -225,6 +227,66 @@ const EXCLUDED_OPERATIONS: Record<string, { reason: string; handRoute: string }>
     reason:
       'validates the construct `type` segment; kept hand-written alongside structures surface',
     handRoute: 'dsl/[type]/[name]/structure.get.ts',
+  },
+  vhsLoadTest: {
+    reason: 'plain proxy but kept hand-written alongside vhs surface',
+    handRoute: 'vhs/loadtest.post.ts',
+  },
+  listVhsTapes: {
+    reason: 'plain proxy but kept hand-written alongside vhs surface',
+    handRoute: 'vhs/tapes/index.get.ts',
+  },
+  deleteVhsTape: {
+    reason: 'plain proxy but kept hand-written alongside vhs surface',
+    handRoute: 'vhs/tapes/[runId].delete.ts',
+  },
+  downloadVhsTape: {
+    reason: 'plain proxy but kept hand-written alongside vhs surface',
+    handRoute: 'vhs/tapes/[runId].get.ts',
+  },
+  replayVhsTape: {
+    reason: 'forwards the request body via readBody() — not in BODY_OPERATIONS set',
+    handRoute: 'vhs/tapes/[runId]/replay.post.ts',
+  },
+  listWebhookDeliveryRows: {
+    reason: 'query-param allowlist (offset/limit/subscriptionId)',
+    handRoute: 'dsl/webhooks/deliveries.get.ts',
+  },
+  listDslDocs: {
+    reason: 'forwards the optional `prefix` query param only when present',
+    handRoute: 'dsl/docs/index.get.ts',
+  },
+  bulkWriteDslDocs: {
+    reason: 'forwards the request body via readBody() — not in BODY_OPERATIONS set',
+    handRoute: 'dsl/docs/bulk.post.ts',
+  },
+  readDslDocByName: {
+    reason: 'plain proxy but kept hand-written alongside docs surface',
+    handRoute: 'dsl/docs/by-name/[name].get.ts',
+  },
+  writeDslDocByName: {
+    reason: 'forwards the request body via readBody() — not in BODY_OPERATIONS set',
+    handRoute: 'dsl/docs/by-name/[name].post.ts',
+  },
+  flushDslDocs: {
+    reason: 'plain proxy but kept hand-written alongside docs surface',
+    handRoute: 'dsl/docs/flush.post.ts',
+  },
+  dslDocsStatus: {
+    reason: 'plain proxy but kept hand-written alongside docs surface',
+    handRoute: 'dsl/docs/status.get.ts',
+  },
+  listDraftCommits: {
+    reason: 'plain proxy but kept hand-written alongside drafts surface',
+    handRoute: 'dsl/drafts/[name]/commits.get.ts',
+  },
+  discardDraft: {
+    reason: 'plain proxy but kept hand-written alongside drafts surface',
+    handRoute: 'dsl/drafts/[name]/discard.post.ts',
+  },
+  getDraftsMetadata: {
+    reason: 'plain proxy but kept hand-written alongside drafts surface',
+    handRoute: 'dsl/drafts/metadata.get.ts',
   },
 }
 

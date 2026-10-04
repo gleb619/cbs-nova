@@ -22,10 +22,11 @@ const banner =
   ' */\n'
 
 const check = process.argv.includes('--check')
+const runnerDir = join(frontendDir, 'scripts', 'api-types-runner')
 
 function generate(targetPath) {
   execFileSync('pnpm', ['exec', 'openapi-typescript', specPath, '-o', targetPath], {
-    cwd: frontendDir,
+    cwd: runnerDir,
     stdio: 'inherit',
   })
   writeFileSync(targetPath, banner + readFileSync(targetPath, 'utf8'))

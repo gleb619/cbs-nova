@@ -36,7 +36,7 @@ if (!existsSync(specPath)) {
 }
 
 const require = createRequire(join(frontendDir, 'package.json'))
-const tscBin = require.resolve('typescript/bin/tsc')
+const tscBin = join(dirname(require.resolve('typescript/package.json')), 'bin', 'tsc')
 const buildDir = mkdtempSync(join(tmpdir(), 'bff-routes-'))
 execFileSync(
   process.execPath,
@@ -51,6 +51,8 @@ execFileSync(
     'es2022',
     '--skipLibCheck',
     '--esModuleInterop',
+    '--types',
+    'node',
   ],
   { stdio: 'inherit' },
 )
