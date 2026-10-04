@@ -563,6 +563,32 @@
           "interval": ""
         }
       ]
+    },
+    {
+      "id": 15,
+      "type": "logs",
+      "title": "Backend logs (Loki)",
+      "description": "T842 backend logs ship through the otel-collector logs exporter. MDC keys rid and cid are captured as log attributes.",
+      "datasource": { "type": "loki", "uid": "cbs-nova-loki" },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 61 },
+      "options": {
+        "showTime": true,
+        "showLabels": false,
+        "showCommonLabels": false,
+        "wrapLogMessage": true,
+        "prettifyLogMessage": false,
+        "enableLogDetails": true,
+        "dedupStrategy": "none",
+        "sortOrder": "Descending"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "loki", "uid": "cbs-nova-loki" },
+          "expr": "{service_name=~\"cbs-nova.*\"} |= \"\"",
+          "queryType": "range"
+        }
+      ]
     }
   ]
 }

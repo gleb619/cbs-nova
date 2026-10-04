@@ -11,7 +11,13 @@
   <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
   <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
 
+
+  <!-- T842: OTLP log appender. Implicit/inert: appender no-ops when SDK is not installed. rid/cid MDC keys flow through OTel attribute mapping. -->
+  <appender name="OpenTelemetry" class="io.opentelemetry.instrumentation.logback.appender.v1_0.OpenTelemetryAppender">
+    <captureMdcAttributes>rid,cid</captureMdcAttributes>
+  </appender>
   <root level="INFO">
+    <appender-ref ref="OpenTelemetry"/>
     <appender-ref ref="CONSOLE"/>
   </root>
 </configuration>
