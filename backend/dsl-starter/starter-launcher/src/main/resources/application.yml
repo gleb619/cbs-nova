@@ -168,7 +168,14 @@ sentry:
   send-default-pii: false
   logging:
     enabled: true
-    minimum-event-level: warn
+    # T800: raise the logback-to-event promotion floor from WARN to ERROR. With `warn`, every
+    # WARN/ERROR log line became a Bugsink event, so a typo'd definition name or a duplicate
+    # schedule (handled at WARN in DslExceptionHandler) paged on-call. Explicit
+    # `Sentry.captureException` calls in DefaultDslExceptionMapper and
+    # TemporalDslProcessService are unaffected — they bypass the logback integration and capture
+    # directly. Override with SENTRY_LOGGING_MINIMUM_EVENT_LEVEL env var if you ever need to
+    # re-enable WARN promotion for a debugging session.
+    minimum-event-level: error
     minimum-breadcrumb-level: debug
 
 # Logging

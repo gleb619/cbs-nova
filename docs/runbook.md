@@ -863,6 +863,10 @@ Two call sites capture exceptions to Sentry:
 
 Both sites guard with `try/catch (Exception ignored)` — Sentry is optional and unconfigured SDK calls are safe no-ops.
 
+The Sentry logback integration (`sentry.logging.minimum-event-level`) also promotes any log line at or above the configured level into a Bugsink event. We ship with `minimum-event-level: error`, so WARN lines are kept as breadcrumbs only and do **not** page on-call. Concretely, `DslExceptionHandler` logs client-caused outcomes (`404 NOT_FOUND`, `409 CONFLICT`, `429 BUILDER_BUSY`, `400 IA_ERROR`, `413 PAYLOAD_TOO_LARGE`, `429 SUBSCRIBER_CAP_EXCEEDED`, `4xx` `BUILDER_API_ERROR`) at WARN — a typo'd definition name or a duplicate schedule is recorded but does not become a Bugsink event. Server-side failures (`5xx` `BUILDER_API_ERROR`, `503 BUILDER_UNAVAILABLE`, `422 DSL_ERROR`, and any unhandled exception) still log at ERROR with stack trace.
+
+Override the floor temporarily for a debugging session with `SENTRY_LOGGING_MINIMUM_EVENT_LEVEL=warn` (or any other logback level).
+
 ### Correlating a `dsl_runs` run id to a Bugsink event
 
 1. Note the `run_id` from the failing run (app log, `dsl_runs` table, or API response).

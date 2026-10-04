@@ -1,5 +1,6 @@
 package cbs.nova.starter;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -17,10 +18,17 @@ import cbs.nova.starter.exception.ScheduleConflictException;
 import cbs.nova.starter.converter.DefaultDslExceptionMapper;
 import cbs.nova.starter.converter.DslExceptionMapper;
 import cbs.nova.dsl.model.ErrorResponse;
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import io.sentry.Sentry;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
@@ -31,6 +39,27 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.request.WebRequest;
 
 class DslExceptionHandlerTest {
+
+  private static final Logger HANDLER_LOGGER = (Logger) LoggerFactory
+          .getLogger(DslExceptionHandler.class);
+  private ListAppender<ILoggingEvent> listAppender;
+
+  @BeforeEach
+  void attachListAppender() {
+    listAppender = new ListAppender<>();
+    listAppender.setContext(HANDLER_LOGGER.getLoggerContext());
+    listAppender.start();
+    HANDLER_LOGGER.addAppender(listAppender);
+  }
+
+  @AfterEach
+  void detachListAppender() {
+    if (listAppender != null) {
+      HANDLER_LOGGER.detachAppender(listAppender);
+      listAppender.stop();
+      listAppender.list.clear();
+    }
+  }
 
   @Test
   void generalExceptionMapsTo500WithInternalErrorCode() throws Exception {
@@ -269,6 +298,95 @@ class DslExceptionHandlerTest {
             .setControllerAdvice(new DslExceptionHandler(new DefaultDslExceptionMapper()))
             .setMessageConverters(new JacksonJsonHttpMessageConverter())
             .build();
+  }
+
+  // --- T800 log-level assertions -------------------------------------------------
+  // These complement the status/body tests above. Each handler must emit a log line at the
+  // severity appropriate to the failure class: client-caused 4xx outcomes at WARN (message only,
+  // no stack), server-side 5xx and unhandled exceptions at ERROR (with stack). The thresholds
+  // matter because `sentry.logging.minimum-event-level` promotes ERROR+ lines to Bugsink events
+  // — a 404 logged at ERROR would page on-call for a typo'd definition name.
+
+  @Test
+  void definitionNotFoundLogsAtWarnWithoutStackTrace() throws Exception {
+    buildMvc().perform(get("/throw/definition-not-found"));
+
+    assertThat(lastEventLevel()).isEqualTo(Level.WARN);
+    assertThat(lastEventHasStackTrace()).isFalse();
+  }
+
+  @Test
+  void apiKeyNotFoundLogsAtWarnWithoutStackTrace() throws Exception {
+    buildMvc().perform(get("/throw/api-key-not-found"));
+
+    assertThat(lastEventLevel()).isEqualTo(Level.WARN);
+    assertThat(lastEventHasStackTrace()).isFalse();
+  }
+
+  @Test
+  void scheduleConflictLogsAtWarnWithoutStackTrace() throws Exception {
+    buildMvc().perform(get("/throw/schedule-conflict"));
+
+    assertThat(lastEventLevel()).isEqualTo(Level.WARN);
+    assertThat(lastEventHasStackTrace()).isFalse();
+  }
+
+  @Test
+  void builderBusyLogsAtWarnWithoutStackTrace() throws Exception {
+    buildMvc().perform(get("/throw/builder-busy"));
+
+    assertThat(lastEventLevel()).isEqualTo(Level.WARN);
+    assertThat(lastEventHasStackTrace()).isFalse();
+  }
+
+  @Test
+  void badRequestLogsAtWarnWithoutStackTrace() throws Exception {
+    buildMvc().perform(get("/throw/bad"));
+
+    assertThat(lastEventLevel()).isEqualTo(Level.WARN);
+    assertThat(lastEventHasStackTrace()).isFalse();
+  }
+
+  @Test
+  void builderApiClientErrorLogsAtWarnWithoutStackTrace() throws Exception {
+    buildMvc().perform(get("/throw/builder-api-400"));
+
+    assertThat(lastEventLevel()).isEqualTo(Level.WARN);
+    assertThat(lastEventHasStackTrace()).isFalse();
+  }
+
+  @Test
+  void builderApiServerErrorLogsAtErrorWithStackTrace() throws Exception {
+    buildMvc().perform(get("/throw/builder-api-502"));
+
+    assertThat(lastEventLevel()).isEqualTo(Level.ERROR);
+    assertThat(lastEventHasStackTrace()).isTrue();
+  }
+
+  @Test
+  void builderUnavailableLogsAtErrorWithStackTrace() throws Exception {
+    buildMvc().perform(get("/throw/builder-unavailable"));
+
+    assertThat(lastEventLevel()).isEqualTo(Level.ERROR);
+    assertThat(lastEventHasStackTrace()).isTrue();
+  }
+
+  @Test
+  void generalExceptionLogsAtErrorWithStackTrace() throws Exception {
+    buildMvc().perform(get("/throw/general"));
+
+    assertThat(lastEventLevel()).isEqualTo(Level.ERROR);
+    assertThat(lastEventHasStackTrace()).isTrue();
+  }
+
+  private Level lastEventLevel() {
+    assertThat(listAppender.list).as("expected at least one log event from DslExceptionHandler")
+            .isNotEmpty();
+    return listAppender.list.get(listAppender.list.size() - 1).getLevel();
+  }
+
+  private boolean lastEventHasStackTrace() {
+    return listAppender.list.get(listAppender.list.size() - 1).getThrowableProxy() != null;
   }
 
   @RestController
