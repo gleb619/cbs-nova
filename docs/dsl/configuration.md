@@ -427,6 +427,36 @@ production opt-in flow and the trigger-handling rules for `RUNNING` rows.
 
 ---
 
+## `cbs.audit`, `cbs.events`, `cbs.diagnostics`
+
+Class: `CbsRetentionProperties` (`@Data`). Opt-in age-based retention purges for the append-only
+`dsl_audit`, `dsl_events` and `dsl_compile_diagnostics` tables (T836). Each table is controlled
+independently; a retention of `0` or negative keeps that table strictly append-only and no purge
+job is registered for it. When at least one table has a positive retention, a single shared
+`DslAuxTableRetentionPurger` self-schedules using the smallest positive `purge-interval` among the
+enabled tables and runs batched `DELETE ... WHERE <timestamp> < cutoff LIMIT batch` passes per
+table until a partial batch is returned.
+
+> **Note on `dsl_audit`.** The T747 `dsl.maintenance.audit-retention.{enabled,max-age,batch-size}`
+> path already purges `dsl_audit` via the unified maintenance driver. The new `cbs.audit.retention`
+> knob is an additional opt-in path that uses the same `dsl.audit.purged` counter. Enabling both is
+> safe but will run two independent purge loops; leave `dsl.maintenance.audit-retention.enabled`
+> unset if you only want the `cbs.audit.retention` path.
+
+| Key | Type | Default | Effect |
+|-----|------|---------|--------|
+| `cbs.audit.retention` | `Duration` | `Duration.ZERO` (`0`) | How long `dsl_audit` rows are kept before purging. `0` or negative disables the `dsl_audit` purge. |
+| `cbs.audit.purge-interval` | `Duration` | `PT1H` | How often the shared purge job runs when `cbs.audit.retention` is positive. |
+| `cbs.audit.purge-batch-size` | `int` | `500` | Max `dsl_audit` rows removed per batched delete pass. |
+| `cbs.events.retention` | `Duration` | `Duration.ZERO` (`0`) | How long `dsl_events` rows are kept before purging. `0` or negative disables the `dsl_events` purge. |
+| `cbs.events.purge-interval` | `Duration` | `PT1H` | How often the shared purge job runs when `cbs.events.retention` is positive. |
+| `cbs.events.purge-batch-size` | `int` | `500` | Max `dsl_events` rows removed per batched delete pass. |
+| `cbs.diagnostics.retention` | `Duration` | `Duration.ZERO` (`0`) | How long `dsl_compile_diagnostics` rows are kept before purging. `0` or negative disables the diagnostics purge. |
+| `cbs.diagnostics.purge-interval` | `Duration` | `PT1H` | How often the shared purge job runs when `cbs.diagnostics.retention` is positive. |
+| `cbs.diagnostics.purge-batch-size` | `int` | `500` | Max `dsl_compile_diagnostics` rows removed per batched delete pass. |
+
+Runbook: [Retention purger stuck or too aggressive](../runbook.md#3-retention-purger-stuck-or-too-aggressive--p1).
+
 ## `cbs.dsl.*`
 
 ### `dsl`

@@ -237,6 +237,8 @@ if volume warrants.
 > rows older than `max-age` are removed in `batch-size`-bounded passes via
 > `DslAuditStore#purgeOlderThan`, the sole deletion path on `dsl_audit` (unreachable from any
 > REST handler).
+> Additionally, the same `dsl_audit` deletion path can be driven by the T836 `cbs.audit.retention`
+> knob; both T747 and T836 paths contribute to the `dsl.audit.purged` counter.
 >
 > **T814 webhook-delivery + notification-firing retention.** The opt-in pattern is also wired
 > for the two pure append-only logs that grow fastest: `dsl_webhook_deliveries` (counter
@@ -248,8 +250,9 @@ if volume warrants.
 > a positive `max-age`. When enabled, rows older than `max-age` are removed in
 > `batch-size`-bounded passes via `WebhookDeliveryRecordRepository#purgeOlderThan` /
 > `NotificationRuleFiringRepository#purgeOlderThan`, the sole deletion paths on those tables
-> (unreachable from any REST handler). `dsl_events` (outbox, replay semantics) and
-> `dsl_compile_diagnostics` stay append-only — bounded retention is a planned follow-up.
+> (unreachable from any REST handler).
+>
+> **T836 events + compile-diagnostics retention.** The opt-in pattern is now also wired for `dsl_events` (counter `dsl.events.purged`, knobs `cbs.events.retention`, `cbs.events.purge-interval`, `cbs.events.purge-batch-size`) and `dsl_compile_diagnostics` (counter `dsl.diagnostics.purged`, knobs `cbs.diagnostics.retention`, `cbs.diagnostics.purge-interval`, `cbs.diagnostics.purge-batch-size`). Disabled by default — no rows are deleted unless an operator sets a positive retention. When enabled, rows older than the retention are removed in `purge-batch-size`-bounded passes via `DslEventCrudRepository#deleteOlderThan` and `CompileDiagnosticCrudRepository#deleteOlderThan`, the sole deletion paths on those tables (unreachable from any REST handler).
 
 **Verification.** `dsl.runs.purged` / `dsl.run.transactions.purged` counters advance; row count
 stabilises; no `DELETE` in `pg_stat_activity` older than a few seconds.
