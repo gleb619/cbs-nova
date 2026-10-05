@@ -10,6 +10,8 @@ an operator needs to grep a log. For architecture, see
 [`dsl/configuration.md`](dsl/configuration.md) (every property named here).
 The API error catalog lives in [`api-errors.md`](api-errors.md).
 
+> To verify the read-only curl examples against the running stack, run `make runbook-verify`.
+
 ## Multi-instance deployment — DSL file flush contract
 
 Multiple app replicas may share one Postgres and one workbench workspace directory. DSL file

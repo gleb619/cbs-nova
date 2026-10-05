@@ -14,6 +14,7 @@ from .commands.loadtest import LoadtestCommand
 from .commands.openapi_diff import OpenApiDiffCommand
 from .commands.openapi_diff_test import OpenApiDiffTestCommand
 from .commands.openapi_fetch import OpenApiFetchCommand
+from .commands.runbook_verify import RunbookVerifyCommand
 from .commands.quality import QualityCommand
 from .commands.seed import SeedCommand
 from .commands.seed_history import SeedHistoryCommand
@@ -89,6 +90,11 @@ class CLI:
         subparsers.add_parser("seed-history", help="Seed historical sample runs").set_defaults(
             handler=SeedHistoryCommand
         )
+        # Runbook verify
+        p = subparsers.add_parser("runbook-verify", help="Verify read-only curl examples in docs/runbook.md")
+        RunbookVerifyCommand.register(p)
+        p.set_defaults(handler=RunbookVerifyCommand)
+
         subparsers.add_parser("loadtest", help="Load-test read-only BFF endpoints").set_defaults(
             handler=LoadtestCommand
         )
