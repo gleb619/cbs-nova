@@ -5,7 +5,7 @@ boilerplate. Business flows are expressed as small, versioned definitions in a d
 compiler turns them into production-ready Temporal classes at build time.
 
 This document is the high-level backend companion to [architecture.md](architecture.md) and
-[architecture-ui.md](architecture-ui.md). Implementation details live in [docs/dsl/](dsl/). The
+[architecture-ui.md](architecture-ui.md). Implementation details live in [docs/dsl/](dsl/). API error codes are catalogued in [api-errors.md](api-errors.md). The
 rationale behind foundational calls (Temporal, the helper SPI) was recorded in `docs/adr/` (since removed in commit c88753e6; rationale lives in the git history of this document).
 The platform baseline (Spring Boot 4 / Jackson 3 / Java 25) was recorded in `ADR 0005` (since removed; see git history).
 

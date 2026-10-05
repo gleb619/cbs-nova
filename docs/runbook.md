@@ -8,6 +8,7 @@ goal is operator-mitigates-in-under-5-minutes.
 an operator needs to grep a log. For architecture, see
 [`architecture-backend.md`](architecture-backend.md) (security & ops layer) and
 [`dsl/configuration.md`](dsl/configuration.md) (every property named here).
+The API error catalog lives in [`api-errors.md`](api-errors.md).
 
 ## Multi-instance deployment — DSL file flush contract
 
