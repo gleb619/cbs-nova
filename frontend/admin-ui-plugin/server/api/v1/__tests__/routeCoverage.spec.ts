@@ -484,6 +484,22 @@ const expectedProxies: readonly ExpectedProxy[] = [
     backendPath: '/api/dsl/auth/keys/{id}',
     bffPath: '/api/v1/dsl/auth/keys/{id}',
   },
+  // ApiKeyAdminRouterConfiguration — explicit admin UI surface (T837)
+  {
+    method: 'GET',
+    backendPath: '/api/dsl/auth/keys',
+    bffPath: '/api/v1/dsl/api-keys',
+  },
+  {
+    method: 'POST',
+    backendPath: '/api/dsl/auth/keys',
+    bffPath: '/api/v1/dsl/api-keys',
+  },
+  {
+    method: 'DELETE',
+    backendPath: '/api/dsl/auth/keys/{id}',
+    bffPath: '/api/v1/dsl/api-keys/{id}',
+  },
 
   // DslExecutionsRouterConfiguration
   {

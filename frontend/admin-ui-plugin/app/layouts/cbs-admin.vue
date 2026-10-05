@@ -98,6 +98,12 @@ const navItems = computed(() => [
     isActive: route.path === '/promote',
   },
   {
+    to: '/api-keys',
+    label: 'API keys',
+    icon: '🔑',
+    isActive: route.path === '/api-keys',
+  },
+  {
     to: '/executions',
     label: 'Executions',
     icon: '📋',
