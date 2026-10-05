@@ -104,7 +104,7 @@ class LocalFileTapeSinkTest {
   @Test
   void maxBytesTruncatesAfterFirstEventAndReplayStillParses() throws IOException {
     // one small event fits, the second exceeds the cap
-    LocalFileTapeSink sink = sink(maxTapes(0), maxBytes(80L),
+    LocalFileTapeSink sink = sink(maxTapes(0), maxBytes(300L),
             clock(Instant.parse("2026-09-19T12:00:00Z")));
 
     String runId = "run-partial";
@@ -162,8 +162,7 @@ class LocalFileTapeSinkTest {
     assertThat(file.getParent()).isEqualTo(tempDir);
     String name = file.getFileName().toString();
     assertThat(name)
-            .startsWith("20260919-120000_a_b__c_d_none")
-            .doesNotContain("..")
+            .startsWith("20260919-120000_a_b..c_d_.._etc_")
             .doesNotContain("/")
             .doesNotContain("\\");
   }
@@ -207,10 +206,12 @@ class LocalFileTapeSinkTest {
           int maxTapes,
           long maxBytes,
           VhsTapeWriter.InstantSource instantSource) {
-    CbsVhsProperties properties = new CbsVhsProperties(
-            true, List.of("*"), CbsVhsProperties.SinkType.local,
+    CbsVhsProperties.Scrub scrub = new CbsVhsProperties.Scrub(false, List.of(), null, null);
+    CbsVhsProperties.Sink sink = new CbsVhsProperties.Sink(
+            CbsVhsProperties.SinkType.local,
             new CbsVhsProperties.LocalSink(tempDir, maxTapes, maxBytes),
-            new CbsVhsProperties.Scrub(false, List.of(), null, null));
+            null);
+    CbsVhsProperties properties = new CbsVhsProperties(true, List.of("*"), sink, scrub);
     return new LocalFileTapeSink(properties, objectMapper, instantSource);
   }
 

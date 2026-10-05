@@ -14,38 +14,43 @@ import org.springframework.validation.annotation.Validated;
  * Configuration for the VHS execution recorder ({@code cbs.vhs.*}).
  *
  * <p>
- * Recording is opt-in and off by default. When {@code enabled=false} no sink or recorder beans are
- * registered and the hot execution path is unchanged.
+ * Recording is opt-in and off by default. When {@code enabled=false} no sink / scrub / recorder
+ * beans are registered and the hot execution path is unchanged.
  */
 @Validated
 @ConfigurationProperties(prefix = "cbs.vhs")
 public record CbsVhsProperties(
         @DefaultValue("false") boolean enabled,
         @DefaultValue List<String> recordableRoutes,
-        @DefaultValue("local") SinkType sinkType,
-        @Valid @DefaultValue LocalSink local,
+        @Valid @DefaultValue Sink sink,
         @Valid @DefaultValue Scrub scrub) {
 
   public CbsVhsProperties {
     recordableRoutes = recordableRoutes == null ? List.of() : List.copyOf(recordableRoutes);
-    sinkType = sinkType == null ? SinkType.local : sinkType;
-    local = local == null ? new LocalSink(null, 0, 0L) : local;
+    sink = sink == null ? new Sink(SinkType.local, null, null) : sink;
     scrub = scrub == null ? new Scrub(false, List.of(), VhsScrubber.DEFAULT_MASK, null) : scrub;
   }
 
   /**
-   * Record-time scrubbing settings ({@code cbs.vhs.scrub.*}).
+   * Tape sink selection and per-backend settings ({@code cbs.vhs.sink.*}).
    */
-  public record Scrub(
-          @DefaultValue("false") boolean enabled,
-          @DefaultValue List<ScrubRule> rules,
-          @DefaultValue(VhsScrubber.DEFAULT_MASK) String maskValue,
-          String seed) {
+  public record Sink(
+          @DefaultValue("local") SinkType type,
+          @Valid @DefaultValue LocalSink local,
+          @Valid @DefaultValue S3Sink s3) {
 
-    public Scrub {
-      rules = rules == null ? List.of() : List.copyOf(rules);
-      maskValue = maskValue == null || maskValue.isBlank() ? VhsScrubber.DEFAULT_MASK : maskValue;
+    public Sink {
+      type = type == null ? SinkType.local : type;
+      local = local == null ? new LocalSink(null, 0, 0L) : local;
+      s3 = s3 == null ? new S3Sink(null, null, null, false, 104_857_600L) : s3;
     }
+  }
+
+  /**
+   * Supported sink backends.
+   */
+  public enum SinkType {
+    local, s3
   }
 
   /**
@@ -78,10 +83,48 @@ public record CbsVhsProperties(
   }
 
   /**
-   * Supported sink backends. Only {@code local} is implemented; {@code object_storage} is reserved
-   * for a follow-up task.
+   * S3-compatible object-storage tape sink settings ({@code cbs.vhs.sink.s3.*}).
+   *
+   * <p>
+   * The actual {@code S3Client} bean (including any endpoint override or path-style access for
+   * MinIO) must be supplied by the host application, matching the opt-in pattern used by
+   * {@code S3StorageHelper}. The sink only needs bucket and prefix; endpoint and path-style keys
+   * are accepted here so operators keep all S3-related VHS knobs under one namespace.
+   *
+   * <p>
+   * {@code max-bytes} bounds the on-disk staging file used while a tape is open; once it would be
+   * exceeded the writer records a {@code tape_truncated} marker and closes the tape normally. The
+   * default cap prevents an unbounded in-memory or on-disk buffer per open run.
    */
-  public enum SinkType {
-    local, object_storage
+  public record S3Sink(
+          String bucket,
+          String prefix,
+          String endpointOverride,
+          @DefaultValue("false") boolean pathStyle,
+          @DefaultValue("104857600") @Min(0) long maxBytes) {
+
+    public S3Sink {
+      if (prefix == null) {
+        prefix = "";
+      }
+      if (maxBytes < 0) {
+        maxBytes = 0L;
+      }
+    }
+  }
+
+  /**
+   * Record-time scrubbing settings ({@code cbs.vhs.scrub.*}).
+   */
+  public record Scrub(
+          @DefaultValue("false") boolean enabled,
+          @DefaultValue List<ScrubRule> rules,
+          @DefaultValue(VhsScrubber.DEFAULT_MASK) String maskValue,
+          String seed) {
+
+    public Scrub {
+      rules = rules == null ? List.of() : List.copyOf(rules);
+      maskValue = maskValue == null || maskValue.isBlank() ? VhsScrubber.DEFAULT_MASK : maskValue;
+    }
   }
 }

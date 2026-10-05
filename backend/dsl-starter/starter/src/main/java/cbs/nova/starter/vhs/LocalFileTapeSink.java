@@ -86,10 +86,10 @@ public final class LocalFileTapeSink implements VhsTapeSink {
   }
 
   private VhsTapeWriter openWriter(String runId, String route, String correlationId) {
-    CbsVhsProperties.LocalSink local = properties.local();
-    if (properties.sinkType() != CbsVhsProperties.SinkType.local) {
+    CbsVhsProperties.LocalSink local = properties.sink().local();
+    if (properties.sink().type() != CbsVhsProperties.SinkType.local) {
       throw new IllegalStateException(
-              "LocalFileTapeSink only supports sink.type=local, was " + properties.sinkType());
+              "LocalFileTapeSink only supports sink.type=local, was " + properties.sink().type());
     }
 
     Instant now = instantSource.now();
@@ -99,11 +99,11 @@ public final class LocalFileTapeSink implements VhsTapeSink {
   }
 
   private void pruneIfNeeded() {
-    int maxTapes = properties.local().maxTapes();
+    int maxTapes = properties.sink().local().maxTapes();
     if (maxTapes <= 0) {
       return;
     }
-    Path directory = properties.local().path();
+    Path directory = properties.sink().local().path();
     synchronized (pruneLock) {
       List<Path> finished;
       try (Stream<Path> files = Files.list(directory)) {
