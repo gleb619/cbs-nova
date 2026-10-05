@@ -61,6 +61,9 @@ dependencies {
   compileOnly libs.openfeign.core
   compileOnly libs.spring.kafka
   compileOnly libs.spring.boot.starter.amqp
+  // T833: opt-in `natsPublish` helper. compileOnly keeps NATS client off the runtime classpath
+  // unless the host app declares io.nats:jnats and exposes a Connection bean.
+  compileOnly libs.nats.client
   // T769: opt-in SMTP transport for the `email` notification sink. JavaMailSender + jakarta.mail
   // types are referenced at compile time only — apps that want real email delivery declare this
   // dependency themselves and publish a JavaMailSender bean (the starter never pulls a runtime
@@ -134,6 +137,7 @@ dependencies {
   testImplementation libs.wiremock
   testImplementation libs.spring.kafka
   testImplementation libs.spring.boot.starter.amqp
+  testImplementation libs.nats.client
   testImplementation libs.spring.boot.starter.mail
   testImplementation libs.awssdk.s3
   testImplementation libs.spring.boot.starter.data.redis

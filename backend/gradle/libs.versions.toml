@@ -31,6 +31,7 @@ caffeine = "3.1.8"
 resilience4j = "2.3.0"
 squigglesql = "4.2.1"
 awssdk = "2.34.0"
+nats = "2.20.5"
 
 jgit = "7.1.0.202411261347-r"
 jtokkit = "1.1.0"
@@ -138,6 +139,9 @@ swagger-annotations-jakarta = { module = "io.swagger.core.v3:swagger-annotations
 # -- AWS SDK v2 (T754) -- compileOnly for the opt-in `s3Storage` helper; users who do not
 # declare software.amazon.awssdk:s3 themselves keep a starter without S3 on the classpath.
 awssdk-s3 = { module = "software.amazon.awssdk:s3", version.ref = "awssdk" }
+# T833: opt-in `natsPublish` helper. compileOnly keeps io.nats:jnats off every user's runtime
+# classpath — apps that want the helper declare it themselves and expose a NATS Connection bean.
+nats-client = { module = "io.nats:jnats", version.ref = "nats" }
 
 # -- Misc --
 jspecify = { module = "org.jspecify:jspecify", version.ref = "jspecify" }
