@@ -2,15 +2,21 @@ package cbs.nova.starter.config;
 
 import cbs.nova.starter.config.properties.DslAuditRetentionProperties;
 import cbs.nova.starter.config.properties.DslMaintenanceProperties;
+import cbs.nova.starter.config.properties.DslNotificationFiringRetentionProperties;
+import cbs.nova.starter.config.properties.DslWebhookDeliveryRetentionProperties;
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.maintenance.AuditRetentionMaintenanceTask;
 import cbs.nova.starter.maintenance.DslMaintenanceService;
 import cbs.nova.starter.maintenance.DslRunReconciliationMaintenanceTask;
 import cbs.nova.starter.maintenance.DslRunRetentionMaintenanceTask;
 import cbs.nova.starter.maintenance.MaintenanceTask;
+import cbs.nova.starter.maintenance.NotificationFiringRetentionMaintenanceTask;
+import cbs.nova.starter.maintenance.WebhookDeliveryRetentionMaintenanceTask;
 import cbs.nova.starter.persistence.DslAuditStore;
+import cbs.nova.starter.persistence.NotificationRuleFiringRepository;
 import cbs.nova.starter.service.DslRunReconciliationService;
 import cbs.nova.starter.service.DslRunRetentionPurger;
+import cbs.nova.starter.webhook.WebhookDeliveryRecordRepository;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Clock;
 import lombok.extern.slf4j.Slf4j;
@@ -34,7 +40,10 @@ import java.util.concurrent.ScheduledExecutorService;
 
 @Slf4j
 @Configuration
-@EnableConfigurationProperties({DslMaintenanceProperties.class, DslAuditRetentionProperties.class})
+@EnableConfigurationProperties({DslMaintenanceProperties.class,
+    DslAuditRetentionProperties.class,
+    DslWebhookDeliveryRetentionProperties.class,
+    DslNotificationFiringRetentionProperties.class})
 @AutoConfigureAfter({DslRunRetentionConfiguration.class, DslRunReconciliationConfiguration.class})
 public class DslMaintenanceConfiguration {
 
@@ -72,6 +81,32 @@ public class DslMaintenanceConfiguration {
             Clock.systemUTC());
   }
 
+  @Bean
+  @ConditionalOnBean(WebhookDeliveryRecordRepository.class)
+  WebhookDeliveryRetentionMaintenanceTask webhookDeliveryRetentionMaintenanceTask(
+          WebhookDeliveryRecordRepository repository,
+          DslWebhookDeliveryRetentionProperties properties,
+          ObjectProvider<MeterRegistry> meterRegistryProvider) {
+    return new WebhookDeliveryRetentionMaintenanceTask(
+            repository,
+            properties,
+            meterRegistryProvider.getIfAvailable(),
+            Clock.systemUTC());
+  }
+
+  @Bean
+  @ConditionalOnBean(NotificationRuleFiringRepository.class)
+  NotificationFiringRetentionMaintenanceTask notificationFiringRetentionMaintenanceTask(
+          NotificationRuleFiringRepository repository,
+          DslNotificationFiringRetentionProperties properties,
+          ObjectProvider<MeterRegistry> meterRegistryProvider) {
+    return new NotificationFiringRetentionMaintenanceTask(
+            repository,
+            properties,
+            meterRegistryProvider.getIfAvailable(),
+            Clock.systemUTC());
+  }
+
   // ---------------------------------------------------------------------
   // Unified driver + its executor — registered only when the master flag
   // is on.
@@ -103,6 +138,10 @@ public class DslMaintenanceConfiguration {
             perTask.orphans().enabled());
     enabled.put(StarterConstants.AUDIT_RETENTION_TASK_NAME,
             perTask.auditRetention().enabled());
+    enabled.put(StarterConstants.WEBHOOK_DELIVERY_RETENTION_TASK_NAME,
+            perTask.webhookDeliveryRetention().enabled());
+    enabled.put(StarterConstants.NOTIFICATION_FIRING_RETENTION_TASK_NAME,
+            perTask.notificationFiringRetention().enabled());
     // Deterministic ordering: sort by task name so logs and meter tag order
     // are stable regardless of bean-registration order.
     List<MaintenanceTask> sorted = tasks.stream()

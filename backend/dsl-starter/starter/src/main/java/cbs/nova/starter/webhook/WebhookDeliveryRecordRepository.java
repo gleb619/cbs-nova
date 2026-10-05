@@ -9,6 +9,7 @@ import cbs.nova.starter.persistence.WebhookDeliveryTableColumns;
 import com.github.squigglesql.squigglesql.Selectable;
 import com.github.squigglesql.squigglesql.TableReference;
 import com.github.squigglesql.squigglesql.literal.Literal;
+import java.time.Instant;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
@@ -18,8 +19,12 @@ import org.springframework.jdbc.core.RowMapper;
  * JDBC access to the append-only {@code dsl_webhook_deliveries} table.
  *
  * <p>
- * Deliberately exposes an insert and a paged query only — the delivery log is append-only by
- * convention, so there are no update or delete methods anywhere in the codebase.
+ * Exposes an insert and a paged query — the delivery log is append-only by convention for all
+ * user-facing surfaces — plus a single, narrowly-named maintenance exception:
+ * {@link #purgeOlderThan(Instant, int)}. That method exists solely so the opt-in
+ * {@code dsl.maintenance.webhook-delivery-retention} purge (T814) can age rows out of the table
+ * once an operator has explicitly enabled it. It is not exposed by any REST handler and not
+ * reachable from any controller code path.
  *
  * <p>
  * Follows the {@link cbs.nova.starter.persistence.JdbcDslRunRepository} idioms: squigglesql reads
@@ -112,5 +117,23 @@ public class WebhookDeliveryRecordRepository {
       return value;
     }
     return value.substring(0, maxLength);
+  }
+
+  /**
+   * Maintenance-only: deletes at most {@code batchSize} rows whose {@code occurred_at} is strictly
+   * older than {@code cutoff}. Returns the number of rows actually deleted.
+   *
+   * <p>
+   * Sole deletion path for the {@code dsl_webhook_deliveries} table; see the class Javadoc. Callers
+   * are expected to invoke this in a loop until it returns less than {@code batchSize}.
+   */
+  public int purgeOlderThan(Instant cutoff, int batchSize) {
+    if (cutoff == null) {
+      throw new IllegalArgumentException("cutoff must not be null");
+    }
+    if (batchSize <= 0) {
+      throw new IllegalArgumentException("batchSize must be positive, was " + batchSize);
+    }
+    return crud.deleteOlderThan(cutoff, batchSize);
   }
 }

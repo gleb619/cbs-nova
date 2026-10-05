@@ -4,6 +4,7 @@ import cbs.nova.starter.entity.NotificationRuleFiringEntity;
 import com.github.squigglesql.squigglesql.Selectable;
 import com.github.squigglesql.squigglesql.TableReference;
 import com.github.squigglesql.squigglesql.literal.Literal;
+import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
@@ -12,7 +13,11 @@ import org.springframework.jdbc.core.RowMapper;
 
 /**
  * JDBC access to the append-only {@code dsl_notification_rule_firing} audit table: an insert plus a
- * paged, filterable read. There is intentionally no update or delete path.
+ * paged, filterable read, plus a single, narrowly-named maintenance exception:
+ * {@link #purgeOlderThan(Instant, int)}. The maintenance method exists solely so the opt-in
+ * {@code dsl.maintenance.notification-firing-retention} purge (T814) can age rows out of the table
+ * once an operator has explicitly enabled it. It is not exposed by any REST handler and not
+ * reachable from any controller code path.
  *
  * <p>
  * Selects are built with squigglesql ({@link ExtendedSelectQueryExecutor}); the insert flows
@@ -72,5 +77,23 @@ public class NotificationRuleFiringRepository {
             .build();
     List<NotificationRuleFiringEntity> items = dslQueries.query(dataQuery, ROW_MAPPER);
     return new NotificationRuleFiringSearchResult(items, total);
+  }
+
+  /**
+   * Maintenance-only: deletes at most {@code batchSize} rows whose {@code created_at} is strictly
+   * older than {@code cutoff}. Returns the number of rows actually deleted.
+   *
+   * <p>
+   * Sole deletion path for the {@code dsl_notification_rule_firing} table; see the class Javadoc.
+   * Callers are expected to invoke this in a loop until it returns less than {@code batchSize}.
+   */
+  public int purgeOlderThan(Instant cutoff, int batchSize) {
+    if (cutoff == null) {
+      throw new IllegalArgumentException("cutoff must not be null");
+    }
+    if (batchSize <= 0) {
+      throw new IllegalArgumentException("batchSize must be positive, was " + batchSize);
+    }
+    return crud.deleteOlderThan(cutoff, batchSize);
   }
 }

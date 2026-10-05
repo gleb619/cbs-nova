@@ -45,19 +45,27 @@ public record DslMaintenanceProperties(
   public DslMaintenanceProperties {
     unifiedEnabled = unifiedEnabled == null ? false : unifiedEnabled;
     schedule = schedule == null ? Duration.ofHours(1) : schedule;
-    tasks = tasks == null ? new Tasks(null, null, null) : tasks;
+    tasks = tasks == null ? new Tasks(null, null, null, null, null) : tasks;
   }
 
   @Builder
   public record Tasks(
           @Valid @DefaultValue Task runRetention,
           @Valid @DefaultValue Task orphans,
-          @Valid @DefaultValue Task auditRetention) {
+          @Valid @DefaultValue Task auditRetention,
+          @Valid @DefaultValue Task webhookDeliveryRetention,
+          @Valid @DefaultValue Task notificationFiringRetention) {
 
     public Tasks {
       runRetention = runRetention == null ? new Task(null) : runRetention;
       orphans = orphans == null ? new Task(null) : orphans;
       auditRetention = auditRetention == null ? new Task(null) : auditRetention;
+      webhookDeliveryRetention = webhookDeliveryRetention == null
+              ? new Task(null)
+              : webhookDeliveryRetention;
+      notificationFiringRetention = notificationFiringRetention == null
+              ? new Task(null)
+              : notificationFiringRetention;
     }
   }
 

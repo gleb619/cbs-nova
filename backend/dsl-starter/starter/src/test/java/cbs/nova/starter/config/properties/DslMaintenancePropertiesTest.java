@@ -29,6 +29,8 @@ class DslMaintenancePropertiesTest {
     assertThat(props.tasks().runRetention().enabled()).isTrue();
     assertThat(props.tasks().orphans().enabled()).isTrue();
     assertThat(props.tasks().auditRetention().enabled()).isTrue();
+    assertThat(props.tasks().webhookDeliveryRetention().enabled()).isTrue();
+    assertThat(props.tasks().notificationFiringRetention().enabled()).isTrue();
   }
 
   @Test
@@ -49,10 +51,14 @@ class DslMaintenancePropertiesTest {
     source.put("dsl.maintenance.tasks.run-retention.enabled", "false");
     source.put("dsl.maintenance.tasks.orphans.enabled", "false");
     source.put("dsl.maintenance.tasks.audit-retention.enabled", "false");
+    source.put("dsl.maintenance.tasks.webhook-delivery-retention.enabled", "false");
+    source.put("dsl.maintenance.tasks.notification-firing-retention.enabled", "false");
     DslMaintenanceProperties props = bind(source);
     assertThat(props.tasks().runRetention().enabled()).isFalse();
     assertThat(props.tasks().orphans().enabled()).isFalse();
     assertThat(props.tasks().auditRetention().enabled()).isFalse();
+    assertThat(props.tasks().webhookDeliveryRetention().enabled()).isFalse();
+    assertThat(props.tasks().notificationFiringRetention().enabled()).isFalse();
   }
 
   private static DslMaintenanceProperties bind(Map<String, String> source) {

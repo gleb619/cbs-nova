@@ -231,6 +231,19 @@ if volume warrants.
 > rows older than `max-age` are removed in `batch-size`-bounded passes via
 > `DslAuditStore#purgeOlderThan`, the sole deletion path on `dsl_audit` (unreachable from any
 > REST handler).
+>
+> **T814 webhook-delivery + notification-firing retention.** The opt-in pattern is also wired
+> for the two pure append-only logs that grow fastest: `dsl_webhook_deliveries` (counter
+> `dsl.webhook.deliveries.purged`, knobs `dsl.maintenance.webhook-delivery-retention.{enabled,
+> max-age,batch-size}`) and `dsl_notification_rule_firing` (counter
+> `dsl.notification.firings.purged`, knobs
+> `dsl.maintenance.notification-firing-retention.{enabled,max-age,batch-size}`). Disabled by
+> default — no rows are deleted unless an operator flips the matching `enabled=true` and sets
+> a positive `max-age`. When enabled, rows older than `max-age` are removed in
+> `batch-size`-bounded passes via `WebhookDeliveryRecordRepository#purgeOlderThan` /
+> `NotificationRuleFiringRepository#purgeOlderThan`, the sole deletion paths on those tables
+> (unreachable from any REST handler). `dsl_events` (outbox, replay semantics) and
+> `dsl_compile_diagnostics` stay append-only — bounded retention is a planned follow-up.
 
 **Verification.** `dsl.runs.purged` / `dsl.run.transactions.purged` counters advance; row count
 stabilises; no `DELETE` in `pg_stat_activity` older than a few seconds.

@@ -129,6 +129,8 @@ public class StarterConstants {
   public static final String TASK_PURGED_COUNTER = "dsl.maintenance.task.purged";
   public static final String TASK_TAG = "task";
   public static final String AUDIT_RETENTION_PURGED_COUNTER = "dsl.audit.purged";
+  public static final String WEBHOOK_DELIVERY_RETENTION_PURGED_COUNTER = "dsl.webhook.deliveries.purged";
+  public static final String NOTIFICATION_FIRING_RETENTION_PURGED_COUNTER = "dsl.notification.firings.purged";
 
   // T775 — outbound delivery meters (webhook + notification sinks).
   // Card is bounded: outcome is a closed vocabulary (success/failure/noop/skipped/rejected/...)
@@ -170,6 +172,8 @@ public class StarterConstants {
 
   public static final String ORPHANS_TASK_NAME = "orphans";
   public static final String AUDIT_RETENTION_TASK_NAME = "audit-retention";
+  public static final String WEBHOOK_DELIVERY_RETENTION_TASK_NAME = "webhook-delivery-retention";
+  public static final String NOTIFICATION_FIRING_RETENTION_TASK_NAME = "notification-firing-retention";
 
   // Maintenance configuration prefix
 

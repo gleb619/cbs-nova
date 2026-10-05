@@ -437,10 +437,12 @@ read-only lookup index for later enforcement layers.
 ## `dsl.maintenance.*`
 
 Class: `DslMaintenanceProperties` (unified driver knobs) + `DslAuditRetentionProperties` (T747
-opt-in `dsl_audit` purge). The unified driver is **off by default**; legacy per-job schedulers
-keep running on their own. When the unified driver is on, each task is gated by its own
-`dsl.maintenance.tasks.<name>.enabled` switch — see [architecture-backend § Unified maintenance
-driver](../architecture-backend.md) for the dispatch order and the rationale.
+opt-in `dsl_audit` purge) + `DslWebhookDeliveryRetentionProperties` / `DslNotificationFiringRetentionProperties`
+(T814 opt-in purges for `dsl_webhook_deliveries` and `dsl_notification_rule_firing`). The unified
+driver is **off by default**; legacy per-job schedulers keep running on their own. When the unified
+driver is on, each task is gated by its own `dsl.maintenance.tasks.<name>.enabled` switch — see
+[architecture-backend § Unified maintenance driver](../architecture-backend.md) for the dispatch
+order and the rationale.
 
 | Key | Type | Default | Effect |
 |-----|------|---------|--------|
@@ -449,9 +451,17 @@ driver](../architecture-backend.md) for the dispatch order and the rationale.
 | `dsl.maintenance.tasks.run-retention.enabled` | `boolean` | `true` | Include `run-retention` in the unified schedule. Honoured only when `dsl.maintenance.unified-enabled=true`; the legacy `cbs.runs.retention` knob still owns the actual purge when the unified driver is off. |
 | `dsl.maintenance.tasks.orphans.enabled` | `boolean` | `true` | Include `orphans` (workflow-vs-DB reconciliation) in the unified schedule. |
 | `dsl.maintenance.tasks.audit-retention.enabled` | `boolean` | `true` | Include `audit-retention` in the unified schedule. T747: the task itself remains a no-op until `dsl.maintenance.audit-retention.enabled=true` is set (orthogonal opt-in). |
+| `dsl.maintenance.tasks.webhook-delivery-retention.enabled` | `boolean` | `true` | Include `webhook-delivery-retention` in the unified schedule. T814: the task itself remains a no-op until `dsl.maintenance.webhook-delivery-retention.enabled=true` is set (orthogonal opt-in). |
+| `dsl.maintenance.tasks.notification-firing-retention.enabled` | `boolean` | `true` | Include `notification-firing-retention` in the unified schedule. T814: the task itself remains a no-op until `dsl.maintenance.notification-firing-retention.enabled=true` is set (orthogonal opt-in). |
 | `dsl.maintenance.audit-retention.enabled` | `boolean` | `false` | T747: master switch for the opt-in age-based purge of the `dsl_audit` table. `false` keeps the table strictly append-only; flip to `true` together with a positive `max-age` to bound table growth. The single deletion path lives on `DslAuditStore#purgeOlderThan` and is unreachable from any REST handler. |
 | `dsl.maintenance.audit-retention.max-age` | `Duration` | `P90D` | Maximum age of an audit row before it becomes eligible for purging. Non-positive values keep the task a no-op regardless of `enabled`. |
 | `dsl.maintenance.audit-retention.batch-size` | `int` (≥ 1) | `500` | Max rows removed per batched delete pass. Same rationale as `cbs.runs.purge-batch-size`. |
+| `dsl.maintenance.webhook-delivery-retention.enabled` | `boolean` | `false` | T814: master switch for the opt-in age-based purge of the `dsl_webhook_deliveries` table. `false` keeps the table strictly append-only; flip to `true` together with a positive `max-age` to bound growth. The single deletion path lives on `WebhookDeliveryRecordRepository#purgeOlderThan` and is unreachable from any REST handler. |
+| `dsl.maintenance.webhook-delivery-retention.max-age` | `Duration` | `P30D` | Maximum age of a delivery row before it becomes eligible for purging. Webhook deliveries grow fast (one row per run) so the default is shorter than the audit retention. Non-positive values keep the task a no-op regardless of `enabled`. |
+| `dsl.maintenance.webhook-delivery-retention.batch-size` | `int` (≥ 1) | `500` | Max rows removed per batched delete pass. |
+| `dsl.maintenance.notification-firing-retention.enabled` | `boolean` | `false` | T814: master switch for the opt-in age-based purge of the `dsl_notification_rule_firing` table. `false` keeps the table strictly append-only; flip to `true` together with a positive `max-age` to bound growth. The single deletion path lives on `NotificationRuleFiringRepository#purgeOlderThan` and is unreachable from any REST handler. |
+| `dsl.maintenance.notification-firing-retention.max-age` | `Duration` | `P90D` | Maximum age of a firing row before it becomes eligible for purging. Non-positive values keep the task a no-op regardless of `enabled`. |
+| `dsl.maintenance.notification-firing-retention.batch-size` | `int` (≥ 1) | `500` | Max rows removed per batched delete pass. |
 
 ---
 

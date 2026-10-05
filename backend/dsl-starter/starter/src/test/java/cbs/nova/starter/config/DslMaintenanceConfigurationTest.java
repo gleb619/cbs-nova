@@ -9,9 +9,13 @@ import cbs.nova.starter.maintenance.AuditRetentionMaintenanceTask;
 import cbs.nova.starter.maintenance.DslMaintenanceService;
 import cbs.nova.starter.maintenance.DslRunReconciliationMaintenanceTask;
 import cbs.nova.starter.maintenance.DslRunRetentionMaintenanceTask;
+import cbs.nova.starter.maintenance.NotificationFiringRetentionMaintenanceTask;
+import cbs.nova.starter.maintenance.WebhookDeliveryRetentionMaintenanceTask;
 import cbs.nova.starter.persistence.DslAuditStore;
+import cbs.nova.starter.persistence.NotificationRuleFiringRepository;
 import cbs.nova.starter.service.DslRunReconciliationService;
 import cbs.nova.starter.service.DslRunRetentionPurger;
+import cbs.nova.starter.webhook.WebhookDeliveryRecordRepository;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.temporal.client.WorkflowClient;
@@ -55,6 +59,8 @@ class DslMaintenanceConfigurationTest {
       assertThat(ctx).hasSingleBean(DslRunReconciliationService.class);
       // Audit task is always present (it's a no-op forward-compat stub).
       assertThat(ctx).hasSingleBean(AuditRetentionMaintenanceTask.class);
+      assertThat(ctx).hasSingleBean(WebhookDeliveryRetentionMaintenanceTask.class);
+      assertThat(ctx).hasSingleBean(NotificationFiringRetentionMaintenanceTask.class);
       assertThat(ctx).doesNotHaveBean(DslMaintenanceService.class);
 
       // The per-job ApplicationRunner starters are present.
@@ -75,6 +81,8 @@ class DslMaintenanceConfigurationTest {
       assertThat(ctx).hasSingleBean(DslRunRetentionMaintenanceTask.class);
       assertThat(ctx).hasSingleBean(DslRunReconciliationMaintenanceTask.class);
       assertThat(ctx).hasSingleBean(AuditRetentionMaintenanceTask.class);
+      assertThat(ctx).hasSingleBean(WebhookDeliveryRetentionMaintenanceTask.class);
+      assertThat(ctx).hasSingleBean(NotificationFiringRetentionMaintenanceTask.class);
     });
   }
 
@@ -90,8 +98,10 @@ class DslMaintenanceConfigurationTest {
               assertThat(service.tasks()).extracting(t -> t.name())
                       .containsExactly(
                               StarterConstants.AUDIT_RETENTION_TASK_NAME,
+                              StarterConstants.NOTIFICATION_FIRING_RETENTION_TASK_NAME,
                               StarterConstants.ORPHANS_TASK_NAME,
-                              StarterConstants.RUN_RETENTION_TASK_NAME);
+                              StarterConstants.RUN_RETENTION_TASK_NAME,
+                              StarterConstants.WEBHOOK_DELIVERY_RETENTION_TASK_NAME);
             });
   }
 
@@ -121,6 +131,16 @@ class DslMaintenanceConfigurationTest {
     @Bean
     DslAuditStore dslAuditStore() {
       return Mockito.mock(DslAuditStore.class);
+    }
+
+    @Bean
+    WebhookDeliveryRecordRepository webhookDeliveryRecordRepository() {
+      return Mockito.mock(WebhookDeliveryRecordRepository.class);
+    }
+
+    @Bean
+    NotificationRuleFiringRepository notificationRuleFiringRepository() {
+      return Mockito.mock(NotificationRuleFiringRepository.class);
     }
   }
 }
