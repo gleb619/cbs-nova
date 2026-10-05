@@ -14,6 +14,7 @@ import {
   selectTransaction,
 } from '@cbs/components'
 import { useLivePollingPreference } from '@cbs/admin-ui-plugin/composables/useLivePollingPreference'
+import { useExecutionDeepLink, type ExecutionDetailTab } from '@cbs/admin-ui-plugin/composables/useExecutionDeepLink'
 import { navigateTo, useRoute } from 'nuxt/app'
 import { computed, onUnmounted, ref, watch } from 'vue'
 import type { ExecutionMode, TransactionExecutionDto } from '~/types'
@@ -33,25 +34,20 @@ const {
   cancelExecution,
 } = useExecutions()
 
-type DetailTab = 'payload' | 'metadata' | 'logs' | 'errors' | 'transactions'
-
-const activeTab = ref<DetailTab>('payload')
-
 // T296 — the backend has no log source for production runs today, so the
 // Logs tab only appears when the detail payload actually carries one. The
 // user's tab choice is kept in `activeTab`; `visibleTab` falls back to
 // 'payload' while the chosen tab is not available, so the panel never goes
 // blank when e.g. logs disappear after a refresh.
 const hasLogs = computed(() => (selectedExecution.value?.logs?.length ?? 0) > 0)
-const availableTabs = computed<DetailTab[]>(() => {
-  const tabs: DetailTab[] = ['payload', 'metadata', 'transactions']
+const availableTabs = computed<ExecutionDetailTab[]>(() => {
+  const tabs: ExecutionDetailTab[] = ['payload', 'metadata', 'transactions']
   if (hasLogs.value) tabs.push('logs')
   tabs.push('errors')
   return tabs
 })
-const visibleTab = computed<DetailTab>(() =>
-  availableTabs.value.includes(activeTab.value) ? activeTab.value : 'payload',
-)
+
+const { activeTab, visibleTab } = useExecutionDeepLink({ availableTabs })
 
 // T461 — live polling on the detail page is user-controllable and persisted
 // (mirrors the T441 list-page pattern). Default stays ON so a user landing
@@ -147,7 +143,7 @@ async function loadTransactions() {
   }
 }
 
-function onTabSelect(tab: DetailTab) {
+function onTabSelect(tab: ExecutionDetailTab) {
   activeTab.value = tab
   if (tab === 'transactions') {
     void loadTransactions()
