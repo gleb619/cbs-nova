@@ -5,6 +5,7 @@ import cbs.nova.starter.persistence.NotificationRuleCrudRepository;
 import cbs.nova.starter.persistence.NotificationRuleFiringCrudRepository;
 import cbs.nova.starter.persistence.NotificationRuleFiringRepository;
 import cbs.nova.starter.persistence.NotificationRuleRepository;
+import cbs.nova.starter.config.properties.SlackProperties;
 import cbs.nova.starter.service.DslAuditService;
 import cbs.nova.starter.webhook.WebhookDispatcher;
 import cbs.nova.starter.webhook.WebhookProperties;
@@ -16,6 +17,7 @@ import javax.sql.DataSource;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
@@ -81,10 +83,12 @@ public class NotificationConfiguration {
 
   @Bean
   @ConditionalOnBean(NotificationRuleService.class)
-  GenericJsonRuleSink slackRuleSink(@Qualifier("webhookHttpClient") HttpClient webhookHttpClient,
+  @ConditionalOnProperty(prefix = "cbs.dsl.notifications.slack", name = "webhook-url")
+  SlackRuleSink slackRuleSink(SlackProperties slackProperties,
+          @Qualifier("webhookHttpClient") HttpClient webhookHttpClient,
           ObjectMapper objectMapper, WebhookProperties properties) {
-    return new GenericJsonRuleSink("slack", webhookHttpClient, objectMapper,
-            properties.getTimeout(), properties);
+    return new SlackRuleSink(webhookHttpClient, objectMapper, properties.getTimeout(),
+            properties, slackProperties.webhookUrl());
   }
 
   @Bean

@@ -171,6 +171,16 @@ raw `eventType` is published.
 | `cbs.nova.events.mq.retry-batch-size` | `int` | `100` | Max events retried per pass by `MqDomainEventRetryTask`. Coerced to `100` if `<= 0`. |
 | `cbs.nova.events.mq.retry-interval-seconds` | `long` | `30` | Fixed-delay between `MqDomainEventRetryTask` passes (seconds). Coerced to `30` if `<= 0`. |
 
+### `cbs.dsl.notifications.slack`
+
+Class: `SlackProperties`. Opt-in Slack incoming-webhook sink for notification rules. When
+`webhook-url` is absent the sink is not registered and rules with a `slack` action are skipped.
+The URL passes the same SSRF guard as the other URL-bearing sinks (see `cbs.nova.dsl.webhooks`).
+
+| Key | Type | Default | Effect |
+|-----|------|---------|--------|
+| `cbs.dsl.notifications.slack.webhook-url` | `String` | unset | Slack incoming webhook URL; rule messages are POSTed as `{"text": ...}`. Non-2xx or `{"ok":false}` responses become a failure outcome. |
+
 ### `cbs.nova.web`
 
 Class: `CbsNovaWebProperties` (record). Web-layer global caps applied before any controller
