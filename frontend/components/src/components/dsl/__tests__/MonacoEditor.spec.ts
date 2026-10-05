@@ -65,6 +65,12 @@ vi.mock('monaco-editor', () => ({
     registerCompletionItemProvider,
   },
 }))
+vi.mock('monaco-editor/esm/vs/languages/definitions/java/register.js', () => ({}))
+vi.mock('monaco-editor/esm/vs/languages/definitions/markdown/register.js', () => ({}))
+vi.mock('monaco-editor/esm/vs/features/find/register.js', () => ({}))
+vi.mock('monaco-editor/esm/vs/editor/contrib/suggest/browser/suggestController.js', () => ({}))
+vi.mock('monaco-editor/esm/vs/editor/contrib/hover/browser/hoverContribution.js', () => ({}))
+vi.mock('monaco-editor/esm/vs/editor/contrib/parameterHints/browser/parameterHints.js', () => ({}))
 
 import MonacoEditor from '../MonacoEditor.vue'
 

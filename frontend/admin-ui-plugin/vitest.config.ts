@@ -1,11 +1,33 @@
+import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import vue from '@vitejs/plugin-vue'
+import type { Plugin } from 'vite'
 import { defineConfig } from 'vitest/config'
 
 const r = (p: string) => fileURLToPath(new URL(p, import.meta.url))
 
+const componentsNodeModules = resolve(r('.'), '../components/node_modules')
+const monacoEditorRoot = resolve(componentsNodeModules, 'monaco-editor/esm/vs')
+
+function resolveMonacoPaths(): Plugin {
+  const prefix = 'monaco-editor/esm/vs/'
+  return {
+    name: 'resolve-monaco-subpaths',
+    enforce: 'pre',
+    resolveId(id) {
+      if (id === 'monaco-editor') {
+        return resolve(monacoEditorRoot, 'editor/editor.api.js')
+      }
+      if (id.startsWith(prefix)) {
+        return resolve(monacoEditorRoot, id.slice(prefix.length))
+      }
+      return null
+    },
+  }
+}
+
 export default defineConfig({
-  plugins: [vue() as any],
+  plugins: [vue() as any, resolveMonacoPaths()],
   resolve: {
     // Map the `~/` alias used by Nitro server routes (and the Nuxt app) to
     // the package root, matching what Nuxt's `~/` resolves to at runtime.
