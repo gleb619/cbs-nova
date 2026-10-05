@@ -359,6 +359,7 @@ export default defineNuxtModule<ModuleOptions>({
         `${prefix}/activity`,
         `${prefix}/webhooks`,
         `${prefix}/notifications`,
+        `${prefix}/audit`,
         `${prefix}/approvals`,
         `${prefix}/promote`,
         `${prefix}/api-keys`,
@@ -404,6 +405,12 @@ export default defineNuxtModule<ModuleOptions>({
           name: 'cbs-admin-notifications',
           path: `${prefix}/notifications`,
           file: resolve('./app/pages/notifications.vue'),
+          meta: { layout: 'cbs-admin', pad: true },
+        },
+        {
+          name: 'cbs-admin-audit',
+          path: `${prefix}/audit`,
+          file: resolve('./app/pages/audit.vue'),
           meta: { layout: 'cbs-admin', pad: true },
         },
         {
