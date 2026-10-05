@@ -92,6 +92,7 @@ export { default as RunnerStatusIndicator } from './components/runner/StatusIndi
 export { default as AppSidebarHideButton } from './components/sidebar/AppSidebarHideButton.vue'
 export { default as AppSidebarRestoreHandle } from './components/sidebar/AppSidebarRestoreHandle.vue'
 export { default as WebhookDeliveriesPanel } from './components/WebhookDeliveriesPanel.vue'
+export { default as AuditTrailTable } from './components/AuditTrailTable.vue'
 
 export * from './composables'
 export {

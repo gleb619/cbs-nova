@@ -24,6 +24,8 @@ import {
   unwrapList,
   type WebhookDeliveryPage,
   type WebhookDeliveryQuery,
+  type AuditPage,
+  type AuditQuery,
 } from '@cbs/components'
 import { $fetch } from 'ofetch'
 import type { DefinitionHistoryEntry, HistoryDiffResponse } from '../components/DslHistoryPanel.vue'
@@ -476,7 +478,23 @@ export function useDslApi() {
     function: 'functions',
   }
 
-  async function fetchObjectStructure(
+  async function fetchAuditTrail(params: AuditQuery): Promise<AuditPage> {
+  log.info('fetchAuditTrail request', { ...params })
+  const query: Record<string, string> = {
+    limit: String(params.limit),
+    offset: String(params.offset),
+  }
+  if (params.action?.trim()) query.action = params.action.trim()
+  try {
+    return (await $fetch('/api/v1/dsl/audit', { query })) as AuditPage
+  } catch (err) {
+    const message = extractApiError(err).message
+    log.error('failed to load audit trail', { error: message })
+    throw new Error(message)
+  }
+}
+
+async function fetchObjectStructure(
     type: string,
     name: string,
   ): Promise<ObjectStructureDto | null> {
@@ -732,6 +750,7 @@ export function useDslApi() {
     fetchNotificationChannels,
     fetchNotificationFireLog,
     testNotificationRules,
+    fetchAuditTrail,
     fetchChangeRequests,
     submitChangeRequest,
     approveChangeRequest,

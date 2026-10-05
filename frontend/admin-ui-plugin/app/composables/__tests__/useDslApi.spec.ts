@@ -490,6 +490,50 @@ describe('useDslApi', () => {
     )
   })
 
+  it('fetchAuditTrail GETs /api/v1/dsl/audit with limit and offset', async () => {
+    const envelope = { items: [], total: 0, offset: 25, limit: 25 }
+    fetchMock.mockResolvedValueOnce(envelope)
+    const api = useDslApi()
+    const result = await api.fetchAuditTrail({ limit: 25, offset: 25 })
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/audit', {
+      query: { limit: '25', offset: '25' },
+    })
+    expect(result).toEqual(envelope)
+  })
+
+  it('fetchAuditTrail forwards a non-blank action filter', async () => {
+    fetchMock.mockResolvedValueOnce({ items: [], total: 0, offset: 0, limit: 25 })
+    const api = useDslApi()
+    await api.fetchAuditTrail({ action: 'DEFINITION_PUBLISH', limit: 25, offset: 0 })
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/audit', {
+      query: { limit: '25', offset: '0', action: 'DEFINITION_PUBLISH' },
+    })
+  })
+
+  it('fetchAuditTrail omits a blank action filter from the query', async () => {
+    fetchMock.mockResolvedValueOnce({ items: [], total: 0, offset: 0, limit: 25 })
+    const api = useDslApi()
+    await api.fetchAuditTrail({ action: '   ', limit: 25, offset: 0 })
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/audit', {
+      query: { limit: '25', offset: '0' },
+    })
+  })
+
+  it('fetchAuditTrail maps BFF errors to a normalized message', async () => {
+    fetchMock.mockRejectedValueOnce({
+      data: { message: 'audit store unavailable' },
+      statusCode: 500,
+    })
+    const api = useDslApi()
+
+    await expect(api.fetchAuditTrail({ limit: 25, offset: 0 })).rejects.toThrow(
+      'audit store unavailable',
+    )
+  })
+
   it('validateConstruct delegates to preview with empty body', async () => {
     fetchMock.mockResolvedValueOnce({})
     const api = useDslApi()
