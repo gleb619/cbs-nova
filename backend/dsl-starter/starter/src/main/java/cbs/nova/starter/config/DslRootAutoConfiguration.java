@@ -23,7 +23,6 @@ import org.springframework.context.annotation.Import;
 @AutoConfigureAfter(DataSourceAutoConfiguration.class)
 @Import({
     RequestIdFilterConfiguration.class,
-    MapperConfiguration.class,
     RequestBodyLimitFilterConfiguration.class,
     LoggingConfiguration.class,
     DryRunLoggingConfiguration.class,
@@ -42,7 +41,6 @@ import org.springframework.context.annotation.Import;
     DslRunRetentionConfiguration.class,
     DslRunReconciliationConfiguration.class,
     DslMaintenanceConfiguration.class,
-    DslAuxTableRetentionConfiguration.class,
     DslErrorHandlingConfiguration.class,
     SpringHelperConfiguration.class,
     ApiKeyAuthFilterConfiguration.class,

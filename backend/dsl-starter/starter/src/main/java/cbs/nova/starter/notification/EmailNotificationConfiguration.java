@@ -1,9 +1,9 @@
 package cbs.nova.starter.notification;
 
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.mail.javamail.JavaMailSender;
 
 /**
@@ -11,8 +11,8 @@ import org.springframework.mail.javamail.JavaMailSender;
  * applications which do not declare {@code spring-boot-starter-mail} do not fail to start when the
  * notification rules engine is otherwise enabled.
  */
-@Configuration
 @ConditionalOnClass(name = "org.springframework.mail.javamail.JavaMailSender")
+@ConditionalOnBean(NotificationRuleService.class)
 public class EmailNotificationConfiguration {
 
   @Bean

@@ -1,6 +1,3 @@
-# File can contain only `DslRootAutoConfiguration`, other configs must be included via '@Import' annotation
-# TODO: refactor `AutoConfiguration.imports` file, remove extras, keep only `DslRootAutoConfiguration`
-
 cbs.nova.starter.config.DslRootAutoConfiguration
 cbs.nova.starter.config.DslScheduleConfiguration
 cbs.nova.starter.config.DslManifestConfiguration
@@ -12,11 +9,6 @@ cbs.nova.starter.config.router.DslManifestRouterConfiguration
 cbs.nova.starter.config.ManifestObjectGuardConfiguration
 cbs.nova.starter.config.VhsConfiguration
 cbs.nova.starter.config.router.NotificationRouterConfiguration
-cbs.nova.starter.config.router.RootIndexRouterConfiguration
 cbs.nova.starter.config.router.ChangeRequestRouterConfiguration
 cbs.nova.starter.config.RbacFilterConfiguration
 cbs.nova.starter.config.OpenTelemetryHelperConfiguration
-cbs.nova.starter.config.MapperConfiguration
-cbs.nova.starter.config.TracingConfiguration
-cbs.nova.starter.config.OpenApiConfiguration
-cbs.nova.starter.config.DslFileBufferConfiguration

@@ -7,6 +7,7 @@ import cbs.nova.starter.config.properties.CbsNovaPreviewProperties;
 import cbs.nova.starter.config.router.DslRouterConfiguration;
 import cbs.nova.starter.events.mq.MqEventConfiguration;
 import cbs.nova.starter.notification.NotificationConfiguration;
+import cbs.nova.starter.notification.EmailNotificationConfiguration;
 import cbs.nova.starter.security.ProductionSecurityPostureValidator;
 import cbs.nova.starter.security.SecurityPostureReporter;
 import cbs.nova.starter.webhook.WebhookConfiguration;
@@ -103,6 +104,7 @@ class DslRootAutoConfigurationTest {
             DslRunRepositoryConfiguration.class,
             VhsConfiguration.class,
             NotificationConfiguration.class,
+            EmailNotificationConfiguration.class,
             MqEventConfiguration.class,
             ChangeRequestConfiguration.class,
             RequestBodyLimitFilterConfiguration.class);
