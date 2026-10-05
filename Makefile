@@ -200,6 +200,8 @@ lint-kanban: ## Check docs/kanban.md (unique IDs, valid Status, resolvable Plan 
 JOB ?=
 
 .PHONY: ci-local
+# Note: JOB=e2e-offline may not be supported by wrkflw because browser binaries / display
+# wiring are CI-runner specific. Use CI=true pnpm test:e2e in frontend/ directly.
 ci-local: ## Run .github/workflows/ci.yml locally via wrkflw; JOB="lint scripts-tests" selects jobs
 	@python3 $(SCRIPT) ci-local $(JOB)
 

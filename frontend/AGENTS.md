@@ -174,6 +174,8 @@ To run with a real backend:
 E2E_BACKEND=1 E2E_BACKEND_URL=http://localhost:8090 pnpm test:e2e
 ```
 
+CI runs the backend-less path via `CI=true pnpm test:e2e` (see the `e2e-offline` job in `.github/workflows/ci.yml`).
+
 `E2E_BACKEND_URL` is propagated to the Nitro BFF as `BACKEND_BASE_URL`. CI
 should set both.
 

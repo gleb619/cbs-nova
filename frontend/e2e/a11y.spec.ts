@@ -53,7 +53,7 @@ const ALLOWLIST: ReadonlyArray<{
       '/activity': 8,
       '/approvals': 9,
       '/notifications': 8,
-      '/promote': 11,
+      '/promote': 12, // measured 2026-10-05 against dead backend; one extra low-contrast docs link in error state (T453)
       '/webhooks': 8,
     },
     reason:
