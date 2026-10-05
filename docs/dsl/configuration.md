@@ -261,8 +261,8 @@ unchanged. Only the `local` sink is implemented; `object_storage` is reserved fo
 | `cbs.vhs.recordable-routes` | `List<String>` | `[]` (empty) | Route patterns the recorder is allowed to capture. Empty list means no routes are recorded even when `enabled=true`. |
 | `cbs.vhs.sink.type` | `SinkType` (`local\|object_storage`) | `local` | Sink backend. Only `local` is wired; `object_storage` is reserved. |
 | `cbs.vhs.local.path` | `String` (path) | `${java.io.tmpdir}/cbs-nova/vhs` | Local-sink root directory. Created lazily by the sink. |
-| `cbs.vhs.local.max-tapes` | `int` (`@Min(0)`) | `0` | Maximum number of tapes kept on disk; `0` disables tape-count capping (byte cap still applies). |
-| `cbs.vhs.local.max-bytes` | `long` (`@Min(0)`) | `0` | Maximum aggregate bytes kept on disk; `0` disables byte capping (tape-count cap still applies). |
+| `cbs.vhs.local.max-tapes` | `int` (`@Min(0)`) | `0` | Maximum finished `.vhs.jsonl` files kept on disk; oldest are deleted when exceeded. `0` disables tape-count capping. |
+| `cbs.vhs.local.max-bytes` | `long` (`@Min(0)`) | `0` | Per-tape byte ceiling (event-line bytes). Exceeding it writes a `tape_truncated` marker and stops appending. `0` disables byte capping. |
 | `cbs.vhs.scrub.enabled` | `boolean` | `false` | Master switch for record-time scrubbing. When `false`, every captured field is recorded verbatim. |
 | `cbs.vhs.scrub.rules` | `List<ScrubRule>` | `[]` (empty) | Ordered scrub rules; empty list is a no-op when `scrub.enabled=true`. |
 | `cbs.vhs.scrub.mask-value` | `String` | `***` (`VhsScrubber.DEFAULT_MASK`) | Replacement value injected in place of scrubbed fields. Blank values fall back to the default. |
