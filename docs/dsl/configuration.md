@@ -92,8 +92,49 @@ Class: `DryRunProperties` (record). Dry-run context and log buffering.
 
 | Key | Type | Default | Effect |
 |-----|------|---------|--------|
-| `cbs.nova.dry-run.context.type` | `String` | `threadlocal` | Context carrier for dry-run state. **Only `threadlocal` is supported**; any other value throws at startup. |
+| `cbs.nova.dry-run.context.type` | `String` | `mdc` | Context carrier for dry-run state. Supported values are `mdc` (the default — uses SLF4J MDC) and `threadlocal` (an in-process, thread-local carrier independent of MDC). Any other value throws at startup. The `@ConditionalOnProperty` toggles in `DryRunLoggingConfiguration` also match on `cbs.nova.dryRun.context.type` — both spellings bind the same property. |
 | `cbs.nova.dry-run.log.max-events-per-run` | `int` | `1000` | Maximum buffered dry-run log events retained per run (`@Min(1)`). |
+
+### `cbs.nova.index-page`
+
+Class: `CbsNovaIndexProperties` (record). Opt-in root HTML dashboard.
+
+| Key | Type | Default | Effect |
+|-----|------|---------|--------|
+| `cbs.nova.index-page.enabled` | `boolean` | `false` | When `true`, exposes `GET /` as a tiny HTML dashboard for the request looks like it came from a browser. Off by default; the launcher stays a pure JSON API otherwise. |
+
+### `cbs.nova.explain`
+
+Class: `CbsNovaExplainProperties` (record). Explain-budget and per-section token caps applied when the runtime renders a DSL explain tree. Blank `resources-prefix` values are rejected at startup.
+
+| Key | Type | Default | Effect |
+|-----|------|---------|--------|
+| `cbs.nova.explain.budget-chars` | `int` (`@Min(0)`) | `4000` | Maximum total character budget the explain renderer is allowed to emit. Negative values are clamped to `0`. |
+| `cbs.nova.explain.resources-prefix` | `String` | `explain/` | Classpath-style prefix (e.g. `explain/`) used when resolving explain resources. Must be non-blank — blank values throw at startup. |
+| `cbs.nova.explain.name-max-tokens` | `int` (`@Min(0)`) | `128` | Per-node name token cap inside the explain payload. Negative values are clamped to `0`. |
+| `cbs.nova.explain.description-max-tokens` | `int` (`@Min(0)`) | `256` | Per-node description token cap inside the explain payload. Negative values are clamped to `0`. |
+| `cbs.nova.explain.mermaid-max-tokens` | `int` (`@Min(0)`) | `4096` | Mermaid-diagram token cap inside the explain payload. Negative values are clamped to `0`. |
+
+### `cbs.nova.schedule`
+
+Class: `DslScheduleProperties` (record). Temporal schedule catch-up window.
+
+| Key | Type | Default | Effect |
+|-----|------|---------|--------|
+| `cbs.nova.schedule.catchup-window` | `Duration` | `1m` | How long after a missed fire Temporal still catches it up. Fires missed beyond this window (e.g. during a Temporal outage) are silently dropped — they do not backfill. See `docs/architecture-backend.md` §scheduled-runs for the runtime contract. |
+
+### `cbs.nova.process`
+
+Wired through `@Value` on `TemporalConfiguration` (no `@ConfigurationProperties` class). Thread-pool and DB-save tunables for the asynchronous DSL process executor, plus the health-check poll cadence on the dedicated single-thread scheduler. Defaults come from the starter source.
+
+| Key / env | Type | Default | Effect |
+|-----------|------|---------|--------|
+| `cbs.nova.process.executor.core-size` | `int` | `4` | Core thread count of the `cbsNovaDslProcessExecutor` (`ThreadPoolTaskExecutor`) that runs Temporal DSL processes. |
+| `cbs.nova.process.executor.max-size` | `int` | `16` | Maximum thread count of the same executor; threads above `core-size` are created on demand and reaped during shutdown. |
+| `cbs.nova.process.executor.queue-capacity` | `int` | `64` | Bounded queue capacity of the same executor. Tasks beyond this queue trigger the executor's default rejection policy. |
+| `cbs.nova.process.healthcheck.interval` | `Duration` | `PT30S` | How often the dedicated `cbsNovaDslProcessHealthcheckExecutor` polls for stuck runs. |
+| `cbs.nova.process.healthcheck.stale-threshold` | `Duration` | `PT5M` | A run whose last update is older than this is reported as stale by the health-check pass. |
+| `cbs.nova.process.async-db-save` | `boolean` | `true` | When `true`, run-output DB writes are dispatched asynchronously on the process executor. When `false`, writes happen synchronously on the workflow's worker thread. |
 
 ### `cbs.nova.startup-report`
 
@@ -203,6 +244,29 @@ Class: `DslRunPersistenceProperties` (record). The `dsl_runs` persistence layer.
 ---
 
 ## `cbs.vhs.*`
+
+### `cbs.vhs`
+
+Class: `CbsVhsProperties` (record). VHS execution recorder wiring. Recording is opt-in and off by
+default — when `enabled=false` no sink / scrub / recorder is registered and the hot execution path is
+unchanged. Only the `local` sink is implemented; `object_storage` is reserved for a follow-up.
+
+> The scrub, local-sink and replay sub-trees share the `cbs.vhs` prefix (`@ConfigurationProperties`
+> on the root class). The replay engine lives in `cbs.vhs.replay.*` (own class) for clarity; the
+> tree is flat under `cbs.vhs` for relaxed binding purposes.
+
+| Key | Type | Default | Effect |
+|-----|------|---------|--------|
+| `cbs.vhs.enabled` | `boolean` | `false` | Master switch. When `false` no recorder / sink / scrub bean is created. |
+| `cbs.vhs.recordable-routes` | `List<String>` | `[]` (empty) | Route patterns the recorder is allowed to capture. Empty list means no routes are recorded even when `enabled=true`. |
+| `cbs.vhs.sink.type` | `SinkType` (`local\|object_storage`) | `local` | Sink backend. Only `local` is wired; `object_storage` is reserved. |
+| `cbs.vhs.local.path` | `String` (path) | `${java.io.tmpdir}/cbs-nova/vhs` | Local-sink root directory. Created lazily by the sink. |
+| `cbs.vhs.local.max-tapes` | `int` (`@Min(0)`) | `0` | Maximum number of tapes kept on disk; `0` disables tape-count capping (byte cap still applies). |
+| `cbs.vhs.local.max-bytes` | `long` (`@Min(0)`) | `0` | Maximum aggregate bytes kept on disk; `0` disables byte capping (tape-count cap still applies). |
+| `cbs.vhs.scrub.enabled` | `boolean` | `false` | Master switch for record-time scrubbing. When `false`, every captured field is recorded verbatim. |
+| `cbs.vhs.scrub.rules` | `List<ScrubRule>` | `[]` (empty) | Ordered scrub rules; empty list is a no-op when `scrub.enabled=true`. |
+| `cbs.vhs.scrub.mask-value` | `String` | `***` (`VhsScrubber.DEFAULT_MASK`) | Replacement value injected in place of scrubbed fields. Blank values fall back to the default. |
+| `cbs.vhs.scrub.seed` | `String` | — (unset; no initializer) | Optional deterministic seed for hash-based scrubbers; unset means per-process randomness. |
 
 ### `cbs.vhs.replay`
 
@@ -334,6 +398,23 @@ Defensive caps applied before persistence / workflow submission.
 | `cbs.runs.max-input-bytes` | `long` | `1048576` (`1024 * 1024`, `DEFAULT_MAX_BYTES`) | Max incoming run/preview request body size in bytes. Oversized inputs rejected with HTTP 413. `0` or very large disables the cap. |
 | `cbs.runs.max-output-bytes` | `long` | `1048576` (`1024 * 1024`, `DEFAULT_MAX_BYTES`) | Max persisted run output JSON size in bytes. Oversized worker outputs are truncated on persist (run still completes normally). `0` or very large disables the cap. |
 
+### `cbs.runs.reconciliation`
+
+Class: `DslRunReconciliationProperties` (`@Data` class). Recurring stuck-`dsl_runs` reconciliation
+against Temporal. Follows the established opt-in pattern (T408 RBAC, T814 retentions): the job is
+**disabled by default** and an operator opts in by setting `cbs.runs.reconciliation.enabled=true`.
+Existing deployments and local DX are unaffected until the feature is enabled — no job is
+registered and stuck runs continue to be handled by the legacy `STALE` sweep. See
+[docs/runbook.md § Stuck-run reconciliation](../runbook.md#stuck-run-reconciliation) for the
+production opt-in flow and the trigger-handling rules for `RUNNING` rows.
+
+| Key | Type | Default | Effect |
+|-----|------|---------|--------|
+| `cbs.runs.reconciliation.enabled` | `boolean` | `false` | Master switch. When `false` no reconciliation `ScheduledFuture` is registered. |
+| `cbs.runs.reconciliation.scan-interval` | `Duration` | `5m` | How often the reconciliation pass runs. |
+| `cbs.runs.reconciliation.grace-period` | `Duration` | `15m` | Only `RUNNING` rows whose `started_at` is older than this grace period are inspected; in-flight lifecycle callbacks get time to finish normally. |
+| `cbs.runs.reconciliation.batch-size` | `int` | `200` | Max rows inspected per scan pass; keeps each schema / row lock small. |
+
 ---
 
 ## `cbs.dsl.*`
@@ -351,6 +432,29 @@ hot-reload toggles.
 | `cbs.dsl.reload.enabled` | `boolean` | `false` | Whether hot reload of DSL definitions is enabled. |
 | `cbs.dsl.auth.api-key` | `String` | — (unset; no initializer) | API key for authenticated DSL endpoints (e.g. reload). |
 | `cbs.dsl.auth.last-used-throttle-seconds` | `int` | `60` | Minimum gap (seconds) between two `last_used_at` writes for the same stored API key on a single node. Within the window, repeated authentications are coalesced into one `UPDATE dsl_api_keys SET last_used_at = …` write. `0` reproduces the pre-throttle behaviour (every successful match writes). Throttling is per node: in a multi-node deployment the worst case is one write per node per window. The bookkeeping write still fails soft — JDBC errors are logged at WARN and swallowed so authentication never breaks. |
+
+#### `cbs.dsl.auth.rbac`
+
+Class: `DslProperties.Auth.Rbac` (record). Role-based access-control sub-feature (T408, phase 1).
+Registered as a servlet filter only when `cbs.dsl.auth.rbac.enabled=true`; the filter is OFF by
+default, and existing deployments see zero behaviour change.
+
+| Key | Type | Default | Effect |
+|-----|------|---------|--------|
+| `cbs.dsl.auth.rbac.enabled` | `boolean` | `false` | Master switch. When `true`, the RBAC filter enforces a per-route role table on every `/api/**` request. |
+| `cbs.dsl.auth.rbac.claim` | `String` | `roles` | JWT claim name the filter reads roles from when an OIDC principal is authenticated. Standard OAuth 2.0 `scope` / `scp` claims are also consulted when this default claim is in use. Blank values fall back to `roles`. |
+
+#### Opt-in route toggles (`cbs.dsl.docs`, `cbs.dsl.drafts`, `cbs.webhook`)
+
+These toggles gate handler / router registration under the matching `@ConditionalOnProperty`
+prefix. They have no dedicated `@ConfigurationProperties` class — the controller is wired up only
+when the property resolves to true.
+
+| Key | Type | Default | Effect |
+|-----|------|---------|--------|
+| `cbs.dsl.docs.enabled` | `boolean` | `true` (`matchIfMissing`) | When `true`, registers the `/api/dsl/docs/**` endpoints (controller + router). Setting `false` removes the documentation surface. |
+| `cbs.dsl.drafts.enabled` | `boolean` | `true` (`matchIfMissing`) | When `true`, registers the drafts controller and router family (`/api/dsl/drafts/**`, definition-bundle endpoints, draft history, draft VCS). Setting `false` strips the entire drafts surface. |
+| `cbs.webhook.enabled` | `boolean` | `false` | When `true`, registers the legacy DSL webhook handler and router. The newer `cbs.nova.dsl.webhooks.*` family below is the canonical, opt-in replacement; this toggle exists for backward compatibility with deployments already wired to the legacy surface. |
 
 ### `cbs.nova.dsl.webhooks`
 
@@ -386,6 +490,31 @@ these settings back.
 |-----|------|---------|--------|
 | `cbs.dsl.builder.git.pull-strategy` | `PullStrategy` | `REBASE` | How `POST /api/dsl/vcs/pull` handles divergence from upstream: `REBASE` (default; replay local commits onto upstream, abort cleanly on conflict leaving the tree untouched) or `MERGE` (create a merge commit; a conflict leaves the repo `MERGING`). |
 
+### `cbs.dsl.builder-client`
+
+Class: `DslBuilderClientProperties` (record). Configuration for the DSL builder HTTP client and
+its resilience primitives (T498 migrated the breaker / bulkhead / queue from a hand-rolled
+implementation to Resilience4j core).
+
+> The queue's previous `offerTimeoutMillis` knob is retained for backward compatibility — it is
+> no longer honoured. Resilience4j's `ThreadPoolBulkhead` rejects immediately when its bounded
+> queue is full.
+
+| Key | Type | Default | Effect |
+|-----|------|---------|--------|
+| `cbs.dsl.builder-client.base-url` | `String` | `http://localhost:8091` | Base URL of the dsl-builder HTTP endpoint the starter proxies to. |
+| `cbs.dsl.builder-client.http2` | `boolean` | `true` | Whether the HTTP client negotiates HTTP/2 with the dsl-builder. |
+| `cbs.dsl.builder-client.queue.capacity` | `int` | `100` | Bounded queue capacity for in-flight builder calls. |
+| `cbs.dsl.builder-client.queue.offer-timeout-millis` | `long` | `5000` | Legacy knob retained for backward compatibility; ignored by the Resilience4j bulkhead, which rejects immediately when the queue is full. |
+| `cbs.dsl.builder-client.queue.workers` | `int` | `4` | Number of workers draining the builder-call queue. |
+| `cbs.dsl.builder-client.bulkhead.permits` | `int` | `8` | Resilience4j bulkhead concurrent-permit count. |
+| `cbs.dsl.builder-client.bulkhead.acquire-timeout-seconds` | `long` | `5` | How long a caller waits for a bulkhead permit before giving up. |
+| `cbs.dsl.builder-client.breaker.failure-threshold` | `int` | `5` | Number of consecutive failures before the breaker opens. |
+| `cbs.dsl.builder-client.breaker.open-duration-seconds` | `long` | `30` | How long the breaker stays open before transitioning to half-open. |
+| `cbs.dsl.builder-client.breaker.half-open-probes` | `int` | `3` | Number of allowed probe calls while half-open before the breaker either reopens or closes. |
+| `cbs.dsl.builder-client.timeouts.connect-millis` | `long` | `5000` | TCP connect timeout for the builder HTTP client. |
+| `cbs.dsl.builder-client.timeouts.read-millis` | `long` | `60000` | Per-call read timeout for the builder HTTP client. |
+
 ---
 
 ### `cbs.dsl.helper.jwt`
@@ -415,6 +544,27 @@ format).
 | Key | Type | Default | Effect |
 |-----|------|---------|--------|
 | `cbs.dsl.helper.json-patch.pretty-print` | `boolean` | `false` | When `true`, `JsonPatchOut.result` is pretty-printed JSON instead of the compact (no-whitespace) form. Coerced to `false` if `null`. |
+
+### `cbs.dsl.helper.http-call`
+
+Class: `HttpCallProperties` (record). SSRF guard tunables applied by the `httpCall` helper at
+the helper-call site. The same guard (`UrlSafetyValidator`) backs `cbs.nova.dsl.webhooks.*`; the
+helper-specific prefix keeps the call-site defaults friendly — `private-address` blocking is
+default-on here even though it is off by default for static webhook subscriptions. See
+[docs/dsl/helpers.md § Outbound URL validation (SSRF guard)](../dsl/helpers.md#outbound-url-validation-ssrf-guard)
+for the validation rules and `OutboundUrlValidator` contract.
+
+> **Behaviour change:** `cbs.dsl.helper.http-call.block-private-addresses` defaults to `true`,
+> so DSLs that call internal hosts fail closed until the flag is relaxed or the host is
+> allowlisted. Two- and three-argument legacy constructors on `HttpCallProperties` keep their
+> permissive pre-guard behaviour for non-Spring call sites (tests, manual wiring).
+
+| Key | Type | Default | Effect |
+|-----|------|---------|--------|
+| `cbs.dsl.helper.http-call.allowed-schemes` | `List<String>` | `["https", "http"]` | URL scheme allowlist. Empty/missing falls back to `["https", "http"]`. |
+| `cbs.dsl.helper.http-call.block-private-addresses` | `boolean` | `true` | When `true`, loopback / link-local / site-local / any-local / multicast targets (e.g. cloud-metadata endpoints) are rejected. |
+| `cbs.dsl.helper.http-call.allowed-hosts` | `List<String>` | `[]` (empty) | Optional host allowlist; exact or `*.suffix` match. Empty means any host is allowed (subject to other checks). |
+| `cbs.dsl.helper.http-call.max-redirect-hops` | `int` | `5` | Maximum number of redirect hops the helper follows before giving up. |
 
 ## `cbs.dsl.manifest`
 
