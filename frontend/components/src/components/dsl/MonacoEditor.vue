@@ -58,6 +58,12 @@ function installWorkerlessEnvironment() {
 
 async function loadEditor() {
   const monacoApi = await import('monaco-editor')
+  await import('monaco-editor/esm/vs/languages/definitions/java/register.js')
+  await import('monaco-editor/esm/vs/languages/definitions/markdown/register.js')
+  await import('monaco-editor/esm/vs/features/find/register.js')
+  await import('monaco-editor/esm/vs/editor/contrib/suggest/browser/suggestController.js')
+  await import('monaco-editor/esm/vs/editor/contrib/hover/browser/hoverContribution.js')
+  await import('monaco-editor/esm/vs/editor/contrib/parameterHints/browser/parameterHints.js')
   const { CodeEditor } = await import('monaco-editor-vue3')
   if (disposed) return
   monaco = monacoApi
