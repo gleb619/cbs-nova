@@ -542,6 +542,32 @@ const expectedProxies: readonly ExpectedProxy[] = [
     backendPath: '/api/executions/{id}/cancel',
     bffPath: '/api/v1/executions/{id}/cancel',
   },
+  // VhsManagementRouterConfiguration (T840)
+  {
+    method: 'GET',
+    backendPath: '/api/v1/vhs/tapes',
+    bffPath: '/api/v1/vhs/tapes',
+  },
+  {
+    method: 'GET',
+    backendPath: '/api/v1/vhs/tapes/{runId}',
+    bffPath: '/api/v1/vhs/tapes/{runId}',
+  },
+  {
+    method: 'DELETE',
+    backendPath: '/api/v1/vhs/tapes/{runId}',
+    bffPath: '/api/v1/vhs/tapes/{runId}',
+  },
+  {
+    method: 'POST',
+    backendPath: '/api/v1/vhs/tapes/{runId}/replay',
+    bffPath: '/api/v1/vhs/tapes/{runId}/replay',
+  },
+  {
+    method: 'POST',
+    backendPath: '/api/v1/vhs/loadtest',
+    bffPath: '/api/v1/vhs/loadtest',
+  },
 ]
 
 // Nitro route filename: "<segments>.<method>.ts". Examples:

@@ -110,6 +110,12 @@ const navItems = computed(() => [
     isActive: route.path === '/api-keys',
   },
   {
+    to: '/vhs',
+    label: 'VHS Tapes',
+    icon: '📼',
+    isActive: route.path === '/vhs',
+  },
+  {
     to: '/executions',
     label: 'Executions',
     icon: '📋',

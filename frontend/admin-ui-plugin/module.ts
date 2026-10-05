@@ -8,9 +8,9 @@ import {
   extendPages,
   resolvePath,
 } from '@nuxt/kit'
+import { resolveRuntimeConfig } from './server/utils/moduleRuntimeConfig'
 import { parseForwardedHeadersEnv } from './server/utils/parseForwardedHeadersEnv'
 import { parseSecurityHeadersEnv } from './server/utils/parseSecurityHeadersEnv'
-import { resolveRuntimeConfig } from './server/utils/moduleRuntimeConfig'
 
 // ---------------------------------------------------------------------------
 // @cbs/admin-ui-plugin
@@ -366,6 +366,7 @@ export default defineNuxtModule<ModuleOptions>({
         `${prefix}/dsl-workbench`,
         `${prefix}/executions`,
         `${prefix}/executions/:id`,
+        `${prefix}/vhs`,
       ]
       for (let i = pages.length - 1; i >= 0; i--) {
         if (added.includes(pages[i].path)) pages.splice(i, 1)
@@ -447,6 +448,12 @@ export default defineNuxtModule<ModuleOptions>({
           name: 'cbs-admin-execution-detail',
           path: `${prefix}/executions/:id`,
           file: resolve('./app/pages/executions/[id].vue'),
+          meta: { layout: 'cbs-admin' },
+        },
+        {
+          name: 'cbs-admin-vhs',
+          path: `${prefix}/vhs`,
+          file: resolve('./app/pages/vhs.vue'),
           meta: { layout: 'cbs-admin' },
         },
       )

@@ -33,6 +33,7 @@ const ROUTES = [
   '/promote',
   '/webhooks',
   '/audit',
+  '/vhs',
 ] as const
 
 // Ratchet allowlist: a rule may appear on a route up to `maxNodes` times. Anything above that (a
@@ -57,6 +58,7 @@ const ALLOWLIST: ReadonlyArray<{
       '/promote': 12, // measured 2026-10-05 against dead backend; one extra low-contrast docs link in error state (T453)
       '/webhooks': 8,
       '/audit': 8,
+      '/vhs': 10,
     },
     reason:
       'T453 owns color tokens / contrast (raw Tailwind neutral-500 placeholder + sidebar-link ' +
