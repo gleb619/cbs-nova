@@ -259,20 +259,28 @@ Class: `DslRunPersistenceProperties` (record). The `dsl_runs` persistence layer.
 
 Class: `CbsVhsProperties` (record). VHS execution recorder wiring. Recording is opt-in and off by
 default — when `enabled=false` no sink / scrub / recorder is registered and the hot execution path is
-unchanged. Only the `local` sink is implemented; `object_storage` is reserved for a follow-up.
+unchanged. The sink backend is selected by `cbs.vhs.sink.type`: `local` (default) wires the
+file-system sink; `s3` writes each tape as a single S3 object and requires an `S3Client` bean from
+the host application (the AWS SDK v2 dependency is `compileOnly` in the starter, matching
+`S3StorageHelper`).
 
-> The scrub, local-sink and replay sub-trees share the `cbs.vhs` prefix (`@ConfigurationProperties`
+> The `sink`, `scrub` and `replay` sub-trees share the `cbs.vhs` prefix (`@ConfigurationProperties`
 > on the root class). The replay engine lives in `cbs.vhs.replay.*` (own class) for clarity; the
-> tree is flat under `cbs.vhs` for relaxed binding purposes.
+> tree is otherwise flat under `cbs.vhs` for relaxed binding purposes.
 
 | Key | Type | Default | Effect |
 |-----|------|---------|--------|
 | `cbs.vhs.enabled` | `boolean` | `false` | Master switch. When `false` no recorder / sink / scrub bean is created. |
 | `cbs.vhs.recordable-routes` | `List<String>` | `[]` (empty) | Route patterns the recorder is allowed to capture. Empty list means no routes are recorded even when `enabled=true`. |
-| `cbs.vhs.sink.type` | `SinkType` (`local\|object_storage`) | `local` | Sink backend. Only `local` is wired; `object_storage` is reserved. |
-| `cbs.vhs.local.path` | `String` (path) | `${java.io.tmpdir}/cbs-nova/vhs` | Local-sink root directory. Created lazily by the sink. |
-| `cbs.vhs.local.max-tapes` | `int` (`@Min(0)`) | `0` | Maximum finished `.vhs.jsonl` files kept on disk; oldest are deleted when exceeded. `0` disables tape-count capping. |
-| `cbs.vhs.local.max-bytes` | `long` (`@Min(0)`) | `0` | Per-tape byte ceiling (event-line bytes). Exceeding it writes a `tape_truncated` marker and stops appending. `0` disables byte capping. |
+| `cbs.vhs.sink.type` | `SinkType` (`local\|s3`) | `local` | Sink backend. `local` writes to disk; `s3` writes one object per run. |
+| `cbs.vhs.sink.local.path` | `String` (path) | `${java.io.tmpdir}/cbs-nova/vhs` | Local-sink root directory. Created lazily by the sink. |
+| `cbs.vhs.sink.local.max-tapes` | `int` (`@Min(0)`) | `0` | Maximum finished `.vhs.jsonl` files kept on disk; oldest are deleted when exceeded. `0` disables tape-count capping. |
+| `cbs.vhs.sink.local.max-bytes` | `long` (`@Min(0)`) | `0` | Per-tape byte ceiling (event-line bytes). Exceeding it writes a `tape_truncated` marker and stops appending. `0` disables byte capping. |
+| `cbs.vhs.sink.s3.bucket` | `String` | — (unset; no initializer) | Target S3 bucket. Required when `sink.type=s3`. |
+| `cbs.vhs.sink.s3.prefix` | `String` | `""` (empty) | Key prefix for every tape object; a trailing `/` is added automatically if absent. |
+| `cbs.vhs.sink.s3.endpoint-override` | `String` | — (unset; no initializer) | Accepted for operator convenience but not consumed by the sink — configure the `S3Client` bean with the endpoint override (e.g. for MinIO). |
+| `cbs.vhs.sink.s3.path-style` | `boolean` | `false` | Accepted for operator convenience but not consumed by the sink — enable path-style access on the host `S3Client` bean when using MinIO. |
+| `cbs.vhs.sink.s3.max-bytes` | `long` (`@Min(0)`) | `104857600` (100 MiB) | Per-tape byte ceiling for the on-disk staging buffer. Exceeding it writes a `tape_truncated` marker and stops appending. `0` disables byte capping. |
 | `cbs.vhs.scrub.enabled` | `boolean` | `false` | Master switch for record-time scrubbing. When `false`, every captured field is recorded verbatim. |
 | `cbs.vhs.scrub.rules` | `List<ScrubRule>` | `[]` (empty) | Ordered scrub rules; empty list is a no-op when `scrub.enabled=true`. |
 | `cbs.vhs.scrub.mask-value` | `String` | `***` (`VhsScrubber.DEFAULT_MASK`) | Replacement value injected in place of scrubbed fields. Blank values fall back to the default. |

@@ -35,7 +35,7 @@ public final class LocalFileTapeStore implements VhsTapeStore {
 
   public LocalFileTapeStore(@NonNull CbsVhsProperties properties,
           @NonNull ObjectMapper objectMapper) {
-    this.directory = properties.local().path();
+    this.directory = properties.sink().local().path();
     this.objectMapper = objectMapper;
   }
 

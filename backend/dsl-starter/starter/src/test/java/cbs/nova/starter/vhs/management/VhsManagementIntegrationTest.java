@@ -59,10 +59,12 @@ class VhsManagementIntegrationTest {
   void setUp() {
     requestBodyLimitFilter = new RequestBodyLimitFilter(new CbsNovaWebProperties(0L));
     objectMapper = JsonMapper.builder().build();
-    CbsVhsProperties properties = new CbsVhsProperties(
-            true, List.of("*"), CbsVhsProperties.SinkType.local,
+    CbsVhsProperties.Sink sink = new CbsVhsProperties.Sink(
+            CbsVhsProperties.SinkType.local,
             new CbsVhsProperties.LocalSink(tempDir, 0, 0L),
-            new CbsVhsProperties.Scrub(false, List.of(), null, null));
+            null);
+    CbsVhsProperties properties = new CbsVhsProperties(
+            true, List.of("*"), sink, new CbsVhsProperties.Scrub(false, List.of(), null, null));
 
     LocalFileTapeStore store = new LocalFileTapeStore(properties, objectMapper);
     ObjectProvider<VhsReplayJob> replayProvider = mock(ObjectProvider.class);

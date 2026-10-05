@@ -4,6 +4,7 @@ import cbs.nova.starter.config.properties.CbsVhsProperties;
 import cbs.nova.starter.config.properties.CbsVhsReplayProperties;
 import cbs.nova.starter.core.listener.DslExecutionEventBus;
 import cbs.nova.starter.vhs.LocalFileTapeSink;
+import cbs.nova.starter.vhs.S3TapeSink;
 import cbs.nova.starter.vhs.VhsRecorder;
 import cbs.nova.starter.vhs.VhsTapeSink;
 import cbs.nova.starter.vhs.management.LocalFileTapeStore;
@@ -14,13 +15,16 @@ import cbs.nova.starter.vhs.replay.VhsCallDriver;
 import cbs.nova.starter.vhs.replay.VhsCallDrivers;
 import cbs.nova.starter.vhs.replay.VhsReplayEngine;
 import cbs.nova.starter.vhs.scrub.VhsScrubber;
+import java.time.Instant;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import software.amazon.awssdk.services.s3.S3Client;
 import tools.jackson.databind.ObjectMapper;
 
 /**
@@ -32,6 +36,11 @@ import tools.jackson.databind.ObjectMapper;
  * are registered only when {@code cbs.vhs.replay.enabled=true}; when disabled (the default) both
  * sets of beans are absent, leaving the hot execution path unchanged and making the zero-overhead
  * guarantee testable.
+ *
+ * <p>
+ * The sink backend is selected by {@code cbs.vhs.sink.type}: {@code local} (default) wires
+ * {@link LocalFileTapeSink} and {@link LocalFileTapeStore}; {@code s3} wires {@link S3TapeSink} and
+ * leaves the read-side store for a follow-up task.
  *
  * <p>
  * <b>Operational safety:</b> the replay target is resolved through {@link VhsCallDrivers#resolve},
@@ -46,8 +55,8 @@ public class VhsConfiguration {
 
   @Bean
   @ConditionalOnProperty(name = "cbs.vhs.sink.type", havingValue = "local", matchIfMissing = true)
-  VhsTapeSink vhsTapeSink(CbsVhsProperties properties) {
-    return new LocalFileTapeSink(properties);
+  VhsTapeSink vhsTapeSink(CbsVhsProperties properties, ObjectMapper objectMapper) {
+    return new LocalFileTapeSink(properties, objectMapper, Instant::now);
   }
 
   @Bean
@@ -57,6 +66,14 @@ public class VhsConfiguration {
   }
 
   @Bean
+  @ConditionalOnProperty(name = "cbs.vhs.sink.type", havingValue = "s3")
+  VhsTapeSink s3VhsTapeSink(CbsVhsProperties properties, ObjectProvider<S3Client> s3ClientProvider,
+          ObjectMapper objectMapper) {
+    return new S3TapeSink(properties, s3ClientProvider, objectMapper);
+  }
+
+  @Bean
+  @ConditionalOnBean(VhsTapeStore.class)
   VhsManagementService vhsManagementService(VhsTapeStore store,
           ObjectProvider<VhsReplayJob> replayJobProvider) {
     return new VhsManagementService(store, replayJobProvider);
