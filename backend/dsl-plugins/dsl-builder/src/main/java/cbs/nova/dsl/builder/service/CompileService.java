@@ -227,6 +227,11 @@ public class CompileService {
   private void copyDirectory(Path source, Path target) throws IOException {
     try (var walk = Files.walk(source)) {
       for (var path : walk.toList()) {
+        // A cloned repo is untrusted input: copying a symlink would pull the link target's content
+        // (possibly from outside the repo) into the compiled session. Skip links entirely.
+        if (Files.isSymbolicLink(path)) {
+          continue;
+        }
         var destination = target.resolve(source.relativize(path).toString());
         if (Files.isDirectory(path)) {
           Files.createDirectories(destination);
