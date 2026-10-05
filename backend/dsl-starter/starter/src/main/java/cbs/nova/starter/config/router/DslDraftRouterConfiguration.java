@@ -26,6 +26,7 @@ import org.springframework.web.servlet.function.ServerResponse;
 
 @Configuration
 @ConditionalOnProperty(prefix = "cbs.dsl.drafts", name = "enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(prefix = "cbs.dsl.reload", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class DslDraftRouterConfiguration {
 
   @Bean

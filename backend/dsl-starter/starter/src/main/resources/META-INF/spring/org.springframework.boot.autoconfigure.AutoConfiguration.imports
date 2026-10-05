@@ -16,3 +16,7 @@ cbs.nova.starter.config.router.RootIndexRouterConfiguration
 cbs.nova.starter.config.router.ChangeRequestRouterConfiguration
 cbs.nova.starter.config.RbacFilterConfiguration
 cbs.nova.starter.config.OpenTelemetryHelperConfiguration
+cbs.nova.starter.config.MapperConfiguration
+cbs.nova.starter.config.TracingConfiguration
+cbs.nova.starter.config.OpenApiConfiguration
+cbs.nova.starter.config.DslFileBufferConfiguration

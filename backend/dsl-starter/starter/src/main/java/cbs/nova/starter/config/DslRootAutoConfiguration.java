@@ -11,6 +11,7 @@ import cbs.nova.starter.security.SecurityPostureReporter;
 import cbs.nova.starter.webhook.WebhookConfiguration;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.events.mq.MqEventConfiguration;
+import cbs.nova.starter.notification.EmailNotificationConfiguration;
 import cbs.nova.starter.notification.NotificationConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
@@ -22,6 +23,7 @@ import org.springframework.context.annotation.Import;
 @AutoConfigureAfter(DataSourceAutoConfiguration.class)
 @Import({
     RequestIdFilterConfiguration.class,
+    MapperConfiguration.class,
     RequestBodyLimitFilterConfiguration.class,
     LoggingConfiguration.class,
     DryRunLoggingConfiguration.class,
@@ -58,6 +60,7 @@ import org.springframework.context.annotation.Import;
     BuilderClientConfiguration.class,
     VhsConfiguration.class,
     NotificationConfiguration.class,
+    EmailNotificationConfiguration.class,
     MqEventConfiguration.class,
     ChangeRequestConfiguration.class,
 })

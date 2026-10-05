@@ -19,7 +19,6 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import tools.jackson.databind.ObjectMapper;
 
@@ -73,12 +72,6 @@ public class NotificationConfiguration {
   @ConditionalOnBean(NotificationRuleService.class)
   WebhookRuleSink webhookRuleSink(WebhookDispatcher dispatcher) {
     return new WebhookRuleSink(dispatcher);
-  }
-
-  @Bean
-  @ConditionalOnBean(NotificationRuleService.class)
-  EmailRuleSink emailRuleSink(ObjectProvider<JavaMailSender> mailSenderProvider) {
-    return new EmailRuleSink(mailSenderProvider);
   }
 
   @Bean

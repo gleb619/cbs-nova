@@ -7,11 +7,13 @@ import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
 import org.springframework.boot.info.BuildProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.context.annotation.Configuration;
 
 import java.util.Optional;
 
 @Configuration
+@ConditionalOnClass(name = "io.swagger.v3.oas.models.OpenAPI")
 public class OpenApiConfiguration {
 
   @Bean

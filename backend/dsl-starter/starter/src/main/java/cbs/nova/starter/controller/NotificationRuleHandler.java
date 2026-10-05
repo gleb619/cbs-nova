@@ -36,7 +36,6 @@ import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.web.servlet.function.ServerRequest;
 import org.springframework.web.servlet.function.ServerResponse;
 import tools.jackson.core.JacksonException;
@@ -70,7 +69,7 @@ public class NotificationRuleHandler {
   private final NotificationRuleFiringRepository firingRepository;
   private final Optional<WebhookDispatcher> webhookDispatcher;
   private final ObjectProvider<DslAuditService> auditServiceProvider;
-  private final ObjectProvider<JavaMailSender> mailSenderProvider;
+  private final boolean emailEnabled;
 
   @Operation(summary = "List notification rules, match order (priority desc)")
   @ApiResponse(responseCode = "200", content = @Content(mediaType = "application/json", schema = @Schema(implementation = PageResponse.class)))
@@ -230,7 +229,7 @@ public class NotificationRuleHandler {
   @Operation(summary = "List available notification channel types")
   @ApiResponse(responseCode = "200", description = "Static channel catalogue; email is active when a JavaMailSender bean is present")
   public ServerResponse channels(ServerRequest request) {
-    boolean emailEnabled = mailSenderProvider.getIfAvailable() != null;
+    boolean emailEnabled = this.emailEnabled;
     List<ChannelDto> channels = List.of(
             new ChannelDto("webhook", webhookDispatcher.isPresent(), false),
             new ChannelDto("email", emailEnabled, !emailEnabled),

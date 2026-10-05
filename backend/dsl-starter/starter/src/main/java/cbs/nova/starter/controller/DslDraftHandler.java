@@ -67,6 +67,7 @@ import tools.jackson.databind.ObjectMapper;
 @Slf4j
 @Component
 @ConditionalOnProperty(prefix = "cbs.dsl.drafts", name = "enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(prefix = "cbs.dsl.reload", name = "enabled", havingValue = "true", matchIfMissing = true)
 @AllArgsConstructor
 public class DslDraftHandler {
 

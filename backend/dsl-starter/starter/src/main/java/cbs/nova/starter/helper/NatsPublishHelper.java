@@ -4,6 +4,7 @@ import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.Result;
 import cbs.nova.starter.annotation.SpringHelper;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import cbs.nova.starter.helper.model.NatsPublishIn;
 import cbs.nova.starter.helper.model.NatsPublishOut;
 import io.nats.client.Connection;
@@ -31,6 +32,7 @@ import tools.jackson.databind.ObjectMapper;
  * instead of an NPE.
  */
 @SpringHelper(name = "natsPublish", description = "Publishes an arbitrary JSON payload to a NATS Core subject.")
+@ConditionalOnClass(name = "io.nats.client.Connection")
 public class NatsPublishHelper implements Executable<NatsPublishIn, NatsPublishOut> {
 
   private static final Logger LOG = LoggerFactory.getLogger(NatsPublishHelper.class);
