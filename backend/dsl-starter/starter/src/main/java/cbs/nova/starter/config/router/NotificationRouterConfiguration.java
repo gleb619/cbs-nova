@@ -22,8 +22,8 @@ import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.servlet.function.RouterFunction;
 import org.springframework.web.servlet.function.RouterFunctions;
@@ -44,9 +44,19 @@ public class NotificationRouterConfiguration {
           NotificationRuleEngine ruleEngine, NotificationRuleFiringRepository firingRepository,
           Optional<WebhookDispatcher> webhookDispatcher,
           ObjectProvider<DslAuditService> auditServiceProvider,
-          ObjectProvider<JavaMailSender> mailSenderProvider) {
+          ApplicationContext applicationContext) {
     return new NotificationRuleHandler(ruleService, ruleEngine, firingRepository,
-            webhookDispatcher, auditServiceProvider, mailSenderProvider);
+            webhookDispatcher, auditServiceProvider, emailEnabled(applicationContext));
+  }
+
+  private static boolean emailEnabled(ApplicationContext applicationContext) {
+    try {
+      Class<?> mailSenderClass = Class.forName(
+              "org.springframework.mail.javamail.JavaMailSender");
+      return applicationContext.getBeanNamesForType(mailSenderClass).length > 0;
+    } catch (ClassNotFoundException e) {
+      return false;
+    }
   }
 
   @Bean

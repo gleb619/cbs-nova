@@ -32,7 +32,7 @@ services:
     volumes:
       - dsl-builder-data:/var/lib/dsl-builder
       - ../../backend/dsl-starter/dsl-examples:/workspace
-      - ${HOME}/.ssh:/home/appuser/.ssh:ro
+      - ${HOME:-/root}/.ssh:/home/appuser/.ssh:ro
     healthcheck:
       # TCP probe via /dev/tcp (the JRE image strips curl/wget; see app.yml
       # for rationale). Spring binds 8091 only once the embedded server is

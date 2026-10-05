@@ -4,6 +4,7 @@ import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.Result;
 import cbs.nova.starter.annotation.SpringHelper;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import cbs.nova.starter.helper.model.KafkaPublishIn;
 import cbs.nova.starter.helper.model.KafkaPublishOut;
 import java.time.Instant;
@@ -37,6 +38,7 @@ import tools.jackson.databind.ObjectMapper;
  * {@code spring.kafka.bootstrap-servers} is set).
  */
 @SpringHelper(name = "kafkaPublish", description = "Publishes an arbitrary JSON payload to a Kafka topic.")
+@ConditionalOnClass(name = "org.springframework.kafka.core.KafkaTemplate")
 public class KafkaPublishHelper implements Executable<KafkaPublishIn, KafkaPublishOut> {
 
   private static final long SEND_TIMEOUT_MILLIS = 5_000L;

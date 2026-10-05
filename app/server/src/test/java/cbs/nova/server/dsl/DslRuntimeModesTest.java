@@ -6,12 +6,12 @@ import cbs.nova.app.dsl.OrderIn;
 import cbs.nova.app.dsl.OrderOut;
 import cbs.nova.dsl.DslRuntime;
 import cbs.nova.dsl.ExecutionMode;
-import cbs.nova.dsl.ExplainReport;
 import cbs.nova.dsl.GlobalManager;
+import cbs.nova.dsl.Result;
+import cbs.nova.dsl.model.ExplainReport;
 import cbs.nova.dsl.model.PreviewReport;
 import cbs.nova.dsl.model.SimpleContext;
-import cbs.nova.dsl.Result;
-import cbs.nova.dsl.DefinitionLoader;
+import cbs.nova.dsl.utils.DefinitionLoader;
 import java.math.BigDecimal;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -76,8 +76,8 @@ class DslRuntimeModesTest {
         SimpleContext.builder(input).mode(ExecutionMode.EXPLAIN).build());
 
     assertThat(report).isNotNull();
-    assertThat(report.description()).containsIgnoringCase("order");
-    assertThat(report.executionTrace()).isNotEmpty();
+    assertThat(report.name()).containsIgnoringCase("order");
+    assertThat(report.markdown()).isNotBlank();
   }
 
   @Test

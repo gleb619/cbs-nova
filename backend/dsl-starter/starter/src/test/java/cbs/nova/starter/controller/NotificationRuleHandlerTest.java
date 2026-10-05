@@ -86,7 +86,7 @@ class NotificationRuleHandlerTest {
 
     var handler = new NotificationRuleHandler(ruleService, ruleEngine, firingRepository,
             Optional.empty(), AuditTestSupport.emptyProvider(),
-            AuditTestSupport.emptyMailSenderProvider());
+            false);
     var router = new NotificationRouterConfiguration();
 
     var adviceContext = new AnnotationConfigApplicationContext();
@@ -331,7 +331,7 @@ class NotificationRuleHandlerTest {
     var audit = AuditTestSupport.h2();
     mockMvc = buildMockMvc(new NotificationRuleHandler(ruleService, ruleEngine, firingRepository,
             Optional.empty(), AuditTestSupport.providerOf(audit.service()),
-            AuditTestSupport.emptyMailSenderProvider()));
+            false));
 
     String body = objectMapper.writeValueAsString(sampleRule("loan-failures"));
 
@@ -359,7 +359,7 @@ class NotificationRuleHandlerTest {
     var audit = AuditTestSupport.h2();
     mockMvc = buildMockMvc(new NotificationRuleHandler(ruleService, ruleEngine, firingRepository,
             Optional.empty(), AuditTestSupport.providerOf(audit.service()),
-            AuditTestSupport.emptyMailSenderProvider()));
+            false));
 
     var dto = new NotificationRuleDto(null, "   ", true,
             new EventFilterDto("RunFailed", null, null, null, null),
@@ -383,7 +383,7 @@ class NotificationRuleHandlerTest {
     var audit = AuditTestSupport.h2();
     mockMvc = buildMockMvc(new NotificationRuleHandler(ruleService, ruleEngine, firingRepository,
             Optional.empty(), AuditTestSupport.providerOf(audit.service()),
-            AuditTestSupport.emptyMailSenderProvider()));
+            false));
     var created = ruleService.create(sampleRule("old-name"));
     var updated = new NotificationRuleDto(
             created.id(), "new-name", false,
@@ -409,7 +409,7 @@ class NotificationRuleHandlerTest {
     var audit = AuditTestSupport.h2();
     mockMvc = buildMockMvc(new NotificationRuleHandler(ruleService, ruleEngine, firingRepository,
             Optional.empty(), AuditTestSupport.providerOf(audit.service()),
-            AuditTestSupport.emptyMailSenderProvider()));
+            false));
     var body = objectMapper.writeValueAsString(sampleRule("any"));
 
     mockMvc.perform(put("/api/dsl/notifications/rules/987654321")
@@ -429,7 +429,7 @@ class NotificationRuleHandlerTest {
     var audit = AuditTestSupport.h2();
     mockMvc = buildMockMvc(new NotificationRuleHandler(ruleService, ruleEngine, firingRepository,
             Optional.empty(), AuditTestSupport.providerOf(audit.service()),
-            AuditTestSupport.emptyMailSenderProvider()));
+            false));
     var created = ruleService.create(sampleRule("to-delete"));
 
     mockMvc.perform(delete("/api/dsl/notifications/rules/" + created.id()))
@@ -448,7 +448,7 @@ class NotificationRuleHandlerTest {
     var audit = AuditTestSupport.h2();
     mockMvc = buildMockMvc(new NotificationRuleHandler(ruleService, ruleEngine, firingRepository,
             Optional.empty(), AuditTestSupport.providerOf(audit.service()),
-            AuditTestSupport.emptyMailSenderProvider()));
+            false));
 
     mockMvc.perform(delete("/api/dsl/notifications/rules/987654321"))
             .andExpect(status().isNotFound());
@@ -465,7 +465,7 @@ class NotificationRuleHandlerTest {
     var audit = AuditTestSupport.h2();
     mockMvc = buildMockMvc(new NotificationRuleHandler(ruleService, ruleEngine, firingRepository,
             Optional.empty(), AuditTestSupport.providerOf(audit.service()),
-            AuditTestSupport.emptyMailSenderProvider()));
+            false));
     var created = ruleService.create(sampleRule("toggle"));
     String body = objectMapper.writeValueAsString(new ToggleEnabledRequest(false));
 
@@ -489,7 +489,7 @@ class NotificationRuleHandlerTest {
     var audit = AuditTestSupport.h2();
     mockMvc = buildMockMvc(new NotificationRuleHandler(ruleService, ruleEngine, firingRepository,
             Optional.empty(), AuditTestSupport.providerOf(audit.service()),
-            AuditTestSupport.emptyMailSenderProvider()));
+            false));
     String body = objectMapper.writeValueAsString(new ToggleEnabledRequest(true));
 
     mockMvc.perform(post("/api/dsl/notifications/rules/987654321/enabled")

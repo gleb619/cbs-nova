@@ -181,6 +181,15 @@ The URL passes the same SSRF guard as the other URL-bearing sinks (see `cbs.nova
 |-----|------|---------|--------|
 | `cbs.dsl.notifications.slack.webhook-url` | `String` | unset | Slack incoming webhook URL; rule messages are POSTed as `{"text": ...}`. Non-2xx or `{"ok":false}` responses become a failure outcome. |
 
+
+### `cbs.dsl.notifications.email`
+
+The `email` notification sink has no cbs-nova-specific configuration keys. It is auto-detected when
+the host application provides a `JavaMailSender` bean (typically by declaring
+`spring-boot-starter-mail` and setting the standard `spring.mail.*` properties). When no sender bean
+is present, the sink still registers and records a `noop` firing so email rules remain configurable
+without an SMTP transport.
+
 ### `cbs.nova.web`
 
 Class: `CbsNovaWebProperties` (record). Web-layer global caps applied before any controller

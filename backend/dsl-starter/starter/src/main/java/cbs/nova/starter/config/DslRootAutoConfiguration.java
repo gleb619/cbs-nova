@@ -11,6 +11,7 @@ import cbs.nova.starter.security.SecurityPostureReporter;
 import cbs.nova.starter.webhook.WebhookConfiguration;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.events.mq.MqEventConfiguration;
+import cbs.nova.starter.notification.EmailNotificationConfiguration;
 import cbs.nova.starter.notification.NotificationConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
@@ -40,7 +41,6 @@ import org.springframework.context.annotation.Import;
     DslRunRetentionConfiguration.class,
     DslRunReconciliationConfiguration.class,
     DslMaintenanceConfiguration.class,
-    DslAuxTableRetentionConfiguration.class,
     DslErrorHandlingConfiguration.class,
     SpringHelperConfiguration.class,
     ApiKeyAuthFilterConfiguration.class,
@@ -58,6 +58,7 @@ import org.springframework.context.annotation.Import;
     BuilderClientConfiguration.class,
     VhsConfiguration.class,
     NotificationConfiguration.class,
+    EmailNotificationConfiguration.class,
     MqEventConfiguration.class,
     ChangeRequestConfiguration.class,
 })

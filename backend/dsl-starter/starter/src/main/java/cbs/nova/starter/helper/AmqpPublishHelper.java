@@ -4,6 +4,7 @@ import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.Result;
 import cbs.nova.starter.annotation.SpringHelper;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import cbs.nova.starter.helper.model.AmqpPublishIn;
 import cbs.nova.starter.helper.model.AmqpPublishOut;
 import java.nio.charset.StandardCharsets;
@@ -28,6 +29,8 @@ import tools.jackson.databind.ObjectMapper;
  * {@code application/json}.
  */
 @SpringHelper(name = "amqpPublish", description = "Publishes an arbitrary JSON payload to a RabbitMQ exchange/routing key.")
+@ConditionalOnClass(name = "org.springframework.amqp.core.AmqpTemplate")
+
 public class AmqpPublishHelper implements Executable<AmqpPublishIn, AmqpPublishOut> {
 
   private final @Nullable AmqpTemplate amqpTemplate;

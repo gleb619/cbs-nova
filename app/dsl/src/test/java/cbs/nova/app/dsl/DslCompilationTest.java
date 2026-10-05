@@ -14,22 +14,22 @@ class DslCompilationTest {
 
   @Test
   void generatedProcessInterfaceExists() throws IOException {
-    assertThat(findFirst(PACKAGE.resolve("orderprocess"), "OrderProcessProcessWorkflow.java")).exists();
+    assertThat(findFirst("OrderProcessProcessWorkflow.java")).exists();
   }
 
   @Test
   void generatedProcessDefinitionExists() throws IOException {
-    assertThat(findFirst(PACKAGE.resolve("orderprocess"), "OrderProcessProcessDefinition.java")).exists();
+    assertThat(findFirst("OrderProcessProcessDefinition.java")).exists();
   }
 
   @Test
   void generatedTransactionInterfaceExists() throws IOException {
-    assertThat(findFirst(PACKAGE.resolve("validateorder"), "VALIDATE_ORDERTransactionActivity.java")).exists();
+    assertThat(findFirst("VALIDATE_ORDERTransactionActivity.java")).exists();
   }
 
   @Test
   void generatedTransactionDefinitionExists() throws IOException {
-    assertThat(findFirst(PACKAGE.resolve("validateorder"), "VALIDATE_ORDERTransactionDefinition.java")).exists();
+    assertThat(findFirst("VALIDATE_ORDERTransactionDefinition.java")).exists();
   }
 
   @Test
@@ -37,12 +37,12 @@ class DslCompilationTest {
     assertThat(GENERATED.resolve("META-INF/services/cbs.nova.dsl.DslDefinitionProvider")).exists();
   }
 
-  private static Path findFirst(Path base, String fileName) throws IOException {
-    try (var stream = Files.walk(base, 2)) {
+  private static Path findFirst(String fileName) throws IOException {
+    try (var stream = Files.walk(PACKAGE, 10)) {
       return stream
           .filter(p -> p.getFileName().toString().equals(fileName))
           .findFirst()
-          .orElse(base.resolve(fileName));
+          .orElse(PACKAGE.resolve(fileName));
     }
   }
 }

@@ -4,6 +4,7 @@ import cbs.nova.dsl.Context;
 import cbs.nova.dsl.Executable;
 import cbs.nova.dsl.Result;
 import cbs.nova.starter.annotation.SpringHelper;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import cbs.nova.starter.helper.model.S3StorageIn;
 import cbs.nova.starter.helper.model.S3StorageOut;
 import java.nio.charset.StandardCharsets;
@@ -36,6 +37,7 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
  * exists, calls fail with an explicit error (logged once) instead of silently dropping the object.
  */
 @SpringHelper(name = "s3Storage", description = "Stores and retrieves objects in S3-compatible object storage.")
+@ConditionalOnClass(name = "software.amazon.awssdk.services.s3.S3Client")
 public class S3StorageHelper implements Executable<S3StorageIn, S3StorageOut> {
 
   private static final Logger LOG = LoggerFactory.getLogger(S3StorageHelper.class);

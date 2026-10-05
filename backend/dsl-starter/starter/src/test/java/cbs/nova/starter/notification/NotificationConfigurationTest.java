@@ -14,16 +14,16 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.mail.javamail.JavaMailSender;
 
 /**
- * Wiring specs for the email sink factory inside {@link NotificationConfiguration}: the bean must
- * be created in both bean states (a {@link JavaMailSender} bean is present or absent) and must hand
- * the resolved sender (or {@code null}) to {@link EmailRuleSink} unchanged so the sink keeps its
- * noop fallback when no transport is configured.
+ * Wiring specs for the email sink factory inside {@link EmailNotificationConfiguration}: the bean
+ * must be created in both bean states (a {@link JavaMailSender} bean is present or absent) and must
+ * hand the resolved sender (or {@code null}) to {@link EmailRuleSink} unchanged so the sink keeps
+ * its noop fallback when no transport is configured.
  */
 class NotificationConfigurationTest {
 
   @Test
   void emailSinkBeanIsCreatedWhenNoMailSenderIsRegistered() {
-    NotificationConfiguration config = new NotificationConfiguration();
+    EmailNotificationConfiguration config = new EmailNotificationConfiguration();
     @SuppressWarnings("unchecked")
     ObjectProvider<JavaMailSender> emptyProvider = mock(ObjectProvider.class);
     when(emptyProvider.getIfAvailable()).thenReturn(null);
@@ -39,7 +39,7 @@ class NotificationConfigurationTest {
 
   @Test
   void emailSinkBeanIsCreatedAndReceivesMailSenderWhenPresent() {
-    NotificationConfiguration config = new NotificationConfiguration();
+    EmailNotificationConfiguration config = new EmailNotificationConfiguration();
     JavaMailSender sender = mock(JavaMailSender.class);
     @SuppressWarnings("unchecked")
     ObjectProvider<JavaMailSender> provider = mock(ObjectProvider.class);
