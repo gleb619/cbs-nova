@@ -1,23 +1,18 @@
 <script setup lang="ts">
 import { computed, onBeforeUpdate, ref } from 'vue'
+import { useLocalStorageState } from '../../composables/useLocalStorageState'
 import type { ConstructType } from '../../composables/useConstructSchema'
 import { useHierarchyHistory } from '../../composables/usePreviewHistory'
 import type { RunnerOutput, RunnerStatus } from '../../types/runner'
+import HierarchyReportView from './HierarchyReportView.vue'
 
 /**
- * Hierarchy tab — structural snapshot of a definition and its references,
- * distinct from `ExplainTab` (free-form JSON payload + markdown/report
- * rendering) in two ways:
+ * Hierarchy tab — structural snapshot of a definition and its references.
  *
- * 1. Input is a typed options panel (`depth` + `include*` toggles), NOT a
- *    free-form JSON textarea — hierarchy is computed from the construct,
- *    not from runtime arguments.
- * 2. Result rendering is raw JSON in a `<pre>` block for now. Pretty
- *    visualization (tree, indentation) is intentionally deferred until the
- *    backend payload shape is finalized.
- *
- * The component still mirrors `ExplainTab`'s lifecycle (name-change resets,
- * status state, history persistence) so the workbench treats it uniformly.
+ * It mirrors `ExplainTab`'s lifecycle (name-change resets, status state,
+ * history persistence) so the workbench treats it uniformly. The result panel
+ * now renders the backend `HierarchyReport` visually via `HierarchyReportView`
+ * and keeps a Raw JSON toggle for the previous `<pre>` output.
  */
 
 const props = defineProps<{
@@ -42,6 +37,7 @@ const includeQueries = ref(true)
 
 const output = ref<RunnerOutput | null>(null)
 const status = ref<RunnerStatus>('idle')
+const showRawJson = useLocalStorageState('hierarchy-raw-json', false)
 
 let previousName = props.name
 
@@ -151,14 +147,6 @@ function clampDepth(n: number): number {
   return Math.max(1, Math.min(16, Math.trunc(n)))
 }
 
-const resultText = computed(() => {
-  if (!output.value) return ''
-  if (output.value.errors?.length) {
-    return JSON.stringify(output.value, null, 2)
-  }
-  return JSON.stringify(output.value.result ?? output.value, null, 2)
-})
-
 const statusLabel = computed(() => {
   if (status.value === 'loading') return 'running…'
   if (status.value === 'success') return 'done'
@@ -242,13 +230,17 @@ const statusLabel = computed(() => {
               statusLabel
             }}</span>
           </div>
+          <label class="flex items-center gap-1.5 text-xs text-ink cursor-pointer">
+            <input v-model="showRawJson" type="checkbox" data-testid="hierarchy-raw-toggle">
+            <span>Raw JSON</span>
+          </label>
         </header>
         <div class="flex-1 min-h-0 overflow-auto p-3">
-          <pre
-            v-if="resultText"
-            data-testid="hierarchy-result-text"
-            class="w-full h-full min-h-0 font-mono text-xs leading-relaxed text-ink whitespace-pre-wrap break-words"
-          >{{ resultText }}</pre>
+          <HierarchyReportView
+            v-if="output"
+            :output="output"
+            :show-raw="showRawJson"
+          />
           <p v-else class="text-xs text-ink-muted" data-testid="hierarchy-result-empty">
             No result yet. Press Run to fetch the structural snapshot.
           </p>

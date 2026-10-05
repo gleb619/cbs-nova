@@ -125,7 +125,7 @@ Runner-backed tabs that send the current definition body to the backend and rend
 
 - **Preview** — dry-run the construct and inspect inputs/outputs.
 - **Explain** — human-readable explanation of what the construct does.
-- **Hierarchy** — call/reference hierarchy of the construct (which helpers, functions, and transactions it invokes, recursively).
+- **Hierarchy** — call/reference hierarchy of the construct (which helpers, functions, and transactions it invokes, recursively). The result is rendered as summary chips, a Mermaid diagram, an expandable child tree, and collapsible external-calls/execution-trace lists; a Raw JSON toggle restores the previous `<pre>` output.
 
 ### Problems tab
 

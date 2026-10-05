@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { marked } from 'marked'
 import { computed, onMounted, onUpdated, ref } from 'vue'
+import { useMermaidRender } from '../../composables/useMermaidRender'
 
 defineOptions({ name: 'ExplainMarkdownView' })
 
@@ -20,10 +21,9 @@ const root = ref<HTMLElement | null>(null)
 const MERMAID_FIRST_LINE =
   /^(graph\b|flowchart\b|sequenceDiagram\b|stateDiagram(-v2)?\b|classDiagram\b|erDiagram\b|gantt\b|pie\b|journey\b|gitGraph\b|mindmap\b|timeline\b|quadrantChart\b|requirementDiagram\b|C4Context\b)/
 
-let _mermaidModule: typeof import('mermaid')['default'] | null = null
-let _mermaidRender: ((definition: string) => Promise<string>) | null = null
-let mermaidUnavailable = false
 let mermaidSequence = 0
+
+const { render, unavailable } = useMermaidRender()
 
 const computedHtml = computed(() => {
   const raw = props.markdown ?? ''
@@ -37,38 +37,17 @@ const computedHtml = computed(() => {
   return marked.parse(raw, { async: false }) as string
 })
 
-async function ensureMermaid() {
-  if (mermaidUnavailable) return null
-  if (_mermaidRender) return _mermaidRender
-  try {
-    const mermaid = (await import('mermaid')).default
-    _mermaidModule = mermaid
-    mermaid.initialize({ startOnLoad: false, securityLevel: 'loose', theme: 'default' })
-    _mermaidRender = async (definition: string) => {
-      const id = `explain-mmd-${++mermaidSequence}-${Math.random().toString(36).slice(2, 9)}`
-      // biome-ignore lint/style/noNonNullAssertion: module is loaded inside ensureMermaid
-      const { svg } = await _mermaidModule!.render(id, definition)
-      return svg
-    }
-    return _mermaidRender
-  } catch {
-    mermaidUnavailable = true
-    return null
-  }
-}
-
 async function renderMermaidDiagrams() {
-  if (!props.mermaid || mermaidUnavailable || !root.value) return
+  if (!props.mermaid || unavailable.value || !root.value) return
   const blocks = Array.from(root.value.querySelectorAll('pre code.language-mermaid'))
   if (blocks.length === 0) return
-  const render = await ensureMermaid()
-  if (!render) return
   for (const block of blocks) {
     const pre = block.parentElement
     if (!pre || pre.getAttribute('data-mermaid-state') === 'rendered') continue
     try {
       const definition = block.textContent ?? ''
-      const svg = await render(definition)
+      const id = `explain-mmd-${++mermaidSequence}-${Math.random().toString(36).slice(2, 9)}`
+      const svg = await render(definition, id)
       const container = document.createElement('div')
       container.setAttribute('data-testid', 'explain-mermaid-diagram')
       container.style.width = '100%'
