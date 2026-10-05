@@ -73,7 +73,7 @@ describe('HierarchyTab', () => {
       .fn<
         (name: string, body: unknown, metadata?: Record<string, unknown>) => Promise<RunnerOutput>
       >()
-      .mockResolvedValue({ nodes: [] } as unknown as RunnerOutput)
+      .mockResolvedValue({ result: { name: 'demo' } } as unknown as RunnerOutput)
     const wrapper = mountTab({}, hierarchy)
 
     await wrapper.find('[data-testid="include-signals"] input').setValue(false)
@@ -96,12 +96,19 @@ describe('HierarchyTab', () => {
     expect(wrapper.find('[data-testid="hierarchy-result-status"]').text()).toBe('done')
   })
 
-  it('clicks Run with the typed config and renders the raw response', async () => {
+  it('clicks Run with the typed config and renders the visual hierarchy report', async () => {
     const hierarchy = vi
       .fn<
         (name: string, body: unknown, metadata?: Record<string, unknown>) => Promise<RunnerOutput>
       >()
-      .mockResolvedValue({ result: { children: [{ name: 'root' }] } } as unknown as RunnerOutput)
+      .mockResolvedValue({
+        result: {
+          name: 'demo',
+          description: 'Process: demo',
+          children: [{ name: 'root' }],
+          callCounts: { http: 1 },
+        },
+      } as unknown as RunnerOutput)
     const wrapper = mountTab({}, hierarchy)
 
     await wrapper.find('[data-testid="depth-input"]').setValue('7')
@@ -110,6 +117,25 @@ describe('HierarchyTab', () => {
 
     const payload = hierarchy.mock.calls[0]?.[1] as Record<string, unknown>
     expect(payload.depth).toBe(7)
+    expect(wrapper.find('[data-testid="hierarchy-report-view"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="hierarchy-summary-name"]').text()).toContain('demo')
+    expect(wrapper.find('[data-testid="hierarchy-children-tree"]').text()).toContain('root')
+  })
+
+  it('toggles Raw JSON to show the raw response', async () => {
+    const hierarchy = vi
+      .fn<
+        (name: string, body: unknown, metadata?: Record<string, unknown>) => Promise<RunnerOutput>
+      >()
+      .mockResolvedValue({ result: { children: [{ name: 'root' }] } } as unknown as RunnerOutput)
+    const wrapper = mountTab({}, hierarchy)
+
+    await wrapper.find('[data-testid="run-button"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="hierarchy-result-text"]').exists()).toBe(false)
+    await wrapper.find('[data-testid="hierarchy-raw-toggle"]').setValue(true)
+    await flushPromises()
     expect(wrapper.find('[data-testid="hierarchy-result-text"]').text()).toContain('children')
   })
 
