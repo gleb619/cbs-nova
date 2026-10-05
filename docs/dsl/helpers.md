@@ -1133,6 +1133,28 @@ KafkaPublishOut published = ctx.runHelper("kafkaPublish",
 
 ---
 
+## Messaging (NATS)
+
+`natsPublish` (`NatsPublishIn(subject, payload)`) publishes a JSON payload to a NATS Core subject
+via an injected NATS `Connection` bean — no extra broker connection is created. The helper validates
+first: `subject` and `payload` must be non-blank, and `payload` must be well-formed JSON (it is sent
+as UTF-8 bytes). If no `Connection` bean is available (NATS not configured), the helper logs a WARN
+and fails with an explicit `IllegalStateException` rather than silently dropping the message.
+
+Opt-in: `io.nats:jnats` is a `compileOnly` dependency of the starter, so apps that do not declare it
+never have the NATS client on their runtime classpath. To enable, add `io.nats:jnats` as a runtime
+dependency of your service and expose a `io.nats.client.Connection` bean.
+
+```java
+NatsPublishOut published = ctx.runHelper("natsPublish",
+        new NatsPublishIn("orders.created", payloadJson))
+        .as(NatsPublishOut.class);
+// published.subject() echoes the destination subject;
+// published.timestamp() records when the helper invoked the NATS Connection
+```
+
+---
+
 ## Object storage (S3 / MinIO)
 
 `s3Storage` (`S3StorageIn(op, bucket, key, body, contentType)`) runs a single `put`, `get` or

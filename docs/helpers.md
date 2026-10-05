@@ -4,7 +4,7 @@
 > For how to author and call helpers from DSL code, see the
 > [helpers authoring guide](dsl/helpers.md).
 
-62 helpers, sorted by name.
+63 helpers, sorted by name.
 
 | Name | Description | Input | Output |
 |---|---|---|---|
@@ -47,6 +47,7 @@
 | math | Performs arithmetic operations (sum, product, round, compare, etc.) on a list of numbers. | ArithmeticIn | ArithmeticOut |
 | mergeRecords | Merges two or more Map<String, Object> records with nested override. | MergeRecordsIn | MergeRecordsOut |
 | metric | Emits a Micrometer meter (counter, timer, gauge) from a DSL process. | MetricIn | MetricOut |
+| natsPublish | Publishes an arbitrary JSON payload to a NATS Core subject. | NatsPublishIn | NatsPublishOut |
 | orderPricingFn | Prices an order with subtotal, VIP discount, tax, and total. | OrderIn | PricedOrder |
 | otel | Exposes OpenTelemetry tracing operations (span, attribute, log) to DSL authors. | OtelIn | OtelOut |
 | parseCsv | Parses an RFC 4180 CSV payload into a list of rows. | ParseCsvIn | ParseCsvOut |
