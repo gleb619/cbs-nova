@@ -140,6 +140,11 @@ const writeDslDocPathHandler = (await import('../dsl/docs/[...path].post')).defa
 const bulkWriteDslDocsHandler = (await import('../dsl/docs/bulk.post')).default
 const flushDslDocsHandler = (await import('../dsl/docs/flush.post')).default
 const dslDocsStatusHandler = (await import('../dsl/docs/status.get')).default
+const vhsTapesIndexHandler = (await import('../vhs/tapes/index.get')).default
+const vhsTapeGetHandler = (await import('../vhs/tapes/[runId].get')).default
+const vhsTapeDeleteHandler = (await import('../vhs/tapes/[runId].delete')).default
+const vhsTapeReplayHandler = (await import('../vhs/tapes/[runId]/replay.post')).default
+const vhsLoadTestHandler = (await import('../vhs/loadtest.post')).default
 
 // Minimal H3Event stub. The route handlers only pass this through to
 // proxyToBackend, which is mocked, so a plain object is sufficient.
@@ -628,6 +633,79 @@ describe('dsl/drafts/[name]/delete.delete', () => {
     expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
     expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/dsl/drafts/DraftOne', {
       method: 'DELETE',
+    })
+  })
+})
+
+describe('vhs/tapes/index.get (T840)', () => {
+  it('forwards offset, limit, route and since query params', async () => {
+    queryValue = {
+      offset: '10',
+      limit: '25',
+      route: 'POST /api/foo',
+      since: '2026-01-01T00:00:00Z',
+    }
+
+    await vhsTapesIndexHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/v1/vhs/tapes', {
+      query: { offset: '10', limit: '25', route: 'POST /api/foo', since: '2026-01-01T00:00:00Z' },
+    })
+  })
+})
+
+describe('vhs/tapes/[runId].get (T840)', () => {
+  it('proxies to the tape detail endpoint with raw: true', async () => {
+    routerParams = { runId: 'run-1' }
+
+    await vhsTapeGetHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/v1/vhs/tapes/run-1', {
+      raw: true,
+    })
+  })
+})
+
+describe('vhs/tapes/[runId].delete (T840)', () => {
+  it('proxies with method: DELETE', async () => {
+    routerParams = { runId: 'run-1' }
+
+    await vhsTapeDeleteHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/v1/vhs/tapes/run-1', {
+      method: 'DELETE',
+    })
+  })
+})
+
+describe('vhs/tapes/[runId]/replay.post (T840)', () => {
+  it('forwards the body and proxies with method: POST', async () => {
+    routerParams = { runId: 'run-1' }
+    bodyValue = { mode: 'exact', target: 'dry-run' }
+
+    await vhsTapeReplayHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/v1/vhs/tapes/run-1/replay', {
+      method: 'POST',
+      body: { mode: 'exact', target: 'dry-run' },
+    })
+  })
+})
+
+describe('vhs/loadtest.post (T840)', () => {
+  it('reads the body and proxies with method: POST', async () => {
+    bodyValue = { tapes: '**/*.vhs.jsonl', concurrency: 8 }
+
+    await vhsLoadTestHandler(fakeEvent)
+
+    expect(proxyToBackendMock).toHaveBeenCalledTimes(1)
+    expect(proxyToBackendMock).toHaveBeenCalledWith(fakeEvent, '/api/v1/vhs/loadtest', {
+      method: 'POST',
+      body: { tapes: '**/*.vhs.jsonl', concurrency: 8 },
     })
   })
 })

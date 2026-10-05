@@ -27,3 +27,11 @@ export type PageResponse = Omit<Schemas['PageResponse'], 'total' | 'offset'> & {
  * `PageResponseOf<ExecutionDto>`.
  */
 export type PageResponseOf<T> = Omit<PageResponse, 'items'> & { items: T[] }
+/** Summary of a recorded VHS tape file discovered by a VhsTapeStore. */
+export type VhsTapeSummary = Schemas['TapeSummary']
+
+/** Immutable report of a VHS replay run. */
+export type VhsReplayReport = Schemas['VhsReplayReport']
+
+/** Response returned by a VHS tape replay request. */
+export type VhsReplayRunResponse = Schemas['ReplayRunResponse']
