@@ -131,6 +131,8 @@ public class StarterConstants {
   public static final String AUDIT_RETENTION_PURGED_COUNTER = "dsl.audit.purged";
   public static final String WEBHOOK_DELIVERY_RETENTION_PURGED_COUNTER = "dsl.webhook.deliveries.purged";
   public static final String NOTIFICATION_FIRING_RETENTION_PURGED_COUNTER = "dsl.notification.firings.purged";
+  public static final String EVENTS_PURGED_COUNTER = "dsl.events.purged";
+  public static final String DIAGNOSTICS_PURGED_COUNTER = "dsl.diagnostics.purged";
 
   // T775 — outbound delivery meters (webhook + notification sinks).
   // Card is bounded: outcome is a closed vocabulary (success/failure/noop/skipped/rejected/...)

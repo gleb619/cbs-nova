@@ -40,6 +40,7 @@ import org.springframework.context.annotation.Import;
     DslRunRetentionConfiguration.class,
     DslRunReconciliationConfiguration.class,
     DslMaintenanceConfiguration.class,
+    DslAuxTableRetentionConfiguration.class,
     DslErrorHandlingConfiguration.class,
     SpringHelperConfiguration.class,
     ApiKeyAuthFilterConfiguration.class,
