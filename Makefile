@@ -221,6 +221,10 @@ seed: ## Seed a hello-world DSL definition + one sample run (idempotent)
 seed-history: ## Seed up to 5 historical sample runs (seed-history-*, mixed statuses, idempotent)
 	@python3 $(SCRIPT) seed-history
 
+.PHONY: runbook-verify
+runbook-verify: ## Verify read-only curl examples in docs/runbook.md (set SERVER_PORT/BACKEND_BASE_URL/BFF_BASE_URL to override)
+	@python3 $(SCRIPT) runbook-verify
+
 .PHONY: loadtest
 loadtest: ## Load-test read-only BFF endpoints and report latency percentiles + error rate
 	@python3 $(SCRIPT) loadtest
