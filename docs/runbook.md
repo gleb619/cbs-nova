@@ -33,6 +33,11 @@ single-writer-per-file by routing edits through one replica or accepting overwri
 | Loki (logs) | `http://localhost:3100` (compose, internal) | backend logs shipped via the OpenTelemetry logback appender (T842); queryable from the Grafana Loki panel |
 | Postgres | `localhost:5432` | shared by app, Keycloak, Temporal, Bugsink |
 
+`/api/executions/export.csv` neutralizes leading formula-trigger chars (`= + - @ \t \r`) on
+free-text cells (runId, processName, status, mode, triggeredBy, correlationId, error, input,
+output) by prefixing `'` — ISO/numeric columns (`startedAt`, `finishedAt`, `duration`) are
+emitted raw so timezone offsets and negative durations stay intact.
+
 Key metrics (Micrometer, scraped from `/actuator/prometheus` when enabled):
 `dsl.run.duration`, `dsl.run.count`, `dsl.run.cancel` (tagged `processName`, `status`);
 `dsl.preview.calls`, `dsl.preview.external.calls`, `dsl.preview.duration`;

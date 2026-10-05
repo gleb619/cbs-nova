@@ -41,30 +41,38 @@ public class ExecutionCsvWriter {
     }
   }
 
+  private static final char[] FORMULA_TRIGGER_CHARS = {'=', '+', '-', '@', '\t', '\r'};
+
   private void writeRun(Appendable out, DslRun run, Config config) throws IOException {
-    writeField(out, run.runId());
+    // Per-column neutralization decision:
+    // - runId, processName, status, mode, triggeredBy, correlationId, error, input, output
+    // are caller/DSL-controlled free-text => prefix ' when the first char is a formula
+    // trigger (=, +, -, @, tab, CR) to mitigate CSV/formula injection (OWASP).
+    // - startedAt/finishedAt/duration are machine-generated ISO-8601 / integer seconds;
+    // leaving them untouched keeps '-' (timezone offset, negative seconds) intact.
+    writeField(out, run.runId(), true);
     out.append(CSV_DELIMITER);
-    writeField(out, run.processName());
+    writeField(out, run.processName(), true);
     out.append(CSV_DELIMITER);
-    writeField(out, run.status());
+    writeField(out, run.status(), true);
     out.append(CSV_DELIMITER);
-    writeField(out, effectiveMode(run.executionMode()));
+    writeField(out, effectiveMode(run.executionMode()), true);
     out.append(CSV_DELIMITER);
-    writeField(out, run.triggeredBy());
+    writeField(out, run.triggeredBy(), true);
     out.append(CSV_DELIMITER);
-    writeField(out, run.correlationId());
+    writeField(out, run.correlationId(), true);
     out.append(CSV_DELIMITER);
-    writeField(out, run.startedAt().toString());
+    writeField(out, run.startedAt().toString(), false);
     out.append(CSV_DELIMITER);
-    writeField(out, run.finishedAt() != null ? run.finishedAt().toString() : null);
+    writeField(out, run.finishedAt() != null ? run.finishedAt().toString() : null, false);
     out.append(CSV_DELIMITER);
-    writeField(out, duration(run));
+    writeField(out, duration(run), false);
     out.append(CSV_DELIMITER);
-    writeField(out, firstLine(run.error()));
+    writeField(out, firstLine(run.error()), true);
     out.append(CSV_DELIMITER);
-    writeField(out, truncate(run.input(), config.maxInputOutputChars()));
+    writeField(out, truncate(run.input(), config.maxInputOutputChars()), true);
     out.append(CSV_DELIMITER);
-    writeField(out, truncate(run.output(), config.maxInputOutputChars()));
+    writeField(out, truncate(run.output(), config.maxInputOutputChars()), true);
     out.append(CSV_LINE_ENDING);
   }
 
@@ -79,13 +87,25 @@ public class ExecutionCsvWriter {
   }
 
   private void writeField(Appendable out, String value) throws IOException {
+    writeField(out, value, true);
+  }
+
+  /**
+   * Writes a CSV cell. When {@code neutralizeFormulas} is true and {@code value} starts with one of
+   * {@code = + - @ \t \r}, a leading single quote is prepended to disarm formula execution in
+   * spreadsheet apps. Neutralization is applied <em>before</em> quote/escape processing so embedded
+   * quotes inside the value are still doubled correctly.
+   */
+  private void writeField(Appendable out, String value, boolean neutralizeFormulas)
+          throws IOException {
     if (value == null) {
       return;
     }
-    if (needsQuoting(value)) {
+    String effective = neutralizeFormulas ? neutralizeFormula(value) : value;
+    if (needsQuoting(effective)) {
       out.append(CSV_QUOTE);
-      for (int i = 0; i < value.length(); i++) {
-        char c = value.charAt(i);
+      for (int i = 0; i < effective.length(); i++) {
+        char c = effective.charAt(i);
         if (c == CSV_QUOTE) {
           out.append(CSV_QUOTE);
         }
@@ -93,8 +113,21 @@ public class ExecutionCsvWriter {
       }
       out.append(CSV_QUOTE);
     } else {
-      out.append(value);
+      out.append(effective);
     }
+  }
+
+  static String neutralizeFormula(String value) {
+    if (value.isEmpty()) {
+      return value;
+    }
+    char first = value.charAt(0);
+    for (char trigger : FORMULA_TRIGGER_CHARS) {
+      if (first == trigger) {
+        return "'" + value;
+      }
+    }
+    return value;
   }
 
   private static boolean needsQuoting(String value) {

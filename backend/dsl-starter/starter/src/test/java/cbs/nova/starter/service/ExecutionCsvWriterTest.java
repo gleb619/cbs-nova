@@ -134,6 +134,65 @@ class ExecutionCsvWriterTest {
     assertThat(csv).doesNotContain("second line");
   }
 
+  @Test
+  void leadingEqualsSignIsNeutralized() {
+    DslRun run = run().input("=HYPERLINK(\"http://evil\",\"x\")").build();
+
+    String csv = write(List.of(run));
+
+    assertThat(csv).contains(",\"'=HYPERLINK(\"\"http://evil\"\",\"\"x\"\")\"");
+  }
+
+  @Test
+  void leadingPlusAtMinusAndTabAreNeutralized() {
+    DslRun run = run()
+            .triggeredBy("=bot")
+            .correlationId("+corr")
+            .error("@stack")
+            .build();
+
+    String csv = write(List.of(run));
+
+    assertThat(csv).contains(",'=bot,'+corr,2026-08-13T10:00:00Z,2026-08-13T10:00:05Z,5,'@stack,");
+  }
+
+  @Test
+  void midStringEqualsSignIsLeftAlone() {
+    DslRun run = run().input("a=b").build();
+
+    String csv = write(List.of(run));
+
+    assertThat(csv).contains(",a=b,");
+  }
+
+  @Test
+  void negativeNumberLookingDurationIsNotNeutralized() {
+    DslRun run = run().startedAt(FINISHED_AT).finishedAt(STARTED_AT).build();
+
+    String csv = write(List.of(run));
+
+    assertThat(csv).contains("2026-08-13T10:00:05Z,2026-08-13T10:00:00Z,-5,");
+  }
+
+  @Test
+  void nullFieldStaysEmpty() {
+    DslRun run = run().triggeredBy(null).correlationId(null).build();
+
+    String csv = write(List.of(run));
+
+    assertThat(csv).contains(",RUN,,,2026-08-13T10:00:00Z,");
+    assertThat(csv).doesNotContain("''");
+  }
+
+  @Test
+  void neutralizedValueContainingQuoteAndDelimiterIsProperlyQuoted() {
+    DslRun run = run().input("=a,\"b\"").build();
+
+    String csv = write(List.of(run));
+
+    assertThat(csv).contains(",\"'=a,\"\"b\"\"\",");
+  }
+
   private static String write(List<DslRun> runs) {
     return write(runs, ExecutionCsvWriter.Config.defaults());
   }
