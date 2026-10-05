@@ -65,6 +65,7 @@ vi.mock('@cbs/admin-ui-plugin/composables/useExecutionsApi', () => ({
 
 vi.mock('nuxt/app', () => ({
   useRoute: () => ({ params: { id: 'exec-1' }, query: {} }),
+  useRouter: () => ({ replace: vi.fn(() => Promise.resolve()) }),
   navigateTo,
   useRuntimeConfig: () => ({
     public: { temporalUiBaseUrl: '', temporalNamespace: 'default' },
