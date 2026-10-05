@@ -361,6 +361,7 @@ export default defineNuxtModule<ModuleOptions>({
         `${prefix}/notifications`,
         `${prefix}/approvals`,
         `${prefix}/promote`,
+        `${prefix}/api-keys`,
         `${prefix}/dsl-workbench`,
         `${prefix}/executions`,
         `${prefix}/executions/:id`,
@@ -409,6 +410,12 @@ export default defineNuxtModule<ModuleOptions>({
           name: 'cbs-admin-approvals',
           path: `${prefix}/approvals`,
           file: resolve('./app/pages/approvals.vue'),
+          meta: { layout: 'cbs-admin', pad: true },
+        },
+        {
+          name: 'cbs-admin-api-keys',
+          path: `${prefix}/api-keys`,
+          file: resolve('./app/pages/api-keys.vue'),
           meta: { layout: 'cbs-admin', pad: true },
         },
         {
