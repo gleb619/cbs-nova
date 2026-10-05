@@ -50,6 +50,14 @@ public record CbsVhsProperties(
 
   /**
    * Local file-system tape sink settings.
+   *
+   * <p>
+   * {@code max-tapes} caps the number of finished {@code .vhs.jsonl} files kept in the sink
+   * directory; when the limit is exceeded the oldest files (by the embedded timestamp prefix in the
+   * filename) are deleted. It does <strong>not</strong> limit concurrently open recordings.
+   * {@code max-bytes} is a per-tape byte ceiling: once the running total of event-line bytes would
+   * exceed it, the tape stops accepting events and writes a {@code tape_truncated} marker. A value
+   * of {@code 0} disables the corresponding cap.
    */
   public record LocalSink(
           Path path,

@@ -1800,8 +1800,8 @@ cbs:
       type: local
       local:
         path: /var/cbs-nova/vhs
-        max-tapes: 0    # 0 = unlimited
-        max-bytes: 0
+        max-tapes: 0    # max finished .vhs.jsonl files kept on disk; 0 = unlimited
+        max-bytes: 0    # per-tape byte ceiling (event bytes); 0 = unlimited
     scrub:
       enabled: true
       mask-value: "***REDACTED***"
@@ -1816,7 +1816,17 @@ cbs:
 `recordable-routes` matches the DSL construct name (`event.name()`) that the recorder stores
 in the tape header `route` field. The wildcard `*` records every routed run. Tapes are written as
 one `.vhs.jsonl` file per run under `cbs.vhs.sink.local.path` with the naming convention
-`<yyyyMMdd-HHmmss>_<runId>_<correlationId>.vhs.jsonl`. For the exact line-oriented format, see
+`<yyyyMMdd-HHmmss>_<runId>_<correlationId>.vhs.jsonl`. `max-tapes` counts finished `.vhs.jsonl` files in the sink directory; when the limit is
+exceeded the oldest files (by timestamp prefix in the filename) are deleted, while currently open
+tapes are never removed. `max-bytes` is a per-tape cap: once the running total of event-line bytes
+would exceed it, the writer stops appending events, records a `tape_truncated` marker, and still
+closes the tape normally so replay can read it. A value of `0` disables either cap.
+
+> **Note (T831):** Before T831, `max-tapes` counted concurrently open recordings. It now counts
+> finished files on disk, matching the operator knob shown above. Existing tape files remain
+> readable.
+
+For the exact line-oriented format, see
 [`docs/vhs-tape-format.md`](vhs-tape-format.md). For how the optional `pieceId` on each scrub
 rule relates to the broader control-plane manifest, see [`docs/vhs-manifest.md`](vhs-manifest.md).
 

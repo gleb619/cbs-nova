@@ -35,7 +35,7 @@ Every event must contain these exact fields:
 |-------|------|---------|
 | `schema_version` | string | Must match `header.schema_version`. |
 | `event_index` | integer | Zero-based position of the event in the tape. |
-| `event_type` | enum string | One of `run_started`, `run_completed`, `call_start`, `call_end`, `trace`, `marker`, `error`. |
+| `event_type` | enum string | One of `run_started`, `run_completed`, `call_start`, `call_end`, `trace`, `marker`, `error`, `tape_truncated`. |
 | `timestamp` | ISO-8601 string | Absolute wall-clock time of the event. |
 | `relative_ms` | integer | Milliseconds elapsed since the `run_started` event. |
 | `call_metadata` | object \| null | Required shape for `call_start` and `call_end`; may be `null` for other event types. |
@@ -63,6 +63,13 @@ Present on `call_start` / `call_end` events:
 | `started_at` | ISO-8601 \| null | Event or call start time. |
 | `finished_at` | ISO-8601 \| null | Event or call finish time; `null` until finished. |
 | `duration_ms` | integer \| null | Elapsed milliseconds; `null` until finished. |
+
+### `tape_truncated` marker
+
+A tape may contain a single `tape_truncated` marker inserted by the writer when a
+per-tape byte cap is reached. It is not part of the replay stream: readers must skip it
+but still validate its `event_index` for monotonicity. The marker carries the number of
+events already persisted and the cap that triggered truncation in its `output` object.
 
 ## Implementation note
 

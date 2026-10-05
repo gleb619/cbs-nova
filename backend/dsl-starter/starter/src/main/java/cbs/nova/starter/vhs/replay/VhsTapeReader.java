@@ -26,7 +26,8 @@ import tools.jackson.databind.json.JsonMapper;
  * ({@value #SUPPORTED_SCHEMA_VERSION});</li>
  * <li>every event line must parse and carry {@code event_index} values that are strictly
  * monotonically increasing starting at 0 (gaps or out-of-order indexes indicate corruption or
- * truncation);</li>
+ * truncation); the optional {@code tape_truncated} marker is skipped from the event stream but is
+ * still validated for monotonicity;</li>
  * <li>every event's {@code schema_version} must match the header;</li>
  * <li>the last line must be a {@code tape_closed} trailer whose {@code event_count} equals the
  * number of preceding event lines; anything after the trailer is an error.</li>
@@ -40,6 +41,7 @@ public final class VhsTapeReader {
 
   public static final String SUPPORTED_TAPE_FORMAT_MAJOR = "1";
   public static final String SUPPORTED_SCHEMA_VERSION = "1";
+  public static final String TRUNCATED_MARKER_TYPE = "tape_truncated";
 
   private final @NonNull ObjectMapper objectMapper;
 
@@ -53,7 +55,8 @@ public final class VhsTapeReader {
    *
    * @param file
    *          path to a {@code .vhs.jsonl} tape
-   * @return the validated tape; header plus all events (excluding the {@code tape_closed} trailer)
+   * @return the validated tape; header plus all events (excluding the {@code tape_closed} trailer
+   *         and any {@code tape_truncated} marker)
    * @throws VhsReplayException
    *           on any format violation, with a message describing the exact problem
    */
@@ -99,6 +102,8 @@ public final class VhsTapeReader {
       }
       if ("tape_closed".equals(event.eventType())) {
         trailer = event;
+      } else if (TRUNCATED_MARKER_TYPE.equals(event.eventType())) {
+        // marker is not part of the replay stream, but its index is validated above
       } else {
         events.add(event);
       }

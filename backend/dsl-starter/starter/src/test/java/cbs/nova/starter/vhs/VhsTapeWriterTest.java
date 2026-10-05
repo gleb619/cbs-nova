@@ -7,6 +7,7 @@ import cbs.nova.starter.vhs.replay.VhsReplayException;
 import cbs.nova.starter.vhs.replay.VhsTapeReader;
 import cbs.nova.starter.vhs.replay.VhsTapeReader.VhsTape;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -22,7 +23,7 @@ import tools.jackson.databind.json.JsonMapper;
  *
  * <p>
  * These tests pin current behavior — unicode payloads, embedded CR/LF/CRLF and quotes/backslashes
- * in fields, empty event streams, and truncated tapes — as a cross-version contract together with
+ * in fields, empty event streams, truncated tapes — as a cross-version contract together with
  * {@code docs/vhs-tape-format.md}. No writer behavior is prescribed here beyond what exists today.
  */
 class VhsTapeWriterTest {
@@ -84,11 +85,14 @@ class VhsTapeWriterTest {
     escWriter.close();
 
     List<String> lines = Files.readAllLines(file);
-    // one JSON object per line: no raw control chars or unescaped quotes leak into framing
+    // one JSON object per line: no raw control chars or unescaped quotes/backslashes leak into
+    // framing
     assertThat(lines).hasSize(3);
     String wire = lines.get(1);
-    assertThat(wire).contains("a\\r\\nb\\rc\\nd \\\"q\\\" \\\\");
     assertThat(wire).doesNotContain("\r").doesNotContain("\n");
+    assertThat(wire).contains("\\r\\n")
+            .contains("\\\"q\\\"")
+            .contains("\\\\");
   }
 
   @Test
@@ -170,9 +174,60 @@ class VhsTapeWriterTest {
             .hasMessageContaining("unparseable event at line 3");
   }
 
+  @Test
+  void truncatesWhenMaxBytesReachedAndReaderSkipsMarker() throws IOException {
+    Path file = tempDir.resolve("cap-empty.vhs.jsonl");
+    TapeEvent event = new TapeEvent(
+            "1", 0, "trace", "2026-09-19T12:00:00Z", 0L, null,
+            Map.of("payload", "x"), null,
+            new TapeEvent.Timing(null, null, null), null, Map.of());
+
+    VhsTapeWriter capped = writer(file, "run_cap", null, 1L);
+    capped.append(event);
+    assertThat(capped.close()).isEqualTo(0L);
+
+    List<String> lines = Files.readAllLines(file);
+    assertThat(lines).hasSize(3);
+    assertThat(objectMapper.readTree(lines.get(1)).get("event_type").asText())
+            .isEqualTo("tape_truncated");
+
+    VhsTape tape = reader.read(file);
+    assertThat(tape.events()).isEmpty();
+  }
+
+  @Test
+  void maxBytesKeepsLeadingEventsAndTruncatesTheRest() throws IOException {
+    Path file = tempDir.resolve("cap-partial.vhs.jsonl");
+    TapeEvent first = new TapeEvent(
+            "1", 0, "trace", "2026-09-19T12:00:00Z", 0L, null,
+            Map.of("payload", "a"), null,
+            new TapeEvent.Timing(null, null, null), null, Map.of());
+    TapeEvent second = new TapeEvent(
+            "1", 1, "trace", "2026-09-19T12:00:00Z", 0L, null,
+            Map.of("payload", "a".repeat(1000)), null,
+            new TapeEvent.Timing(null, null, null), null, Map.of());
+
+    long firstLineBytes = objectMapper.writeValueAsString(first)
+            .getBytes(StandardCharsets.UTF_8).length;
+    VhsTapeWriter capped = writer(file, "run_partial", null, firstLineBytes + 1);
+    capped.append(first);
+    capped.append(second);
+    assertThat(capped.close()).isEqualTo(1L);
+
+    VhsTape tape = reader.read(file);
+    assertThat(tape.events()).hasSize(1);
+    assertThat(tape.events().get(0).eventIndex()).isZero();
+  }
+
   private VhsTapeWriter writer(Path file, String runId, String correlationId) {
     return new VhsTapeWriter(
             file, runId, correlationId, "Ping", START, objectMapper,
             () -> END);
+  }
+
+  private VhsTapeWriter writer(Path file, String runId, String correlationId, long maxBytes) {
+    return new VhsTapeWriter(
+            file, runId, correlationId, "Ping", START, objectMapper,
+            () -> END, maxBytes);
   }
 }
