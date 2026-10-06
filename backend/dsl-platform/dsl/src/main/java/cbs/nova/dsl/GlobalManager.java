@@ -5,6 +5,7 @@ import cbs.nova.dsl.config.Constants;
 import cbs.nova.dsl.config.DslConfig;
 import cbs.nova.dsl.security.ObjectGuard;
 import cbs.nova.dsl.exception.DslEntityNotFoundException;
+import cbs.nova.dsl.exception.DslSagaCompensationException;
 import cbs.nova.dsl.exception.DslExecutionException;
 import cbs.nova.dsl.explain.ExplainResource;
 import cbs.nova.dsl.explain.ExplainResourceProvider;
@@ -190,8 +191,14 @@ public final class GlobalManager {
             .withSaga(saga);
     var result = runTransaction(tx, ctx);
     if (!result.isSuccess()) {
-      saga.compensate();
-      throw new RuntimeException("Transaction failed", result.cause());
+      Throwable cause = result.cause();
+      RuntimeException failure = new RuntimeException("Transaction failed", cause);
+      try {
+        saga.compensate();
+      } catch (Exception compEx) {
+        addCompensationFailures(failure, compEx);
+      }
+      throw failure;
     }
     return result.value();
   }
@@ -437,16 +444,36 @@ public final class GlobalManager {
     try {
       var result = main.apply(ctx);
       if (!result.isSuccess()) {
-        failureRef.set(result.cause());
-        saga.compensate();
-        String detail = result.cause() != null ? result.cause().getMessage() : "unknown";
-        throw new DslExecutionException(ctx.runId(), "Process failed: " + detail,
-                result.cause() != null ? result.cause() : new RuntimeException("unknown"));
+        Throwable cause = result.cause();
+        failureRef.set(cause);
+        Exception compensationFailure = null;
+        try {
+          saga.compensate();
+        } catch (Exception compEx) {
+          compensationFailure = compEx;
+          if (cause == null) {
+            cause = compEx;
+            failureRef.set(cause);
+          }
+        }
+        String detail = cause != null ? cause.getMessage() : "unknown";
+        DslExecutionException failure = new DslExecutionException(
+                ctx.runId(),
+                "Process failed: " + detail,
+                cause != null ? cause : new RuntimeException("unknown"));
+        if (compensationFailure != null) {
+          addCompensationFailures(failure, compensationFailure);
+        }
+        throw failure;
       }
       return result.value();
     } catch (Exception e) {
       failureRef.set(e);
-      saga.compensate();
+      try {
+        saga.compensate();
+      } catch (Exception compEx) {
+        addCompensationFailures(e, compEx);
+      }
       throw e;
     }
   }
@@ -457,6 +484,20 @@ public final class GlobalManager {
             .or(() -> describeHelper(name).map(ExecutableDescriptor::description))
             .or(() -> findHelper(name).map(Executable::description))
             .or(() -> describeFunction(name).map(DslDescriptor::description));
+  }
+
+  private static void addCompensationFailures(
+          @NonNull Throwable target, @NonNull Throwable compensationError) {
+    if (compensationError instanceof DslSagaCompensationException sagaEx) {
+      if (sagaEx.getCause() != null) {
+        target.addSuppressed(sagaEx.getCause());
+      }
+      for (Throwable suppressed : sagaEx.getSuppressed()) {
+        target.addSuppressed(suppressed);
+      }
+    } else {
+      target.addSuppressed(compensationError);
+    }
   }
 
   public void resetForTests() {

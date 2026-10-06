@@ -1,6 +1,7 @@
 package cbs.nova.dsl;
 import cbs.nova.dsl.model.SimpleContext;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import cbs.nova.dsl.history.TransactionExecutionRepository;
 import cbs.nova.dsl.process.ProcessRunner;
@@ -105,6 +106,46 @@ class MultiTransactionCompensationTest {
     runner.run(process, ctx);
 
     assertThat(order).containsExactly("SagaT2-compensated", "SagaT1-compensated");
+    GlobalManager.globalManager().resetForTests();
+  }
+
+  @Test
+  void processWithCompensationFailureKeepsOriginalFailurePrimary() {
+    RuntimeException original = new RuntimeException("original failure");
+    RuntimeException compFailure = new RuntimeException("compensation failure");
+
+    assertThatThrownBy(() -> GlobalManager.globalManager().runProcessWithCompensation(
+            "run-primary",
+            "in",
+            ctx -> Result.failure(original),
+            (ctx, error) -> {
+              throw compFailure;
+            }))
+            .isInstanceOf(cbs.nova.dsl.exception.DslExecutionException.class)
+            .hasCause(original)
+            .satisfies(ex -> assertThat(ex.getSuppressed()).containsExactly(compFailure));
+
+    GlobalManager.globalManager().resetForTests();
+  }
+
+  @Test
+  void processWithRuntimeExceptionKeepsOriginalExceptionPrimary() {
+    RuntimeException original = new RuntimeException("runtime failure");
+    RuntimeException compFailure = new RuntimeException("compensation failure");
+
+    assertThatThrownBy(() -> GlobalManager.globalManager().runProcessWithCompensation(
+            "run-runtime",
+            "in",
+            ctx -> {
+              throw original;
+            },
+            (ctx, error) -> {
+              throw compFailure;
+            }))
+            .isInstanceOf(RuntimeException.class)
+            .satisfies(ex -> assertThat(ex).isSameAs(original))
+            .satisfies(ex -> assertThat(ex.getSuppressed()).containsExactly(compFailure));
+
     GlobalManager.globalManager().resetForTests();
   }
 }

@@ -1,5 +1,6 @@
 package cbs.nova.dsl;
 
+import cbs.nova.dsl.exception.DslSagaCompensationException;
 import org.jspecify.annotations.NonNull;
 
 import java.util.ArrayList;
@@ -67,13 +68,29 @@ public interface DslSaga {
     public void compensate() {
       List<Runnable> snapshot = new ArrayList<>(compensations);
       compensations.clear();
+      List<Throwable> failures = new ArrayList<>();
       List<Runnable> reversed = snapshot.reversed();
-      if (options.parallelCompensation()) {
-        reversed.parallelStream().forEach(Runnable::run);
-      } else {
-        for (Runnable compensation : reversed) {
+
+      // Deterministic sequential execution. parallelStream uses the common ForkJoinPool
+      // and is unsafe inside Temporal workflow threads, so the parallelCompensation flag
+      // is retained for API compatibility but currently executes sequentially.
+      for (Runnable compensation : reversed) {
+        try {
           compensation.run();
+        } catch (Throwable t) {
+          failures.add(t);
         }
+      }
+
+      if (!failures.isEmpty()) {
+        Throwable first = failures.getFirst();
+        var aggregate = new DslSagaCompensationException(
+                failures.size() + " compensation(s) failed; see suppressed exceptions",
+                first);
+        for (int i = 1; i < failures.size(); i++) {
+          aggregate.addSuppressed(failures.get(i));
+        }
+        throw aggregate;
       }
     }
 
