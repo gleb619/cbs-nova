@@ -225,8 +225,7 @@ grep -E "cbs.runs.(retention|purge-interval|purge-batch-size)" <app-config>
 - *Growth:* set `cbs.runs.retention` to a sane duration (e.g. `P90D`) and restart; the job runs
   every `cbs.runs.purge-interval` (default `PT1H`).
 - *Too aggressive:* raise `cbs.runs.retention`; **stop the bleeding immediately** by setting it to
-  `0` (disables the job) until you pick the right value. Purged rows are gone — restore from
-  backup if history matters.
+  `0` (disables the job) until you pick the right value. Purged rows are gone — [restore from backup](#backup-and-restore) if history matters.
 - *Lock storms:* lower `cbs.runs.purge-batch-size` (e.g. `100`), raise `cbs.runs.purge-interval`.
 
 **Permanent fix.** T276 (retention), T315 (`dsl_runs` purge index). Partition `dsl_runs` by month
@@ -260,6 +259,153 @@ if volume warrants.
 stabilises; no `DELETE` in `pg_stat_activity` older than a few seconds.
 
 ---
+
+## Backup and restore
+
+> This section closes the broken promise in the retention purger and Postgres-down incidents:
+> "restore from backup" now has a procedure.
+
+### What to back up
+
+| Asset | Where it lives | Backup method |
+|---|---|---|
+| DSL operational data | Postgres `nova` database / user `nova` on the shared `postgres` service | `pg_dump -U nova -d nova -Fc` |
+| Temporal persistence | Postgres `temporal` database / user `temporal` on the same `postgres` service | `pg_dump -U temporal -d temporal -Fc` |
+| VHS local tapes | Filesystem path configured by `cbs.vhs.sink.local.path` (default inside the container temp directory, typically `/tmp/cbs-nova/vhs`) | Copy the host directory that is mounted into the app container as a persistent volume |
+| S3 / MinIO tape objects (T843) | The configured S3 bucket/prefix, or the `minio-data` Docker volume when using the local MinIO sink | Object-store replication or `mc mirror` |
+
+The shared Postgres instance also hosts `keycloak`, `gitea`, and `bugsink` databases. Extend the same `pg_dump` pattern if you want those siblings backed up too.
+
+The local VHS tape sink is only durable if the configured path is a persistent volume mounted into the app container. The default `app/compose/app.yml` does not mount a VHS volume, so local tapes are lost on container recreation unless you bind one in.
+
+### Backup
+
+Run from the repo root. In production, point `BACKUP_DIR` at replicated/offsite storage.
+
+```bash
+BACKUP_DIR=/var/backups/cbs-nova/postgres
+mkdir -p "$BACKUP_DIR"
+
+docker compose -f app/docker-compose.yml exec -T postgres \
+  pg_dump -U nova -d nova -Fc > "$BACKUP_DIR/nova_$(date +%Y%m%d-%H%M%S).dump"
+
+docker compose -f app/docker-compose.yml exec -T postgres \
+  pg_dump -U temporal -d temporal -Fc > "$BACKUP_DIR/temporal_$(date +%Y%m%d-%H%M%S).dump"
+```
+
+- `-Fc` emits a compressed custom-format archive; restore with `pg_restore`.
+- To emit plain SQL instead, drop `-Fc` and restore with `psql -f <file>`.
+- If local VHS is enabled, also copy `cbs.vhs.sink.local.path` to the same backup root.
+
+Schedule the dump with cron. The example below keeps 14 days of dumps and deletes older ones:
+
+```bash
+# /etc/cron.d/cbs-nova-pg-backup
+0 3 * * * root /bin/bash -c 'cd /opt/cbs-nova && docker compose -f app/docker-compose.yml exec -T postgres pg_dump -U nova -d nova -Fc > /var/backups/cbs-nova/postgres/nova_$(date +\%Y\%m\%d-\%H\%M\%S).dump && docker compose -f app/docker-compose.yml exec -T postgres pg_dump -U temporal -d temporal -Fc > /var/backups/cbs-nova/postgres/temporal_$(date +\%Y\%m\%d-\%H\%M\%S).dump && find /var/backups/cbs-nova/postgres -name "*.dump" -mtime +14 -delete'
+```
+
+Use a systemd timer in production if cron is not permitted.
+
+### Restore
+
+Order matters: stop writers, drop the damaged databases, recreate them with the correct owners, restore from the latest dump, then restart consumers.
+
+```bash
+# 1. Stop everything that writes to Postgres.
+docker compose -f app/docker-compose.yml stop temporal spring-app frontend
+
+# 2. Pick the dumps to restore.
+NOVA_DUMP=/var/backups/cbs-nova/postgres/nova_<timestamp>.dump
+TEMPORAL_DUMP=/var/backups/cbs-nova/postgres/temporal_<timestamp>.dump
+
+# 3. Drop and recreate the databases with the owners the apps expect.
+docker compose -f app/docker-compose.yml exec -T postgres psql -U postgres -d postgres -c "DROP DATABASE IF EXISTS nova;"
+docker compose -f app/docker-compose.yml exec -T postgres psql -U postgres -d postgres -c "CREATE DATABASE nova OWNER nova;"
+
+docker compose -f app/docker-compose.yml exec -T postgres psql -U postgres -d postgres -c "DROP DATABASE IF EXISTS temporal;"
+docker compose -f app/docker-compose.yml exec -T postgres psql -U postgres -d postgres -c "CREATE DATABASE temporal OWNER temporal;"
+
+# 4. Restore.
+docker compose -f app/docker-compose.yml exec -T postgres pg_restore -U postgres -d nova -Fc -c --if-exists < "$NOVA_DUMP"
+docker compose -f app/docker-compose.yml exec -T postgres pg_restore -U postgres -d temporal -Fc -c --if-exists < "$TEMPORAL_DUMP"
+
+# 5. Start consumers.
+docker compose -f app/docker-compose.yml start temporal spring-app frontend
+```
+
+Notes:
+- `DROP DATABASE` cannot run inside a transaction; run each as a separate `-c` invocation.
+- `pg_restore -c --if-exists` drops existing objects before recreating them, so it is safe to restore into a freshly created database.
+- If you used plain SQL dumps, replace step 4 with `docker compose -f app/docker-compose.yml exec -T postgres psql -U postgres -d nova -f /path/to/nova.sql`.
+
+### Post-restore sanity checks
+
+1. Key table row counts match the backup:
+   ```bash
+   docker compose -f app/docker-compose.yml exec -T postgres psql -U nova -d nova -c "SELECT count(*) FROM dsl_runs;"
+   docker compose -f app/docker-compose.yml exec -T postgres psql -U nova -d nova -tc "SELECT count(*) FROM information_schema.tables WHERE table_schema='public';"
+   ```
+2. Temporal schema is intact:
+   ```bash
+   docker compose -f app/docker-compose.yml exec -T postgres psql -U temporal -d temporal -tc "SELECT count(*) FROM information_schema.tables WHERE table_schema='public';"
+   ```
+3. Full-stack health after all services are up:
+   ```bash
+   make doctor
+   ```
+
+### Verified drill
+
+Ran on `2026-10-06` against `docker compose -f app/docker-compose.yml up -d postgres temporal`. Only the DB portion was exercised; the app and BFF were intentionally down to keep the drill focused on backup/restore.
+
+1. Created baseline data:
+   ```bash
+   docker compose -f app/docker-compose.yml exec -T postgres psql -U nova -d nova -c \
+     "CREATE TABLE t847_baseline (id serial PRIMARY KEY, note text); INSERT INTO t847_baseline (note) VALUES ('before-backup-1'), ('before-backup-2');"
+   ```
+   Result: `INSERT 0 2`.
+
+2. Recorded pre-backup counts:
+   - `nova` public tables: `13`
+   - `temporal` public tables: `39`
+
+3. Took backups:
+   ```bash
+   docker compose -f app/docker-compose.yml exec -T postgres pg_dump -U nova -d nova -Fc > /tmp/cbs-nova-backups/nova_2026-10-06.dump
+   docker compose -f app/docker-compose.yml exec -T postgres pg_dump -U temporal -d temporal -Fc > /tmp/cbs-nova-backups/temporal_2026-10-06.dump
+   ```
+   Files: `nova_2026-10-06.dump` (42K), `temporal_2026-10-06.dump` (63K).
+
+4. Simulated data loss:
+   ```bash
+   docker compose -f app/docker-compose.yml exec -T postgres psql -U nova -d nova -c \
+     "CREATE TABLE t847_drill (id serial PRIMARY KEY, note text); INSERT INTO t847_drill (note) VALUES ('after-backup-1'),('after-backup-2'),('after-backup-3');"
+   ```
+   `nova` public table count went to `14`.
+
+5. Stopped Temporal before restore:
+   ```bash
+   docker compose -f app/docker-compose.yml stop temporal
+   ```
+
+6. Restored:
+   ```bash
+   docker compose -f app/docker-compose.yml exec -T postgres psql -U postgres -d postgres -c "DROP DATABASE IF EXISTS nova;"
+   docker compose -f app/docker-compose.yml exec -T postgres psql -U postgres -d postgres -c "CREATE DATABASE nova OWNER nova;"
+   docker compose -f app/docker-compose.yml exec -T postgres pg_restore -U postgres -d nova -Fc -c --if-exists < /tmp/cbs-nova-backups/nova_2026-10-06.dump
+
+   docker compose -f app/docker-compose.yml exec -T postgres psql -U postgres -d postgres -c "DROP DATABASE IF EXISTS temporal;"
+   docker compose -f app/docker-compose.yml exec -T postgres psql -U postgres -d postgres -c "CREATE DATABASE temporal OWNER temporal;"
+   docker compose -f app/docker-compose.yml exec -T postgres pg_restore -U postgres -d temporal -Fc -c --if-exists < /tmp/cbs-nova-backups/temporal_2026-10-06.dump
+   ```
+
+7. Verified:
+   - `SELECT count(*) FROM t847_baseline;` → `2`
+   - `SELECT to_regclass('public.t847_drill');` → empty (table removed)
+   - `nova` public table count → `13`
+   - `temporal` public table count → `39`
+
+8. Ran `make doctor` while only Postgres + Temporal were running; it failed on app/BFF checks as expected. With the full stack up it is the correct end-to-end sanity check.
 
 ## 4. Stuck-RUNNING reconciliation lag  — P2
 
@@ -554,8 +700,7 @@ shared `NovaHikariPool` (`backend/dsl-starter/starter-launcher/src/main/resource
 
 **Hypotheses (ranked).**
 1. **Postgres container down** — crash, OOM, disk full, failed volume mount. Affects **every**
-   sibling (Keycloak, Temporal, Bugsink) — confirm via `ps`/`logs postgres` above. Restore
-   Postgres first; everything else heals on its own.
+   sibling (Keycloak, Temporal, Bugsink) — confirm via `ps`/`logs postgres` above. [Restore Postgres first from backup](#backup-and-restore); everything else heals on its own.
 2. **Pool exhausted by long-running transactions** — the purger holding a write lock for too
    long, or a runner workflow in a tight retry loop with `auto-commit=false`. Look for
    `state='idle in transaction'` or `state='active'` rows whose `age` exceeds a minute.
