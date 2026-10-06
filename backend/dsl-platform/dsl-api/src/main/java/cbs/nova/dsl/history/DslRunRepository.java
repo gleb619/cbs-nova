@@ -33,6 +33,15 @@ public interface DslRunRepository {
     return Set.of();
   }
 
+  /**
+   * Unconditionally overwrites the terminal fields of the run identified by {@code runId}.
+   *
+   * <p>
+   * This is a raw update: it will overwrite any terminal status, including {@code CANCELLED} or
+   * {@code STALE}. Callers that need ordering guarantees should use the guarded variants
+   * {@link #updateFinishedIfRunning} (transition only from {@code RUNNING}) or
+   * {@link #updateFinishedIfStatusIn} (transition only from an explicit set of statuses).
+   */
   @NonNull
   DslRun updateFinished(
           @NonNull String runId,
@@ -49,6 +58,34 @@ public interface DslRunRepository {
           @Nullable String error,
           @NonNull Instant finishedAt,
           @Nullable String contextJson);
+
+  /**
+   * Compare-and-set terminal transition that succeeds only when the run's current status is
+   * contained in {@code fromStatuses}. Returns the number of affected rows (0 or 1).
+   *
+   * <p>
+   * The default implementation is a best-effort fallback for repositories that do not implement
+   * store-side CAS; it only safely delegates to {@link #updateFinishedIfRunning} when the allowed
+   * set is exactly {@code RUNNING}. Real implementations should enforce the status filter
+   * atomically in the store.
+   */
+  default int updateFinishedIfStatusIn(
+          @NonNull String runId,
+          @NonNull String status,
+          @Nullable String output,
+          @Nullable String error,
+          @NonNull Instant finishedAt,
+          @Nullable String contextJson,
+          @NonNull Set<String> fromStatuses) {
+    DslRun run = findByRunId(runId).orElse(null);
+    if (run == null || !fromStatuses.contains(run.status())) {
+      return 0;
+    }
+    if (fromStatuses.size() == 1 && fromStatuses.contains(DslRunStatus.RUNNING.name())) {
+      return updateFinishedIfRunning(runId, status, output, error, finishedAt, contextJson);
+    }
+    return 0;
+  }
 
   default int purgeFinishedBefore(@NonNull Instant cutoff, int batchSize) {
     return purgeFinishedBefore(cutoff, batchSize, ids -> {

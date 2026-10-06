@@ -587,34 +587,49 @@ public class TemporalDslProcessService {
         span.setStatus(StatusCode.ERROR, finalError);
       }
 
+      Set<String> completionSourceStatuses = Set.of(
+              DslRunStatus.RUNNING.name(), DslRunStatus.STALE.name());
+
+      // Flipped to false when the guarded write loses to an earlier terminal state (e.g.
+      // CANCELLED). Accurate in sync mode; in async-db-save mode the write has not run yet, so
+      // metrics/webhook remain best-effort.
+      AtomicBoolean transitionApplied = new AtomicBoolean(true);
       submitDbWrite(runId, terminalEventType, () -> {
-        runRepository.updateFinished(
+        int affected = runRepository.updateFinishedIfStatusIn(
                 runId,
                 status,
                 finalOutputJson,
                 finalError,
                 finishedAt,
-                contextJson);
-        publishStatusChanged(runId, status);
-        if (DslRunStatus.COMPLETED.name().equals(status)) {
-          publishEvent(new DomainEvent.RunCompleted(
-                  runId, processName, DslRunStatus.COMPLETED,
-                  finalOutputJson, finalError, startedAt, finishedAt,
-                  finishedAt, correlationId));
+                contextJson,
+                completionSourceStatuses);
+        if (affected == 0) {
+          transitionApplied.set(false);
+          log.info("Completion skipped {} transition for run {}: it is no longer RUNNING or STALE",
+                  status, runId);
         } else {
-          publishEvent(new DomainEvent.RunFailed(
-                  runId, processName, DslRunStatus.FAILED,
-                  finalError, startedAt, finishedAt,
-                  finishedAt, correlationId));
+          publishStatusChanged(runId, status);
+          if (DslRunStatus.COMPLETED.name().equals(status)) {
+            publishEvent(new DomainEvent.RunCompleted(
+                    runId, processName, DslRunStatus.COMPLETED,
+                    finalOutputJson, finalError, startedAt, finishedAt,
+                    finishedAt, correlationId));
+          } else {
+            publishEvent(new DomainEvent.RunFailed(
+                    runId, processName, DslRunStatus.FAILED,
+                    finalError, startedAt, finishedAt,
+                    finishedAt, correlationId));
+          }
         }
       });
 
-      recordRunComplete(processName, status, startedAt, finishedAt);
-
-      webhookDispatcher.ifPresent(
-              dispatcher -> dispatcher.onRunComplete(runId, processName, status, startedAt,
-                      finishedAt,
-                      finalError));
+      if (transitionApplied.get()) {
+        recordRunComplete(processName, status, startedAt, finishedAt);
+        webhookDispatcher.ifPresent(
+                dispatcher -> dispatcher.onRunComplete(runId, processName, status, startedAt,
+                        finishedAt,
+                        finalError));
+      }
 
       return result;
     } finally {

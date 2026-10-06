@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 class InMemoryDslRunRepositoryTest {
 
@@ -190,6 +191,60 @@ class InMemoryDslRunRepositoryTest {
             .get()
             .extracting(DslRun::status)
             .isEqualTo(DslRunStatus.STALE.name());
+  }
+
+  @Test
+  void updateFinishedIfStatusInTransitionsRunningAndStaleRuns() {
+    var repo = new InMemoryDslRunRepository(InMemoryDslRunRepository.NO_OP_EVICTION);
+    Instant finishedAt = Instant.now();
+    repo.save(run("run-running", "OrderProcess", DslRunStatus.RUNNING.name(), STARTED_AT, "RUN"));
+    repo.save(run("run-stale", "OrderProcess", DslRunStatus.STALE.name(), STARTED_AT, "RUN"));
+
+    assertThat(repo.updateFinishedIfStatusIn(
+            "run-running", DslRunStatus.COMPLETED.name(),
+            "{}", null, finishedAt, null,
+            Set.of(DslRunStatus.RUNNING.name(), DslRunStatus.STALE.name())))
+            .isEqualTo(1);
+    assertThat(repo.updateFinishedIfStatusIn(
+            "run-stale", DslRunStatus.FAILED.name(),
+            null, "error", finishedAt, null,
+            Set.of(DslRunStatus.RUNNING.name(), DslRunStatus.STALE.name())))
+            .isEqualTo(1);
+
+    assertThat(repo.findByRunId("run-running")).get()
+            .extracting(DslRun::status, DslRun::output)
+            .containsExactly(DslRunStatus.COMPLETED.name(), "{}");
+    assertThat(repo.findByRunId("run-stale")).get()
+            .extracting(DslRun::status, DslRun::error)
+            .containsExactly(DslRunStatus.FAILED.name(), "error");
+  }
+
+  @Test
+  void updateFinishedIfStatusInDoesNotOverwriteCancelledOrCompleted() {
+    var repo = new InMemoryDslRunRepository(InMemoryDslRunRepository.NO_OP_EVICTION);
+    Instant finishedAt = Instant.now();
+    repo.save(
+            run("run-cancelled", "OrderProcess", DslRunStatus.CANCELLED.name(), STARTED_AT, "RUN"));
+    repo.save(
+            run("run-completed", "OrderProcess", DslRunStatus.COMPLETED.name(), STARTED_AT, "RUN"));
+
+    assertThat(repo.updateFinishedIfStatusIn(
+            "run-cancelled", DslRunStatus.FAILED.name(),
+            null, "should not apply", finishedAt, null,
+            Set.of(DslRunStatus.RUNNING.name(), DslRunStatus.STALE.name())))
+            .isZero();
+    assertThat(repo.updateFinishedIfStatusIn(
+            "run-completed", DslRunStatus.FAILED.name(),
+            null, "should not apply", finishedAt, null,
+            Set.of(DslRunStatus.RUNNING.name(), DslRunStatus.STALE.name())))
+            .isZero();
+
+    assertThat(repo.findByRunId("run-cancelled")).get()
+            .extracting(DslRun::status, DslRun::error)
+            .containsExactly(DslRunStatus.CANCELLED.name(), null);
+    assertThat(repo.findByRunId("run-completed")).get()
+            .extracting(DslRun::status, DslRun::error)
+            .containsExactly(DslRunStatus.COMPLETED.name(), null);
   }
 
   @Test

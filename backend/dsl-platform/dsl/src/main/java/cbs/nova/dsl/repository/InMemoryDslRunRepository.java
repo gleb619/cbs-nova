@@ -118,9 +118,23 @@ public final class InMemoryDslRunRepository implements DslRunRepository {
           @Nullable String error,
           @NonNull Instant finishedAt,
           @Nullable String contextJson) {
+    return updateFinishedIfStatusIn(
+            runId, status, output, error, finishedAt, contextJson,
+            Set.of(DslRunStatus.RUNNING.name()));
+  }
+
+  @Override
+  public int updateFinishedIfStatusIn(
+          @NonNull String runId,
+          @NonNull String status,
+          @Nullable String output,
+          @Nullable String error,
+          @NonNull Instant finishedAt,
+          @Nullable String contextJson,
+          @NonNull Set<String> fromStatuses) {
     AtomicInteger affected = new AtomicInteger();
     runs.computeIfPresent(runId, (id, existing) -> {
-      if (!DslRunStatus.RUNNING.name().equals(existing.status())) {
+      if (!fromStatuses.contains(existing.status())) {
         return existing;
       }
       affected.incrementAndGet();
