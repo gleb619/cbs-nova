@@ -6,10 +6,13 @@ import cbs.nova.starter.events.DomainEventListener;
 import cbs.nova.starter.events.sink.DomainEventSink;
 import cbs.nova.starter.persistence.DslEventRepository;
 import java.time.Instant;
+import java.util.concurrent.CompletableFuture;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import tools.jackson.databind.ObjectMapper;
 
 @Slf4j
@@ -53,9 +56,25 @@ public class DomainEventPublisher {
     log.debug("[DSL events] published {} aggregate={} id={} correlationId={}",
             event.eventType(), event.aggregateType(), event.aggregateId(),
             event.correlationId());
+    if (TransactionSynchronizationManager.isActualTransactionActive()) {
+      TransactionSynchronizationManager.registerSynchronization(
+              new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                  // Fan-out must not run while the committing thread still holds an open
+                  // transaction, so execute it on a different thread and wait for it to finish.
+                  CompletableFuture.runAsync(() -> fanOut(event, rowId)).join();
+                }
+              });
+    } else {
+      fanOut(event, rowId);
+    }
+    return rowId;
+  }
+
+  private void fanOut(DomainEvent event, long rowId) {
     notifyListeners(event, rowId);
     notifySinks(event, rowId);
-    return rowId;
   }
 
   private void notifyListeners(DomainEvent event, long rowId) {

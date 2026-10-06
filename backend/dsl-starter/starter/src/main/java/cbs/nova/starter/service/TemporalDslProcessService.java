@@ -60,7 +60,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Supplier;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -189,12 +188,11 @@ public class TemporalDslProcessService {
                 .contentHash(DefinitionContentHash.of(processName))
                 .build();
 
-        submitDbWrite(() -> {
+        submitDbWrite(runId, "RunStarted", () -> {
           runRepository.save(running);
           publishEvent(new DomainEvent.RunStarted(
                   runId, processName, triggeredBy, startedAt, correlationId));
           publishStatusChanged(runId, DslRunStatus.RUNNING.name());
-          return null;
         });
 
         ensureHealthcheckStarted();
@@ -295,7 +293,7 @@ public class TemporalDslProcessService {
     var scope = propagateRunId(runId);
     try {
       Instant finishedAt = now();
-      submitDbWrite(() -> {
+      submitDbWrite(runId, "RunStale", () -> {
         int affected = runRepository.updateFinishedIfRunning(
                 runId,
                 DslRunStatus.STALE.name(),
@@ -316,7 +314,6 @@ public class TemporalDslProcessService {
                   finishedAt, run.correlationId()));
           publishStatusChanged(runId, DslRunStatus.STALE.name());
         }
-        return null;
       });
 
       meterRegistry.counter(StarterConstants.SWEEP_STALE_COUNTER,
@@ -449,13 +446,16 @@ public class TemporalDslProcessService {
 
       String finalOutputJson = outputJson;
       String finalError = error;
+      String terminalEventType = DslRunStatus.COMPLETED.name().equals(status)
+              ? "RunCompleted"
+              : "RunFailed";
 
       span.setAttribute("status", status);
       if (!result.isSuccess()) {
         span.setStatus(StatusCode.ERROR, finalError);
       }
 
-      submitDbWrite(() -> {
+      submitDbWrite(runId, terminalEventType, () -> {
         runRepository.updateFinished(
                 runId,
                 status,
@@ -475,7 +475,6 @@ public class TemporalDslProcessService {
                   finalError, startedAt, finishedAt,
                   finishedAt, correlationId));
         }
-        return null;
       });
 
       recordRunComplete(processName, status, startedAt, finishedAt);
@@ -498,18 +497,30 @@ public class TemporalDslProcessService {
     }
   }
 
-  private void submitDbWrite(@NonNull Supplier<Void> write) {
+  private void submitDbWrite(@NonNull String runId, @NonNull String eventType,
+          @NonNull Runnable write) {
     if (!asyncDbSave) {
-      write.get();
+      inTx(write);
       return;
     }
     dslProcessExecutor.execute(() -> {
       try {
-        write.get();
+        inTx(write);
       } catch (RuntimeException ex) {
-        log.warn("Async DSL DB write failed: {}", ex.getMessage(), ex);
+        log.error("Async DSL DB write failed for runId={} eventType={}: {}", runId, eventType,
+                ex.getMessage(), ex);
+        meterRegistry.counter(StarterConstants.DB_WRITE_FAILED_COUNTER).increment();
       }
     });
+  }
+
+  private void inTx(@NonNull Runnable write) {
+    TransactionTemplate tx = transactionTemplateProvider.getIfAvailable();
+    if (tx != null) {
+      tx.executeWithoutResult(status -> write.run());
+    } else {
+      write.run();
+    }
   }
 
   /**
@@ -517,24 +528,17 @@ public class TemporalDslProcessService {
    *
    * <p>
    * This is intentionally a NO-OP when the publisher is absent (no DataSource / in-memory run
-   * repository / tests that disable the event store). When the publisher IS present, the insert
-   * runs in the SAME database transaction as the surrounding state-row write when a
-   * {@link TransactionTemplate} is also available — see the "T411 same-TX" comments at the call
-   * sites in {@code startProcess}, {@code doExecuteAndRecord}, and {@code markStale}. Failure is
-   * NOT swallowed: an event-store failure at the run path breaks the surrounding write (per the
-   * loop note: event loss defeats the purpose of the store).
+   * repository / tests that disable the event store). When the publisher IS present, the caller
+   * must place this call inside the same transaction as the state-row write (see {@link #inTx});
+   * the publisher inserts the row in the current transaction and defers listener/sink fan-out until
+   * after commit.
    */
   private void publishEvent(@NonNull DomainEvent event) {
     DomainEventPublisher publisher = eventPublisherProvider.getIfAvailable();
     if (publisher == null) {
       return;
     }
-    TransactionTemplate tx = transactionTemplateProvider.getIfAvailable();
-    if (tx != null) {
-      tx.executeWithoutResult(status -> publisher.publish(event));
-    } else {
-      publisher.publish(event);
-    }
+    publisher.publish(event);
   }
 
   private AutoCloseable propagateRunId(@NonNull String runId) {
