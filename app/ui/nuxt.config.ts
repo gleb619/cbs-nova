@@ -1,5 +1,31 @@
+import { createRequire } from 'node:module'
+import { dirname, resolve } from 'node:path'
+import type { Plugin } from 'vite'
+
+const _require = createRequire(import.meta.url)
+const componentsPackageDir = dirname(dirname(dirname(dirname(_require.resolve('@cbs/components/tailwind.config')))))
+const monacoEditorRoot = resolve(componentsPackageDir, 'monaco-editor/esm/vs')
+
+function resolveMonacoPaths(): Plugin {
+  const prefix = 'monaco-editor/esm/vs/'
+  return {
+    name: 'cbs-resolve-monaco-subpaths',
+    enforce: 'pre',
+    resolveId(id) {
+      if (id === 'monaco-editor') {
+        return resolve(monacoEditorRoot, 'editor/editor.api.js')
+      }
+      if (id.startsWith(prefix)) {
+        return resolve(monacoEditorRoot, id.slice(prefix.length))
+      }
+      return null
+    },
+  }
+}
+
 export default defineNuxtConfig({
-  compatibilityDate: '2024-04-03',
+  compatibilityDate: '2024-09-01',
+  future: { compatibilityVersion: 4 },
   devtools: { enabled: true },
   pages: true,
 
@@ -20,9 +46,13 @@ export default defineNuxtConfig({
 
   postcss: {
     plugins: {
-      tailwindcss: {},
+      '@tailwindcss/postcss': {},
       autoprefixer: {},
     },
+  },
+
+  vite: {
+    plugins: [resolveMonacoPaths()],
   },
 
   build: {

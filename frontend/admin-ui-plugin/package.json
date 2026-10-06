@@ -45,5 +45,9 @@
     "typescript": "^7.0.2",
     "vitest": "^5.0.1",
     "vue-tsc": "^3.3.11"
+  },
+  "peerDependencies": {
+    "nuxt": "^4.x",
+    "vue": "^3.5.x"
   }
 }

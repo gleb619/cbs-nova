@@ -204,7 +204,7 @@ export default defineNuxtModule<ModuleOptions>({
   meta: {
     name: '@cbs/admin-ui-plugin',
     configKey: 'adminUiPlugin',
-    compatibility: { nuxt: '>=3.0.0' },
+    compatibility: { nuxt: '^4.0.0' },
   },
 
   defaults: {
