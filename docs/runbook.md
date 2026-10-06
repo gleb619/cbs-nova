@@ -67,6 +67,44 @@ make logs                       # tail all compose services
 ```
 ---
 
+## Acquiring a local Keycloak token
+
+The compose Keycloak realm `cbs-nova` (`app/compose/keycloak/cbs-nova-realm.json`) maps backend `Role` enum values to realm roles. The `cbs-nova-bff` client emits a flat `roles` claim on access tokens via a user-realm-role mapper.
+
+| User | Password | Assigned role |
+|---|---|---|
+| `devuser` | `devpassword` | `ADMIN` |
+| `authoruser` | `authorpassword` | `AUTHOR` |
+| `runneruser` | `runnerpassword` | `RUNNER` |
+
+Role ladder and route examples: see [Architecture — RBAC roles](architecture-backend.md#rbac-roles).
+
+```bash
+# Exchange username/password for an access token (direct access grant):
+TOKEN=$(curl -s -X POST \
+  "http://localhost:8080/realms/cbs-nova/protocol/openid-connect/token" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "grant_type=password" \
+  -d "client_id=cbs-nova-bff" \
+  -d "client_secret=change_me_in_production" \
+  -d "username=devuser" \
+  -d "password=devpassword" \
+  | jq -r '.access_token')
+
+# Decode and inspect the flat roles claim:
+echo "$TOKEN" | jq -R 'split(".") | .[1] | @base64d | fromjson | .roles'
+
+# Known limitation (T852): with RBAC+OIDC both on, RbacAuthorizationFilter runs before the OIDC
+# resource-server authenticates the JWT, so RoleResolver sees an anonymous caller (VIEWER) and
+# RUNNER+ routes still return 403 even with a valid token. The token's `roles` claim is correct;
+# the backend filter ordering needs a follow-up.
+curl -s -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -X POST "http://localhost:8090/api/dsl/signals/nonexistent-run" \
+  -d '{"signalName":"approval"}'
+```
+
+---
+
 ## Health endpoints
 
 Use the three actuator health URLs to decide whether a pod is alive, ready to take traffic, or

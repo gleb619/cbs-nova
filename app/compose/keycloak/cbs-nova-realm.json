@@ -38,6 +38,46 @@
         },
         "clientRole": false,
         "containerId": "cbs-nova"
+      },
+      {
+        "id": "e00a2271-037e-43cf-93fb-1afec1ea61ff",
+        "name": "VIEWER",
+        "description": "RBAC role VIEWER for DSL control-plane API (T852).",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "cbs-nova"
+      },
+      {
+        "id": "ac11c2c5-707c-45cd-8168-a7b7b2f0c56d",
+        "name": "RUNNER",
+        "description": "RBAC role RUNNER for DSL control-plane API (T852).",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "cbs-nova"
+      },
+      {
+        "id": "e50aa13b-d4ee-40ee-b0f5-2d20c2a17d32",
+        "name": "AUTHOR",
+        "description": "RBAC role AUTHOR for DSL control-plane API (T852).",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "cbs-nova"
+      },
+      {
+        "id": "3f8d363b-a121-430f-b48d-32bdbc85ad9c",
+        "name": "OPERATOR",
+        "description": "RBAC role OPERATOR for DSL control-plane API (T852).",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "cbs-nova"
+      },
+      {
+        "id": "bdb34b5e-8a80-4387-a6c7-c1344f4e4efb",
+        "name": "ADMIN",
+        "description": "RBAC role ADMIN for DSL control-plane API (T852).",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "cbs-nova"
       }
     ]
   },
@@ -58,8 +98,9 @@
         }
       ],
       "realmRoles": [
-        "default-roles-cbs-nova",
-        "cbs-nova-user"
+        "ADMIN",
+        "cbs-nova-user",
+        "default-roles-cbs-nova"
       ]
     },
     {
@@ -71,6 +112,46 @@
       "realmRoles": [
         "default-roles-cbs-nova",
         "cbs-nova-user"
+      ]
+    },
+    {
+      "id": "9dfa9ffd-be11-4e28-ba0c-e5f5768d554c",
+      "username": "authoruser",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "authoruser@example.com",
+      "firstName": "Author",
+      "lastName": "User",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "authorpassword",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "default-roles-cbs-nova",
+        "AUTHOR"
+      ]
+    },
+    {
+      "id": "c4c586c3-3d11-4633-957d-56762ca22d4f",
+      "username": "runneruser",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "runneruser@example.com",
+      "firstName": "Runner",
+      "lastName": "User",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "runnerpassword",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "default-roles-cbs-nova",
+        "RUNNER"
       ]
     }
   ],
@@ -118,6 +199,22 @@
             "included.client.audience": "cbs-nova-bff",
             "id.token.claim": "false",
             "access.token.claim": "true"
+          }
+        },
+        {
+          "id": "9c57dd20-9c03-4396-af34-be1f1beaec98",
+          "name": "roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "claim.name": "roles",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "userinfo.token.claim": "false",
+            "user.attribute": "role_list"
           }
         }
       ]
