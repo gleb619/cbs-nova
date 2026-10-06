@@ -11,11 +11,8 @@ import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.metric.RunDurationMetricsCollector;
 import cbs.nova.starter.sse.ExecutionStatusEventPublisher;
 import io.micrometer.core.instrument.MeterRegistry;
-import io.temporal.api.enums.v1.WorkflowExecutionStatus;
 import io.temporal.client.WorkflowClient;
-import io.temporal.client.WorkflowExecutionDescription;
 import io.temporal.client.WorkflowNotFoundException;
-import io.temporal.client.WorkflowStub;
 import io.temporal.client.schedules.ScheduleActionExecutionStartWorkflow;
 import io.temporal.client.schedules.ScheduleActionResult;
 import io.temporal.client.schedules.ScheduleClient;
@@ -42,10 +39,9 @@ import java.util.stream.Stream;
  * {@code dsl_runs} rows and writes the correct terminal status.
  *
  * <p>
- * This service complements, but does not replace, the existing STALE sweep in
- * {@link TemporalDslProcessService}: when Temporal cannot answer (for example because the workflow
- * was already reaped) the row is still eventually marked {@link DslRunStatus#STALE} by the
- * healthcheck sweep.
+ * The actual describe/status-mapping logic lives in the shared {@link WorkflowStatusProbe}; this
+ * job and the healthcheck stale sweep in {@link TemporalDslProcessService} share the same mapping
+ * so a run cannot be classified differently by the two writers.
  *
  * <p>
  * T726: schedule-fired runs never pass through {@code TemporalDslProcessService.startProcess} (the
@@ -63,7 +59,7 @@ public class DslRunReconciliationService {
   static final String EMPTY_OUTPUT_JSON = "{}";
 
   private final DslRunRepository runRepository;
-  private final WorkflowClient workflowClient;
+  private final WorkflowStatusProbe workflowStatusProbe;
   private final MeterRegistry meterRegistry;
   private final Duration scanInterval;
   private final Duration gracePeriod;
@@ -97,7 +93,7 @@ public class DslRunReconciliationService {
           Clock clock,
           @Nullable ScheduleClient scheduleClient) {
     this.runRepository = runRepository;
-    this.workflowClient = workflowClient;
+    this.workflowStatusProbe = new WorkflowStatusProbe(workflowClient);
     this.meterRegistry = meterRegistry;
     this.scanInterval = scanInterval;
     this.gracePeriod = gracePeriod;
@@ -259,47 +255,21 @@ public class DslRunReconciliationService {
     String runId = run.runId();
     meterRegistry.counter(StarterConstants.INSPECTED_COUNTER,
             PROCESS_NAME_TAG, safeProcessName(run.processName())).increment();
-    try {
-      WorkflowStub stub = workflowClient.newUntypedWorkflowStub(runId);
-      WorkflowExecutionDescription description = stub.describe();
-      resolveIfTerminal(run, description);
-    } catch (WorkflowNotFoundException notFound) {
-      log.warn("No Temporal workflow found for run {}; marking STALE", runId);
-      writeTerminal(run, DslRunStatus.STALE, "Workflow not found in Temporal; run is stale", null);
-    } catch (Exception ex) {
-      log.warn("Temporal reconciliation failed for run {}: {}", runId, ex.getMessage(), ex);
+    switch (workflowStatusProbe.probe(runId)) {
+      case WorkflowStatusProbe.StillRunningResult _ -> {
+        // Temporal says it is still executing; leave the row alone.
+      }
+      case WorkflowStatusProbe.TerminalResult terminal ->
+        writeTerminal(run, terminal.status(), terminal.error(), terminal.closeTime());
+      case WorkflowStatusProbe.NotFoundResult _ -> {
+        log.warn("No Temporal workflow found for run {}; marking STALE", runId);
+        writeTerminal(run, DslRunStatus.STALE,
+                "Workflow not found in Temporal; run is stale", null);
+      }
+      case WorkflowStatusProbe.ErrorResult error ->
+        log.warn("Temporal reconciliation failed for run {}: {}",
+                runId, error.cause().getMessage(), error.cause());
     }
-  }
-
-  private void resolveIfTerminal(
-          @NonNull DslRun run,
-          @NonNull WorkflowExecutionDescription description) {
-    WorkflowExecutionStatus temporalStatus = description.getStatus();
-    Instant closeTime = description.getCloseTime();
-
-    if (temporalStatus == WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_COMPLETED) {
-      writeTerminal(run, DslRunStatus.COMPLETED, null, closeTime);
-      return;
-    }
-    if (temporalStatus == WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_FAILED) {
-      writeTerminal(run, DslRunStatus.FAILED, "Workflow failed in Temporal", closeTime);
-      return;
-    }
-    if (temporalStatus == WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_TIMED_OUT) {
-      writeTerminal(run, DslRunStatus.FAILED, "Workflow timed out in Temporal", closeTime);
-      return;
-    }
-    if (temporalStatus == WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_CANCELED) {
-      writeTerminal(run, DslRunStatus.CANCELLED, "Workflow was cancelled in Temporal", closeTime);
-      return;
-    }
-    if (temporalStatus == WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_TERMINATED) {
-      writeTerminal(run, DslRunStatus.CANCELLED, "Workflow was terminated in Temporal", closeTime);
-      return;
-    }
-
-    // RUNNING, CONTINUED_AS_NEW, or UNSPECIFIED: leave the row alone and let the next pass
-    // re-evaluate.
   }
 
   @Autowired(required = false)

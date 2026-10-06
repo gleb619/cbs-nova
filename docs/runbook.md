@@ -190,7 +190,7 @@ task yet — raise one if this recurs.
 
 **Verification.** Authenticated `/actuator/health` shows the Temporal component
 `reachable=true`; Temporal UI loads; a fresh preview→run of a trivial process completes; run the
-reconciliation job (incident #4) to sweep rows stranded during the outage.
+health-check stale sweep and reconciliation job (incident #4) to update rows stranded during the outage.
 
 ---
 
@@ -450,7 +450,8 @@ Ran on `2026-10-06` against `docker compose -f app/docker-compose.yml up -d post
 
 **Symptom.** Executions list shows runs `RUNNING` for hours that Temporal UI reports as
 `COMPLETED`/`FAILED`; dashboard stats (`/api/executions/stats`) inflated with phantom running
-counts.
+counts. Signals to a live long-running workflow return `409 "Execution run is not running"` because
+the row was prematurely marked `STALE`.
 
 **Triage.**
 ```sql
@@ -459,29 +460,41 @@ WHERE status = 'RUNNING' AND started_at < now() - interval '1 hour'
 ORDER BY started_at LIMIT 50;
 ```
 ```bash
-grep -i "reconciliation" <app-log> | tail -20
-grep -E "cbs.runs.reconciliation" <app-config>
+grep -E "reconciliation|healthcheck sweep|sweep" <app-log> | tail -40
+grep -E "cbs.runs.reconciliation|cbs.nova.process.healthcheck" <app-config>
 ```
 
 **Hypotheses.**
-1. Reconciliation job disabled (`cbs.runs.reconciliation.enabled` default `false`) — nothing
-   sweeps stranded rows.
-2. Job enabled but `grace-period` (default `15m`) longer than the drift you're seeing — working
+1. Temporal is unreachable → both the always-on health-check sweep and the optional reconciliation
+   job skip and retry; rows stay `RUNNING` until Temporal answers.
+2. Reconciliation job disabled (`cbs.runs.reconciliation.enabled` default `false`) — the
+   health-check sweep still runs, but it scans less frequently and without the reconciliation
+   `batch-size`/`grace-period` tuning.
+3. Job enabled but `grace-period` (default `15m`) longer than the drift you're seeing — working
    as designed, wait a cycle (`scan-interval`, default `5m`).
-3. `batch-size` (default `200`) too small for a large backlog after a Temporal outage — it
+4. `batch-size` (default `200`) too small for a large backlog after a Temporal outage — it
    catches up one batch per scan.
-4. Temporal describe API failing → job skips and retries, never marks `STALE`.
+5. A long-running workflow legitimately ran longer than the old wall-clock threshold (now
+   `PT1H`) and was marked `STALE` while still executing. In Temporal mode the sweep asks
+   Temporal first, so this should only happen when Temporal is not answering.
 
 **Mitigation.**
-- Enable the job: `cbs.runs.reconciliation.enabled=true`, restart. It maps each stuck row to the
-  real Temporal terminal status; rows genuinely gone from Temporal become `STALE`.
+- Restore Temporal reachability; the health-check sweep and reconciliation job will both resume
+  mapping rows to their real status. Rows genuinely gone from Temporal become `STALE`; live rows
+  return to `RUNNING`.
+- Enable the optional job for a second, slower scan with tunable batching:
+  `cbs.runs.reconciliation.enabled=true`, restart.
 - After a big outage, temporarily raise `batch-size` and lower `scan-interval` to drain faster,
   then revert.
+- If a live workflow was marked `STALE` because Temporal was down, it will be corrected on the
+  next successful describe once Temporal is back.
 
-**Permanent fix.** T316 (stuck-run reconciliation).
+**Permanent fix.** T316/T908 (stuck-run reconciliation and Temporal-aware health-check sweep).
 
-**Verification.** `dsl.run.reconciliation.inspected` / `...resolved` counters advance; the query
-above returns few/no rows; stats endpoint running-count matches Temporal.
+**Verification.** `dsl.run.sweep.inspected`, `dsl.run.sweep.stale`, and
+`dsl.run.reconciliation.inspected` / `...resolved` counters advance; the query above returns
+few/no rows; stats endpoint running-count matches Temporal; signals to long-running workflows
+return `202`/`SENT`.
 
 ---
 
@@ -793,8 +806,8 @@ aggregate status anonymously; for the per-component `db.status=UP` view, send th
 an `Authorization: Bearer $TOKEN` header per the T752 hardening note above);
 `hikaricp_connections_pending`
 flat at `0`; `pg_stat_activity` shows no `idle in transaction` rows older than a few seconds;
-a fresh `POST /api/dsl/run/<name>` completes end-to-end; reconciliation sweep (see [incident
-#4](#4-stuck-running-reconciliation-lag--p2)) clears any rows stranded by the outage.
+a fresh `POST /api/dsl/run/<name>` completes end-to-end; health-check sweep and reconciliation job (see [incident
+#4](#4-stuck-running-reconciliation-lag--p2)) update any rows stranded by the outage.
 
 ---
 
@@ -917,9 +930,9 @@ waiting on a slow worker start.
 - **Bring workers up** if `cbs.dsl.worker.enabled=false`: set it to `true`, redeploy the
   app, and confirm Temporal UI's Pollers column rises to ≥1 on every queue in
   `configuredTaskQueues`.
-- **Sweep stranded runs** with the reconciliation job once workers are polling — see
+- **Sweep stranded runs** with the always-on health-check stale sweep and the optional reconciliation job once workers are polling — see
   [incident #4](#4-stuck-running-reconciliation-lag--p2); the
-  `dsl.run.reconciliation.{inspected,resolved}` counters surface the backlog.
+  `dsl.run.sweep.{inspected,stale}` and `dsl.run.reconciliation.{inspected,resolved}` counters surface the backlog.
 
 **Permanent fix.**
 - `DslWorkerConfiguration` should create one `Worker` per distinct
@@ -942,8 +955,8 @@ waiting on a slow worker start.
 **Verification.** Authenticated `/actuator/health` shows
 `components.dsl.details.temporal.reachable=true`; Temporal UI's Pollers column shows ≥1
 poller on every queue in `configuredTaskQueues`; `POST /api/dsl/run/<name>` for a process
-on each declared queue completes end-to-end; the reconciliation sweep (see
-[incident #4](#4-stuck-running-reconciliation-lag--p2)) clears rows stranded during the
+on each declared queue completes end-to-end; the health-check sweep and reconciliation job (see
+[incident #4](#4-stuck-running-reconciliation-lag--p2)) update rows stranded during the
 stall; new runs no longer park on "Pending Workflow Task".
 
 ---
@@ -956,7 +969,7 @@ Every request carries two ids. Both are optional — the caller may send either,
   back on the response so the caller learns it. The BFF also generates one per backend call.
 - **`X-Correlation-Id`** — caller-owned business-transaction id. The server **never**
   generates one; absence means absent. Persisted on `dsl_runs.correlation_id` for run-path
-  lookups (see incident #4 for stuck runs).
+  lookups (see incident #4 for stuck or stale runs).
 
 Where they show up:
 
