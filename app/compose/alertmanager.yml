@@ -1,0 +1,27 @@
+# Alertmanager routing for local development.
+# In production replace the null receiver with a real webhook / Slack / PagerDuty route.
+global:
+  smtp_smarthost: 'localhost:25'
+  smtp_from: 'alertmanager@localhost'
+
+route:
+  receiver: 'null'
+  group_by: ['alertname']
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 1h
+
+receivers:
+  - name: 'null'
+    webhook_configs:
+      - url: 'http://localhost:5001/'
+        send_resolved: true
+
+# Uncomment and edit to send alerts to a real Slack-compatible webhook:
+#   - name: 'slack'
+#     slack_configs:
+#       - api_url: 'https://hooks.slack.com/services/YOUR/WEBHOOK/URL'
+#         channel: '#alerts'
+#         send_resolved: true
+#         title: '{{ .GroupLabels.alertname }}'
+#         text: '{{ .CommonAnnotations.summary }}'
