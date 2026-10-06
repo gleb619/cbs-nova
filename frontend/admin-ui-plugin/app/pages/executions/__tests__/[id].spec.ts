@@ -586,4 +586,133 @@ describe('executions/[id].vue run-again button', () => {
       wrapper.unmount()
     })
   })
+  describe('executions/[id].vue signal panel observed-confirmation polling (T854)', () => {
+    beforeEach(() => {
+      installLocalStorageMock()
+      harness.selectedExecution.value = null
+      harness.error.value = null
+      harness.loadDetail.mockClear()
+      harness.startPolling.mockClear()
+      harness.stopPolling.mockClear()
+      vi.useFakeTimers({ shouldAdvanceTime: true })
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+      document.body.innerHTML = ''
+    })
+
+    function findSendButton(wrapper: ReturnType<typeof mountPage>) {
+      return wrapper.find('[data-testid="send-signal-button"]')
+    }
+
+    function findSignalInput(wrapper: ReturnType<typeof mountPage>) {
+      return wrapper.find('[data-testid="signal-name-input"]')
+    }
+
+    function queryCalls(fetchMock: ReturnType<typeof vi.mocked>) {
+      return fetchMock.mock.calls.filter(
+        (call) => typeof call[0] === 'string' && call[0].includes('/api/v1/dsl/queries/'),
+      )
+    }
+
+    it('shows "observed" suffix when signalState contains the sent signal on first query', async () => {
+      harness.selectedExecution.value = detail({ status: 'Running' })
+      const fetchMock = vi.mocked(globalThis.$fetch as import('vitest').Mock)
+      fetchMock.mockImplementation(async (...args: unknown[]) => {
+        const [url] = args
+        const u = String(url)
+        if (u.includes('/api/v1/dsl/signals/')) return undefined
+        if (u.includes('/api/v1/dsl/queries/')) return { signalState: { MySignal: true } }
+        return undefined
+      })
+
+      const wrapper = mountPage()
+      await flush()
+
+      await findSignalInput(wrapper).setValue('MySignal')
+      await findSendButton(wrapper).trigger('click')
+      await flush()
+
+      expect(fetchMock).toHaveBeenCalledWith('/api/v1/dsl/signals/exec-1', {
+        method: 'POST',
+        body: { signalName: 'MySignal', payload: {} },
+      })
+      expect(queryCalls(fetchMock)).toHaveLength(1)
+      expect(wrapper.find('[data-testid="signal-result"]').text()).toContain(
+        'Signal "MySignal" sent',
+      )
+      const suffix = wrapper.find('[data-testid="signal-result-suffix"]')
+      expect(suffix.text()).toContain('observed')
+      expect(suffix.classes()).toContain('text-success-600')
+
+      wrapper.unmount()
+    })
+
+    it('shows "not yet observed" suffix after 5 attempts and stops polling', async () => {
+      harness.selectedExecution.value = detail({ status: 'Running' })
+      const fetchMock = vi.mocked(globalThis.$fetch as import('vitest').Mock)
+      fetchMock.mockImplementation(async (...args: unknown[]) => {
+        const [url] = args
+        const u = String(url)
+        if (u.includes('/api/v1/dsl/signals/')) return undefined
+        if (u.includes('/api/v1/dsl/queries/')) return { signalState: { OtherSignal: true } }
+        return undefined
+      })
+
+      const wrapper = mountPage()
+      await flush()
+
+      await findSignalInput(wrapper).setValue('MySignal')
+      await findSendButton(wrapper).trigger('click')
+      await flush()
+
+      expect(queryCalls(fetchMock)).toHaveLength(1)
+
+      for (let i = 0; i < 4; i++) {
+        await vi.advanceTimersByTimeAsync(2000)
+        await flush()
+      }
+
+      expect(queryCalls(fetchMock)).toHaveLength(5)
+      const suffix = wrapper.find('[data-testid="signal-result-suffix"]')
+      expect(suffix.text()).toContain('not yet observed')
+      expect(suffix.classes()).toContain('text-warning-700')
+
+      await vi.advanceTimersByTimeAsync(10000)
+      await flush()
+      expect(queryCalls(fetchMock)).toHaveLength(5)
+
+      wrapper.unmount()
+    })
+
+    it('cancels pending poll timers when the component unmounts', async () => {
+      harness.selectedExecution.value = detail({ status: 'Running' })
+      const fetchMock = vi.mocked(globalThis.$fetch as import('vitest').Mock)
+      fetchMock.mockImplementation(async (...args: unknown[]) => {
+        const [url] = args
+        const u = String(url)
+        if (u.includes('/api/v1/dsl/signals/')) return undefined
+        if (u.includes('/api/v1/dsl/queries/')) return { signalState: { OtherSignal: true } }
+        return undefined
+      })
+
+      const wrapper = mountPage()
+      await flush()
+
+      await findSignalInput(wrapper).setValue('MySignal')
+      await findSendButton(wrapper).trigger('click')
+      await flush()
+
+      expect(queryCalls(fetchMock)).toHaveLength(1)
+      expect(wrapper.find('[data-testid="signal-result-suffix"]').exists()).toBe(false)
+
+      wrapper.unmount()
+
+      await vi.advanceTimersByTimeAsync(10000)
+      await flush()
+      expect(queryCalls(fetchMock)).toHaveLength(1)
+    })
+  })
+
 })
