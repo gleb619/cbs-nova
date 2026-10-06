@@ -2,8 +2,10 @@ package cbs.nova.starter.config;
 
 import cbs.nova.starter.config.properties.CbsHealthProperties;
 import cbs.nova.starter.service.TemporalHealthProbe;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.health.contributor.HealthIndicator;
 import org.springframework.context.annotation.Bean;
@@ -25,5 +27,12 @@ public class DslHealthIndicatorConfiguration {
           @Nullable ObjectProvider<TemporalHealthProbe> probeProvider,
           @Nullable ObjectProvider<CbsHealthProperties> propsProvider) {
     return new DslReadinessIndicator(probeProvider, propsProvider);
+  }
+
+  @Bean
+  @ConditionalOnBean({TemporalHealthProbe.class, MeterRegistry.class})
+  TemporalReachabilityMetrics temporalReachabilityMetrics(
+          TemporalHealthProbe probe, MeterRegistry meterRegistry) {
+    return new TemporalReachabilityMetrics(probe, meterRegistry);
   }
 }

@@ -51,7 +51,6 @@ groups:
 
   - name: cbs-nova-app-down
     rules:
-      # Temporal-specific reachability alerting rides on T390 readiness work (future dsl_temporal_reachable gauge).
       - alert: CbsNovaAppDown
         expr: up{job="cbs-nova"} == 0
         for: 2m
@@ -60,6 +59,17 @@ groups:
         annotations:
           summary: "cbs-nova application is down"
           description: "Prometheus cannot scrape the cbs-nova job at spring-app:8090/actuator/prometheus for 2 minutes."
+
+  - name: cbs-nova-temporal-reachability
+    rules:
+      - alert: CbsNovaTemporalUnreachable
+        expr: dsl_temporal_reachable == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "cbs-nova Temporal is unreachable"
+          description: "The dsl_temporal_reachable gauge reports Temporal as unreachable for 2 minutes. Check the Temporal server and network path."
 
   # T490 — multi-window multi-burn-rate alerts for the run-success SLO.
   # Budget/target reference: docs/slo.md (SLO 1). Target = 99.0% placeholder
