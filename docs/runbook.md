@@ -488,7 +488,7 @@ pages load; no upstream errors in Nitro logs for 5 minutes.
 ## 5a. `HTTP 413 PAYLOAD_TOO_LARGE` from a write endpoint  — P2
 
 **Symptom.** Any `POST` / `PUT` / `PATCH` under `/api/` (drafts save, bulk file/docs write,
-signals, schedules, manifest reload, notification rules, promote, api-key admin, change
+signals, schedules, manifest reload, notification rules, promote, [api-key admin](#11-api-key-leaked-or-client-locked-out--p1), change
 request submit/approve/reject, VHS replay/loadtest, run/preview/explain/hierarchy) returns
 `413 PAYLOAD_TOO_LARGE` with the body
 `{"code":"PAYLOAD_TOO_LARGE","message":"Request body for 'request-body' exceeds maximum input size (limit <N> bytes, actual <M> bytes)","entityName":"request-body", ...}`
@@ -2134,6 +2134,138 @@ curl -sS -X POST http://localhost:3000/api/v1/vhs/tapes/run-2v7k9x/replay \
 docker compose -f app/docker-compose.yml logs app | \
   grep -E 'VHS replay job|VHS replay.*failed'
 ```
+
+## 11. API key leaked or client locked out — P1
+
+**Symptom.** A caller reports `401 UNAUTHORIZED` on every `/api/*` call; an API key is suspected
+leaked; or all stored keys were revoked and no replacement was distributed.
+
+**Triage.**
+List keys to see what exists. The response never includes a hash or plaintext.
+
+```bash
+# Direct backend path (supply a valid key explicitly)
+curl -sS -H 'X-Api-Key: <admin-key>' http://localhost:8090/api/dsl/auth/keys | jq .
+
+# BFF path (the BFF supplies its own configured backendApiKey)
+curl -sS http://localhost:3000/api/v1/dsl/api-keys | jq .
+```
+
+Expected shape: `[{ "id", "label", "prefix", "createdAt", "revokedAt", "lastUsedAt" }]`.
+
+Check audit for recent key mutations:
+
+```bash
+curl -sS -H 'X-Api-Key: <admin-key>' 'http://localhost:8090/api/dsl/audit?action=API_KEY_CREATE&limit=10' | jq '.items[] | {occurredAt, actor, action, target, outcome, detailsJson}'
+curl -sS -H 'X-Api-Key: <admin-key>' 'http://localhost:8090/api/dsl/audit?action=API_KEY_REVOKE&limit=10' | jq '.items[] | {occurredAt, actor, action, target, outcome}'
+```
+
+**Hypotheses.**
+1. A stored key was leaked and is being used.
+2. A stored key was revoked before a replacement was created.
+3. Every stored key is revoked and there is no configured bootstrap key.
+4. The BFF or a client is presenting the wrong key.
+
+**Mitigation — leaked key.**
+
+Create a replacement *before* revoking the old one. The auth filter accepts the old key
+until the revocation commit is visible, so the swap is seamless.
+
+```bash
+# 1. Identify the leaked key by prefix in the list above.
+# 2. Create a replacement.
+curl -sS -X POST -H 'X-Api-Key: <admin-key>' -H 'Content-Type: application/json'   -d '{"label":"orders-service-replacement"}'   http://localhost:8090/api/dsl/auth/keys | tee /tmp/new-key.json | jq .
+
+# 3. Distribute the new "key" value to the client.
+NEW_KEY=$(jq -r .key /tmp/new-key.json)
+
+# 4. Verify the new key works.
+curl -sS -H "X-Api-Key: $NEW_KEY" http://localhost:8090/api/dsl/auth/keys | jq .
+
+# 5. Revoke the leaked key by id.
+curl -sS -X DELETE -H 'X-Api-Key: <admin-key>'   http://localhost:8090/api/dsl/auth/keys/<leaked-key-id>
+
+# 6. Confirm revocation.
+curl -sS -H 'X-Api-Key: <admin-key>' http://localhost:8090/api/dsl/auth/keys | jq .
+```
+
+The plaintext key is returned exactly once from `POST /api/dsl/auth/keys`; after that only
+the public `id`, `label`, `prefix` and timestamps are visible.
+
+**Mitigation — total lockout (all keys revoked / none configured).**
+
+- If `cbs.dsl.auth.api-key` is set in application config, that bootstrap key is still accepted
+even when every stored key is revoked (it is checked before the stored-key store). Use it to
+create a new stored key, distribute it, then rotate the config key out. Note that this
+config-level key is deprecated — once recovery is complete, leave `cbs.dsl.auth.api-key` empty
+and rely on stored keys.
+- If there is no bootstrap key, create a stored key directly in Postgres. Hash the plaintext
+with SHA-256 (lowercase hex) and use the first 8 characters as the visible prefix:
+
+```bash
+PLAIN='your-emergency-key-please-rotate-me'
+HASH=$(printf '%s' "$PLAIN" | sha256sum | awk '{print $1}')
+PREFIX=$(printf '%s' "$PLAIN" | cut -c1-8)
+
+docker compose -f app/docker-compose.yml exec -T postgres psql -U nova -d nova -c   "INSERT INTO dsl_api_keys (label, key_hash, key_prefix, created_at) VALUES ('emergency-recovery', '$HASH', '$PREFIX', now());"
+```
+
+Restart is **not** required; the auth filter reads from the table on every request. Verify the
+new key works with `GET /api/dsl/auth/keys`.
+
+**Permanent fix.** Treat config-level `cbs.dsl.auth.api-key` as a bootstrap-only key; migrate to
+stored rotatable keys via the admin surface and leave the property empty. T837 adds a UI for the
+same operations; forward-reference only.
+
+**Diagnostics — `last_used_at` staleness.**
+
+`last_used_at` on a stored key is updated best-effort after a successful match. Use it as one
+compromise signal: if traffic is expected but the timestamp is stale, the key in use may not be
+the one you think it is.
+
+Caveat: writes are throttled per node by `cbs.dsl.auth.last-used-throttle-seconds`
+(default `60`). Within the throttle window repeated auths coalesce into one write, so
+`last_used_at` can lag by up to that many seconds. The throttle is per-node; in a multi-node
+deployment the worst case is one write per node per window.
+
+```bash
+# Keys that have never been used
+curl -sS -H 'X-Api-Key: <admin-key>' http://localhost:8090/api/dsl/auth/keys |   jq '[.[] | select(.lastUsedAt == null)]'
+
+# Keys whose last_used_at has not moved recently
+docker compose -f app/docker-compose.yml exec -T postgres psql -U nova -d nova -c   "SELECT id, label, key_prefix, last_used_at FROM dsl_api_keys WHERE revoked_at IS NULL AND (last_used_at IS NULL OR last_used_at < now() - interval '1 hour');"
+```
+
+**Audit verification.**
+
+Key admin mutations write rows to the append-only `dsl_audit` log:
+
+| Action | Meaning | Details |
+|---|---|---|
+| `API_KEY_CREATE` | A key was created. | `{id, label, prefix}` — plaintext/hash never included. |
+| `API_KEY_REVOKE` | A key was revoked. | `{id}` on success; `{error: ...}` on failure. |
+
+Read them via the audit trail (T838 will add a UI viewer):
+
+```bash
+curl -sS -H 'X-Api-Key: <admin-key>' 'http://localhost:8090/api/dsl/audit?action=API_KEY_CREATE&limit=10' | jq .
+curl -sS -H 'X-Api-Key: <admin-key>' 'http://localhost:8090/api/dsl/audit?action=API_KEY_REVOKE&limit=10' | jq .
+```
+
+BFF equivalent: `/api/v1/dsl/audit?action=API_KEY_CREATE&limit=10`.
+
+**Common failure cases.**
+
+| Symptom | HTTP | Cause | Fix |
+|---|---|---|---|
+| `401 UNAUTHORIZED` on key admin calls | 401 | Missing or invalid `X-Api-Key`. | Supply a valid bootstrap or stored key. |
+| `404 NOT_FOUND` on revoke | 404 | Unknown id or already revoked. | Re-list keys; revocation is idempotent for already-revoked ids (returns 204), but unknown ids return 404. |
+| Created key cannot be used | 401 | The key was revoked before distribution, or the wrong plaintext was copied. | Create a new key; revoked rows never match. |
+
+**Verification.**
+After rotation, the leaked/revoked id shows `revokedAt`; the replacement shows a recent
+`lastUsedAt` when exercised; audit lists `API_KEY_CREATE` and `API_KEY_REVOKE` rows for the
+rotation. After lockout recovery, a valid stored key returns `200` from `/api/dsl/auth/keys`.
 
 ## Maintaining this runbook
 
