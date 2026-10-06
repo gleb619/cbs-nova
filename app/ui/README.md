@@ -1,6 +1,6 @@
 # CBS Nova — Operator Portal Host App
 
-This is a reference Nuxt 3 host application that consumes the `@cbs/admin-ui-plugin` package from a local tarball registry, just like a real client integrating CBS Nova into their own admin portal.
+This is a reference Nuxt 4 host application that consumes the `@cbs/admin-ui-plugin` package from a local tarball registry, just like a real client integrating CBS Nova into their own admin portal.
 
 ## What it demonstrates
 
