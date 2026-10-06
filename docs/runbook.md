@@ -1050,7 +1050,7 @@ If the counter or bucket names differ from the conventional names used in `alert
 ### Alert delivery
 
 Prometheus sends fired alerts to Alertmanager at `http://alertmanager:9093`. In local dev the
-route lands in the `null` receiver (a dummy webhook URL) so alerts are visible in the
+route lands in the `null` receiver (no delivery configured) so alerts are visible in the
 Alertmanager UI without spamming a real channel.
 
 - See firing alerts: open `http://localhost:9093/#/alerts` or query
