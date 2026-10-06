@@ -16,6 +16,7 @@ import {
 import { useLivePollingPreference } from '@cbs/admin-ui-plugin/composables/useLivePollingPreference'
 import { useExecutionDeepLink, type ExecutionDetailTab } from '@cbs/admin-ui-plugin/composables/useExecutionDeepLink'
 import { navigateTo, useRoute } from 'nuxt/app'
+import { $fetch } from 'ofetch'
 import { computed, onUnmounted, ref, watch } from 'vue'
 import type { ExecutionMode, TransactionExecutionDto } from '~/types'
 import { stashRunAgain } from '../../utils/runAgainHandoff'
@@ -185,6 +186,9 @@ const signalError = ref<string | null>(null)
 const queryResult = ref<Record<string, unknown> | null>(null)
 const signalBusy = ref(false)
 const queryBusy = ref(false)
+const signalObserved = ref<boolean | null>(null)
+const signalPollTimer = ref<ReturnType<typeof setTimeout> | null>(null)
+let signalPollRunId = 0
 
 // T722 — declared signal metadata for the run's definition, surfaced as
 // chips + datalist. Loaded on demand when the panel mounts (panel only
@@ -227,8 +231,54 @@ const signalNameIsUnknown = computed(() => {
   return !declaredNames.value.has(trimmed)
 })
 
+function stopSignalPolling() {
+  if (signalPollTimer.value) {
+    clearTimeout(signalPollTimer.value)
+    signalPollTimer.value = null
+  }
+  signalPollRunId += 1
+}
+
+async function pollForObserved(
+  name: string,
+  runId: number,
+  executionId: string,
+  attempt = 0,
+  anySuccess = false,
+) {
+  if (runId !== signalPollRunId) return
+  if (attempt >= 5) {
+    if (anySuccess) signalObserved.value = false
+    return
+  }
+  try {
+    const response = await $fetch(`/api/v1/dsl/queries/${executionId}`)
+    if (runId !== signalPollRunId) return
+    queryResult.value = (response as Record<string, unknown>) ?? null
+    const state = queryResult.value?.signalState as Record<string, unknown> | undefined
+    if (state && Object.hasOwn(state, name)) {
+      signalObserved.value = true
+      return
+    }
+    anySuccess = true
+  } catch (_err) {
+    // ignore query errors; leave the plain "sent" result if nothing succeeds
+  }
+  if (attempt + 1 >= 5) {
+    if (anySuccess) signalObserved.value = false
+    return
+  }
+  signalPollTimer.value = setTimeout(() => {
+    signalPollTimer.value = null
+    void pollForObserved(name, runId, executionId, attempt + 1, anySuccess)
+  }, 2000)
+}
+
 async function sendSignal() {
   if (!selectedExecution.value?.id) return
+  const executionId = selectedExecution.value.id
+  stopSignalPolling()
+  signalObserved.value = null
   signalBusy.value = true
   signalError.value = null
   signalResult.value = null
@@ -239,12 +289,13 @@ async function sendSignal() {
     } catch (_e) {
       throw new Error('Payload must be valid JSON')
     }
-    await $fetch(`/api/v1/dsl/signals/${selectedExecution.value.id}`, {
+    await $fetch(`/api/v1/dsl/signals/${executionId}`, {
       method: 'POST',
       body: { signalName: signalName.value, payload },
     })
     signalResult.value = `Signal "${signalName.value}" sent`
-    await querySignalState()
+    const runId = signalPollRunId
+    void pollForObserved(signalName.value, runId, executionId)
   } catch (err) {
     signalError.value = (err as Error)?.message ?? 'Failed to send signal'
   } finally {
@@ -267,6 +318,7 @@ async function querySignalState() {
 
 onUnmounted(() => {
   stopPolling()
+  stopSignalPolling()
 })
 </script>
 
@@ -481,13 +533,18 @@ onUnmounted(() => {
             type="button"
             :disabled="!signalName || signalBusy"
             class="px-3 py-2 text-xs font-medium rounded border transition-colors border-primary-300 bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-50"
+            data-testid="send-signal-button"
             @click="sendSignal"
           >
             {{ signalBusy ? 'Sending…' : 'Send signal' }}
           </button>
         </div>
         <p v-if="signalResult" class="text-sm text-success-600" data-testid="signal-result">
-          {{ signalResult }}
+          {{ signalResult }}<span
+            v-if="signalObserved !== null"
+            :class="['text-sm', signalObserved ? 'text-success-600' : 'text-warning-700']"
+            data-testid="signal-result-suffix"
+          >{{ signalObserved ? ' · observed' : ' · not yet observed' }}</span>
         </p>
         <p v-if="signalError" class="text-sm text-error-600" data-testid="signal-error">
           {{ signalError }}
