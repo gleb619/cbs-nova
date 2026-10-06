@@ -62,7 +62,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 @Slf4j
-@RequiredArgsConstructor
 public class TemporalDslProcessService {
 
   private final DslRunRepository runRepository;
@@ -79,7 +78,66 @@ public class TemporalDslProcessService {
   private final OpenTelemetry openTelemetry;
   private final ObjectProvider<DomainEventPublisher> eventPublisherProvider;
   private final ObjectProvider<TransactionTemplate> transactionTemplateProvider;
+  private final Optional<WorkflowStatusProbe> workflowStatusProbe;
   private @Nullable ExecutionStatusEventPublisher statusPublisher;
+
+  /**
+   * Legacy constructor kept for existing tests and callers that do not supply a
+   * {@link WorkflowStatusProbe}. Such instances fall back to wall-clock stale behaviour.
+   */
+  public TemporalDslProcessService(
+          DslRunRepository runRepository,
+          ObjectMapper objectMapper,
+          ThreadPoolTaskExecutor dslProcessExecutor,
+          ScheduledExecutorService healthcheckExecutor,
+          Duration healthcheckInterval,
+          Duration staleThreshold,
+          boolean asyncDbSave,
+          long maxOutputBytes,
+          MeterRegistry meterRegistry,
+          RunIdentityResolver runIdentityResolver,
+          Optional<WebhookDispatcher> webhookDispatcher,
+          OpenTelemetry openTelemetry,
+          ObjectProvider<DomainEventPublisher> eventPublisherProvider,
+          ObjectProvider<TransactionTemplate> transactionTemplateProvider) {
+    this(runRepository, objectMapper, dslProcessExecutor, healthcheckExecutor,
+            healthcheckInterval, staleThreshold, asyncDbSave, maxOutputBytes,
+            meterRegistry, runIdentityResolver, webhookDispatcher, openTelemetry,
+            eventPublisherProvider, transactionTemplateProvider, Optional.empty());
+  }
+
+  public TemporalDslProcessService(
+          DslRunRepository runRepository,
+          ObjectMapper objectMapper,
+          ThreadPoolTaskExecutor dslProcessExecutor,
+          ScheduledExecutorService healthcheckExecutor,
+          Duration healthcheckInterval,
+          Duration staleThreshold,
+          boolean asyncDbSave,
+          long maxOutputBytes,
+          MeterRegistry meterRegistry,
+          RunIdentityResolver runIdentityResolver,
+          Optional<WebhookDispatcher> webhookDispatcher,
+          OpenTelemetry openTelemetry,
+          ObjectProvider<DomainEventPublisher> eventPublisherProvider,
+          ObjectProvider<TransactionTemplate> transactionTemplateProvider,
+          Optional<WorkflowStatusProbe> workflowStatusProbe) {
+    this.runRepository = runRepository;
+    this.objectMapper = objectMapper;
+    this.dslProcessExecutor = dslProcessExecutor;
+    this.healthcheckExecutor = healthcheckExecutor;
+    this.healthcheckInterval = healthcheckInterval;
+    this.staleThreshold = staleThreshold;
+    this.asyncDbSave = asyncDbSave;
+    this.maxOutputBytes = maxOutputBytes;
+    this.meterRegistry = meterRegistry;
+    this.runIdentityResolver = runIdentityResolver;
+    this.webhookDispatcher = webhookDispatcher;
+    this.openTelemetry = openTelemetry;
+    this.eventPublisherProvider = eventPublisherProvider;
+    this.transactionTemplateProvider = transactionTemplateProvider;
+    this.workflowStatusProbe = workflowStatusProbe;
+  }
 
   @Deprecated(forRemoval = true)
   public static TemporalDslProcessService withDefaults(
@@ -93,7 +151,8 @@ public class TemporalDslProcessService {
             asyncDbSave, maxOutputBytes, meterRegistry, runIdentityResolver,
             Optional.empty(), OpenTelemetry.noop(),
             EmptyObjectProvider.of(DomainEventPublisher.class),
-            EmptyObjectProvider.of(TransactionTemplate.class));
+            EmptyObjectProvider.of(TransactionTemplate.class),
+            Optional.empty());
   }
 
   private final AtomicReference<Clock> clock = new AtomicReference<>(Clock.systemUTC());
@@ -268,6 +327,7 @@ public class TemporalDslProcessService {
   private void healthcheckSweep() {
     Instant cutoff = now().minus(staleThreshold);
     try {
+      Optional<WorkflowStatusProbe> probe = workflowStatusProbe;
       for (String processName : knownProcessNames()) {
         for (DslRun run : runRepository.findByProcessName(processName)) {
           meterRegistry.counter(StarterConstants.SWEEP_INSPECTED_COUNTER,
@@ -275,6 +335,30 @@ public class TemporalDslProcessService {
                   .increment();
           if (!DslRunStatus.RUNNING.name().equals(run.status())) {
             continue;
+          }
+          if (probe.isPresent()) {
+            // Only probe runs past the threshold: describing every RUNNING run each tick would
+            // hammer Temporal and race the normal completion callback for fresh runs.
+            if (run.startedAt().isAfter(cutoff)) {
+              continue;
+            }
+            WorkflowStatusProbe.ProbeResult outcome = probe.get().probe(run.runId());
+            if (outcome instanceof WorkflowStatusProbe.StillRunningResult) {
+              continue;
+            }
+            if (outcome instanceof WorkflowStatusProbe.TerminalResult terminal) {
+              writeTerminal(run, terminal.status(), terminal.error(), terminal.closeTime());
+              continue;
+            }
+            if (outcome instanceof WorkflowStatusProbe.NotFoundResult) {
+              markStale(run, "Workflow not found in Temporal; run is stale");
+              continue;
+            }
+            if (outcome instanceof WorkflowStatusProbe.ErrorResult error) {
+              log.warn("Temporal healthcheck sweep skipped run {}: {}",
+                      run.runId(), error.cause().getMessage());
+              continue;
+            }
           }
           Instant startedAt = run.startedAt();
           if (startedAt.isAfter(cutoff)) {
@@ -289,6 +373,11 @@ public class TemporalDslProcessService {
   }
 
   private void markStale(@NonNull DslRun run) {
+    markStale(run, "Run exceeded staleness threshold " + staleThreshold
+            + " without producing a final status");
+  }
+
+  private void markStale(@NonNull DslRun run, @NonNull String errorMessage) {
     String runId = run.runId();
     var scope = propagateRunId(runId);
     try {
@@ -298,8 +387,7 @@ public class TemporalDslProcessService {
                 runId,
                 DslRunStatus.STALE.name(),
                 StarterConstants.EMPTY_OUTPUT_JSON,
-                "Run exceeded staleness threshold " + staleThreshold
-                        + " without producing a final status",
+                errorMessage,
                 finishedAt,
                 null);
         if (affected == 0) {
@@ -308,8 +396,7 @@ public class TemporalDslProcessService {
         } else {
           publishEvent(new DomainEvent.RunStale(
                   runId, run.processName(), DslRunStatus.STALE,
-                  "Run exceeded staleness threshold " + staleThreshold
-                          + " without producing a final status",
+                  errorMessage,
                   run.startedAt(), finishedAt,
                   finishedAt, run.correlationId()));
           publishStatusChanged(runId, DslRunStatus.STALE.name());
@@ -324,6 +411,51 @@ public class TemporalDslProcessService {
       if (span != null) {
         span.setAttribute("status", DslRunStatus.STALE.name());
         span.setStatus(StatusCode.ERROR, "Run marked stale by healthcheck");
+        span.end();
+      }
+    } finally {
+      try {
+        scope.close();
+      } catch (Exception ignored) {
+      }
+    }
+  }
+
+  private void writeTerminal(
+          @NonNull DslRun run,
+          @NonNull DslRunStatus status,
+          @Nullable String error,
+          @Nullable Instant closeTime) {
+    String runId = run.runId();
+    var scope = propagateRunId(runId);
+    try {
+      Instant finishedAt = closeTime != null ? closeTime : now();
+      submitDbWrite(runId, "Run" + status.name(), () -> {
+        int affected = runRepository.updateFinishedIfRunning(
+                runId,
+                status.name(),
+                StarterConstants.EMPTY_OUTPUT_JSON,
+                error,
+                finishedAt,
+                null);
+        if (affected == 0) {
+          log.info("Sweep skipped {} transition for run {}: it is no longer RUNNING",
+                  status.name(), runId);
+        } else {
+          publishStatusChanged(runId, status.name());
+          log.info("Sweep reconciled run {} to status {}", runId, status.name());
+        }
+      });
+
+      recordRunComplete(run.processName(), status.name(), run.startedAt(), finishedAt);
+
+      Span span = activeSpans.remove(runId);
+      if (span != null) {
+        span.setAttribute("status", status.name());
+        if (status != DslRunStatus.COMPLETED) {
+          span.setStatus(StatusCode.ERROR,
+                  error != null ? error : "Run marked terminal by sweep");
+        }
         span.end();
       }
     } finally {

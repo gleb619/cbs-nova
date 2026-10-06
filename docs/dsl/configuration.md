@@ -25,7 +25,7 @@ standard Spring configuration sources:
 - **Opt-in security defaults-off.** `cbs.security.ratelimit.enabled` and
   `cbs.security.oidc.enabled` both default to `false` so a fresh starter is behaviourally identical to the
   historical anonymous, unthrottled starter until an operator opts in.
-- Types use Spring's kebab-case keys. Durations are ISO-8601 (`PT5M`, `PT2S`) or plain `ms`/`s` suffixes and
+- Types use Spring's kebab-case keys. Durations are ISO-8601 (`PT1H`, `PT2S`) or plain `ms`/`s` suffixes and
   are bound as `java.time.Duration`.
 
 ---
@@ -41,10 +41,10 @@ Class: `CbsNovaCacheProperties` (record). Centralised Caffeine cache tuning. Cac
 
 | Key | Type | Default | Effect |
 |-----|------|---------|--------|
-| `cbs.nova.cache.defaults.ttl` | `Duration` | `PT5M` | Default TTL for caches with no override. |
+| `cbs.nova.cache.defaults.ttl` | `Duration` | `PT1H` | Default TTL for caches with no override. |
 | `cbs.nova.cache.defaults.max-size` | `long` | `10000` | Default max entry count for caches with no override (`@Min(1)`). |
 | `cbs.nova.cache.overrides` | `Map<String, CacheSpec>` | `{}` (empty) | Per-cache overrides; each entry name maps to a `CacheSpec` below. |
-| `cbs.nova.cache.overrides.<name>.ttl` | `Duration` | `PT5M` | TTL for the named cache. |
+| `cbs.nova.cache.overrides.<name>.ttl` | `Duration` | `PT1H` | TTL for the named cache. |
 | `cbs.nova.cache.overrides.<name>.max-size` | `long` | `10000` | Max entry count for the named cache (`@Min(1)`). |
 
 ### `cbs.nova.preview`
@@ -133,7 +133,7 @@ Wired through `@Value` on `TemporalConfiguration` (no `@ConfigurationProperties`
 | `cbs.nova.process.executor.max-size` | `int` | `16` | Maximum thread count of the same executor; threads above `core-size` are created on demand and reaped during shutdown. |
 | `cbs.nova.process.executor.queue-capacity` | `int` | `64` | Bounded queue capacity of the same executor. Tasks beyond this queue trigger the executor's default rejection policy. |
 | `cbs.nova.process.healthcheck.interval` | `Duration` | `PT30S` | How often the dedicated `cbsNovaDslProcessHealthcheckExecutor` polls for stuck runs. |
-| `cbs.nova.process.healthcheck.stale-threshold` | `Duration` | `PT5M` | A run whose last update is older than this is reported as stale by the health-check pass. |
+| `cbs.nova.process.healthcheck.stale-threshold` | `Duration` | `PT1H` | Wall-clock fallback threshold for the health-check stale sweep. When Temporal mode is active, the sweep asks Temporal first; only non-Temporal mode or a failed describe call uses this threshold against `started_at`. |
 | `cbs.nova.process.async-db-save` | `boolean` | `true` | When `true`, run-output DB writes are dispatched asynchronously on the process executor. When `false`, writes happen synchronously on the workflow's worker thread. |
 
 ### `cbs.nova.startup-report`

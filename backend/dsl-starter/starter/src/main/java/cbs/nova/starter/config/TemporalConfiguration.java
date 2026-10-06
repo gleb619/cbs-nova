@@ -32,6 +32,7 @@ import cbs.nova.starter.service.DslRunCancellationService;
 import cbs.nova.starter.service.PreviewResultCache;
 import cbs.nova.starter.service.TemporalDslProcessLauncher;
 import cbs.nova.starter.service.TemporalDslProcessService;
+import cbs.nova.starter.service.WorkflowStatusProbe;
 import cbs.nova.starter.service.RunIdentityResolver;
 import cbs.nova.starter.service.TemporalDslService;
 import cbs.nova.starter.webhook.WebhookDispatcher;
@@ -349,6 +350,12 @@ public class TemporalConfiguration {
     };
   }
 
+  @Bean
+  @ConditionalOnBean(WorkflowClient.class)
+  WorkflowStatusProbe workflowStatusProbe(WorkflowClient workflowClient) {
+    return new WorkflowStatusProbe(workflowClient);
+  }
+
   @Bean(destroyMethod = "shutdownHealthcheck")
   TemporalDslProcessService temporalDslProcessService(
           DslRunRepository runRepository,
@@ -356,7 +363,7 @@ public class TemporalConfiguration {
           @Qualifier("cbsNovaDslProcessExecutor") ThreadPoolTaskExecutor dslProcessExecutor,
           @Qualifier("cbsNovaDslProcessHealthcheckExecutor") ScheduledExecutorService healthcheckExecutor,
           @Value("${cbs.nova.process.healthcheck.interval:PT30S}") Duration healthcheckInterval,
-          @Value("${cbs.nova.process.healthcheck.stale-threshold:PT5M}") Duration staleThreshold,
+          @Value("${cbs.nova.process.healthcheck.stale-threshold:PT1H}") Duration staleThreshold,
           @Value("${cbs.nova.process.async-db-save:true}") boolean asyncDbSave,
           DslRunsProperties dslRunsProperties,
           OpenTelemetry openTelemetry,
@@ -364,7 +371,8 @@ public class TemporalConfiguration {
           RunIdentityResolver runIdentityResolver,
           Optional<WebhookDispatcher> webhookDispatcher,
           ObjectProvider<DomainEventPublisher> eventPublisherProvider,
-          ObjectProvider<TransactionTemplate> transactionTemplateProvider) {
+          ObjectProvider<TransactionTemplate> transactionTemplateProvider,
+          Optional<WorkflowStatusProbe> workflowStatusProbe) {
     TemporalDslProcessService service = new TemporalDslProcessService(runRepository,
             JsonMapper.builder().build(),
             dslProcessExecutor, healthcheckExecutor,
@@ -375,7 +383,8 @@ public class TemporalConfiguration {
             webhookDispatcher,
             openTelemetry,
             eventPublisherProvider,
-            transactionTemplateProvider);
+            transactionTemplateProvider,
+            workflowStatusProbe);
     return service;
   }
 

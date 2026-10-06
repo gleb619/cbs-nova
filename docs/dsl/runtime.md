@@ -608,6 +608,25 @@ is persisted on the `dsl_runs` row and surfaced on the execution list and detail
 
 ## Run lifecycle
 
+### Health-check stale sweep
+
+A built-in health-check sweep runs on every `TemporalDslProcessService` instance every `cbs.nova.process.healthcheck.interval` (default `PT30S`). Its job is to detect `RUNNING` `dsl_runs` rows that are no longer actually executing and mark them with the correct terminal status.
+
+When a Temporal `WorkflowClient` bean is present (production `run` mode), the sweep asks Temporal for the real workflow status before acting:
+
+| Temporal status | Effect on the `dsl_runs` row |
+|-----------------|------------------------------|
+| `RUNNING` / `CONTINUED_AS_NEW` / `UNSPECIFIED` | left in `RUNNING` |
+| `COMPLETED` / `FAILED` / `TIMED_OUT` / `CANCELED` / `TERMINATED` | mapped to the matching terminal `dsl_run.status` (`COMPLETED`, `FAILED`, `CANCELLED`, `CANCELLED`) |
+| workflow not found | marked `STALE` with error noting the workflow is gone |
+| describe error | skipped; logged and retried on the next sweep |
+
+The status-mapping logic is shared with the optional reconciliation job, so the two writers cannot disagree about a workflow's status. Both use `updateFinishedIfRunning`, so a concurrent terminal transition from the normal lifecycle callbacks wins and the sweep write is ignored.
+
+When Temporal is not configured (in-memory / non-Temporal mode) the `WorkflowClient` bean is absent and the sweep falls back to wall-clock staleness: a `RUNNING` row whose `started_at` is older than `cbs.nova.process.healthcheck.stale-threshold` (default `PT1H`) is marked `STALE`. In Temporal mode this threshold only applies if the describe call cannot be made; it does not override Temporal's answer.
+
+Metrics: `dsl.run.sweep.inspected` and `dsl.run.sweep.stale`.
+
 ### Stuck-run reconciliation
 
 An optional scheduled job can reconcile `dsl_runs` rows that are stuck in `RUNNING` against their
@@ -639,8 +658,9 @@ run id as the workflow id and maps the real workflow status to the matching term
 
 The write uses `updateFinishedIfRunning`, so a concurrent terminal transition from the normal
 lifecycle callbacks wins and the reconciliation write is ignored. Any other Temporal exception
-(skip, log a warning, and retry on the next scan) does **not** mark the run `STALE` — the existing
-healthcheck STALE sweep remains the fallback when Temporal cannot answer. This also means the
+(skip, log a warning, and retry on the next scan) does **not** mark the run `STALE`. The always-on
+health-check stale sweep uses the same `WorkflowStatusProbe` mapping, so the two writers are
+consistent; rows only stay stuck when Temporal itself cannot be queried. This also means the
 feature only activates when a `WorkflowClient` bean is available (Temporal runtime mode).
 
 ### Temporal schedules

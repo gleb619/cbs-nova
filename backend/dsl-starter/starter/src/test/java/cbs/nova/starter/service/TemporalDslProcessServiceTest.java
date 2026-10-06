@@ -1,5 +1,10 @@
 package cbs.nova.starter.service;
 
+import org.springframework.transaction.support.TransactionTemplate;
+import io.opentelemetry.api.OpenTelemetry;
+import java.util.Optional;
+import io.temporal.client.WorkflowClient;
+import io.temporal.client.WorkflowStub;
 import java.util.concurrent.atomic.AtomicReference;
 import cbs.nova.dsl.process.ProcessDslObject;
 import cbs.nova.dsl.Context;
@@ -848,4 +853,195 @@ class TemporalDslProcessServiceTest {
     DslRun run = repo.findByProcessName("Ok").get(0);
     assertThat(run.correlationId()).isNull();
   }
+
+  // T908 — Temporal-aware stale sweep must not kill live long-running workflows.
+
+  @Test
+  void temporalAwareSweepLeavesLiveLongRunRunning() throws Exception {
+    ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+    try {
+      ThreadPoolTaskExecutor exec = synchronousExecutor();
+      InMemoryDslRunRepository repo = new InMemoryDslRunRepository(
+              InMemoryDslRunRepository.NO_OP_EVICTION);
+      longAgoClock fixedClock = new longAgoClock();
+      SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
+      WorkflowStatusProbe probe = Mockito.mock(WorkflowStatusProbe.class);
+      Mockito.when(probe.probe("run-live-long"))
+              .thenReturn(new WorkflowStatusProbe.StillRunningResult(null));
+
+      TemporalDslProcessService service = new TemporalDslProcessService(
+              repo, new ObjectMapper(), exec, scheduler,
+              Duration.ofMillis(1), Duration.ofMillis(100), false,
+              Long.MAX_VALUE, meterRegistry, nullResolver(),
+              Optional.empty(), OpenTelemetry.noop(),
+              EmptyObjectProvider.of(DomainEventPublisher.class),
+              EmptyObjectProvider.of(TransactionTemplate.class),
+              Optional.of(probe));
+      service.setClock(fixedClock);
+
+      repo.save(DslRun.builder()
+              .runId("run-live-long")
+              .processName("long-running-process")
+              .status(DslRunStatus.RUNNING.name())
+              .input("{}")
+              .output("{}")
+              .error(null)
+              .startedAt(fixedClock.instant().minus(Duration.ofMinutes(10)))
+              .finishedAt(Instant.EPOCH)
+              .executionMode("RUN")
+              .build());
+
+      service.ensureHealthcheckForTest();
+
+      long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+      while (System.nanoTime() < deadline) {
+        if (meterRegistry.counter(StarterConstants.SWEEP_INSPECTED_COUNTER,
+                StarterConstants.PROCESS_NAME_TAG, StarterConstants.UNKNOWN_PROCESS)
+                .count() >= 1.0) {
+          break;
+        }
+        Thread.sleep(20);
+      }
+
+      DslRun run = repo.findByRunId("run-live-long").orElseThrow();
+      assertThat(run.status()).isEqualTo(DslRunStatus.RUNNING.name());
+      assertThat(meterRegistry.counter(StarterConstants.SWEEP_STALE_COUNTER,
+              StarterConstants.PROCESS_NAME_TAG, StarterConstants.UNKNOWN_PROCESS)
+              .count()).isZero();
+      assertThat(meterRegistry.counter(StarterConstants.RUN_COUNT_COUNTER,
+              StarterConstants.PROCESS_NAME_TAG, StarterConstants.UNKNOWN_PROCESS,
+              StarterConstants.STATUS_TAG, DslRunStatus.STALE.name())
+              .count()).isZero();
+
+      WorkflowClient workflowClient = Mockito.mock(WorkflowClient.class);
+      WorkflowStub stub = Mockito.mock(WorkflowStub.class);
+      Mockito.when(workflowClient.newUntypedWorkflowStub("run-live-long")).thenReturn(stub);
+      DslSignalService signalService = new DslSignalService(workflowClient, repo);
+      DslSignalService.SignalResult result = signalService.sendSignal(
+              "run-live-long", "approve", null);
+      assertThat(result.outcome()).isEqualTo(DslSignalService.Outcome.SENT);
+    } finally {
+      scheduler.shutdownNow();
+    }
+  }
+
+  @Test
+  void temporalAwareSweepMarksMissingWorkflowStale() throws Exception {
+    ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+    try {
+      ThreadPoolTaskExecutor exec = synchronousExecutor();
+      InMemoryDslRunRepository repo = new InMemoryDslRunRepository(
+              InMemoryDslRunRepository.NO_OP_EVICTION);
+      longAgoClock fixedClock = new longAgoClock();
+      SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
+      WorkflowStatusProbe probe = Mockito.mock(WorkflowStatusProbe.class);
+      Mockito.when(probe.probe("run-missing"))
+              .thenReturn(new WorkflowStatusProbe.NotFoundResult());
+
+      TemporalDslProcessService service = new TemporalDslProcessService(
+              repo, new ObjectMapper(), exec, scheduler,
+              Duration.ofMillis(1), Duration.ofMillis(100), false,
+              Long.MAX_VALUE, meterRegistry, nullResolver(),
+              Optional.empty(), OpenTelemetry.noop(),
+              EmptyObjectProvider.of(DomainEventPublisher.class),
+              EmptyObjectProvider.of(TransactionTemplate.class),
+              Optional.of(probe));
+      service.setClock(fixedClock);
+
+      repo.save(DslRun.builder()
+              .runId("run-missing")
+              .processName("ghost-process")
+              .status(DslRunStatus.RUNNING.name())
+              .input("{}")
+              .output("{}")
+              .error(null)
+              .startedAt(fixedClock.instant().minus(Duration.ofMinutes(10)))
+              .finishedAt(Instant.EPOCH)
+              .executionMode("RUN")
+              .build());
+
+      service.ensureHealthcheckForTest();
+
+      long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+      DslRunStatus status = DslRunStatus.RUNNING;
+      while (System.nanoTime() < deadline) {
+        status = DslRunStatus.valueOf(repo.findByRunId("run-missing").orElseThrow().status());
+        if (status == DslRunStatus.STALE) {
+          break;
+        }
+        Thread.sleep(20);
+      }
+
+      assertThat(status).isEqualTo(DslRunStatus.STALE);
+      assertThat(repo.findByRunId("run-missing").orElseThrow().error())
+              .contains("not found");
+      assertThat(meterRegistry.counter(StarterConstants.SWEEP_STALE_COUNTER,
+              StarterConstants.PROCESS_NAME_TAG, StarterConstants.UNKNOWN_PROCESS)
+              .count()).isEqualTo(1.0);
+    } finally {
+      scheduler.shutdownNow();
+    }
+  }
+
+  @Test
+  void temporalAwareSweepMapsTerminalWorkflowStatus() throws Exception {
+    ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+    try {
+      ThreadPoolTaskExecutor exec = synchronousExecutor();
+      InMemoryDslRunRepository repo = new InMemoryDslRunRepository(
+              InMemoryDslRunRepository.NO_OP_EVICTION);
+      longAgoClock fixedClock = new longAgoClock();
+      SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
+      WorkflowStatusProbe probe = Mockito.mock(WorkflowStatusProbe.class);
+      Instant closeTime = fixedClock.instant().minusSeconds(30);
+      Mockito.when(probe.probe("run-terminal"))
+              .thenReturn(new WorkflowStatusProbe.TerminalResult(
+                      DslRunStatus.COMPLETED, null, closeTime));
+
+      TemporalDslProcessService service = new TemporalDslProcessService(
+              repo, new ObjectMapper(), exec, scheduler,
+              Duration.ofMillis(1), Duration.ofMillis(100), false,
+              Long.MAX_VALUE, meterRegistry, nullResolver(),
+              Optional.empty(), OpenTelemetry.noop(),
+              EmptyObjectProvider.of(DomainEventPublisher.class),
+              EmptyObjectProvider.of(TransactionTemplate.class),
+              Optional.of(probe));
+      service.setClock(fixedClock);
+
+      repo.save(DslRun.builder()
+              .runId("run-terminal")
+              .processName("terminal-process")
+              .status(DslRunStatus.RUNNING.name())
+              .input("{}")
+              .output("{}")
+              .error(null)
+              .startedAt(fixedClock.instant().minus(Duration.ofMinutes(10)))
+              .finishedAt(Instant.EPOCH)
+              .executionMode("RUN")
+              .build());
+
+      service.ensureHealthcheckForTest();
+
+      long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+      DslRunStatus status = DslRunStatus.RUNNING;
+      while (System.nanoTime() < deadline) {
+        status = DslRunStatus.valueOf(repo.findByRunId("run-terminal").orElseThrow().status());
+        if (status == DslRunStatus.COMPLETED) {
+          break;
+        }
+        Thread.sleep(20);
+      }
+
+      assertThat(status).isEqualTo(DslRunStatus.COMPLETED);
+      assertThat(repo.findByRunId("run-terminal").orElseThrow().finishedAt())
+              .isEqualTo(closeTime);
+      assertThat(meterRegistry.counter(StarterConstants.RUN_COUNT_COUNTER,
+              StarterConstants.PROCESS_NAME_TAG, StarterConstants.UNKNOWN_PROCESS,
+              StarterConstants.STATUS_TAG, DslRunStatus.COMPLETED.name())
+              .count()).isEqualTo(1.0);
+    } finally {
+      scheduler.shutdownNow();
+    }
+  }
+
 }
