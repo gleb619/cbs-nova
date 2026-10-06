@@ -34,6 +34,7 @@ single-writer-per-file by routing edits through one replica or accepting overwri
 | Bugsink (error tracking) | `http://localhost:8000` | Spring app ships errors via `BUGSINK_DSN` |
 | Grafana | `http://localhost:3000` (compose) | Micrometer metrics |
 | Loki (logs) | `http://localhost:3100` (compose, internal) | backend logs shipped via the OpenTelemetry logback appender (T842); queryable from the Grafana Loki panel |
+| Alertmanager | `http://localhost:9093` (compose) | Receives Prometheus alerts; inspect firing alerts via `/#/alerts` or `:9093/api/v2/alerts` |
 | Postgres | `localhost:5432` | shared by app, Keycloak, Temporal, Bugsink |
 
 `/api/executions/export.csv` neutralizes leading formula-trigger chars (`= + - @ \t \r`) on
@@ -1045,6 +1046,19 @@ curl -s http://localhost:8090/actuator/prometheus | grep -E "dsl_run|dsl_preview
 If the counter or bucket names differ from the conventional names used in `alerts.yml`, update the expressions and this runbook to match the live output. This check is intentionally deferred to a human or CI boot because it requires Postgres + Temporal.
 
 ---
+
+### Alert delivery
+
+Prometheus sends fired alerts to Alertmanager at `http://alertmanager:9093`. In local dev the
+route lands in the `null` receiver (a dummy webhook URL) so alerts are visible in the
+Alertmanager UI without spamming a real channel.
+
+- See firing alerts: open `http://localhost:9093/#/alerts` or query
+  `curl -s http://localhost:9093/api/v2/alerts | jq .`.
+- Point alerts at a real receiver: edit `app/compose/alertmanager.yml`, uncomment the
+  `slack` receiver, set its `api_url` to a Slack-compatible webhook URL, and change the
+  top-level `route.receiver` to `slack`. Restart the `alertmanager` container to reload the
+  config.
 
 ## Reading errors in Bugsink
 

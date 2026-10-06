@@ -93,6 +93,8 @@ dashboard (provisioned by T481 from `app/compose/grafana/dashboards/dsl-overview
 
 ---
 
+Fired burn-rate alerts route to Alertmanager (`app/compose/alertmanager.yml`) for delivery.
+
 ## Error budget policy
 
 <!-- TEAM: fill in the actual policy (3-line placeholder). -->
