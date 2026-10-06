@@ -52,6 +52,12 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import cbs.nova.starter.events.DomainEvent;
+
+import cbs.nova.starter.sse.ExecutionStatusEventPublisher;
+
+import org.springframework.beans.factory.ObjectProvider;
+
 class TemporalDslProcessServiceTest {
 
   @AfterEach
@@ -1042,6 +1048,206 @@ class TemporalDslProcessServiceTest {
     } finally {
       scheduler.shutdownNow();
     }
+  }
+
+  @Test
+  void cancelledRunStaysCancelledWhenExecutionCompletes() throws Exception {
+    GlobalManager.globalManager().resetForTests();
+    String name = unique();
+    CountDownLatch entered = new CountDownLatch(1);
+    CountDownLatch release = new CountDownLatch(1);
+    GlobalManager.globalManager().registerProcess(
+            Dsl.process(name).execute(ctx -> {
+              entered.countDown();
+              try {
+                release.await();
+              } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return Result.failure(e);
+              }
+              return Result.success("completed");
+            }).build());
+
+    InMemoryDslRunRepository repo = new InMemoryDslRunRepository(
+            InMemoryDslRunRepository.NO_OP_EVICTION);
+    DomainEventPublisher publisher = Mockito.mock(DomainEventPublisher.class);
+    ExecutionStatusEventPublisher statusPublisher = Mockito
+            .mock(ExecutionStatusEventPublisher.class);
+    SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
+
+    ThreadPoolTaskExecutor exec = asyncExecutor();
+    try {
+      TemporalDslProcessService service = new TemporalDslProcessService(
+              repo, new ObjectMapper(), exec, disabledScheduledExecutor(),
+              Duration.ofSeconds(30), Duration.ofMinutes(5), false, Long.MAX_VALUE,
+              meterRegistry, nullResolver(), Optional.empty(), OpenTelemetry.noop(),
+              ofPublisher(publisher), EmptyObjectProvider.of(TransactionTemplate.class));
+      service.setExecutionStatusEventPublisher(statusPublisher);
+
+      WorkflowClient workflowClient = Mockito.mock(WorkflowClient.class);
+      WorkflowStub stub = Mockito.mock(WorkflowStub.class);
+      Mockito.when(workflowClient.newUntypedWorkflowStub(Mockito.anyString())).thenReturn(stub);
+
+      DslRunCancellationService cancellationService = new DslRunCancellationService(
+              workflowClient, repo, Clock.systemUTC(), service,
+              ofPublisher(publisher), EmptyObjectProvider.of(TransactionTemplate.class));
+
+      var run = service.runProcess(name, Map.of(), (String) null);
+
+      assertThat(entered.await(5, TimeUnit.SECONDS)).isTrue();
+      long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+      while (System.nanoTime() < deadline) {
+        DslRun r = repo.findByRunId(run.runId()).orElse(null);
+        if (r != null && DslRunStatus.RUNNING.name().equals(r.status())) {
+          break;
+        }
+        Thread.sleep(20);
+      }
+
+      cancellationService.cancel(run.runId());
+      release.countDown();
+      Result<?> result = run.result().get(5, TimeUnit.SECONDS);
+
+      assertThat(result.isSuccess()).isTrue();
+      DslRun persisted = repo.findByRunId(run.runId()).orElseThrow();
+      assertThat(persisted.status()).isEqualTo(DslRunStatus.CANCELLED.name());
+      assertThat(persisted.error()).isEqualTo(StarterConstants.CANCELLED_REASON);
+      assertThat(persisted.output()).isEqualTo(StarterConstants.EMPTY_OUTPUT_JSON);
+
+      Mockito.verify(publisher, Mockito.atLeastOnce()).publish(
+              Mockito.any(DomainEvent.RunStarted.class));
+      Mockito.verify(publisher).publish(Mockito.any(DomainEvent.RunCancelled.class));
+      Mockito.verify(publisher, Mockito.never()).publish(
+              Mockito.any(DomainEvent.RunCompleted.class));
+      Mockito.verify(publisher, Mockito.never()).publish(
+              Mockito.any(DomainEvent.RunFailed.class));
+
+      Mockito.verify(statusPublisher, Mockito.never()).publish(
+              run.runId(), DslRunStatus.COMPLETED.name());
+      Mockito.verify(statusPublisher, Mockito.never()).publish(
+              run.runId(), DslRunStatus.FAILED.name());
+
+      assertThat(meterRegistry.counter(StarterConstants.RUN_COUNT_COUNTER,
+              StarterConstants.PROCESS_NAME_TAG, name,
+              StarterConstants.STATUS_TAG, DslRunStatus.COMPLETED.name())
+              .count()).isZero();
+      assertThat(meterRegistry.counter(StarterConstants.RUN_COUNT_COUNTER,
+              StarterConstants.PROCESS_NAME_TAG, name,
+              StarterConstants.STATUS_TAG, DslRunStatus.FAILED.name())
+              .count()).isZero();
+    } finally {
+      exec.shutdown();
+    }
+  }
+
+  @Test
+  void staleRunCanBeOverwrittenByRealCompletion() throws Exception {
+    GlobalManager.globalManager().resetForTests();
+    String name = unique();
+    CountDownLatch entered = new CountDownLatch(1);
+    CountDownLatch release = new CountDownLatch(1);
+    GlobalManager.globalManager().registerProcess(
+            Dsl.process(name).execute(ctx -> {
+              entered.countDown();
+              try {
+                release.await();
+              } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return Result.failure(e);
+              }
+              return Result.success("completed-after-stale");
+            }).build());
+
+    InMemoryDslRunRepository repo = new InMemoryDslRunRepository(
+            InMemoryDslRunRepository.NO_OP_EVICTION);
+    DomainEventPublisher publisher = Mockito.mock(DomainEventPublisher.class);
+    ExecutionStatusEventPublisher statusPublisher = Mockito
+            .mock(ExecutionStatusEventPublisher.class);
+    SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
+
+    ThreadPoolTaskExecutor exec = asyncExecutor();
+    try {
+      TemporalDslProcessService service = new TemporalDslProcessService(
+              repo, new ObjectMapper(), exec, disabledScheduledExecutor(),
+              Duration.ofSeconds(30), Duration.ofMinutes(5), false, Long.MAX_VALUE,
+              meterRegistry, nullResolver(), Optional.empty(), OpenTelemetry.noop(),
+              ofPublisher(publisher), EmptyObjectProvider.of(TransactionTemplate.class));
+      service.setExecutionStatusEventPublisher(statusPublisher);
+
+      var run = service.runProcess(name, Map.of(), (String) null);
+
+      assertThat(entered.await(5, TimeUnit.SECONDS)).isTrue();
+      long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+      while (System.nanoTime() < deadline) {
+        DslRun r = repo.findByRunId(run.runId()).orElse(null);
+        if (r != null && DslRunStatus.RUNNING.name().equals(r.status())) {
+          break;
+        }
+        Thread.sleep(20);
+      }
+
+      Instant staleAt = Instant.now();
+      int affected = repo.updateFinishedIfRunning(
+              run.runId(),
+              DslRunStatus.STALE.name(),
+              StarterConstants.EMPTY_OUTPUT_JSON,
+              "stale",
+              staleAt,
+              null);
+      assertThat(affected).isEqualTo(1);
+
+      release.countDown();
+      Result<?> result = run.result().get(5, TimeUnit.SECONDS);
+
+      assertThat(result.isSuccess()).isTrue();
+      DslRun persisted = repo.findByRunId(run.runId()).orElseThrow();
+      assertThat(persisted.status()).isEqualTo(DslRunStatus.COMPLETED.name());
+      assertThat(persisted.output()).contains("completed-after-stale");
+
+      Mockito.verify(publisher, Mockito.atLeastOnce()).publish(
+              Mockito.any(DomainEvent.RunStarted.class));
+      Mockito.verify(publisher).publish(Mockito.any(DomainEvent.RunCompleted.class));
+      Mockito.verify(publisher, Mockito.never()).publish(
+              Mockito.any(DomainEvent.RunFailed.class));
+
+      Mockito.verify(statusPublisher).publish(run.runId(), DslRunStatus.COMPLETED.name());
+
+      assertThat(meterRegistry.counter(StarterConstants.RUN_COUNT_COUNTER,
+              StarterConstants.PROCESS_NAME_TAG, name,
+              StarterConstants.STATUS_TAG, DslRunStatus.COMPLETED.name())
+              .count()).isEqualTo(1.0);
+    } finally {
+      exec.shutdown();
+    }
+  }
+
+  private static ObjectProvider<DomainEventPublisher> ofPublisher(DomainEventPublisher publisher) {
+    return new ObjectProvider<>() {
+      @Override
+      public DomainEventPublisher getObject() {
+        return publisher;
+      }
+
+      @Override
+      public DomainEventPublisher getIfAvailable() {
+        return publisher;
+      }
+
+      @Override
+      public DomainEventPublisher getIfUnique() {
+        return publisher;
+      }
+    };
+  }
+
+  private static ThreadPoolTaskExecutor asyncExecutor() {
+    ThreadPoolTaskExecutor exec = new ThreadPoolTaskExecutor();
+    exec.setCorePoolSize(1);
+    exec.setMaxPoolSize(1);
+    exec.setQueueCapacity(0);
+    exec.setThreadNamePrefix("cbs-nova-dsl-test-async-");
+    exec.initialize();
+    return exec;
   }
 
 }

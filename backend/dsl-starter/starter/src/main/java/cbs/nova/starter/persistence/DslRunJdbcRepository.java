@@ -8,6 +8,7 @@ import org.springframework.data.repository.CrudRepository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Spring Data JDBC repository for {@link DslRunEntity} reads.
@@ -41,6 +42,25 @@ public interface DslRunJdbcRepository extends CrudRepository<DslRunEntity, Long>
           String errorMessage,
           String contextJson,
           Instant finishedAt);
+
+  @Modifying
+  @Query("""
+          UPDATE dsl_runs
+          SET status = :status,
+              output_json = :outputJson,
+              error_message = :errorMessage,
+              context_json = :contextJson,
+              finished_at = :finishedAt
+          WHERE run_id = :runId AND status IN (:fromStatuses)
+          """)
+  int updateFinishedIfStatusIn(
+          String runId,
+          String status,
+          String outputJson,
+          String errorMessage,
+          String contextJson,
+          Instant finishedAt,
+          Set<String> fromStatuses);
 
   @Modifying
   @Query("""

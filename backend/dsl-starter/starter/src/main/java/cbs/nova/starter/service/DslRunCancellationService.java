@@ -36,6 +36,15 @@ import org.springframework.transaction.support.TransactionTemplate;
  * cancel request is never overwritten to CANCELLED. A zero-affected-rows result is surfaced as
  * {@link Outcome#NOT_CANCELLABLE} rather than treated as success, which is what lets the HTTP layer
  * answer 409 for that race.
+ *
+ * <p>
+ * Ordering rules:
+ * <ul>
+ * <li>CANCELLED is never overwritten by a later completion or failure.</li>
+ * <li>STALE can be overwritten by a real completion/failure (the completion path in
+ * {@link TemporalDslProcessService} uses {@link DslRunRepository#updateFinishedIfStatusIn} with
+ * source statuses {@code RUNNING} and {@code STALE}).</li>
+ * </ul>
  */
 @Slf4j
 @RequiredArgsConstructor

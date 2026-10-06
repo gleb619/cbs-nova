@@ -16,6 +16,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -135,8 +136,22 @@ public class JdbcDslRunRepository implements DslRunRepository, DslRunStatsReposi
           @Nullable String error,
           @NonNull Instant finishedAt,
           @Nullable String contextJson) {
-    return delegate.updateFinishedIfRunning(runId, status, encryption.encrypt(output),
-            encryption.encrypt(error), encryption.encrypt(contextJson), finishedAt);
+    return updateFinishedIfStatusIn(
+            runId, status, output, error, finishedAt, contextJson,
+            Set.of(DslRunStatus.RUNNING.name()));
+  }
+
+  @Override
+  public int updateFinishedIfStatusIn(
+          @NonNull String runId,
+          @NonNull String status,
+          @Nullable String output,
+          @Nullable String error,
+          @NonNull Instant finishedAt,
+          @Nullable String contextJson,
+          @NonNull Set<String> fromStatuses) {
+    return delegate.updateFinishedIfStatusIn(runId, status, encryption.encrypt(output),
+            encryption.encrypt(error), encryption.encrypt(contextJson), finishedAt, fromStatuses);
   }
 
   @Override

@@ -19,6 +19,7 @@ import org.springframework.test.context.jdbc.Sql;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @Sql(scripts = {"classpath:db/migration/h2/V1__init.sql",
@@ -150,6 +151,54 @@ class JdbcDslRunRepositoryTest {
     DslRun persisted = repository.findByRunId("run-stale-yes").orElseThrow();
     assertThat(persisted.status()).isEqualTo(DslRunStatus.STALE.name());
     assertThat(persisted.output()).isEqualTo("{}");
+  }
+
+  @Test
+  void updateFinishedIfStatusInTransitionsRunningAndStaleRuns() {
+    Instant finishedAt = Instant.parse("2025-01-01T01:00:00Z");
+    repository.save(run("run-running", DslRunStatus.RUNNING, null, null));
+    repository.save(run("run-stale", DslRunStatus.STALE, null, null));
+
+    int affectedRunning = repository.updateFinishedIfStatusIn(
+            "run-running", DslRunStatus.COMPLETED.name(),
+            "{}", null, finishedAt, null,
+            Set.of(DslRunStatus.RUNNING.name(), DslRunStatus.STALE.name()));
+    int affectedStale = repository.updateFinishedIfStatusIn(
+            "run-stale", DslRunStatus.FAILED.name(),
+            null, "error", finishedAt, null,
+            Set.of(DslRunStatus.RUNNING.name(), DslRunStatus.STALE.name()));
+
+    assertThat(affectedRunning).isEqualTo(1);
+    assertThat(affectedStale).isEqualTo(1);
+    assertThat(repository.findByRunId("run-running").orElseThrow().status())
+            .isEqualTo(DslRunStatus.COMPLETED.name());
+    assertThat(repository.findByRunId("run-stale").orElseThrow().status())
+            .isEqualTo(DslRunStatus.FAILED.name());
+  }
+
+  @Test
+  void updateFinishedIfStatusInDoesNotOverwriteCancelledOrCompleted() {
+    Instant finishedAt = Instant.parse("2025-01-01T01:00:00Z");
+    repository.save(run("run-cancelled", DslRunStatus.CANCELLED, null, null));
+    repository.save(run("run-completed", DslRunStatus.COMPLETED, "{}", null));
+
+    int affectedCancelled = repository.updateFinishedIfStatusIn(
+            "run-cancelled", DslRunStatus.FAILED.name(),
+            null, "should not apply", finishedAt, null,
+            Set.of(DslRunStatus.RUNNING.name(), DslRunStatus.STALE.name()));
+    int affectedCompleted = repository.updateFinishedIfStatusIn(
+            "run-completed", DslRunStatus.FAILED.name(),
+            null, "should not apply", finishedAt, null,
+            Set.of(DslRunStatus.RUNNING.name(), DslRunStatus.STALE.name()));
+
+    assertThat(affectedCancelled).isZero();
+    assertThat(affectedCompleted).isZero();
+    assertThat(repository.findByRunId("run-cancelled").orElseThrow().status())
+            .isEqualTo(DslRunStatus.CANCELLED.name());
+    assertThat(repository.findByRunId("run-completed").orElseThrow().status())
+            .isEqualTo(DslRunStatus.COMPLETED.name());
+    assertThat(repository.findByRunId("run-completed").orElseThrow().output())
+            .isEqualTo("{}");
   }
 
   @Test
