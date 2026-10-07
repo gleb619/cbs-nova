@@ -6,16 +6,18 @@ import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.starter.model.RuntimeOutcome;
 import cbs.nova.starter.model.ValidationError;
 import cbs.nova.starter.model.ValidationErrorsResponse;
-import cbs.nova.starter.service.DslRuntimeService;
 import cbs.nova.starter.service.CorrelationId;
+import cbs.nova.starter.service.DslRuntimeService;
 import cbs.nova.starter.service.IdempotencyKeys;
 import cbs.nova.starter.service.InputValidator;
+import cbs.nova.starter.service.RunIdentityResolver;
 import cbs.nova.starter.web.DslPayloadSizeValidator;
 import jakarta.servlet.ServletException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.servlet.function.ServerRequest;
 import org.springframework.web.servlet.function.ServerResponse;
+import tools.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
 import java.util.List;
@@ -31,6 +33,8 @@ public class DslRuntimeHandler {
   private final DslRuntimeService service;
   private final DslPayloadSizeValidator payloadSizeValidator;
   private final InputValidator inputValidator;
+  private final ObjectMapper objectMapper;
+  private final RunIdentityResolver runIdentityResolver;
 
   public ServerResponse preview(ServerRequest request) throws ServletException, IOException {
     String name = request.pathVariable("name");
@@ -61,10 +65,13 @@ public class DslRuntimeHandler {
                 .body(new ErrorResponse("INVALID_IDEMPOTENCY_KEY", "Invalid Idempotency-Key header",
                         name, null, null, null, null, null, null));
       }
-      String runId = IdempotencyKeys.deriveRunId(name, trimmed);
+      String caller = callerScope();
+      String runId = IdempotencyKeys.deriveRunId(name, trimmed, caller);
+      String fingerprint = IdempotencyKeys.fingerprint(objectMapper, dslRequest.body());
       return validationOrExecute(name, dslRequest,
               () -> respond(
-                      service.run(name, dslRequest, requestId(request), runId, correlationId)));
+                      service.run(name, dslRequest, requestId(request), runId, correlationId,
+                              fingerprint, caller)));
     }
     return validationOrExecute(name, dslRequest,
             () -> respond(service.run(name, dslRequest, requestId(request), null, correlationId)));
@@ -90,6 +97,11 @@ public class DslRuntimeHandler {
     }
     return validationOrExecute(name, dslRequest,
             () -> respond(service.hierarchy(name, dslRequest, requestId(request))));
+  }
+
+  private String callerScope() {
+    String caller = runIdentityResolver.resolve();
+    return caller != null && !caller.isBlank() ? caller : "anonymous";
   }
 
   private ServerResponse validationOrExecute(String name, DslRequest request,

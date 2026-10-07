@@ -12,6 +12,7 @@ import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.model.ValidationErrorsResponse;
 import cbs.nova.starter.service.DslRuntimeService;
 import cbs.nova.starter.service.InputValidator;
+import cbs.nova.starter.service.RunIdentityResolver;
 import cbs.nova.starter.web.DslPayloadSizeValidator;
 import cbs.nova.starter.web.RequestBodyLimitFilter;
 import com.github.benmanes.caffeine.cache.Cache;
@@ -63,8 +64,11 @@ public class DslRuntimeRouterConfiguration {
   DslRuntimeHandler dslRuntimeHandler(
           DslRuntimeService service,
           DslPayloadSizeValidator payloadSizeValidator,
-          InputValidator inputValidator) {
-    return new DslRuntimeHandler(service, payloadSizeValidator, inputValidator);
+          InputValidator inputValidator,
+          ObjectMapper objectMapper,
+          RunIdentityResolver runIdentityResolver) {
+    return new DslRuntimeHandler(service, payloadSizeValidator, inputValidator, objectMapper,
+            runIdentityResolver);
   }
 
   @Bean

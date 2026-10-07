@@ -37,6 +37,7 @@ import cbs.nova.starter.converter.DslRuntimeMapper;
 import cbs.nova.starter.logging.LoggingExecutionListener;
 import cbs.nova.starter.service.DslRuntimeService;
 import cbs.nova.starter.service.IdempotencyKeys;
+import cbs.nova.starter.service.RunIdentityResolver;
 import cbs.nova.starter.idempotency.IdempotentReplayException;
 import cbs.nova.starter.service.InputValidator;
 import cbs.nova.starter.web.DslPayloadSizeValidator;
@@ -81,7 +82,8 @@ class DslRuntimeResourceTest {
             new JacksonJsonSchemaGenerator(),
             new InputValidationProperties(true),
             Caffeine.newBuilder().build());
-    DslRuntimeHandler handler = new DslRuntimeHandler(service, validator, inputValidator);
+    DslRuntimeHandler handler = new DslRuntimeHandler(service, validator, inputValidator,
+            new ObjectMapper(), new RunIdentityResolver());
     DslRuntimeRouterConfiguration router = new DslRuntimeRouterConfiguration();
     mockMvc = MockMvcBuilders
             .routerFunctions(router.dslRuntimeRouter(handler, requestBodyLimitFilter)).build();
@@ -383,7 +385,7 @@ class DslRuntimeResourceTest {
             .forClass(Context.class);
     verify(dslRuntime).run(eq("P"), captor.capture());
     assertThat(captor.getValue().runId())
-            .isEqualTo(IdempotencyKeys.deriveRunId("P", "valid-key_1.0"));
+            .isEqualTo(IdempotencyKeys.deriveRunId("P", "valid-key_1.0", "anonymous"));
   }
 
   @Test
@@ -400,6 +402,7 @@ class DslRuntimeResourceTest {
             .andExpect(status().isOk())
             .andExpect(header().string("Idempotency-Replayed", "true"))
             .andExpect(jsonPath("$.runId").value("idem-abc"))
-            .andExpect(jsonPath("$.status").value("REPLAYED"));
+            .andExpect(jsonPath("$.status").value("REPLAYED"))
+            .andExpect(jsonPath("$.originalStatus").value("RUNNING"));
   }
 }

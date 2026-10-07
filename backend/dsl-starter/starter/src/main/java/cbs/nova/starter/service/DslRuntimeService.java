@@ -1,6 +1,9 @@
 package cbs.nova.starter.service;
 
+import cbs.nova.starter.idempotency.IdempotencyKeyReusedException;
 import cbs.nova.starter.idempotency.IdempotentReplayException;
+import cbs.nova.dsl.history.DslRun;
+import cbs.nova.dsl.history.DslRunRepository;
 import cbs.nova.dsl.model.SimpleContext;
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.DslRuntime;
@@ -26,6 +29,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.MDC;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
@@ -48,6 +52,13 @@ public class DslRuntimeService {
   private final DslRuntime dslRuntime;
   private final LoggingExecutionListener loggingListener;
   private final DslRuntimeMapper mapper;
+
+  @Autowired(required = false)
+  private DslRunRepository dslRunRepository;
+
+  void setDslRunRepository(DslRunRepository dslRunRepository) {
+    this.dslRunRepository = dslRunRepository;
+  }
 
   public RuntimeOutcome preview(String name, DslRequest request, @Nullable String requestId) {
     String runId = resolveRunId(requestId);
@@ -83,25 +94,39 @@ public class DslRuntimeService {
   }
 
   public RuntimeOutcome run(String name, DslRequest request, @Nullable String requestId) {
-    return run(name, request, requestId, null, null);
+    return run(name, request, requestId, null, null, null, null);
   }
 
   public RuntimeOutcome run(String name, DslRequest request, @Nullable String requestId,
           @Nullable String forcedRunId) {
-    return run(name, request, requestId, forcedRunId, null);
+    return run(name, request, requestId, forcedRunId, null, null, null);
   }
 
   public RuntimeOutcome run(String name, DslRequest request, @Nullable String requestId,
           @Nullable String forcedRunId, @Nullable String correlationId) {
+    return run(name, request, requestId, forcedRunId, correlationId, null, null);
+  }
+
+  public RuntimeOutcome run(String name, DslRequest request, @Nullable String requestId,
+          @Nullable String forcedRunId, @Nullable String correlationId,
+          @Nullable String idempotencyFingerprint, @Nullable String idempotencyCaller) {
     String runId = forcedRunId != null ? forcedRunId : resolveRunId(requestId);
     String mdcRunId = requestId != null && !requestId.isBlank() ? requestId : runId;
-    Context<?> ctx = toContext(name, request, ExecutionMode.RUN, runId, correlationId);
+    Context<?> ctx = toContext(name, request, ExecutionMode.RUN, runId, correlationId,
+            idempotencyFingerprint, idempotencyCaller);
     Result<?> result = executeWithMdc(mdcRunId, () -> dslRuntime.run(name, ctx));
     if (result.isSuccess()) {
       return RuntimeOutcome.ok(result.value());
     }
     if (result.cause() instanceof IdempotentReplayException replay) {
-      return RuntimeOutcome.okReplayed(Map.of("runId", replay.runId(), "status", "REPLAYED"));
+      return RuntimeOutcome.okReplayed(Map.of(
+              "runId", replay.runId(),
+              "status", "REPLAYED",
+              "originalStatus", resolveOriginalStatus(replay.runId())));
+    }
+    if (result.cause() instanceof IdempotencyKeyReusedException reused) {
+      return RuntimeOutcome.error(mapper.toErrorResponse(
+              mapper.fromIdempotencyKeyReusedException(name, reused.runId(), reused)));
     }
     return RuntimeOutcome.error(toErrorResponse(name, runId, result.cause()));
   }
@@ -137,16 +162,28 @@ public class DslRuntimeService {
   }
 
   private Context<?> toContext(String name, DslRequest request, ExecutionMode mode, String runId) {
-    return toContext(name, request, mode, runId, null);
+    return toContext(name, request, mode, runId, null, null, null);
   }
 
   private Context<?> toContext(String name, DslRequest request, ExecutionMode mode,
           String runId, @Nullable String correlationId) {
+    return toContext(name, request, mode, runId, correlationId, null, null);
+  }
+
+  private Context<?> toContext(String name, DslRequest request, ExecutionMode mode,
+          String runId, @Nullable String correlationId,
+          @Nullable String idempotencyFingerprint, @Nullable String idempotencyCaller) {
     Map<String, Object> metadata = request.metadata() != null
             ? new HashMap<>(request.metadata())
             : new HashMap<>();
     if (correlationId != null && !correlationId.isBlank()) {
       metadata.put(StarterConstants.CORRELATION_ID_METADATA_KEY, correlationId);
+    }
+    if (idempotencyFingerprint != null && !idempotencyFingerprint.isBlank()) {
+      metadata.put(StarterConstants.IDEMPOTENCY_FINGERPRINT_METADATA_KEY, idempotencyFingerprint);
+    }
+    if (idempotencyCaller != null && !idempotencyCaller.isBlank()) {
+      metadata.put(StarterConstants.IDEMPOTENCY_CALLER_METADATA_KEY, idempotencyCaller);
     }
     if (mode != ExecutionMode.RUN && request.signals() != null && !request.signals().isEmpty()) {
       metadata.put(Constants.PREVIEW_SIGNAL_SEEDS_KEY, List.copyOf(request.signals()));
@@ -157,12 +194,19 @@ public class DslRuntimeService {
     return ctx.withExecutionListener(loggingListener);
   }
 
+  private String resolveOriginalStatus(String runId) {
+    if (dslRunRepository == null) {
+      return "RUNNING";
+    }
+    return dslRunRepository.findByRunId(runId).map(DslRun::status).orElse("RUNNING");
+  }
+
   /**
    * Coerce an inbound {@code Map<String,Object>} body into the typed input record declared on the
    * target construct (process / transaction). HTTP callers send JSON which Spring binds as a
    * {@link java.util.LinkedHashMap}; user DSL code reads {@code ctx.body()} and casts to a typed
    * record (e.g. {@code BatchIn}). Without this coercion, the cast at the user code site throws
-   * {@code ClassCastException} and the request fails with HTTP 422.
+   * {@link ClassCastException} and the request fails with HTTP 422.
    *
    * <p>
    * Best-effort: if the construct cannot be resolved, the body is not a map, or conversion throws,

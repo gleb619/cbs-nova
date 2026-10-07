@@ -4,6 +4,7 @@ import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.dsl.model.PreviewReport;
 import cbs.nova.dsl.exception.DslException;
 import cbs.nova.starter.exception.PreviewTimeoutException;
+import cbs.nova.starter.idempotency.IdempotencyKeyReusedException;
 import cbs.nova.starter.model.ErrorResponseContext;
 import org.mapstruct.Mapper;
 import org.mapstruct.ReportingPolicy;
@@ -65,5 +66,12 @@ public interface DslRuntimeMapper {
     java.util.Map<String, Object> context = firstError != null ? firstError.context() : null;
     return new ErrorResponseContext(code, message, entityName, runId, exceptionId, suggestion,
             context);
+  }
+
+  default ErrorResponseContext fromIdempotencyKeyReusedException(String entityName, String runId,
+          IdempotencyKeyReusedException cause) {
+    String exceptionId = runId + ":ex:" + UUID.randomUUID();
+    return new ErrorResponseContext("IDEMPOTENCY_KEY_REUSED", cause.getMessage(), entityName,
+            runId, exceptionId);
   }
 }

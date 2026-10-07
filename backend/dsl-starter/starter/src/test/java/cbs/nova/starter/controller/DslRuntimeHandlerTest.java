@@ -22,6 +22,7 @@ import cbs.nova.starter.model.ValidationError;
 import cbs.nova.starter.service.DslRuntimeService;
 import cbs.nova.starter.service.IdempotencyKeys;
 import cbs.nova.starter.service.InputValidator;
+import cbs.nova.starter.service.RunIdentityResolver;
 import cbs.nova.starter.web.DslPayloadSizeValidator;
 import java.util.List;
 import java.util.Map;
@@ -32,6 +33,7 @@ import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Unit characterization spec for {@link DslRuntimeHandler}: the HTTP shell around a mocked
@@ -44,6 +46,8 @@ class DslRuntimeHandlerTest {
   private DslRuntimeService service;
   private DslPayloadSizeValidator payloadSizeValidator;
   private InputValidator inputValidator;
+  private RunIdentityResolver runIdentityResolver;
+  private ObjectMapper objectMapper;
   private static RequestBodyLimitFilter requestBodyLimitFilter;
   private MockMvc mockMvc;
 
@@ -53,9 +57,11 @@ class DslRuntimeHandlerTest {
     service = mock(DslRuntimeService.class);
     payloadSizeValidator = mock(DslPayloadSizeValidator.class);
     inputValidator = mock(InputValidator.class);
+    runIdentityResolver = mock(RunIdentityResolver.class);
+    objectMapper = new ObjectMapper();
 
     DslRuntimeHandler handler = new DslRuntimeHandler(service, payloadSizeValidator,
-            inputValidator);
+            inputValidator, objectMapper, runIdentityResolver);
     DslRuntimeRouterConfiguration router = new DslRuntimeRouterConfiguration();
 
     mockMvc = MockMvcBuilders
@@ -170,11 +176,14 @@ class DslRuntimeHandlerTest {
   }
 
   @Test
-  void runDerivesRunIdFromValidIdempotencyKey() throws Exception {
+  void runDerivesRunIdFromValidIdempotencyKeyAndPassesFingerprint() throws Exception {
     when(inputValidator.validate(eq("LoanA"), any())).thenReturn(List.of());
+    when(runIdentityResolver.resolve()).thenReturn(null);
     String key = "my-key";
-    String runId = IdempotencyKeys.deriveRunId("LoanA", key);
-    when(service.run(eq("LoanA"), any(DslRequest.class), isNull(), eq(runId), isNull()))
+    String runId = IdempotencyKeys.deriveRunId("LoanA", key, "anonymous");
+    String fingerprint = IdempotencyKeys.fingerprint(objectMapper, Map.of());
+    when(service.run(eq("LoanA"), any(DslRequest.class), isNull(), eq(runId), isNull(),
+            eq(fingerprint), eq("anonymous")))
             .thenReturn(RuntimeOutcome.ok(Map.of("ran", true)));
 
     mockMvc.perform(post("/api/dsl/run/LoanA")
@@ -184,7 +193,29 @@ class DslRuntimeHandlerTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.ran").value(true));
 
-    verify(service).run(eq("LoanA"), any(DslRequest.class), isNull(), eq(runId), isNull());
+    verify(service).run(eq("LoanA"), any(DslRequest.class), isNull(), eq(runId), isNull(),
+            eq(fingerprint), eq("anonymous"));
+  }
+
+  @Test
+  void runUsesResolvedCallerForIdempotencyScope() throws Exception {
+    when(inputValidator.validate(eq("LoanA"), any())).thenReturn(List.of());
+    when(runIdentityResolver.resolve()).thenReturn("api-key");
+    String key = "my-key";
+    String runId = IdempotencyKeys.deriveRunId("LoanA", key, "api-key");
+    String fingerprint = IdempotencyKeys.fingerprint(objectMapper, Map.of("a", 1));
+    when(service.run(eq("LoanA"), any(DslRequest.class), isNull(), eq(runId), isNull(),
+            eq(fingerprint), eq("api-key")))
+            .thenReturn(RuntimeOutcome.ok(Map.of()));
+
+    mockMvc.perform(post("/api/dsl/run/LoanA")
+            .header(StarterConstants.IDEMPOTENCY_KEY_HEADER, key)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"body\":{\"a\":1}}"))
+            .andExpect(status().isOk());
+
+    verify(service).run(eq("LoanA"), any(DslRequest.class), isNull(), eq(runId), isNull(),
+            eq(fingerprint), eq("api-key"));
   }
 
   @Test
@@ -213,6 +244,22 @@ class DslRuntimeHandlerTest {
             .andExpect(status().isOk())
             .andExpect(header().string("Idempotency-Replayed", "true"))
             .andExpect(jsonPath("$.cached").value(true));
+  }
+
+  @Test
+  void runMapsIdempotencyKeyReusedTo422() throws Exception {
+    when(inputValidator.validate(eq("LoanA"), any())).thenReturn(List.of());
+    ErrorResponse error = new ErrorResponse("IDEMPOTENCY_KEY_REUSED",
+            "Idempotency key reused with different payload for run id idem-abc", "LoanA",
+            "idem-abc", null, null, null, null, null);
+    when(service.run(eq("LoanA"), any(DslRequest.class), isNull(), isNull(), isNull()))
+            .thenReturn(RuntimeOutcome.error(error));
+
+    mockMvc.perform(post("/api/dsl/run/LoanA")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"body\":{}}"))
+            .andExpect(status().isUnprocessableEntity())
+            .andExpect(jsonPath("$.code").value("IDEMPOTENCY_KEY_REUSED"));
   }
 
   @Test
@@ -286,7 +333,8 @@ class DslRuntimeHandlerTest {
 
   private void verifyNoServiceInteraction() {
     verify(service, org.mockito.Mockito.never()).preview(any(), any(), any());
-    verify(service, org.mockito.Mockito.never()).run(any(), any(), any(), any(), any());
+    verify(service, org.mockito.Mockito.never()).run(any(), any(), any(), any(), any(), any(),
+            any());
     verify(service, org.mockito.Mockito.never()).explain(any(), any(), any());
     verify(service, org.mockito.Mockito.never()).hierarchy(any(), any(), any());
   }

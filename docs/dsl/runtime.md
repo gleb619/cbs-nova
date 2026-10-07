@@ -581,18 +581,33 @@ wait   # the curl returns a normal response, not "connection reset by peer"
 ## Run idempotency
 
 `POST /api/dsl/run/{name}` accepts an optional `Idempotency-Key` header. When present, the same
-process name + key pair always maps to the same Temporal workflow, so duplicate submissions return
-the existing run instead of launching a new one.
+process name + key + caller combination always maps to the same Temporal workflow, so duplicate
+submissions return the existing run instead of launching a new one.
 
 - **Header name:** `Idempotency-Key`
 - **Validation:** after `trim()`, the value must be non-blank, 1–200 characters, and match
   `[A-Za-z0-9_.:-]+`. A rejected key returns `400 Bad Request` with code `INVALID_IDEMPOTENCY_KEY`.
 - **Derivation:** the run id (and Temporal `workflowId`) is:
-  `"idem-" + sha256Hex(name + ":" + key)` truncated to the first 32 hex characters.
+  `"idem-" + sha256Hex(name + ":" + key + ":" + caller)` truncated to the first 32 hex
+  characters. `caller` is the authenticated principal (`sub` for OIDC, `api-key` for API-key
+  authentication, or `anonymous` when authentication is disabled). Including the caller scopes the
+  key to each client: two callers using the same short key for the same definition cannot collide.
+- **Fingerprint:** the request body is hashed with `SHA-256(canonical JSON body)` and stored on the
+  workflow memo. A replay with a different body returns `422 Unprocessable Entity` with code
+  `IDEMPOTENCY_KEY_REUSED` instead of being treated as a replay.
+- **Workflow id reuse policy:** idempotent starts use `REJECT_DUPLICATE` so a closed workflow is still
+  treated as a duplicate. This is configurable via
+  `cbs.nova.dsl.idempotency.workflow-id-reuse-policy` (`REJECT_DUPLICATE` or
+  `ALLOW_DUPLICATE_FAILED_ONLY`; default `REJECT_DUPLICATE`).
 - **Replay response:** `200 OK` with response header `Idempotency-Replayed: true` and body
-  `{ "runId": "<run-id>", "status": "REPLAYED" }`.
-- **Dedup window:** no persistent key store is used; deduplication lasts as long as the Temporal
-  namespace retains the workflow execution (workflow retention).
+  `{ "runId": "<run-id>", "status": "REPLAYED", "originalStatus": "<status>" }`.
+  `originalStatus` is read from the `dsl_runs` row when available and falls back to `RUNNING`
+  when the run is not yet recorded.
+- **Dedup window:** deduplication lasts as long as the Temporal namespace retains the workflow
+  execution (workflow retention).
+- **State migration:** adding caller scoping changes the derived workflow id for existing keys.
+  In-flight replays across a deployment will not match runs started before the change; this is
+  acceptable because the previous runs were keyed to the old namespace.
 
 ## Correlation id
 

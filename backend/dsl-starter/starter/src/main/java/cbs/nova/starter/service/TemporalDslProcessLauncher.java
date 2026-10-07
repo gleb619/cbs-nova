@@ -1,5 +1,7 @@
 package cbs.nova.starter.service;
 
+import cbs.nova.starter.core.StarterConstants;
+import cbs.nova.starter.idempotency.IdempotencyKeyReusedException;
 import cbs.nova.starter.idempotency.IdempotentReplayException;
 import cbs.nova.dsl.Context;
 import cbs.nova.dsl.ExecutionMode;
@@ -13,8 +15,11 @@ import cbs.nova.dsl.process.DslTemporalProcessRequest;
 import cbs.nova.dsl.process.TemporalProcessLauncher;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowExecutionAlreadyStarted;
+import io.temporal.client.WorkflowExecutionDescription;
 import io.temporal.client.WorkflowOptions;
+import io.temporal.client.WorkflowStub;
 import io.temporal.common.RetryOptions;
+import io.temporal.api.enums.v1.WorkflowIdReusePolicy;
 import io.temporal.workflow.Workflow;
 import lombok.Builder;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +28,7 @@ import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.ObjectMapper;
 
 import java.time.Duration;
+import java.util.Map;
 
 @RequiredArgsConstructor
 public class TemporalDslProcessLauncher implements TemporalProcessLauncher {
@@ -31,6 +37,13 @@ public class TemporalDslProcessLauncher implements TemporalProcessLauncher {
   private final ObjectMapper objectMapper;
   private final Duration executionTimeout;
   private final Duration taskTimeout;
+  private final WorkflowIdReusePolicy idempotencyReusePolicy;
+
+  public TemporalDslProcessLauncher(WorkflowClient workflowClient, ObjectMapper objectMapper,
+          Duration executionTimeout, Duration taskTimeout) {
+    this(workflowClient, objectMapper, executionTimeout, taskTimeout,
+            WorkflowIdReusePolicy.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE);
+  }
 
   @Builder
   public record ProcessLaunchRequest(
@@ -70,13 +83,20 @@ public class TemporalDslProcessLauncher implements TemporalProcessLauncher {
             .orElseThrow(() -> new IllegalArgumentException(
                     "No generated Temporal process: " + request.processName()));
 
-    var options = WorkflowOptions.newBuilder()
+    String idempotencyFingerprint = idempotencyFingerprint(request.ctx());
+    var optionsBuilder = WorkflowOptions.newBuilder()
             .setTaskQueue(request.taskQueue())
             .setWorkflowId(request.ctx().runId())
             .setWorkflowExecutionTimeout(executionTimeout)
             .setWorkflowTaskTimeout(taskTimeout)
-            .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(1).build())
-            .build();
+            .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(1).build());
+    if (idempotencyFingerprint != null) {
+      optionsBuilder
+              .setWorkflowIdReusePolicy(idempotencyReusePolicy)
+              .setMemo(Map.of(StarterConstants.IDEMPOTENCY_FINGERPRINT_METADATA_KEY,
+                      idempotencyFingerprint));
+    }
+    var options = optionsBuilder.build();
 
     var stub = workflowClient.newWorkflowStub(descriptor.temporalInterface(), options);
     try {
@@ -102,10 +122,32 @@ public class TemporalDslProcessLauncher implements TemporalProcessLauncher {
       Throwable cause = e.getCause() != null ? e.getCause() : e;
       if (e instanceof WorkflowExecutionAlreadyStarted
               || cause instanceof WorkflowExecutionAlreadyStarted) {
-        return Result.failure(new IdempotentReplayException(request.ctx().runId()));
+        String runId = request.ctx().runId();
+        if (idempotencyFingerprint != null
+                && !fingerprintMatchesStored(runId, idempotencyFingerprint)) {
+          return Result.failure(new IdempotencyKeyReusedException(runId));
+        }
+        return Result.failure(new IdempotentReplayException(runId));
       }
       return Result.failure(new DslExecutionException(request.ctx().runId(),
               "Process %s failed: %s".formatted(request.processName(), cause.getMessage()), cause));
+    }
+  }
+
+  private @Nullable String idempotencyFingerprint(@NonNull Context<?> ctx) {
+    Object value = ctx.metadata().get(StarterConstants.IDEMPOTENCY_FINGERPRINT_METADATA_KEY);
+    return value instanceof String s ? s : null;
+  }
+
+  private boolean fingerprintMatchesStored(@NonNull String runId, @NonNull String expected) {
+    try {
+      WorkflowStub stub = workflowClient.newUntypedWorkflowStub(runId);
+      WorkflowExecutionDescription description = stub.describe();
+      String stored = description.getMemo(StarterConstants.IDEMPOTENCY_FINGERPRINT_METADATA_KEY,
+              String.class, String.class);
+      return stored != null && expected.equals(stored);
+    } catch (RuntimeException ex) {
+      return false;
     }
   }
 }
