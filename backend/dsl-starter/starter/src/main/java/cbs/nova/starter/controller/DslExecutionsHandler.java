@@ -26,6 +26,7 @@ import cbs.nova.starter.model.PageResponse;
 import cbs.nova.starter.controller.Pagination;
 import cbs.nova.starter.model.ExecutionStatsResponse;
 import cbs.nova.starter.model.ExecutionTimeseriesResponse;
+import cbs.nova.starter.model.RunStartResponse;
 import cbs.nova.starter.model.RequestQueryModels.ExecutionListQuery;
 import cbs.nova.starter.model.TransactionExecutionDto;
 import cbs.nova.starter.persistence.DslRunStats;
@@ -33,6 +34,7 @@ import cbs.nova.starter.persistence.DslRunStatsRepository;
 import cbs.nova.starter.persistence.RunTimeseriesBucket;
 import cbs.nova.starter.service.DslAuditService;
 import cbs.nova.starter.service.DslRunCancellationService;
+import cbs.nova.starter.service.TemporalDslProcessService;
 import cbs.nova.starter.service.ExecutionCsvWriter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -62,6 +64,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Functional handler for the DSL execution runs endpoint. Registered as a {@code RouterFunction}
@@ -77,10 +80,12 @@ public class DslExecutionsHandler {
           .ofPattern(StarterConstants.CSV_FILENAME_PATTERN);
 
   public static final String ACTION_RUN_CANCEL = StarterConstants.ACTION_RUN_CANCEL;
+  public static final String ACTION_RUN_RERUN = StarterConstants.ACTION_RUN_RERUN;
 
   private final DslRunRepository runRepository;
   private final ObjectMapper objectMapper;
   private final DslRunCancellationService cancellationService;
+  private final TemporalDslProcessService processService;
   private final @Nullable DslRunStatsRepository statsRepository;
   private final TransactionExecutionRepository transactionExecutionRepository;
   private final RequestQueryConverter queryConverter;
@@ -264,19 +269,20 @@ public class DslExecutionsHandler {
     try {
       result = cancellationService.cancel(id);
     } catch (RuntimeException e) {
-      audit(request, id, StarterConstants.OUTCOME_FAILURE,
+      audit(request, ACTION_RUN_CANCEL, id, StarterConstants.OUTCOME_FAILURE,
               Map.of("error", String.valueOf(e.getMessage())));
       throw e;
     }
     return switch (result.outcome()) {
       case NOT_FOUND -> {
-        audit(request, id, StarterConstants.OUTCOME_FAILURE, Map.of("reason", "NOT_FOUND"));
+        audit(request, ACTION_RUN_CANCEL, id, StarterConstants.OUTCOME_FAILURE,
+                Map.of("reason", "NOT_FOUND"));
         yield ServerResponse.status(HttpStatus.NOT_FOUND)
                 .body(new ErrorResponse("NOT_FOUND", "Execution run not found: " + id, null, id,
                         null, null, null, null, null));
       }
       case NOT_CANCELLABLE -> {
-        audit(request, id, StarterConstants.OUTCOME_FAILURE,
+        audit(request, ACTION_RUN_CANCEL, id, StarterConstants.OUTCOME_FAILURE,
                 Map.of("reason", "NOT_CANCELLABLE", "status",
                         String.valueOf(result.currentStatus())));
         yield ServerResponse.status(HttpStatus.CONFLICT)
@@ -286,14 +292,15 @@ public class DslExecutionsHandler {
                         null, id, null, null, null, null, null));
       }
       case CANCELLED -> {
-        audit(request, id, StarterConstants.OUTCOME_SUCCESS, null);
+        audit(request, ACTION_RUN_CANCEL, id, StarterConstants.OUTCOME_SUCCESS, null);
         yield ServerResponse.ok()
                 .body(ExecutionDto.fromDetail(requireRun(result, id), objectMapper));
       }
     };
   }
 
-  private void audit(ServerRequest request, String target, String outcome, Object details) {
+  private void audit(ServerRequest request, String action, String target, String outcome,
+          Object details) {
     if (auditServiceProvider == null) {
       return;
     }
@@ -301,10 +308,83 @@ public class DslExecutionsHandler {
     if (auditService == null) {
       return;
     }
-    auditService.record(DslAuditService.currentActor(), ACTION_RUN_CANCEL, target,
+    auditService.record(DslAuditService.currentActor(), action, target,
             DslAuditService.correlationIdOf(request), outcome, details);
   }
 
+  /**
+   * POST /api/dsl/runs/{runId}/rerun — starts a new run from the stored input of a terminal run.
+   *
+   * <p>
+   * Requires the source run to be in a terminal state. The definition must still be published. The
+   * new run is started through the same {@link TemporalDslProcessService#startProcess} path as a
+   * manual run, with {@code triggered_by} set to {@code rerun} so rerun lineage is queryable.
+   */
+  @Operation(summary = "Re-run a terminal DSL execution from its stored input")
+  @ApiResponse(responseCode = "201", description = "The new run started from the stored input", content = @Content(mediaType = "application/json", schema = @Schema(implementation = RunStartResponse.class)))
+  @ApiResponse(responseCode = "404", description = "No run with the given id or the definition is no longer published", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+  @ApiResponse(responseCode = "409", description = "The source run is not terminal", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+  public ServerResponse rerun(ServerRequest request) {
+    String runId = request.pathVariable("runId");
+    DslRun source = runRepository.findByRunId(runId).orElse(null);
+    if (source == null) {
+      audit(request, ACTION_RUN_RERUN, runId, StarterConstants.OUTCOME_FAILURE,
+              Map.of("reason", "NOT_FOUND"));
+      return ServerResponse.status(HttpStatus.NOT_FOUND)
+              .body(new ErrorResponse("NOT_FOUND", "Execution run not found: " + runId, null,
+                      runId, null, null, null, null, null));
+    }
+    if (!isTerminal(source.status())) {
+      audit(request, ACTION_RUN_RERUN, runId, StarterConstants.OUTCOME_FAILURE,
+              Map.of("reason", "NOT_TERMINAL", "status", source.status()));
+      return ServerResponse.status(HttpStatus.CONFLICT)
+              .body(new ErrorResponse("CONFLICT",
+                      "Execution run is not terminal: " + runId + " (status "
+                              + source.status() + ")",
+                      null, runId, null, null, null, null, null));
+    }
+    if (!processService.isKnownProcess(source.processName())) {
+      audit(request, ACTION_RUN_RERUN, runId, StarterConstants.OUTCOME_FAILURE,
+              Map.of("reason", "DEFINITION_NOT_FOUND", "processName", source.processName()));
+      return ServerResponse.status(HttpStatus.NOT_FOUND)
+              .body(new ErrorResponse("NOT_FOUND",
+                      "DSL definition no longer published: " + source.processName(),
+                      source.processName(), runId, null, null, null, null, null));
+    }
+    Object input = parseStoredInput(source.input(), runId);
+    Map<String, Object> metadata = source.correlationId() != null
+            ? Map.of(StarterConstants.CORRELATION_ID_METADATA_KEY, source.correlationId())
+            : Map.of();
+    try {
+      TemporalDslProcessService.ProcessRun newRun = processService.startProcess(
+              source.processName(), input, metadata, source.correlationId(), "rerun");
+      audit(request, ACTION_RUN_RERUN, runId, StarterConstants.OUTCOME_SUCCESS,
+              Map.of("newRunId", newRun.runId()));
+      return ServerResponse.status(HttpStatus.CREATED)
+              .body(new RunStartResponse(newRun.runId(), runId));
+    } catch (RuntimeException e) {
+      audit(request, ACTION_RUN_RERUN, runId, StarterConstants.OUTCOME_FAILURE,
+              Map.of("error", String.valueOf(e.getMessage())));
+      throw e;
+    }
+  }
+
+  private static boolean isTerminal(String status) {
+    return Set.of(DslRunStatus.COMPLETED.name(), DslRunStatus.FAILED.name(),
+            DslRunStatus.CANCELLED.name()).contains(status);
+  }
+
+  private Object parseStoredInput(@Nullable String inputJson, String runId) {
+    if (inputJson == null || inputJson.isBlank()) {
+      return Map.of();
+    }
+    try {
+      return objectMapper.readValue(inputJson, Object.class);
+    } catch (Exception e) {
+      throw new IllegalArgumentException(
+              "Failed to parse stored input for run " + runId + ": " + e.getMessage(), e);
+    }
+  }
   private static DslRun requireRun(DslRunCancellationService.CancelResult result, String id) {
     DslRun run = result.run();
     if (run == null) {

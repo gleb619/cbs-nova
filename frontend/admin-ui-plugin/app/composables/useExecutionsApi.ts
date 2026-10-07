@@ -5,6 +5,7 @@ import {
   getExecution as bffGetExecution,
   getExecutionTransactions as bffGetExecutionTransactions,
   listExecutions as bffListExecutions,
+  rerunExecution as bffRerunExecution,
 } from './generated/useBffApi'
 
 export function useExecutionsApi() {
@@ -37,5 +38,10 @@ export function useExecutionsApi() {
     return (await bffGetExecutionTransactions(id)) as TransactionExecutionDto[]
   }
 
-  return { list, get, cancel, getTransactions }
+  async function rerun(id: string): Promise<{ runId: string; rerunOf: string }> {
+    log.info('rerunning execution', { id })
+    return (await bffRerunExecution(id)) as { runId: string; rerunOf: string }
+  }
+
+  return { list, get, cancel, getTransactions, rerun }
 }

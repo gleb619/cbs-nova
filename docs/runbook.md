@@ -65,6 +65,8 @@ curl -s -H "Authorization: Bearer $TOKEN" http://localhost:8090/actuator/health 
 docker compose -f app/docker-compose.yml ps
 docker compose -f app/docker-compose.yml logs --tail=200 app
 make logs                       # tail all compose services
+# Re-run a terminal execution from its stored input (T860):
+curl -s -H "Authorization: Bearer $TOKEN" -X POST http://localhost:8090/api/dsl/runs/{runId}/rerun | jq '{runId, rerunOf}'
 ```
 ---
 

@@ -41,7 +41,8 @@ public final class RateLimitFilter extends OncePerRequestFilter {
           new RateLimitRule("POST", "/api/dsl/drafts/*/publish"),
           new RateLimitRule("POST", "/api/dsl/drafts/*/discard"),
           new RateLimitRule("DELETE", "/api/dsl/drafts/*"),
-          new RateLimitRule("POST", "/api/executions/*/cancel"));
+          new RateLimitRule("POST", "/api/executions/*/cancel"),
+          new RateLimitRule("POST", "/api/dsl/runs/*/rerun"));
 
   private final CbsSecurityRateLimitProperties properties;
   private final ObjectMapper objectMapper;

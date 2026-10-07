@@ -41,9 +41,10 @@ class PieceManifestServiceTest {
     assertThat(reload.get().failMode()).isEqualTo("deny");
 
     List<Piece> apiPieces = service.byTarget(new Target.ApiTarget("POST /api/dsl/reload"));
-    assertThat(apiPieces).hasSize(27).extracting(Piece::id)
+    assertThat(apiPieces).hasSize(28).extracting(Piece::id)
             .containsExactlyInAnyOrder("dsl-signal-send", "dsl-preview", "dsl-run", "dsl-explain",
-                    "execution-cancel", "dsl-reload", "dsl-manifest-reload", "draft-save",
+                    "execution-cancel", "execution-rerun", "dsl-reload", "dsl-manifest-reload",
+                    "draft-save",
                     "draft-publish", "draft-history-restore", "draft-delete",
                     "draft-change-request", "change-request-list", "change-request-approve",
                     "change-request-reject", "file-write", "definition-import", "dsl-promote",
@@ -55,6 +56,8 @@ class PieceManifestServiceTest {
             .hasValueSatisfying(p -> assertThat(p.id()).isEqualTo("dsl-reload"));
     assertThat(service.findByRoute("POST", "/api/executions/123/cancel")).isPresent()
             .hasValueSatisfying(p -> assertThat(p.id()).isEqualTo("execution-cancel"));
+    assertThat(service.findByRoute("POST", "/api/dsl/runs/123/rerun")).isPresent()
+            .hasValueSatisfying(p -> assertThat(p.id()).isEqualTo("execution-rerun"));
 
     assertThat(service.byTarget(new Target.ButtonTarget("workbench-publish-btn")))
             .extracting(Piece::id).contains("workbench-publish");

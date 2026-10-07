@@ -84,12 +84,17 @@ const showStaleBanner = computed(
 )
 
 const isRunning = computed(() => selectedExecution.value?.status === 'Running')
+const isTerminal = computed(() =>
+  ['Completed', 'Failed', 'Cancelled'].includes(selectedExecution.value?.status ?? ''),
+)
 const showCancelButton = computed(() => isRunning.value)
 const cancelling = computed(() =>
   selectedExecution.value ? isCancelling(selectedExecution.value.id) : false,
 )
 const cancelError = ref<string | null>(null)
 const showCancelModal = ref<boolean>(false)
+const rerunBusy = ref<boolean>(false)
+const rerunError = ref<string | null>(null)
 
 function openCancelModal() {
   cancelError.value = null
@@ -110,6 +115,21 @@ async function confirmCancel() {
     cancelError.value = null
   } catch (err) {
     cancelError.value = (err as Error)?.message ?? 'Failed to cancel execution'
+  }
+}
+
+async function rerun() {
+  const executionId = selectedExecution.value?.id
+  if (!executionId || rerunBusy.value) return
+  rerunBusy.value = true
+  rerunError.value = null
+  try {
+    const response = await useExecutionsApi().rerun(executionId)
+    navigateTo({ path: `/executions/${response.runId}` })
+  } catch (err) {
+    rerunError.value = (err as Error)?.message ?? 'Failed to re-run execution'
+  } finally {
+    rerunBusy.value = false
   }
 }
 
@@ -356,6 +376,13 @@ onUnmounted(() => {
         @retry="cancelError = null"
       />
 
+      <ErrorBanner
+        v-if="rerunError"
+        :message="rerunError"
+        :retry-label="'Dismiss'"
+        @retry="rerunError = null"
+      />
+
       <ExecutionsExecutionSummary :execution="selectedExecution">
         <template #actions>
           <button
@@ -393,6 +420,16 @@ onUnmounted(() => {
             @click="runAgain"
           >
             Run again
+          </button>
+          <button
+            v-if="isTerminal"
+            type="button"
+            data-testid="rerun-execution-button"
+            class="px-3 py-1.5 text-xs font-medium rounded border transition-colors border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-100 disabled:opacity-50 disabled:cursor-not-allowed"
+            :disabled="rerunBusy || !!rerunError"
+            @click="rerun"
+          >
+            {{ rerunBusy ? 'Re-running…' : 'Re-run' }}
           </button>
           <button
             v-if="showCancelButton"

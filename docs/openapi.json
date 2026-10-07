@@ -1461,6 +1461,21 @@
           }
         },
         "type": "object"
+      },
+      "RunStartResponse": {
+        "properties": {
+          "runId": {
+            "type": "string"
+          },
+          "rerunOf": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "runId",
+          "rerunOf"
+        ],
+        "type": "object"
       }
     }
   },
@@ -5107,6 +5122,54 @@
         "summary": "List last webhook delivery outcomes",
         "tags": [
           "Webhooks"
+        ]
+      }
+    },
+    "/api/dsl/runs/{runId}/rerun": {
+      "post": {
+        "operationId": "rerunExecution",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "runId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunStartResponse"
+                }
+              }
+            },
+            "description": "The new run started from the stored input"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No run with the given id or the definition is no longer published"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The source run is not terminal"
+          }
+        },
+        "summary": "Re-run a terminal DSL execution from its stored input",
+        "tags": [
+          "DSL Executions"
         ]
       }
     }

@@ -9,10 +9,12 @@ import cbs.nova.starter.model.ExecutionDto;
 import cbs.nova.starter.model.PageResponse;
 import cbs.nova.starter.model.ExecutionStatsResponse;
 import cbs.nova.starter.model.ExecutionTimeseriesResponse;
+import cbs.nova.starter.model.RunStartResponse;
 import cbs.nova.starter.model.TransactionExecutionDto;
 import cbs.nova.starter.persistence.DslRunStatsRepository;
 import cbs.nova.starter.service.DslAuditService;
 import cbs.nova.starter.service.DslRunCancellationService;
+import cbs.nova.starter.service.TemporalDslProcessService;
 import cbs.nova.starter.web.RequestBodyLimitFilter;
 import org.springframework.beans.factory.ObjectProvider;
 import io.swagger.v3.oas.annotations.Operation;
@@ -39,6 +41,7 @@ public class DslExecutionsRouterConfiguration {
   DslExecutionsHandler dslExecutionsHandler(DslRunRepository runRepository,
           ObjectMapper objectMapper,
           DslRunCancellationService dslRunCancellationService,
+          TemporalDslProcessService temporalDslProcessService,
           TransactionExecutionRepository transactionExecutionRepository,
           RequestQueryConverter requestQueryConverter,
           ObjectProvider<DslAuditService> auditServiceProvider) {
@@ -46,8 +49,8 @@ public class DslExecutionsRouterConfiguration {
             ? stats
             : null;
     return new DslExecutionsHandler(runRepository, objectMapper, dslRunCancellationService,
-            statsRepository, transactionExecutionRepository, requestQueryConverter,
-            auditServiceProvider);
+            temporalDslProcessService, statsRepository, transactionExecutionRepository,
+            requestQueryConverter, auditServiceProvider);
   }
 
   @Bean
@@ -90,6 +93,12 @@ public class DslExecutionsRouterConfiguration {
               @ApiResponse(responseCode = "200", description = "Transaction executions for the run, most recent first", content = @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = TransactionExecutionDto.class)))),
               @ApiResponse(responseCode = "404", description = "No run with the given id", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
           })),
+      @RouterOperation(path = "/api/dsl/runs/{runId}/rerun", beanClass = DslExecutionsHandler.class, beanMethod = "rerun", method = RequestMethod.POST, operation = @Operation(operationId = "rerunExecution", summary = "Re-run a terminal DSL execution from its stored input", tags = {
+          "DSL Executions"}, parameters = @Parameter(name = "runId", in = ParameterIn.PATH), responses = {
+              @ApiResponse(responseCode = "201", description = "The new run started from the stored input", content = @Content(mediaType = "application/json", schema = @Schema(implementation = RunStartResponse.class))),
+              @ApiResponse(responseCode = "404", description = "No run with the given id or the definition is no longer published", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+              @ApiResponse(responseCode = "409", description = "The source run is not terminal", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+          })),
       @RouterOperation(path = "/api/executions/{id}/cancel", beanClass = DslExecutionsHandler.class, beanMethod = "cancel", method = RequestMethod.POST, operation = @Operation(operationId = "cancelExecution", summary = "Cancel a running DSL execution run", tags = {
           "DSL Executions"}, parameters = @Parameter(name = "id", in = ParameterIn.PATH), responses = {
               @ApiResponse(responseCode = "200", description = "The cancelled execution run", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ExecutionDto.class))),
@@ -108,6 +117,7 @@ public class DslExecutionsRouterConfiguration {
             .GET("/api/executions/export.csv", handler::exportCsv)
             .GET("/api/executions/{id}", handler::detail)
             .GET("/api/executions/{id}/transactions", handler::transactions)
+            .POST("/api/dsl/runs/{runId}/rerun", handler::rerun)
             .POST("/api/executions/{id}/cancel", handler::cancel)
             .filter(requestBodyLimitFilter)
             .build();

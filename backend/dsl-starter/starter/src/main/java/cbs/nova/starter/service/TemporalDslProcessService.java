@@ -190,6 +190,13 @@ public class TemporalDslProcessService {
     return startProcess(processName, input, metadata);
   }
 
+  /**
+   * Returns true when the named DSL process is currently published and runnable.
+   */
+  public boolean isKnownProcess(@NonNull String processName) {
+    return GlobalManager.globalManager().processNames().contains(processName);
+  }
+
   public @NonNull ProcessRun startProcess(@NonNull String processName, @Nullable Object input) {
     return startProcess(processName, input, Map.of());
   }
@@ -207,6 +214,15 @@ public class TemporalDslProcessService {
           @Nullable Object input,
           @NonNull Map<String, Object> metadata,
           @Nullable String correlationId) {
+    return startProcess(processName, input, metadata, correlationId, null);
+  }
+
+  public @NonNull ProcessRun startProcess(
+          @NonNull String processName,
+          @Nullable Object input,
+          @NonNull Map<String, Object> metadata,
+          @Nullable String correlationId,
+          @Nullable String triggeredBy) {
     // T746: operator-facing span around the startProcess entry point. The inner
     // dsl.run.<processName> span inside doExecuteAndRecord() is preserved — this top-level
     // span joins the startProcess call to its inner execution so the Jaeger service graph
@@ -225,7 +241,9 @@ public class TemporalDslProcessService {
         startSpan.setAttribute("runId", runId);
         String inputJson = serialize(body);
         Instant startedAt = now();
-        String triggeredBy = runIdentityResolver.resolve();
+        String effectiveTriggeredBy = triggeredBy != null && !triggeredBy.isBlank()
+                ? triggeredBy
+                : runIdentityResolver.resolve();
 
         DslRun running = DslRun.builder()
                 .runId(runId)
@@ -237,7 +255,7 @@ public class TemporalDslProcessService {
                 .startedAt(startedAt)
                 .finishedAt(StarterConstants.NOT_FINISHED_AT)
                 .executionMode(ExecutionMode.RUN.name())
-                .triggeredBy(triggeredBy)
+                .triggeredBy(effectiveTriggeredBy)
                 .correlationId(correlationId)
                 // T492: descriptor-identity hash of the definition this run executes; null
                 // (never an exception) when the definition cannot be resolved.
@@ -250,7 +268,7 @@ public class TemporalDslProcessService {
         submitDbWrite(runId, "RunStarted", () -> {
           runRepository.save(running);
           publishEvent(new DomainEvent.RunStarted(
-                  runId, processName, triggeredBy, startedAt, correlationId));
+                  runId, processName, effectiveTriggeredBy, startedAt, correlationId));
           publishStatusChanged(runId, DslRunStatus.RUNNING.name());
         });
 
