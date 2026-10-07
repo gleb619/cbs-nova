@@ -306,6 +306,12 @@ public class StarterConstants {
   public static final String DEFAULT_TIMEZONE = "UTC";
 
   /**
+   * Memo key used by {@code DslScheduleService} to persist an optional per-schedule execution
+   * timeout override on the schedule action's {@link io.temporal.client.WorkflowOptions}.
+   */
+  public static final String SCHEDULE_EXECUTION_TIMEOUT_METADATA_KEY = "executionTimeout";
+
+  /**
    * {@code dsl_runs.triggered_by} value for runs started by a schedule fire (T726). Chosen over the
    * creating principal on purpose: {@code RunIdentityResolver} runs on the API path only and cannot
    * see a principal from a Temporal worker thread.

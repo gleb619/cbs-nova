@@ -1,6 +1,7 @@
 package cbs.nova.starter.service;
 
 import static cbs.nova.starter.core.StarterConstants.DEFAULT_TIMEZONE;
+import static cbs.nova.starter.core.StarterConstants.SCHEDULE_EXECUTION_TIMEOUT_METADATA_KEY;
 import static cbs.nova.starter.core.StarterConstants.SCHEDULE_PREFIX;
 
 import cbs.nova.dsl.GeneratedClassDescriptor;
@@ -16,6 +17,7 @@ import cbs.nova.starter.model.ScheduleModels.UpdateScheduleRequest;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import io.temporal.api.enums.v1.ScheduleOverlapPolicy;
+import io.temporal.client.WorkflowOptions;
 import io.temporal.client.schedules.Schedule;
 import io.temporal.client.schedules.ScheduleActionStartWorkflow;
 import io.temporal.client.schedules.ScheduleAlreadyRunningException;
@@ -29,7 +31,7 @@ import io.temporal.client.schedules.ScheduleOptions;
 import io.temporal.client.schedules.SchedulePolicy;
 import io.temporal.client.schedules.ScheduleSpec;
 import io.temporal.client.schedules.ScheduleUpdate;
-import io.temporal.client.WorkflowOptions;
+import io.temporal.client.schedules.ScheduleUpdateInput;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
@@ -71,6 +73,18 @@ public class DslScheduleService {
    * {@code cbs.nova.schedule.catchup-window}.
    */
   private final Duration catchupWindow;
+
+  /**
+   * Workflow execution timeout applied to schedule-fired runs; mirrors the API launcher default
+   * from {@code temporal.execution-timeout}.
+   */
+  private final Duration executionTimeout;
+
+  /**
+   * Workflow task timeout applied to schedule-fired runs; mirrors the API launcher default from
+   * {@code temporal.task-timeout}.
+   */
+  private final Duration taskTimeout;
 
   /**
    * Separator between definition and suffix in a suffixed schedule id. Chosen because it cannot
@@ -153,15 +167,22 @@ public class DslScheduleService {
       throw new IllegalArgumentException("Invalid timezone: " + timezone, e);
     }
 
+    Duration effectiveExecutionTimeout = resolveExecutionTimeout(request.executionTimeout());
+
     Object input = request.input() != null ? request.input() : Map.of();
     String scheduleId = scheduleIdFor(definition, request.suffix());
+
+    var optionsBuilder = ProcessWorkflowOptions.forProcess(descriptor,
+            new ProcessWorkflowOptions.Properties(effectiveExecutionTimeout, taskTimeout));
+    if (request.executionTimeout() != null) {
+      optionsBuilder.setMemo(Map.of(SCHEDULE_EXECUTION_TIMEOUT_METADATA_KEY,
+              request.executionTimeout()));
+    }
 
     ScheduleActionStartWorkflow action = ScheduleActionStartWorkflow.newBuilder()
             .setWorkflowType(descriptor.temporalInterface())
             .setArguments(new DslTemporalProcessRequest<>("scheduled", input))
-            .setOptions(WorkflowOptions.newBuilder()
-                    .setTaskQueue(descriptor.taskQueue())
-                    .build())
+            .setOptions(optionsBuilder.build())
             .build();
 
     ScheduleSpec spec = ScheduleSpec.newBuilder()
@@ -184,15 +205,16 @@ public class DslScheduleService {
       throw new ScheduleConflictException(scheduleId);
     }
 
-    log.info("[DSL schedules] created {} for definition '{}' with cron '{}' in timezone '{}'",
-            scheduleId, definition, cron, timezone);
+    log.info("[DSL schedules] created {} for definition '{}' with cron '{}' in timezone '{}'" +
+            " (execution timeout: {})",
+            scheduleId, definition, cron, timezone, effectiveExecutionTimeout);
     return new CreateScheduleResponse(scheduleId, definition, cron);
   }
 
   /**
-   * Updates an existing schedule's cron/timezone in place via {@link ScheduleHandle#update(...)},
-   * reusing {@code create}'s cron/timezone validation. If the schedule does not exist, a
-   * {@link DefinitionNotFoundException} is thrown so the caller receives a 404.
+   * Updates an existing schedule's cron/timezone/execution-timeout in place via
+   * {@link ScheduleHandle#update(...)}, reusing {@code create}'s validation. If the schedule does
+   * not exist, a {@link DefinitionNotFoundException} is thrown so the caller receives a 404.
    */
   public void update(@NonNull String definition, UpdateScheduleRequest request) {
     String cron = requireNonBlank(request.cron(), "cron is required");
@@ -205,6 +227,12 @@ public class DslScheduleService {
       throw new IllegalArgumentException("Invalid timezone: " + timezone, e);
     }
 
+    GeneratedClassDescriptor descriptor = GlobalManager.globalManager()
+            .findGeneratedProcess(definition)
+            .orElseThrow(() -> new DefinitionNotFoundException(definition));
+
+    Duration effectiveExecutionTimeout = resolveExecutionTimeout(request.executionTimeout());
+
     String scheduleId = scheduleIdFor(definition);
     ScheduleHandle handle = scheduleClient.getHandle(scheduleId);
     try {
@@ -214,15 +242,18 @@ public class DslScheduleService {
                 .setCronExpressions(List.of(cron))
                 .setTimeZoneName(timezone)
                 .build();
+        ScheduleActionStartWorkflow action = rebuildAction(descriptor, current,
+                effectiveExecutionTimeout, request.executionTimeout());
         Schedule updated = Schedule.newBuilder()
-                .setAction(current.getAction())
+                .setAction(action)
                 .setSpec(spec)
                 .setPolicy(current.getPolicy())
                 .build();
         return new ScheduleUpdate(updated);
       });
-      log.info("[DSL schedules] updated {} for definition '{}' with cron '{}' in timezone '{}'",
-              scheduleId, definition, cron, timezone);
+      log.info("[DSL schedules] updated {} for definition '{}' with cron '{}' in timezone '{}'" +
+              " (execution timeout: {})",
+              scheduleId, definition, cron, timezone, effectiveExecutionTimeout);
     } catch (Exception e) {
       if (isNotFound(e)) {
         throw new DefinitionNotFoundException(definition);
@@ -233,7 +264,8 @@ public class DslScheduleService {
 
   /**
    * Lists schedules created by this service (ids prefixed with "sched-"). For each schedule,
-   * describes it to obtain the cron spec, timezone, note, paused flag and next scheduled fire time.
+   * describes it to obtain the cron spec, timezone, note, paused flag, next scheduled fire time and
+   * effective execution timeout.
    */
   public List<ScheduleSummary> list() {
     try (Stream<ScheduleListDescription> stream = scheduleClient
@@ -329,6 +361,7 @@ public class DslScheduleService {
     String cron = spec.getCronExpressions().isEmpty() ? "" : spec.getCronExpressions().get(0);
     String definition = definitionForScheduleId(scheduleId);
     String nextRunAt = firstInstant(info.getNextActionTimes());
+    String executionTimeout = executionTimeoutFromAction(description.getSchedule().getAction());
     return new ScheduleSummary(
             scheduleId,
             definition,
@@ -336,7 +369,65 @@ public class DslScheduleService {
             spec.getTimeZoneName(),
             description.getSchedule().getState().getNote(),
             nextRunAt,
-            description.getSchedule().getState().isPaused());
+            description.getSchedule().getState().isPaused(),
+            executionTimeout);
+  }
+
+  private @Nullable String executionTimeoutFromAction(Object action) {
+    if (!(action instanceof ScheduleActionStartWorkflow start)) {
+      return null;
+    }
+    WorkflowOptions options = start.getOptions();
+    if (options == null) {
+      return null;
+    }
+    Duration timeout = options.getWorkflowExecutionTimeout();
+    return timeout != null ? timeout.toString() : null;
+  }
+
+  private ScheduleActionStartWorkflow rebuildAction(
+          GeneratedClassDescriptor descriptor,
+          Schedule current,
+          Duration effectiveExecutionTimeout,
+          @Nullable String requestedOverride) {
+    ScheduleActionStartWorkflow currentAction = (ScheduleActionStartWorkflow) current.getAction();
+    WorkflowOptions currentOptions = currentAction.getOptions();
+    boolean override = requestedOverride != null && !requestedOverride.isBlank();
+    // A patch without an override keeps the schedule's stored timeout (and its memo); schedules
+    // created before timeouts existed have none, so they pick up the configured default here.
+    Duration timeout = effectiveExecutionTimeout;
+    if (!override && currentOptions != null
+            && currentOptions.getWorkflowExecutionTimeout() != null) {
+      timeout = currentOptions.getWorkflowExecutionTimeout();
+    }
+    var optionsBuilder = ProcessWorkflowOptions.forProcess(descriptor,
+            new ProcessWorkflowOptions.Properties(timeout, taskTimeout));
+    if (override) {
+      optionsBuilder.setMemo(Map.of(SCHEDULE_EXECUTION_TIMEOUT_METADATA_KEY, requestedOverride));
+    } else if (currentOptions != null && currentOptions.getMemo() != null
+            && currentOptions.getMemo().containsKey(SCHEDULE_EXECUTION_TIMEOUT_METADATA_KEY)) {
+      optionsBuilder.setMemo(currentOptions.getMemo());
+    }
+
+    return ScheduleActionStartWorkflow.newBuilder(currentAction)
+            .setOptions(optionsBuilder.build())
+            .build();
+  }
+
+  private Duration resolveExecutionTimeout(@Nullable String requested) {
+    if (requested == null || requested.isBlank()) {
+      return executionTimeout;
+    }
+    Duration parsed;
+    try {
+      parsed = Duration.parse(requested);
+    } catch (DateTimeException e) {
+      throw new IllegalArgumentException("Invalid executionTimeout: " + requested, e);
+    }
+    if (parsed.isZero() || parsed.isNegative()) {
+      throw new IllegalArgumentException("executionTimeout must be positive: " + requested);
+    }
+    return parsed;
   }
 
   private static @Nullable String reasonOrDefault(@Nullable String reason, String defaultReason) {

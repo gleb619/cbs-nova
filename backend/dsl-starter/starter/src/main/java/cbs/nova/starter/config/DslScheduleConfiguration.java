@@ -2,6 +2,7 @@ package cbs.nova.starter.config;
 
 import cbs.nova.starter.config.properties.DslScheduleProperties;
 import cbs.nova.starter.service.DslScheduleService;
+import cbs.nova.starter.config.TemporalProcessTimeouts;
 import io.temporal.client.schedules.ScheduleClient;
 import io.temporal.client.schedules.ScheduleClientOptions;
 import io.temporal.serviceclient.WorkflowServiceStubs;
@@ -36,7 +37,9 @@ public class DslScheduleConfiguration {
   DslScheduleService dslScheduleService(
           ScheduleClient scheduleClient,
           ObjectMapper objectMapper,
-          DslScheduleProperties scheduleProperties) {
-    return new DslScheduleService(scheduleClient, objectMapper, scheduleProperties.catchupWindow());
+          DslScheduleProperties scheduleProperties,
+          TemporalProcessTimeouts timeouts) {
+    return new DslScheduleService(scheduleClient, objectMapper, scheduleProperties.catchupWindow(),
+            timeouts.executionTimeout(), timeouts.taskTimeout());
   }
 }

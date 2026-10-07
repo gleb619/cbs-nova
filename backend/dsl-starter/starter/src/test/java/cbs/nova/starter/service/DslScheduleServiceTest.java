@@ -15,13 +15,16 @@ import cbs.nova.starter.config.properties.DslScheduleProperties;
 import cbs.nova.dsl.DslObject.DslType;
 import cbs.nova.dsl.GeneratedClassDescriptor;
 import cbs.nova.dsl.GlobalManager;
+import cbs.nova.dsl.process.DslTemporalProcessRequest;
 import cbs.nova.starter.exception.DefinitionNotFoundException;
 import cbs.nova.starter.exception.ScheduleConflictException;
+import cbs.nova.starter.service.ProcessWorkflowOptions;
 import cbs.nova.starter.model.ScheduleModels.CreateScheduleRequest;
 import cbs.nova.starter.model.ScheduleModels.ScheduleSummary;
 import cbs.nova.starter.model.ScheduleModels.UpdateScheduleRequest;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
+import io.temporal.client.WorkflowOptions;
 import io.temporal.client.schedules.Schedule;
 import io.temporal.client.schedules.ScheduleClient;
 import io.temporal.client.schedules.ScheduleDescription;
@@ -46,15 +49,19 @@ import tools.jackson.databind.ObjectMapper;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
 
 class DslScheduleServiceTest {
+
+  private static final Duration DEFAULT_EXECUTION_TIMEOUT = Duration.ofSeconds(30);
+  private static final Duration DEFAULT_TASK_TIMEOUT = Duration.ofSeconds(5);
 
   private final ScheduleClient scheduleClient = mock(ScheduleClient.class);
   private final ScheduleHandle handle = mock(ScheduleHandle.class);
   private final ObjectMapper objectMapper = new ObjectMapper();
   private final DslScheduleService service = new DslScheduleService(scheduleClient, objectMapper,
-          Duration.ofMinutes(1));
+          Duration.ofMinutes(1), DEFAULT_EXECUTION_TIMEOUT, DEFAULT_TASK_TIMEOUT);
 
   @BeforeEach
   void setUp() {
@@ -251,7 +258,7 @@ class DslScheduleServiceTest {
   void createUsesConfiguredCatchupWindowFromScheduleProperties() {
     DslScheduleProperties properties = new DslScheduleProperties(Duration.ofMinutes(30));
     DslScheduleService configuredService = new DslScheduleService(scheduleClient, objectMapper,
-            properties.catchupWindow());
+            properties.catchupWindow(), DEFAULT_EXECUTION_TIMEOUT, DEFAULT_TASK_TIMEOUT);
     when(scheduleClient.createSchedule(eq("sched-LoanDisbursement"), any(Schedule.class),
             any(ScheduleOptions.class)))
             .thenReturn(handle);
@@ -471,17 +478,232 @@ class DslScheduleServiceTest {
             .hasMessageContaining("No published definition: LoanDisbursement");
   }
 
+  @Test
+  void createActionCarriesExecutionAndTaskTimeout() {
+    when(scheduleClient.createSchedule(eq("sched-LoanDisbursement"), any(Schedule.class),
+            any(ScheduleOptions.class)))
+            .thenReturn(handle);
+
+    service.create(new CreateScheduleRequest("LoanDisbursement", "0 9 * * *", "UTC", null, null));
+
+    ArgumentCaptor<Schedule> captor = ArgumentCaptor.forClass(Schedule.class);
+    verify(scheduleClient).createSchedule(eq("sched-LoanDisbursement"), captor.capture(),
+            any(ScheduleOptions.class));
+    ScheduleActionStartWorkflow action = (ScheduleActionStartWorkflow) captor.getValue()
+            .getAction();
+    WorkflowOptions opts = action.getOptions();
+
+    assertThat(opts.getWorkflowExecutionTimeout()).isEqualTo(DEFAULT_EXECUTION_TIMEOUT);
+    assertThat(opts.getWorkflowTaskTimeout()).isEqualTo(DEFAULT_TASK_TIMEOUT);
+    assertThat(opts.getRetryOptions().getMaximumAttempts()).isEqualTo(1);
+  }
+
+  @Test
+  void createWithExecutionTimeoutOverrideSetsOptionsAndMemo() {
+    when(scheduleClient.createSchedule(eq("sched-LoanDisbursement"), any(Schedule.class),
+            any(ScheduleOptions.class)))
+            .thenReturn(handle);
+
+    service.create(new CreateScheduleRequest("LoanDisbursement", "0 9 * * *", "UTC", null, null,
+            null, "PT10M"));
+
+    ArgumentCaptor<Schedule> captor = ArgumentCaptor.forClass(Schedule.class);
+    verify(scheduleClient).createSchedule(eq("sched-LoanDisbursement"), captor.capture(),
+            any(ScheduleOptions.class));
+    ScheduleActionStartWorkflow action = (ScheduleActionStartWorkflow) captor.getValue()
+            .getAction();
+    WorkflowOptions opts = action.getOptions();
+
+    assertThat(opts.getWorkflowExecutionTimeout()).isEqualTo(Duration.ofMinutes(10));
+    assertThat(opts.getMemo()).containsEntry("executionTimeout", "PT10M");
+  }
+
+  @Test
+  void createThrowsIllegalArgumentForInvalidExecutionTimeout() {
+    assertThatThrownBy(() -> service
+            .create(new CreateScheduleRequest("LoanDisbursement", "0 9 * * *", "UTC", null, null,
+                    null, "not-a-duration")))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("Invalid executionTimeout");
+    verify(scheduleClient, never()).createSchedule(any(), any(), any());
+  }
+
+  @Test
+  void createThrowsIllegalArgumentForNonPositiveExecutionTimeout() {
+    assertThatThrownBy(() -> service
+            .create(new CreateScheduleRequest("LoanDisbursement", "0 9 * * *", "UTC", null, null,
+                    null, "PT0S")))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("executionTimeout must be positive");
+  }
+
+  @Test
+  void updateWithoutOverridePreservesStoredExecutionTimeout() {
+    when(scheduleClient.getHandle("sched-LoanDisbursement")).thenReturn(handle);
+
+    Schedule current = mock(Schedule.class);
+    WorkflowOptions currentOpts = WorkflowOptions.newBuilder()
+            .setTaskQueue("dsl-task-queue")
+            .setWorkflowExecutionTimeout(Duration.ofSeconds(99))
+            .build();
+    ScheduleActionStartWorkflow currentAction = ScheduleActionStartWorkflow.newBuilder()
+            .setWorkflowType(TestWorkflow.class)
+            .setOptions(currentOpts)
+            .setArguments(new DslTemporalProcessRequest<>("scheduled", Map.of()))
+            .build();
+    when(current.getAction()).thenReturn(currentAction);
+    SchedulePolicy policy = mock(SchedulePolicy.class);
+    when(current.getPolicy()).thenReturn(policy);
+    ScheduleDescription currentDescription = mock(ScheduleDescription.class);
+    when(currentDescription.getSchedule()).thenReturn(current);
+    ScheduleUpdateInput input = new ScheduleUpdateInput(currentDescription);
+
+    service.update("LoanDisbursement",
+            new UpdateScheduleRequest("30 14 * * 1", "Asia/Almaty"));
+
+    ArgumentCaptor<Functions.Func1<ScheduleUpdateInput, ScheduleUpdate>> captor = ArgumentCaptor
+            .forClass(Functions.Func1.class);
+    verify(handle).update(captor.capture());
+    ScheduleUpdate update = captor.getValue().apply(input);
+    ScheduleActionStartWorkflow action = (ScheduleActionStartWorkflow) update.getSchedule()
+            .getAction();
+    WorkflowOptions opts = action.getOptions();
+
+    assertThat(opts.getWorkflowExecutionTimeout()).isEqualTo(Duration.ofSeconds(99));
+    assertThat(opts.getWorkflowTaskTimeout()).isEqualTo(DEFAULT_TASK_TIMEOUT);
+  }
+
+  @Test
+  void updateOfLegacyScheduleWithoutTimeoutAppliesConfiguredDefault() {
+    when(scheduleClient.getHandle("sched-LoanDisbursement")).thenReturn(handle);
+
+    Schedule current = mock(Schedule.class);
+    WorkflowOptions currentOpts = WorkflowOptions.newBuilder()
+            .setTaskQueue("dsl-task-queue")
+            .build();
+    ScheduleActionStartWorkflow currentAction = ScheduleActionStartWorkflow.newBuilder()
+            .setWorkflowType(TestWorkflow.class)
+            .setOptions(currentOpts)
+            .setArguments(new DslTemporalProcessRequest<>("scheduled", Map.of()))
+            .build();
+    when(current.getAction()).thenReturn(currentAction);
+    SchedulePolicy policy = mock(SchedulePolicy.class);
+    when(current.getPolicy()).thenReturn(policy);
+    ScheduleDescription currentDescription = mock(ScheduleDescription.class);
+    when(currentDescription.getSchedule()).thenReturn(current);
+    ScheduleUpdateInput input = new ScheduleUpdateInput(currentDescription);
+
+    service.update("LoanDisbursement",
+            new UpdateScheduleRequest("30 14 * * 1", "Asia/Almaty"));
+
+    ArgumentCaptor<Functions.Func1<ScheduleUpdateInput, ScheduleUpdate>> captor = ArgumentCaptor
+            .forClass(Functions.Func1.class);
+    verify(handle).update(captor.capture());
+    ScheduleUpdate update = captor.getValue().apply(input);
+    ScheduleActionStartWorkflow action = (ScheduleActionStartWorkflow) update.getSchedule()
+            .getAction();
+    WorkflowOptions opts = action.getOptions();
+
+    assertThat(opts.getWorkflowExecutionTimeout()).isEqualTo(DEFAULT_EXECUTION_TIMEOUT);
+    assertThat(opts.getWorkflowTaskTimeout()).isEqualTo(DEFAULT_TASK_TIMEOUT);
+  }
+
+  @Test
+  void updateWithOverrideChangesExecutionTimeoutAndMemo() {
+    when(scheduleClient.getHandle("sched-LoanDisbursement")).thenReturn(handle);
+
+    Schedule current = mock(Schedule.class);
+    WorkflowOptions currentOpts = WorkflowOptions.newBuilder()
+            .setTaskQueue("dsl-task-queue")
+            .setWorkflowExecutionTimeout(Duration.ofSeconds(99))
+            .build();
+    ScheduleActionStartWorkflow currentAction = ScheduleActionStartWorkflow.newBuilder()
+            .setWorkflowType(TestWorkflow.class)
+            .setOptions(currentOpts)
+            .setArguments(new DslTemporalProcessRequest<>("scheduled", Map.of()))
+            .build();
+    when(current.getAction()).thenReturn(currentAction);
+    SchedulePolicy policy = mock(SchedulePolicy.class);
+    when(current.getPolicy()).thenReturn(policy);
+    ScheduleDescription currentDescription = mock(ScheduleDescription.class);
+    when(currentDescription.getSchedule()).thenReturn(current);
+    ScheduleUpdateInput input = new ScheduleUpdateInput(currentDescription);
+
+    service.update("LoanDisbursement",
+            new UpdateScheduleRequest("30 14 * * 1", "Asia/Almaty", "PT2H"));
+
+    ArgumentCaptor<Functions.Func1<ScheduleUpdateInput, ScheduleUpdate>> captor = ArgumentCaptor
+            .forClass(Functions.Func1.class);
+    verify(handle).update(captor.capture());
+    ScheduleUpdate update = captor.getValue().apply(input);
+    ScheduleActionStartWorkflow action = (ScheduleActionStartWorkflow) update.getSchedule()
+            .getAction();
+    WorkflowOptions opts = action.getOptions();
+
+    assertThat(opts.getWorkflowExecutionTimeout()).isEqualTo(Duration.ofHours(2));
+    assertThat(opts.getMemo()).containsEntry("executionTimeout", "PT2H");
+  }
+
+  @Test
+  void listIncludesExecutionTimeoutFromActionOptions() {
+    ScheduleListDescription ours = mock(ScheduleListDescription.class);
+    when(ours.getScheduleId()).thenReturn("sched-LoanDisbursement");
+    when(scheduleClient.listSchedules()).thenReturn(Stream.of(ours));
+
+    ScheduleDescription description = description("sched-LoanDisbursement", "0 9 * * *", "UTC",
+            null, false, Duration.ofMinutes(20));
+    when(scheduleClient.getHandle("sched-LoanDisbursement")).thenReturn(handle);
+    when(handle.describe()).thenReturn(description);
+
+    List<ScheduleSummary> result = service.list();
+
+    assertThat(result).hasSize(1);
+    assertThat(result.get(0).executionTimeout()).isEqualTo("PT20M");
+  }
+
+  @Test
+  void listReportsNullExecutionTimeoutWhenScheduleHasNone() {
+    ScheduleListDescription ours = mock(ScheduleListDescription.class);
+    when(ours.getScheduleId()).thenReturn("sched-LoanDisbursement");
+    when(scheduleClient.listSchedules()).thenReturn(Stream.of(ours));
+
+    ScheduleDescription description = description("sched-LoanDisbursement", "0 9 * * *", "UTC",
+            null, false, null);
+    when(scheduleClient.getHandle("sched-LoanDisbursement")).thenReturn(handle);
+    when(handle.describe()).thenReturn(description);
+
+    List<ScheduleSummary> result = service.list();
+
+    assertThat(result).hasSize(1);
+    assertThat(result.get(0).executionTimeout()).isNull();
+  }
   private static ScheduleDescription description(String scheduleId, String cron, String timezone,
           String note, boolean paused) {
+    return description(scheduleId, cron, timezone, note, paused, DEFAULT_EXECUTION_TIMEOUT);
+  }
+
+  private static ScheduleDescription description(String scheduleId, String cron, String timezone,
+          String note, boolean paused, Duration executionTimeout) {
     ScheduleSpec spec = mock(ScheduleSpec.class);
     when(spec.getCronExpressions()).thenReturn(List.of(cron));
     when(spec.getTimeZoneName()).thenReturn(timezone);
     ScheduleState state = mock(ScheduleState.class);
     when(state.getNote()).thenReturn(note);
     when(state.isPaused()).thenReturn(paused);
+    WorkflowOptions.Builder optionsBuilder = WorkflowOptions.newBuilder()
+            .setTaskQueue("dsl-task-queue");
+    if (executionTimeout != null) {
+      optionsBuilder.setWorkflowExecutionTimeout(executionTimeout);
+    }
+    WorkflowOptions options = optionsBuilder.build();
+    ScheduleActionStartWorkflow action = ScheduleActionStartWorkflow.newBuilder()
+            .setWorkflowType(TestWorkflow.class)
+            .setOptions(options)
+            .build();
     Schedule schedule = mock(Schedule.class);
     when(schedule.getSpec()).thenReturn(spec);
     when(schedule.getState()).thenReturn(state);
+    when(schedule.getAction()).thenReturn(action);
     ScheduleInfo info = mock(ScheduleInfo.class);
     when(info.getNextActionTimes()).thenReturn(List.of());
     ScheduleDescription description = mock(ScheduleDescription.class);

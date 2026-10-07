@@ -166,16 +166,24 @@ public class TemporalConfiguration {
 
   @Bean
   @ConditionalOnMissingBean
+  TemporalProcessTimeouts temporalProcessTimeouts(
+          @Value("${temporal.execution-timeout:30s}") Duration executionTimeout,
+          @Value("${temporal.task-timeout:5s}") Duration taskTimeout) {
+    return new TemporalProcessTimeouts(executionTimeout, taskTimeout);
+  }
+
+  @Bean
+  @ConditionalOnMissingBean
   TemporalProcessLauncher temporalProcessLauncher(
           WorkflowClient workflowClient,
-          @Value("${temporal.execution-timeout:30s}") Duration executionTimeout,
-          @Value("${temporal.task-timeout:5s}") Duration taskTimeout,
+          TemporalProcessTimeouts timeouts,
           @Value("${cbs.nova.dsl.idempotency.workflow-id-reuse-policy:REJECT_DUPLICATE}") String idempotencyReusePolicy) {
     String enumName = idempotencyReusePolicy.startsWith("WORKFLOW_ID_REUSE_POLICY_")
             ? idempotencyReusePolicy
             : "WORKFLOW_ID_REUSE_POLICY_" + idempotencyReusePolicy;
     return new TemporalDslProcessLauncher(workflowClient, JsonMapper.builder().build(),
-            executionTimeout, taskTimeout, WorkflowIdReusePolicy.valueOf(enumName));
+            timeouts.executionTimeout(), timeouts.taskTimeout(),
+            WorkflowIdReusePolicy.valueOf(enumName));
   }
 
   @Bean

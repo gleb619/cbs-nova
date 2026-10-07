@@ -18,7 +18,6 @@ import io.temporal.client.WorkflowExecutionAlreadyStarted;
 import io.temporal.client.WorkflowExecutionDescription;
 import io.temporal.client.WorkflowOptions;
 import io.temporal.client.WorkflowStub;
-import io.temporal.common.RetryOptions;
 import io.temporal.api.enums.v1.WorkflowIdReusePolicy;
 import io.temporal.workflow.Workflow;
 import lombok.Builder;
@@ -84,12 +83,9 @@ public class TemporalDslProcessLauncher implements TemporalProcessLauncher {
                     "No generated Temporal process: " + request.processName()));
 
     String idempotencyFingerprint = idempotencyFingerprint(request.ctx());
-    var optionsBuilder = WorkflowOptions.newBuilder()
-            .setTaskQueue(request.taskQueue())
-            .setWorkflowId(request.ctx().runId())
-            .setWorkflowExecutionTimeout(executionTimeout)
-            .setWorkflowTaskTimeout(taskTimeout)
-            .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(1).build());
+    var optionsBuilder = ProcessWorkflowOptions.forProcess(descriptor,
+            new ProcessWorkflowOptions.Properties(executionTimeout, taskTimeout))
+            .setWorkflowId(request.ctx().runId());
     if (idempotencyFingerprint != null) {
       optionsBuilder
               .setWorkflowIdReusePolicy(idempotencyReusePolicy)
