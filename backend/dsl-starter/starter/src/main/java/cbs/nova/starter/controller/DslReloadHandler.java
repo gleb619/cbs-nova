@@ -30,6 +30,7 @@ import cbs.nova.starter.model.ReloadResponse;
 import cbs.nova.starter.persistence.CompileDiagnosticRecordRepository;
 import cbs.nova.starter.events.DomainEvent;
 import cbs.nova.starter.service.DefinitionContentHash;
+import cbs.nova.starter.service.DefinitionSnapshotService;
 import cbs.nova.starter.service.DomainEventPublisher;
 import cbs.nova.starter.service.DslAuditService;
 import cbs.nova.starter.service.PreviewResultCache;
@@ -53,6 +54,7 @@ import java.util.zip.ZipInputStream;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
@@ -96,6 +98,12 @@ public class DslReloadHandler {
   private final ObjectProvider<CompileDiagnosticRecordRepository> compileDiagnosticRepositoryProvider;
   private final ObjectProvider<DomainEventPublisher> eventPublisherProvider;
   private final ObjectProvider<GlobalManagerReplacedListener> globalManagerReplacedListeners;
+  /**
+   * T875 snapshot capture — optional field injection (not a constructor arg) so existing tests and
+   * embedders that build the handler by hand keep compiling; absence simply skips capture.
+   */
+  @Autowired(required = false)
+  private ObjectProvider<DefinitionSnapshotService> snapshotServiceProvider;
   private final ReentrantLock reloadLock = new ReentrantLock();
 
   /**
@@ -122,7 +130,7 @@ public class DslReloadHandler {
 
     reloadLock.lock();
     try {
-      var load = doReload(dir);
+      var load = doReload(dir, "reload");
       audit(request, dir.toString(), StarterConstants.OUTCOME_SUCCESS, Map.of(
               "processes", load.processCount(),
               "transactions", load.transactionCount(),
@@ -174,13 +182,13 @@ public class DslReloadHandler {
 
     reloadLock.lock();
     try {
-      return doReload(dir);
+      return doReload(dir, "publish");
     } finally {
       reloadLock.unlock();
     }
   }
 
-  private LoadResult doReload(Path sourceDir) throws IOException {
+  private LoadResult doReload(Path sourceDir, String capturedBy) throws IOException {
     var parent = Thread.currentThread().getContextClassLoader();
     Path outputDir = Files.createTempDirectory(DSL_RELOAD_TEMP_PREFIX);
     URLClassLoader reloadClassLoader = null;
@@ -201,6 +209,10 @@ public class DslReloadHandler {
       // T648: publish the content hash (sha256 over the source snapshot) for every definition
       // loaded above, keyed by name+version, so run submission is a cheap cache lookup.
       DefinitionContentHash.publish(sources, candidate);
+      // T875: persist the source snapshot (idempotent on unchanged hash) so content_hash resolves
+      // back to the exact source a run executed. Best-effort: a snapshot failure must never break
+      // the reload/publish.
+      captureSnapshots(sources, candidate, capturedBy);
       notifyGlobalManagerReplaced();
       // Preview results cached against the previous registry are now stale; flush after the swap
       // so a failed compile/staging leaves the cache (and the live registry) untouched.
@@ -216,6 +228,22 @@ public class DslReloadHandler {
         }
       }
       deleteRecursively(outputDir);
+    }
+  }
+
+  private void captureSnapshots(Map<String, String> sources, GlobalManager candidate,
+          String capturedBy) {
+    if (snapshotServiceProvider == null) {
+      return;
+    }
+    var snapshotService = snapshotServiceProvider.getIfAvailable();
+    if (snapshotService == null) {
+      return;
+    }
+    try {
+      snapshotService.capture(sources, candidate, capturedBy);
+    } catch (RuntimeException e) {
+      log.warn("[DSL snapshots] snapshot capture after reload failed: {}", e.getMessage());
     }
   }
 

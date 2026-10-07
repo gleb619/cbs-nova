@@ -84,6 +84,9 @@ class RbacAuthorizationFilterParityTest {
             Arguments.of("DELETE", "/api/dsl/drafts/foo", Role.AUTHOR),
             Arguments.of("POST", "/api/dsl/drafts/foo/change-request", Role.AUTHOR),
             Arguments.of("GET", "/api/dsl/change-requests", Role.VIEWER),
+            // T875: definition source snapshots — read-only but explicit (source text is sensitive)
+            Arguments.of("GET", "/api/dsl/definitions/LoanDsl/versions", Role.VIEWER),
+            Arguments.of("GET", "/api/dsl/definitions/LoanDsl/versions/abc123", Role.VIEWER),
             Arguments.of("POST", "/api/dsl/change-requests/1/approve", Role.AUTHOR),
             Arguments.of("POST", "/api/dsl/change-requests/1/reject", Role.AUTHOR),
             Arguments.of("POST", "/api/dsl/files/foo.dsl", Role.AUTHOR),

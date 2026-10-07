@@ -285,6 +285,32 @@
         },
         "type": "object"
       },
+      "DefinitionSnapshotDto": {
+        "properties": {
+          "capturedAt": {
+            "type": "string"
+          },
+          "capturedBy": {
+            "type": "string"
+          },
+          "contentHash": {
+            "type": "string"
+          },
+          "diff": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "sourceText": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "DefinitionTestCase": {
         "properties": {
           "caseName": {
@@ -351,6 +377,23 @@
           "total": {
             "format": "int32",
             "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "DefinitionVersionDto": {
+        "properties": {
+          "capturedAt": {
+            "type": "string"
+          },
+          "capturedBy": {
+            "type": "string"
+          },
+          "contentHash": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
           }
         },
         "type": "object"
@@ -653,6 +696,23 @@
             "type": "boolean"
           },
           "remoteHead": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "HelperCatalogEntry": {
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "inputType": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "outputType": {
             "type": "string"
           }
         },
@@ -1109,6 +1169,21 @@
         ],
         "type": "object"
       },
+      "RunStartResponse": {
+        "properties": {
+          "rerunOf": {
+            "type": "string"
+          },
+          "runId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "runId",
+          "rerunOf"
+        ],
+        "type": "object"
+      },
       "SeededSignal": {
         "description": "One entry of a preview-mode signal timeline. A seeded signal becomes visible at the zero-based await-point index given by deliverAt (absent or 0 = visible from the start of the preview). Preview resolves signals from this timeline instead of waiting on wall-clock time.",
         "properties": {
@@ -1463,21 +1538,6 @@
             "type": "integer"
           }
         },
-        "type": "object"
-      },
-      "RunStartResponse": {
-        "properties": {
-          "runId": {
-            "type": "string"
-          },
-          "rerunOf": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "runId",
-          "rerunOf"
-        ],
         "type": "object"
       }
     }
@@ -1916,6 +1976,71 @@
         "summary": "Run a definition's test cases through the preview pipeline",
         "tags": [
           "DSL Testing"
+        ]
+      }
+    },
+    "/api/dsl/definitions/{name}/versions": {
+      "get": {
+        "operationId": "listDefinitionVersions",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DefinitionVersionDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unknown definition"
+          }
+        },
+        "summary": "List captured source snapshots of a definition, newest first",
+        "tags": [
+          "DSL Definitions"
+        ]
+      }
+    },
+    "/api/dsl/definitions/{name}/versions/{hash}": {
+      "get": {
+        "operationId": "getDefinitionVersion",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DefinitionSnapshotDto"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unknown definition or hash"
+          }
+        },
+        "summary": "Get a definition source snapshot by content hash with a unified diff against the previous snapshot",
+        "tags": [
+          "DSL Definitions"
         ]
       }
     },
@@ -3435,6 +3560,27 @@
         ]
       }
     },
+    "/api/dsl/helpers": {
+      "get": {
+        "operationId": "getHelperCatalog",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HelperCatalogEntry"
+                }
+              }
+            },
+            "description": "Helper catalog"
+          }
+        },
+        "summary": "Get DSL helper catalog",
+        "tags": [
+          "DSL Introspection"
+        ]
+      }
+    },
     "/api/dsl/hierarchy/{name}": {
       "post": {
         "operationId": "hierarchyDsl",
@@ -4098,6 +4244,54 @@
         "summary": "Execute a DSL process with full side effects",
         "tags": [
           "DSL Runtime"
+        ]
+      }
+    },
+    "/api/dsl/runs/{runId}/rerun": {
+      "post": {
+        "operationId": "rerunExecution",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "runId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunStartResponse"
+                }
+              }
+            },
+            "description": "The new run started from the stored input"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No run with the given id or the definition is no longer published"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The source run is not terminal"
+          }
+        },
+        "summary": "Re-run a terminal DSL execution from its stored input",
+        "tags": [
+          "DSL Executions"
         ]
       }
     },
@@ -5125,54 +5319,6 @@
         "summary": "List last webhook delivery outcomes",
         "tags": [
           "Webhooks"
-        ]
-      }
-    },
-    "/api/dsl/runs/{runId}/rerun": {
-      "post": {
-        "operationId": "rerunExecution",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "runId",
-            "required": true
-          }
-        ],
-        "responses": {
-          "201": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RunStartResponse"
-                }
-              }
-            },
-            "description": "The new run started from the stored input"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "No run with the given id or the definition is no longer published"
-          },
-          "409": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "The source run is not terminal"
-          }
-        },
-        "summary": "Re-run a terminal DSL execution from its stored input",
-        "tags": [
-          "DSL Executions"
         ]
       }
     }

@@ -49,7 +49,7 @@ publish: ## Publish the DSL platform to Maven Local
 	@python3 $(SCRIPT) publish
 
 # Minimum number of paths expected in /v3/api-docs. Bump when new DSL routes are added.
-MIN_OPENAPI_PATHS := 83
+MIN_OPENAPI_PATHS := 85
 
 .PHONY: openapi
 openapi: ## Regenerate docs/openapi.json from the live /v3/api-docs (needs Postgres; Temporal optional)

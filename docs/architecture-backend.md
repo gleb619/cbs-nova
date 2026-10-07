@@ -408,6 +408,15 @@ Definition-version attribution (T492, T648, T649): the `dsl_runs` table carries 
 
 Together `definition_hash` + `content_hash` give attribution along two dimensions: `definition_hash` captures the runtime contract the run executed under, `content_hash` captures the exact source snapshot published. A change to the definition *logic* (helper body, transaction step) flips `content_hash` while leaving `definition_hash` intact when the descriptor is unchanged — useful for pinpointing source drift across reloads.
 
+### Definition source snapshots (T875)
+
+`content_hash` only pays off if it resolves back to source. The `dsl_definition_snapshots` table (migration `V3__dsl_definition_snapshots.sql`, identical in the Postgres and H2 dialect dirs) stores the canonical snapshot text (`path\ncontent\n…`, same canonicalization `DefinitionContentHash` hashes) once per `(definition_name, content_hash)` — recapturing an unchanged hash is a no-op. Capture runs from `DslReloadHandler.doReload` right after `DefinitionContentHash.publish(...)`, for both the reload endpoint (`captured_by = "reload"`) and the draft publish flow (`captured_by = "publish"`), and is strictly best-effort: a snapshot failure is logged and never breaks the reload. Stored `source_text` is capped at 512 KiB (truncation marker appended; the hash is always computed over the full canonical text). Read-side endpoints (RBAC: VIEWER, explicit manifest pieces `definition-versions` / `definition-version-source`):
+
+| Verb | Path | Handler | Purpose |
+|---|---|---|---|
+| `GET` | `/api/dsl/definitions/{name}/versions` | `DslDefinitionSnapshotHandler.versions` | List captured snapshots of a definition, newest first: `{contentHash, version, capturedAt, capturedBy}`. Empty list (200) for an unknown name. |
+| `GET` | `/api/dsl/definitions/{name}/versions/{hash}` | `DslDefinitionSnapshotHandler.version` | The stored `sourceText` for the hash plus a unified line diff (`UnifiedDiff`, no dependency) against the previous snapshot — `diff` is `null` for the first snapshot. `404 NOT_FOUND` for an unknown hash. |
+
 **Preview-cache implications.** `PreviewResultCache` keys are still the descriptor hash, so the content hash does **not** segment the preview cache directly. After a reload, `DslReloadHandler.doReload` calls `PreviewResultCache.clear()` immediately after `DefinitionContentHash.publish(...)` so the next preview recomputes against the freshly swapped registry; the per-hash `PreviewResultCache.invalidateByDslHash(...)` is retained for future per-construct invalidation (e.g. workbench publish of a single process) but is not used by the global reload path today.
 
 **`@DslGenerated` build/git metadata (T649).** Codegen stamps every generated `Process*` / `Transaction*` class with `@DslGenerated(...)` (see [`DslGenerated.java`](../backend/dsl-platform/dsl-api/src/main/java/cbs/nova/dsl/annotation/DslGenerated.java)) alongside the JDK `@Generated`. The annotation carries seven string fields:
