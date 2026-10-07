@@ -92,6 +92,10 @@ public class StarterConstants {
 
   public static final String IDEMPOTENCY_KEY_HEADER = "Idempotency-Key";
 
+  // Idempotency context passed through to the Temporal launcher
+  public static final String IDEMPOTENCY_FINGERPRINT_METADATA_KEY = "idempotencyFingerprint";
+  public static final String IDEMPOTENCY_CALLER_METADATA_KEY = "idempotencyCaller";
+
   // Security (role claim)
 
   public static final String DEFAULT_CLAIM_NAME = "roles";

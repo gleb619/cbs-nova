@@ -1,10 +1,12 @@
 package cbs.nova.starter.service;
 
+import cbs.nova.starter.idempotency.IdempotencyKeyReusedException;
 import cbs.nova.starter.idempotency.IdempotentReplayException;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -32,6 +34,8 @@ import cbs.nova.starter.converter.DslRuntimeMapper;
 import cbs.nova.starter.logging.LoggingExecutionListener;
 import cbs.nova.starter.model.DslRequest;
 import cbs.nova.starter.model.RuntimeOutcome;
+import cbs.nova.dsl.history.DslRun;
+import cbs.nova.dsl.history.DslRunRepository;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.time.Duration;
@@ -287,8 +291,57 @@ class DslRuntimeServiceTest {
 
     assertThat(outcome.success()).isTrue();
     assertThat(outcome.replayed()).isTrue();
-    assertThat(outcome.value()).isEqualTo(Map.of("runId", "idem-abc", "status", "REPLAYED"));
+    assertThat(outcome.value()).isEqualTo(Map.of(
+            "runId", "idem-abc",
+            "status", "REPLAYED",
+            "originalStatus", "RUNNING"));
     assertThat(outcome.error()).isNull();
+  }
+
+  @Test
+  void runReturnsKeyReusedOutcomeWhenLauncherReportsFingerprintMismatch() {
+    doReturn(Result.failure(new IdempotencyKeyReusedException("idem-abc")))
+            .when(dslRuntime).run(eq("P"), any());
+
+    RuntimeOutcome outcome = service.run("P", new DslRequest("input", null), "req-8", "idem-abc");
+
+    assertThat(outcome.success()).isFalse();
+    assertThat(outcome.replayed()).isFalse();
+    assertThat(outcome.error().getCode()).isEqualTo("IDEMPOTENCY_KEY_REUSED");
+    assertThat(outcome.error().getRunId()).isEqualTo("idem-abc");
+  }
+
+  @Test
+  void runIncludesIdempotencyMetadataInContext() {
+    doReturn(Result.success("output")).when(dslRuntime).run(eq("P"), any());
+
+    service.run("P", new DslRequest("input", null), "req-meta", "idem-abc", "corr-1",
+            "print-1", "api-key");
+
+    ArgumentCaptor<Context<?>> captor = ArgumentCaptor
+            .forClass(Context.class);
+    verify(dslRuntime).run(eq("P"), captor.capture());
+    assertThat(captor.getValue().metadata())
+            .containsEntry(StarterConstants.IDEMPOTENCY_FINGERPRINT_METADATA_KEY, "print-1")
+            .containsEntry(StarterConstants.IDEMPOTENCY_CALLER_METADATA_KEY, "api-key");
+  }
+
+  @Test
+  void runLooksUpOriginalStatusFromRepositoryForReplay() {
+    DslRunRepository repository = mock(DslRunRepository.class);
+    when(repository.findByRunId("idem-abc")).thenReturn(java.util.Optional.of(
+            DslRun.builder().runId("idem-abc").processName("P").status("COMPLETED").build()));
+    service.setDslRunRepository(repository);
+
+    doReturn(Result.failure(new IdempotentReplayException("idem-abc")))
+            .when(dslRuntime).run(eq("P"), any());
+
+    RuntimeOutcome outcome = service.run("P", new DslRequest("input", null), "req-8", "idem-abc");
+
+    assertThat(outcome.value()).isEqualTo(Map.of(
+            "runId", "idem-abc",
+            "status", "REPLAYED",
+            "originalStatus", "COMPLETED"));
   }
 
   @Test

@@ -28,6 +28,7 @@ import cbs.nova.starter.logging.LoggingExecutionListener;
 import cbs.nova.starter.reporting.HierarchyDiagramRenderer;
 import cbs.nova.starter.service.DslRuntimeService;
 import cbs.nova.starter.service.InputValidator;
+import cbs.nova.starter.service.RunIdentityResolver;
 import cbs.nova.dsl.jsonschema.JacksonJsonSchemaGenerator;
 import cbs.nova.starter.config.properties.InputValidationProperties;
 import cbs.nova.starter.config.properties.CbsNovaExplainProperties;
@@ -94,7 +95,8 @@ class DslStarterIntegrationTest {
             new JacksonJsonSchemaGenerator(),
             new InputValidationProperties(true),
             Caffeine.newBuilder().build());
-    var handler = new DslRuntimeHandler(service, validator, inputValidator);
+    var handler = new DslRuntimeHandler(service, validator, inputValidator, new ObjectMapper(),
+            new RunIdentityResolver());
     var router = new DslRuntimeRouterConfiguration();
     mockMvc = MockMvcBuilders.routerFunctions(
             router.dslRuntimeRouter(handler,

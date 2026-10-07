@@ -1,5 +1,7 @@
 package cbs.nova.starter.service;
 
+import cbs.nova.starter.core.StarterConstants;
+import cbs.nova.starter.idempotency.IdempotencyKeyReusedException;
 import cbs.nova.starter.idempotency.IdempotentReplayException;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -23,7 +25,10 @@ import cbs.nova.dsl.transaction.TransactionRouting;
 import io.temporal.api.common.v1.WorkflowExecution;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowExecutionAlreadyStarted;
+import io.temporal.client.WorkflowExecutionDescription;
 import io.temporal.client.WorkflowOptions;
+import io.temporal.client.WorkflowStub;
+import io.temporal.api.enums.v1.WorkflowIdReusePolicy;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import tools.jackson.databind.ObjectMapper;
@@ -50,9 +55,7 @@ class TemporalDslProcessLauncherTest {
 
   @Test
   void canRunReturnsTrueOutsideWorkflowThread() {
-    TemporalDslProcessLauncher launcher = new TemporalDslProcessLauncher(
-            mock(WorkflowClient.class), new ObjectMapper(), Duration.ofSeconds(30),
-            Duration.ofSeconds(5));
+    TemporalDslProcessLauncher launcher = launcher(mock(WorkflowClient.class));
     SimpleContext<String> ctx = new SimpleContext<>("body", Map.of(), ExecutionMode.RUN, "rid",
             TransactionRouting.LOCAL, null, null, null, null, null);
 
@@ -61,9 +64,7 @@ class TemporalDslProcessLauncherTest {
 
   @Test
   void canRunReturnsFalseForNonRunMode() {
-    TemporalDslProcessLauncher launcher = new TemporalDslProcessLauncher(
-            mock(WorkflowClient.class), new ObjectMapper(), Duration.ofSeconds(30),
-            Duration.ofSeconds(5));
+    TemporalDslProcessLauncher launcher = launcher(mock(WorkflowClient.class));
 
     assertThat(launcher.canRun(new SimpleContext<>("body", Map.of(), ExecutionMode.PREVIEW, "rid",
             TransactionRouting.LOCAL, null, null, null, null, null))).isFalse();
@@ -85,8 +86,7 @@ class TemporalDslProcessLauncherTest {
             eq(LauncherTestProcess.class), any(WorkflowOptions.class)))
             .thenReturn(impl);
 
-    TemporalDslProcessLauncher launcher = new TemporalDslProcessLauncher(client,
-            new ObjectMapper(), Duration.ofSeconds(30), Duration.ofSeconds(5));
+    TemporalDslProcessLauncher launcher = launcher(client);
     launcher.launch(name, "task-queue-1", null, null, ctx);
 
     ArgumentCaptor<WorkflowOptions> captor = ArgumentCaptor.forClass(WorkflowOptions.class);
@@ -98,6 +98,36 @@ class TemporalDslProcessLauncherTest {
     assertThat(opts.getWorkflowExecutionTimeout()).isEqualTo(Duration.ofSeconds(30));
     assertThat(opts.getWorkflowTaskTimeout()).isEqualTo(Duration.ofSeconds(5));
     assertThat(opts.getRetryOptions().getMaximumAttempts()).isEqualTo(1);
+  }
+
+  @Test
+  void launchSetsRejectDuplicateAndMemoWhenIdempotencyFingerprintPresent() {
+    String name = unique("tl-idem");
+    registerDescriptor(name);
+    String fingerprint = "abc123";
+    SimpleContext<String> ctx = new SimpleContext<>("payload",
+            Map.of(StarterConstants.IDEMPOTENCY_FINGERPRINT_METADATA_KEY, fingerprint),
+            ExecutionMode.RUN, "rid-idem-1", TransactionRouting.LOCAL, null, null, null, null,
+            null);
+    LauncherTestProcessImpl impl = new LauncherTestProcessImpl();
+    impl.handler = req -> "ok";
+
+    WorkflowClient client = mock(WorkflowClient.class);
+    when(client.newWorkflowStub(
+            eq(LauncherTestProcess.class), any(WorkflowOptions.class)))
+            .thenReturn(impl);
+
+    TemporalDslProcessLauncher launcher = launcher(client);
+    launcher.launch(name, "tq", null, null, ctx);
+
+    ArgumentCaptor<WorkflowOptions> captor = ArgumentCaptor.forClass(WorkflowOptions.class);
+    verify(client).newWorkflowStub(eq(LauncherTestProcess.class), captor.capture());
+    WorkflowOptions opts = captor.getValue();
+
+    assertThat(opts.getWorkflowIdReusePolicy())
+            .isEqualTo(WorkflowIdReusePolicy.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE);
+    assertThat(opts.getMemo()).containsEntry(StarterConstants.IDEMPOTENCY_FINGERPRINT_METADATA_KEY,
+            fingerprint);
   }
 
   @Test
@@ -114,8 +144,7 @@ class TemporalDslProcessLauncherTest {
             eq(LauncherTestProcess.class), any(WorkflowOptions.class)))
             .thenReturn(impl);
 
-    TemporalDslProcessLauncher launcher = new TemporalDslProcessLauncher(client,
-            new ObjectMapper(), Duration.ofSeconds(30), Duration.ofSeconds(5));
+    TemporalDslProcessLauncher launcher = launcher(client);
     Result<?> result = launcher.launch(name, "tq", null, null, ctx);
 
     assertThat(result.isSuccess()).isTrue();
@@ -136,8 +165,7 @@ class TemporalDslProcessLauncherTest {
             eq(LauncherTestProcess.class), any(WorkflowOptions.class)))
             .thenReturn(impl);
 
-    TemporalDslProcessLauncher launcher = new TemporalDslProcessLauncher(client,
-            new ObjectMapper(), Duration.ofSeconds(30), Duration.ofSeconds(5));
+    TemporalDslProcessLauncher launcher = launcher(client);
     Result<?> result = launcher.launch(name, "tq", null, null, ctx);
 
     assertThat(result.isSuccess()).isFalse();
@@ -164,8 +192,7 @@ class TemporalDslProcessLauncherTest {
             eq(LauncherTestProcess.class), any(WorkflowOptions.class)))
             .thenReturn(impl);
 
-    TemporalDslProcessLauncher launcher = new TemporalDslProcessLauncher(client,
-            new ObjectMapper(), Duration.ofSeconds(30), Duration.ofSeconds(5));
+    TemporalDslProcessLauncher launcher = launcher(client);
     Result<?> result = launcher.launch(name, "tq", null, null, ctx);
 
     assertThat(result.isSuccess()).isFalse();
@@ -190,8 +217,7 @@ class TemporalDslProcessLauncherTest {
             eq(LauncherTestProcess.class), any(WorkflowOptions.class)))
             .thenReturn(impl);
 
-    TemporalDslProcessLauncher launcher = new TemporalDslProcessLauncher(client,
-            new ObjectMapper(), Duration.ofSeconds(30), Duration.ofSeconds(5));
+    TemporalDslProcessLauncher launcher = launcher(client);
     Result<?> result = launcher.launch(name, "tq", null, ConvertibleRecord.class, ctx);
 
     assertThat(result.isSuccess()).isTrue();
@@ -204,8 +230,7 @@ class TemporalDslProcessLauncherTest {
   @Test
   void launchPropagatesIllegalArgumentExceptionForUnknownProcessName() {
     WorkflowClient client = mock(WorkflowClient.class);
-    TemporalDslProcessLauncher launcher = new TemporalDslProcessLauncher(client,
-            new ObjectMapper(), Duration.ofSeconds(30), Duration.ofSeconds(5));
+    TemporalDslProcessLauncher launcher = launcher(client);
     SimpleContext<String> ctx = new SimpleContext<>("payload", Map.of(), ExecutionMode.RUN,
             "rid-launch-6", TransactionRouting.LOCAL, null, null, null, null, null);
     String missing = unique("missing");
@@ -225,20 +250,6 @@ class TemporalDslProcessLauncherTest {
     // and adding a TestWorkflowEnvironment dependency for one assertion would dominate
     // this unit test's startup cost. The two reachable branches outside a workflow are
     // pinned by canRunReturnsTrueOutsideWorkflowThread and canRunReturnsFalseForNonRunMode.
-  }
-
-  private static void registerDescriptor(String name) {
-    GlobalManager.globalManager().registerGeneratedClass(
-            new GeneratedClassDescriptor(
-                    name, DslType.PROCESS, "1.0", "tq",
-                    LauncherTestProcess.class, LauncherTestProcessImpl.class, null, null, "{}"));
-  }
-
-  private static String unique(String prefix) {
-    return prefix + "-" + UUID.randomUUID();
-  }
-
-  record ConvertibleRecord(int a, String b) {
   }
 
   @Test
@@ -261,8 +272,7 @@ class TemporalDslProcessLauncherTest {
             eq(LauncherTestProcess.class), any(WorkflowOptions.class)))
             .thenReturn(impl);
 
-    TemporalDslProcessLauncher launcher = new TemporalDslProcessLauncher(client,
-            new ObjectMapper(), Duration.ofSeconds(30), Duration.ofSeconds(5));
+    TemporalDslProcessLauncher launcher = launcher(client);
     Result<?> result = launcher.launch(name, "tq", null, null, ctx);
 
     assertThat(result.isSuccess()).isFalse();
@@ -291,13 +301,146 @@ class TemporalDslProcessLauncherTest {
             eq(LauncherTestProcess.class), any(WorkflowOptions.class)))
             .thenReturn(impl);
 
-    TemporalDslProcessLauncher launcher = new TemporalDslProcessLauncher(client,
-            new ObjectMapper(), Duration.ofSeconds(30), Duration.ofSeconds(5));
+    TemporalDslProcessLauncher launcher = launcher(client);
     Result<?> result = launcher.launch(name, "tq", null, null, ctx);
 
     assertThat(result.isSuccess()).isFalse();
     assertThat(result.cause()).isInstanceOf(IdempotentReplayException.class);
     assertThat(((IdempotentReplayException) result.cause()).runId())
             .isEqualTo("rid-launch-replay-cause");
+  }
+
+  @Test
+  void launchReturnsIdempotentReplayWhenStoredFingerprintMatches() {
+    String name = unique("tl-fingerprint-match");
+    registerDescriptor(name);
+    String fingerprint = "stored-print";
+    String runId = "rid-fingerprint-match";
+    SimpleContext<String> ctx = contextWithFingerprint(runId, fingerprint);
+    LauncherTestProcessImpl impl = new LauncherTestProcessImpl();
+    WorkflowExecution execution = WorkflowExecution.newBuilder()
+            .setWorkflowId(runId)
+            .setRunId("run-1")
+            .build();
+    impl.handler = req -> {
+      throw new WorkflowExecutionAlreadyStarted(execution, "WorkflowType", null);
+    };
+
+    WorkflowStub untyped = mock(WorkflowStub.class);
+    WorkflowExecutionDescription description = mock(WorkflowExecutionDescription.class);
+    when(description.getMemo(StarterConstants.IDEMPOTENCY_FINGERPRINT_METADATA_KEY,
+            String.class, String.class)).thenReturn(fingerprint);
+    when(untyped.describe()).thenReturn(description);
+
+    WorkflowClient client = mock(WorkflowClient.class);
+    when(client.newWorkflowStub(eq(LauncherTestProcess.class), any(WorkflowOptions.class)))
+            .thenReturn(impl);
+    when(client.newUntypedWorkflowStub(runId)).thenReturn(untyped);
+
+    TemporalDslProcessLauncher launcher = launcher(client);
+    Result<?> result = launcher.launch(name, "tq", null, null, ctx);
+
+    assertThat(result.isSuccess()).isFalse();
+    assertThat(result.cause()).isInstanceOf(IdempotentReplayException.class);
+    assertThat(((IdempotentReplayException) result.cause()).runId()).isEqualTo(runId);
+  }
+
+  @Test
+  void launchReturnsKeyReusedWhenStoredFingerprintMismatches() {
+    String name = unique("tl-fingerprint-mismatch");
+    registerDescriptor(name);
+    String fingerprint = "request-print";
+    String runId = "rid-fingerprint-mismatch";
+    SimpleContext<String> ctx = contextWithFingerprint(runId, fingerprint);
+    LauncherTestProcessImpl impl = new LauncherTestProcessImpl();
+    WorkflowExecution execution = WorkflowExecution.newBuilder()
+            .setWorkflowId(runId)
+            .setRunId("run-1")
+            .build();
+    impl.handler = req -> {
+      throw new WorkflowExecutionAlreadyStarted(execution, "WorkflowType", null);
+    };
+
+    WorkflowStub untyped = mock(WorkflowStub.class);
+    WorkflowExecutionDescription description = mock(WorkflowExecutionDescription.class);
+    when(description.getMemo(StarterConstants.IDEMPOTENCY_FINGERPRINT_METADATA_KEY,
+            String.class, String.class)).thenReturn("stored-print");
+    when(untyped.describe()).thenReturn(description);
+
+    WorkflowClient client = mock(WorkflowClient.class);
+    when(client.newWorkflowStub(eq(LauncherTestProcess.class), any(WorkflowOptions.class)))
+            .thenReturn(impl);
+    when(client.newUntypedWorkflowStub(runId)).thenReturn(untyped);
+
+    TemporalDslProcessLauncher launcher = launcher(client);
+    Result<?> result = launcher.launch(name, "tq", null, null, ctx);
+
+    assertThat(result.isSuccess()).isFalse();
+    assertThat(result.cause()).isInstanceOf(IdempotencyKeyReusedException.class);
+    assertThat(((IdempotencyKeyReusedException) result.cause()).runId()).isEqualTo(runId);
+  }
+
+  @Test
+  void launchReturnsReplayWhenClosedWorkflowWithSameKeyAndFingerprintIsReSubmitted() {
+    String name = unique("tl-completed-replay");
+    registerDescriptor(name);
+    String fingerprint = "completed-print";
+    String runId = "rid-completed-replay";
+    SimpleContext<String> ctx = contextWithFingerprint(runId, fingerprint);
+    LauncherTestProcessImpl impl = new LauncherTestProcessImpl();
+    impl.handler = req -> "done";
+
+    WorkflowClient client = mock(WorkflowClient.class);
+    when(client.newWorkflowStub(eq(LauncherTestProcess.class), any(WorkflowOptions.class)))
+            .thenReturn(impl);
+
+    TemporalDslProcessLauncher launcher = launcher(client);
+    Result<?> first = launcher.launch(name, "tq", null, null, ctx);
+    assertThat(first.isSuccess()).isTrue();
+    assertThat(first.value()).isEqualTo("done");
+
+    WorkflowExecution execution = WorkflowExecution.newBuilder()
+            .setWorkflowId(runId)
+            .setRunId("run-1")
+            .build();
+    impl.handler = req -> {
+      throw new WorkflowExecutionAlreadyStarted(execution, "WorkflowType", null);
+    };
+
+    WorkflowStub untyped = mock(WorkflowStub.class);
+    WorkflowExecutionDescription description = mock(WorkflowExecutionDescription.class);
+    when(description.getMemo(StarterConstants.IDEMPOTENCY_FINGERPRINT_METADATA_KEY,
+            String.class, String.class)).thenReturn(fingerprint);
+    when(untyped.describe()).thenReturn(description);
+    when(client.newUntypedWorkflowStub(runId)).thenReturn(untyped);
+
+    Result<?> second = launcher.launch(name, "tq", null, null, ctx);
+    assertThat(second.isSuccess()).isFalse();
+    assertThat(second.cause()).isInstanceOf(IdempotentReplayException.class);
+    assertThat(((IdempotentReplayException) second.cause()).runId()).isEqualTo(runId);
+  }
+  private static TemporalDslProcessLauncher launcher(WorkflowClient client) {
+    return new TemporalDslProcessLauncher(client, new ObjectMapper(), Duration.ofSeconds(30),
+            Duration.ofSeconds(5), WorkflowIdReusePolicy.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE);
+  }
+
+  private static SimpleContext<String> contextWithFingerprint(String runId, String fingerprint) {
+    return new SimpleContext<>("payload",
+            Map.of(StarterConstants.IDEMPOTENCY_FINGERPRINT_METADATA_KEY, fingerprint),
+            ExecutionMode.RUN, runId, TransactionRouting.LOCAL, null, null, null, null, null);
+  }
+
+  private static void registerDescriptor(String name) {
+    GlobalManager.globalManager().registerGeneratedClass(
+            new GeneratedClassDescriptor(
+                    name, DslType.PROCESS, "1.0", "tq",
+                    LauncherTestProcess.class, LauncherTestProcessImpl.class, null, null, "{}"));
+  }
+
+  private static String unique(String prefix) {
+    return prefix + "-" + UUID.randomUUID();
+  }
+
+  record ConvertibleRecord(int a, String b) {
   }
 }

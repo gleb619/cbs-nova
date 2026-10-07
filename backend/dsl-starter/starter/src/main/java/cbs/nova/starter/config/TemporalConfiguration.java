@@ -42,6 +42,7 @@ import cbs.nova.starter.tracing.OpenTelemetryContextPropagator;
 import cbs.nova.starter.service.DomainEventPublisher;
 import io.opentelemetry.api.OpenTelemetry;
 import io.temporal.client.WorkflowClient;
+import io.temporal.api.enums.v1.WorkflowIdReusePolicy;
 import io.temporal.client.WorkflowClientOptions;
 import io.temporal.serviceclient.WorkflowServiceStubs;
 import io.temporal.serviceclient.WorkflowServiceStubsOptions;
@@ -168,9 +169,13 @@ public class TemporalConfiguration {
   TemporalProcessLauncher temporalProcessLauncher(
           WorkflowClient workflowClient,
           @Value("${temporal.execution-timeout:30s}") Duration executionTimeout,
-          @Value("${temporal.task-timeout:5s}") Duration taskTimeout) {
+          @Value("${temporal.task-timeout:5s}") Duration taskTimeout,
+          @Value("${cbs.nova.dsl.idempotency.workflow-id-reuse-policy:REJECT_DUPLICATE}") String idempotencyReusePolicy) {
+    String enumName = idempotencyReusePolicy.startsWith("WORKFLOW_ID_REUSE_POLICY_")
+            ? idempotencyReusePolicy
+            : "WORKFLOW_ID_REUSE_POLICY_" + idempotencyReusePolicy;
     return new TemporalDslProcessLauncher(workflowClient, JsonMapper.builder().build(),
-            executionTimeout, taskTimeout);
+            executionTimeout, taskTimeout, WorkflowIdReusePolicy.valueOf(enumName));
   }
 
   @Bean
