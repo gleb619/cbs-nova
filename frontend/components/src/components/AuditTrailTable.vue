@@ -77,7 +77,8 @@ function formatRelativeTime(iso: string): string {
 function outcomeClass(outcome: string): string {
   const normalized = outcome.trim().toUpperCase()
   if (normalized === 'SUCCESS') return 'bg-green-100 text-green-800'
-  if (normalized === 'FAILURE' || normalized === 'FAILED' || normalized === 'ERROR') return 'bg-red-100 text-red-800'
+  if (normalized === 'FAILURE' || normalized === 'FAILED' || normalized === 'ERROR')
+    return 'bg-red-100 text-red-800'
   return 'bg-gray-100 text-gray-800'
 }
 
@@ -156,11 +157,7 @@ function hasDetails(entry: AuditDto): boolean {
     </div>
 
     <div class="flex-1 overflow-auto">
-      <div
-        v-if="loading"
-        class="px-4 py-3 text-sm text-gray-500"
-        data-testid="audit-trail-loading"
-      >
+      <div v-if="loading" class="px-4 py-3 text-sm text-gray-500" data-testid="audit-trail-loading">
         Loading audit trail…
       </div>
       <div v-else-if="error" class="px-4 py-3" data-testid="audit-trail-error">
@@ -191,9 +188,15 @@ function hasDetails(entry: AuditDto): boolean {
               <td class="px-4 py-2 whitespace-nowrap text-gray-500" :title="entry.occurredAt">
                 {{ formatRelativeTime(entry.occurredAt) }}
               </td>
-              <td class="px-2 py-2 text-gray-900" data-testid="audit-trail-actor">{{ entry.actor }}</td>
-              <td class="px-2 py-2 text-gray-900" data-testid="audit-trail-action">{{ entry.action }}</td>
-              <td class="px-2 py-2 text-gray-600 break-all" data-testid="audit-trail-target">{{ entry.target }}</td>
+              <td class="px-2 py-2 text-gray-900" data-testid="audit-trail-actor">
+                {{ entry.actor }}
+              </td>
+              <td class="px-2 py-2 text-gray-900" data-testid="audit-trail-action">
+                {{ entry.action }}
+              </td>
+              <td class="px-2 py-2 text-gray-600 break-all" data-testid="audit-trail-target">
+                {{ entry.target }}
+              </td>
               <td class="px-2 py-2 text-gray-600" data-testid="audit-trail-correlation">
                 {{ entry.correlationId ?? '—' }}
               </td>

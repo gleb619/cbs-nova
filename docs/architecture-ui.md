@@ -124,6 +124,8 @@ The BFF is the only piece of the admin UI that talks to Spring Boot. Its securit
   - **Refresh-token reuse detection** — a proxied 401/403 whose `cbs_rt` matches `cbs_rt_prev` (a replay of the just-rotated token) clears the session and fails the request `401 session revoked`. This is a per-node, ~120s marker — it catches replay-right-after-rotation, not a distributed or long-window attack (a server-side token store is out of scope).
   - Otherwise, on a backend 401/403 the BFF attempts one token refresh using `cbs_rt` and retries the original request.
 
+- **Client-side output sanitization (T922)** — Markdown produced by `marked` and SVG diagrams produced by Mermaid are treated as untrusted author input. `frontend/components/src/utils/sanitizeHtml.ts` removes scripts, event handlers, `javascript:` URLs, and dangerous tags before the output reaches any `v-html`. Mermaid is initialized with `securityLevel: 'strict'`. This is defense-in-depth; the canonical security boundary remains the server-side guards that validate and authorize definition writes. Consider pairing with T915 CSP-Report-Only for additional hardening, but do not depend on it.
+
 See [`architecture-backend.md`](architecture-backend.md#security) for the backend security layer (API key, rate limiting, OIDC resource-server) that the BFF proxies into.
 
 ## Runner panel components (`T153`, `T154`, `T159`, `T161`, `T162`, `T166`)

@@ -17,13 +17,15 @@ export function __resetMermaidRenderForTests(): void {
 }
 
 export function useMermaidRender() {
-  async function ensureMermaid(): Promise<((definition: string, id: string) => Promise<string>) | null> {
+  async function ensureMermaid(): Promise<
+    ((definition: string, id: string) => Promise<string>) | null
+  > {
     if (unavailable.value) return null
     if (renderCache) return renderCache
     try {
       const mermaid = (await import('mermaid')).default
       moduleCache = mermaid
-      mermaid.initialize({ startOnLoad: false, securityLevel: 'loose', theme: 'default' })
+      mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', theme: 'default' })
       renderCache = async (definition, id) => {
         // biome-ignore lint/style/noNonNullAssertion: module is loaded inside ensureMermaid
         const { svg } = await moduleCache!.render(id, definition)

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUpdated, ref, watch } from 'vue'
 import { useMermaidRender } from '../../composables/useMermaidRender'
+import { sanitizeHtml } from '../../utils/sanitizeHtml'
 
 defineOptions({ name: 'MermaidDiagram' })
 
@@ -28,7 +29,7 @@ async function draw() {
   }
   try {
     const svg = await render(props.definition, diagramId.value)
-    svgHtml.value = svg
+    svgHtml.value = sanitizeHtml(svg, 'svg')
     failed.value = false
     await nextTick()
     preserveSvgSize()
@@ -67,17 +68,16 @@ onUpdated(() => {
   void draw()
 })
 
-watch(() => props.definition, () => {
-  void draw()
-})
+watch(
+  () => props.definition,
+  () => {
+    void draw()
+  },
+)
 </script>
 
 <template>
-  <div
-    ref="containerRef"
-    class="mermaid-diagram overflow-auto"
-    data-testid="mermaid-diagram"
-  >
+  <div ref="containerRef" class="mermaid-diagram overflow-auto" data-testid="mermaid-diagram">
     <div v-if="svgHtml" class="mermaid-diagram-svg" v-html="svgHtml" />
     <pre
       v-else-if="failed || unavailable"
@@ -86,4 +86,3 @@ watch(() => props.definition, () => {
     >{{ definition }}</pre>
   </div>
 </template>
-

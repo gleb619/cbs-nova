@@ -42,7 +42,9 @@ describe('HierarchyReportView', () => {
     expect(wrapper.find('[data-testid="hierarchy-summary-description"]').text()).toBe(
       'Process: ProcessA',
     )
-    expect(wrapper.find('[data-testid="hierarchy-summary-compensation"]').text()).toBe('compensation')
+    expect(wrapper.find('[data-testid="hierarchy-summary-compensation"]').text()).toBe(
+      'compensation',
+    )
     expect(wrapper.find('[data-testid="hierarchy-summary-calls"]').text()).toBe('5 total calls')
     expect(wrapper.find('[data-testid="hierarchy-summary-errors"]').exists()).toBe(false)
   })

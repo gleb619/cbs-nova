@@ -1,8 +1,8 @@
 import { mount } from '@vue/test-utils'
-import { nextTick } from 'vue'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import MarkdownBodyEditor from '../MarkdownBodyEditor.vue'
+import { nextTick } from 'vue'
 import { parseBlocks, resetBlockIdCounter, serializeBlocks } from '../../../utils/markdownBlocks'
+import MarkdownBodyEditor from '../MarkdownBodyEditor.vue'
 
 const mountEditor = (props: Record<string, unknown> = {}) =>
   mount(MarkdownBodyEditor, { props: { body: '', ...props } })

@@ -90,6 +90,9 @@ importers:
 
   components:
     dependencies:
+      dompurify:
+        specifier: 3.4.16
+        version: 3.4.16
       marked:
         specifier: ^18.0.14
         version: 18.0.14
