@@ -180,6 +180,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/dsl/definitions/{name}/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List captured source snapshots of a definition, newest first */
+        get: operations["listDefinitionVersions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/dsl/definitions/{name}/versions/{hash}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a definition source snapshot by content hash with a unified diff against the previous snapshot */
+        get: operations["getDefinitionVersion"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/dsl/diagnostics": {
         parameters: {
             query?: never;
@@ -746,6 +780,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/dsl/helpers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get DSL helper catalog */
+        get: operations["getHelperCatalog"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/dsl/hierarchy/{name}": {
         parameters: {
             query?: never;
@@ -1032,6 +1083,23 @@ export interface paths {
         put?: never;
         /** Execute a DSL process with full side effects */
         post: operations["runDsl"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/dsl/runs/{runId}/rerun": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Re-run a terminal DSL execution from its stored input */
+        post: operations["rerunExecution"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1449,23 +1517,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/dsl/runs/{runId}/rerun": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Re-run a terminal DSL execution from its stored input */
-        post: operations["rerunExecution"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1574,6 +1625,15 @@ export interface components {
             type?: string;
             version?: string;
         };
+        DefinitionSnapshotDto: {
+            capturedAt?: string;
+            capturedBy?: string;
+            contentHash?: string;
+            diff?: string;
+            name?: string;
+            sourceText?: string;
+            version?: string;
+        };
         DefinitionTestCase: {
             caseName?: string;
             expectedOutput?: components["schemas"]["PreviewReport"];
@@ -1599,6 +1659,12 @@ export interface components {
             passed?: number;
             /** Format: int32 */
             total?: number;
+        };
+        DefinitionVersionDto: {
+            capturedAt?: string;
+            capturedBy?: string;
+            contentHash?: string;
+            version?: string;
         };
         DraftRequest: {
             name?: string;
@@ -1711,6 +1777,12 @@ export interface components {
             fetched?: boolean;
             remoteHead?: string;
         };
+        HelperCatalogEntry: {
+            description?: string;
+            inputType?: string;
+            name?: string;
+            outputType?: string;
+        };
         HierarchyReport: {
             astTree?: components["schemas"]["CallNode"];
             callCounts?: {
@@ -1743,6 +1815,7 @@ export interface components {
             reloadError?: string;
             reloaded?: boolean;
             results?: components["schemas"]["ImportEntryResult"][];
+            rolledBack?: boolean;
         };
         ImportEntryResult: {
             message?: string;
@@ -1869,6 +1942,10 @@ export interface components {
             status_url?: string | null;
             target: string;
         };
+        RunStartResponse: {
+            rerunOf: string;
+            runId: string;
+        };
         /** @description One entry of a preview-mode signal timeline. A seeded signal becomes visible at the zero-based await-point index given by deliverAt (absent or 0 = visible from the start of the preview). Preview resolves signals from this timeline instead of waiting on wall-clock time. */
         SeededSignal: {
             /** Format: int32 */
@@ -1987,10 +2064,6 @@ export interface components {
             offset?: number;
             /** Format: int64 */
             total?: number;
-        };
-        RunStartResponse: {
-            runId: string;
-            rerunOf: string;
         };
     };
     responses: never;
@@ -2368,6 +2441,64 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DefinitionTestRunReport"];
+                };
+            };
+        };
+    };
+    listDefinitionVersions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DefinitionVersionDto"][];
+                };
+            };
+            /** @description Unknown definition */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    getDefinitionVersion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DefinitionSnapshotDto"];
+                };
+            };
+            /** @description Unknown definition or hash */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
@@ -3753,6 +3884,26 @@ export interface operations {
             };
         };
     };
+    getHelperCatalog: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Helper catalog */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HelperCatalogEntry"];
+                };
+            };
+        };
+    };
     hierarchyDsl: {
         parameters: {
             query?: never;
@@ -4328,6 +4479,46 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ValidationErrorsResponse"];
+                };
+            };
+        };
+    };
+    rerunExecution: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                runId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The new run started from the stored input */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunStartResponse"];
+                };
+            };
+            /** @description No run with the given id or the definition is no longer published */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The source run is not terminal */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
@@ -5172,46 +5363,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WebhookDeliveryInfo"][];
-                };
-            };
-        };
-    };
-    rerunExecution: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                runId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description The new run started from the stored input */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RunStartResponse"];
-                };
-            };
-            /** @description No run with the given id or the definition is no longer published */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description The source run is not terminal */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };

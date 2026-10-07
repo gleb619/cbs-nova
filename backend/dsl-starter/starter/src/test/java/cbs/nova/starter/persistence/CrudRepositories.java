@@ -36,6 +36,7 @@ public final class CrudRepositories {
           NotificationRuleFiringCrudRepository notificationRuleFirings,
           ChangeRequestCrudRepository changeRequests,
           CompileDiagnosticCrudRepository compileDiagnostics,
+          DslDefinitionSnapshotCrudRepository dslDefinitionSnapshots,
           ExtendedSelectQueryExecutor dslQueries) {
   }
 
@@ -57,6 +58,7 @@ public final class CrudRepositories {
             context.getBean(NotificationRuleFiringCrudRepository.class),
             context.getBean(ChangeRequestCrudRepository.class),
             context.getBean(CompileDiagnosticCrudRepository.class),
+            context.getBean(DslDefinitionSnapshotCrudRepository.class),
             new ExtendedSelectQueryExecutor(new NamedParameterJdbcTemplate(dataSource)));
   }
 
@@ -69,7 +71,8 @@ public final class CrudRepositories {
       NotificationRuleCrudRepository.class,
       NotificationRuleFiringCrudRepository.class,
       ChangeRequestCrudRepository.class,
-      CompileDiagnosticCrudRepository.class
+      CompileDiagnosticCrudRepository.class,
+      DslDefinitionSnapshotCrudRepository.class
   }))
   static class CrudRepositoryConfig extends AbstractJdbcConfiguration {
   }

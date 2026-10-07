@@ -41,7 +41,7 @@ class PieceManifestServiceTest {
     assertThat(reload.get().failMode()).isEqualTo("deny");
 
     List<Piece> apiPieces = service.byTarget(new Target.ApiTarget("POST /api/dsl/reload"));
-    assertThat(apiPieces).hasSize(28).extracting(Piece::id)
+    assertThat(apiPieces).hasSize(30).extracting(Piece::id)
             .containsExactlyInAnyOrder("dsl-signal-send", "dsl-preview", "dsl-run", "dsl-explain",
                     "execution-cancel", "execution-rerun", "dsl-reload", "dsl-manifest-reload",
                     "draft-save",
@@ -50,7 +50,7 @@ class PieceManifestServiceTest {
                     "change-request-reject", "file-write", "definition-import", "dsl-promote",
                     "schedule-create", "schedule-delete", "schedule-pause", "schedule-resume",
                     "schedule-trigger", "api-key-create", "api-key-revoke", "vhs-tape-delete",
-                    "vhs-tape-replay");
+                    "vhs-tape-replay", "definition-versions", "definition-version-source");
 
     assertThat(service.findByRoute("POST", "/api/dsl/reload")).isPresent()
             .hasValueSatisfying(p -> assertThat(p.id()).isEqualTo("dsl-reload"));

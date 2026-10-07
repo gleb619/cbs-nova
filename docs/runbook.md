@@ -1758,6 +1758,8 @@ curl -sS 'http://localhost:3000/api/v1/dsl/diagnostics?definition=LoanDsl&limit=
 ```
 
 Returns `PageResponse<CompileDiagnosticDto>`: `{items: [...], total, offset, limit}`.
+
+To see the exact source a `content_hash` was computed over: `curl -sS 'http://localhost:3000/api/v1/dsl/definitions/LoanDsl/versions' | jq` lists captured snapshots, and `curl -sS 'http://localhost:3000/api/v1/dsl/definitions/LoanDsl/versions/<hash>' | jq` returns the stored `sourceText` plus a unified diff against the previous snapshot (T875).
 Items are newest first. Each item carries:
 
 | Field | Type | Meaning |

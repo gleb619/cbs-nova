@@ -66,6 +66,17 @@ const expectedProxies: readonly ExpectedProxy[] = [
     bffPath: '/api/v1/dsl/definitions/{name}/tests/run',
   },
   // DslDefinitionBundleRouterConfiguration
+  // DslDefinitionSnapshotRouterConfiguration (T875)
+  {
+    method: 'GET',
+    backendPath: '/api/dsl/definitions/{name}/versions',
+    bffPath: '/api/v1/dsl/definitions/{name}/versions',
+  },
+  {
+    method: 'GET',
+    backendPath: '/api/dsl/definitions/{name}/versions/{hash}',
+    bffPath: '/api/v1/dsl/definitions/{name}/versions/{hash}',
+  },
   {
     method: 'GET',
     backendPath: '/api/dsl/definitions/export',

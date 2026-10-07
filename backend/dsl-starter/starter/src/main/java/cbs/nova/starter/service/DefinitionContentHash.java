@@ -99,11 +99,25 @@ public final class DefinitionContentHash {
   }
 
   private static String snapshotHash(Map<String, String> sources) {
+    return snapshotHashOf(canonicalSnapshotText(sources));
+  }
+
+  /**
+   * Canonical snapshot payload hashed by {@link #publish}: {@code path\ncontent\n…} over the
+   * {@code TreeMap}-sorted source set. Exposed for T875 so {@code DefinitionSnapshotService} stores
+   * (and hashes) the exact same payload a run's {@code content_hash} was computed from.
+   */
+  public static String canonicalSnapshotText(Map<String, String> sources) {
     Map<String, String> canonical = new TreeMap<>(sources);
     StringBuilder payload = new StringBuilder();
     canonical.forEach((path, content) -> payload.append(path).append('\n')
             .append(content).append('\n'));
-    return sha256Hex(payload.toString().getBytes(StandardCharsets.UTF_8));
+    return payload.toString();
+  }
+
+  /** sha256 (64-char lowercase hex) of a {@link #canonicalSnapshotText} payload. */
+  public static String snapshotHashOf(String canonicalSnapshotText) {
+    return sha256Hex(canonicalSnapshotText.getBytes(StandardCharsets.UTF_8));
   }
 
   private static String sha256Hex(byte[] input) {

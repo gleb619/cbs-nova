@@ -203,6 +203,28 @@ pieces:
         anyOf: [author, operator, admin]
     failMode: deny
 
+  # --- VIEWER: definition source snapshots (T875) — read-only, explicit piece so the role is
+  # pinned in the manifest instead of relying on the GET->VIEWER fallback ---
+  - id: definition-versions
+    target:
+      type: api
+      route: GET /api/dsl/definitions/*/versions
+    roles: [viewer]
+    preCheck:
+      - type: role
+        anyOf: [viewer, runner, author, operator, admin]
+    failMode: deny
+
+  - id: definition-version-source
+    target:
+      type: api
+      route: GET /api/dsl/definitions/*/versions/*
+    roles: [viewer]
+    preCheck:
+      - type: role
+        anyOf: [viewer, runner, author, operator, admin]
+    failMode: deny
+
   # --- OPERATOR: environment promotion / schedule admin / API-key admin ---
   - id: dsl-promote
     target:
