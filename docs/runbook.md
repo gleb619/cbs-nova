@@ -338,6 +338,8 @@ docker compose -f app/docker-compose.yml exec -T postgres \
 - To emit plain SQL instead, drop `-Fc` and restore with `psql -f <file>`.
 - If local VHS is enabled, also copy `cbs.vhs.sink.local.path` to the same backup root.
 
+Or run `make db-backup` to generate the same dumps under `./backups/`.
+
 Schedule the dump with cron. The example below keeps 14 days of dumps and deletes older ones:
 
 ```bash
@@ -378,6 +380,8 @@ Notes:
 - `DROP DATABASE` cannot run inside a transaction; run each as a separate `-c` invocation.
 - `pg_restore -c --if-exists` drops existing objects before recreating them, so it is safe to restore into a freshly created database.
 - If you used plain SQL dumps, replace step 4 with `docker compose -f app/docker-compose.yml exec -T postgres psql -U postgres -d nova -f /path/to/nova.sql`.
+
+Or run `make db-restore FILE=<dump>`; the CLI prints the target database and requires `--yes` confirmation.
 
 ### Post-restore sanity checks
 

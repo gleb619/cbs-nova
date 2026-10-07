@@ -11,8 +11,8 @@ class Docker:
         return Config.COMPOSE_CMD + list(args)
 
     @staticmethod
-    def run(*args: str, capture: bool = False, check: bool = False) -> subprocess.CompletedProcess:
-        return Runner.run(Docker._cmd(*args), capture=capture, check=check)
+    def run(*args: str, capture: bool = False, check: bool = False, text: bool = True) -> subprocess.CompletedProcess:
+        return Runner.run(Docker._cmd(*args), capture=capture, check=check, text=text)
 
     @staticmethod
     def is_stack_running() -> bool:

@@ -3,6 +3,7 @@ import sys
 
 from .commands.ci_local import CiLocalCommand
 from .commands.cve_gate import CveGateCommand
+from .commands.db import DbCommand
 from .commands.dev import DevCommand
 from .commands.doctor import DoctorCommand
 from .commands.format import FormatCommand
@@ -103,6 +104,11 @@ class CLI:
         p = subparsers.add_parser("vhs", help="Manage recorded VHS tapes")
         VhsCommand.register(p)
         p.set_defaults(handler=VhsCommand)
+
+        # DB backup / restore
+        p = subparsers.add_parser("db", help="Postgres backup and restore commands")
+        DbCommand.register(p)
+        p.set_defaults(handler=DbCommand)
 
         # Security / OpenAPI
         p = subparsers.add_parser("cve-scan", help="Check pnpm audit against an allowlist")
