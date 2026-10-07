@@ -18,6 +18,7 @@ import cbs.nova.starter.model.VcsModels.DraftRequest;
 import cbs.nova.starter.model.VcsModels.ImportBundleResult;
 import cbs.nova.starter.model.VcsModels.ImportEntryResult;
 import cbs.nova.starter.service.DslDefinitionBundleService;
+import cbs.nova.starter.service.DslDefinitionBundleService.BundleApplyResult;
 import jakarta.servlet.ServletException;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -128,7 +129,8 @@ class DslDraftHandlerTest {
   void importWithoutDryRunDefaultsToFalseAndAppliesBundle() throws Exception {
     when(reloadHandler.reloadDefinitions()).thenReturn(LoadResult.empty());
     when(bundleService.applyToTarget(eq(sourceDir), any(DefinitionBundle.class)))
-            .thenReturn(List.of(new ImportEntryResult("A", "published", null)));
+            .thenReturn(new BundleApplyResult(
+                    List.of(new ImportEntryResult("A", "published", null)), false));
 
     DefinitionBundle bundle = sampleBundle();
     ServerResponse response = handler.importBundle(postBundle(bundle, null));
@@ -141,6 +143,25 @@ class DslDraftHandlerTest {
     verify(bundleService).applyToTarget(eq(sourceDir), any(DefinitionBundle.class));
     verify(bundleService, never()).diffForImport(any(), any());
     verify(builderClient).flushFiles();
+  }
+
+  @Test
+  void importRollbackSkipsFlushAndFlagsRolledBack() throws Exception {
+    when(bundleService.applyToTarget(eq(sourceDir), any(DefinitionBundle.class)))
+            .thenReturn(new BundleApplyResult(List.of(
+                    new ImportEntryResult("A", "failed", "disk full"),
+                    new ImportEntryResult("B", "skipped", "rolled back")), true));
+
+    DefinitionBundle bundle = sampleBundle();
+    ServerResponse response = handler.importBundle(postBundle(bundle, null));
+
+    assertThat(response.statusCode().value()).isEqualTo(200);
+    ImportBundleResult result = entityOf(response);
+    assertThat(result.rolledBack()).isTrue();
+    assertThat(result.published()).isZero();
+    assertThat(result.failed()).isEqualTo(2);
+    verify(builderClient, never()).flushFiles();
+    verify(builderClient, never()).commit(any());
   }
 
   @Test

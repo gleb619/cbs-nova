@@ -2,6 +2,7 @@ package cbs.nova.starter.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import cbs.nova.starter.repository.DslFileRepository;
 import cbs.nova.starter.builder.DslBuilderClient;
 import cbs.nova.starter.config.properties.CbsNovaCacheProperties;
 import cbs.nova.starter.config.properties.DslBuilderClientProperties;
@@ -82,7 +83,8 @@ class CbsDslPropertyPrefixTest {
             DslSourcePathResolver sourcePathResolver,
             org.springframework.beans.factory.ObjectProvider<DslBuilderClient> builderProvider) {
       return new DslDefinitionBundleService(mapper, Optional.empty(),
-              DslProperties.bundleServiceDefaults(), sourcePathResolver, builderProvider);
+              DslProperties.bundleServiceDefaults(), sourcePathResolver, builderProvider,
+              new DslFileRepository());
     }
 
     @Bean

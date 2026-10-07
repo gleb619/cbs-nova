@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 
 import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.dsl.model.LoadResult;
+import cbs.nova.starter.repository.DslFileRepository;
 import cbs.nova.starter.builder.DslBuilderClient;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.controller.DslDraftHandler;
@@ -162,7 +163,7 @@ class DslDraftApprovalGateTest {
                     providerOfClient, null, null, null),
             mapper,
             new DslDefinitionBundleService(mapper, Optional.empty(), props, sourcePathResolver,
-                    providerOfClient),
+                    providerOfClient, new DslFileRepository()),
             AuditTestSupport.providerOf(audit.service()), providerOfClient, null, null,
             roleResolverProvider(), providerOfBean(sourcePathResolver),
             providerOfBean(gitStatusResolver), providerOfBean(statusResolver), support);

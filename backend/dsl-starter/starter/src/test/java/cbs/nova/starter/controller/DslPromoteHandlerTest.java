@@ -25,6 +25,7 @@ import cbs.nova.starter.model.VcsModels.DraftRequest;
 import cbs.nova.starter.model.VcsModels.ImportEntryResult;
 import cbs.nova.starter.service.DslAuditService;
 import cbs.nova.starter.service.DslDefinitionBundleService;
+import cbs.nova.starter.service.DslDefinitionBundleService.BundleApplyResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -166,8 +167,7 @@ class DslPromoteHandlerTest {
             .andExpect(jsonPath("$.results[2].outcome").value("skipped"))
             .andExpect(jsonPath("$.results[2].message").value("target missing draft base"));
 
-    verify(bundleService, never()).applyToTarget(any(Path.class), any());
-    verify(bundleService, never()).verifyApplied(any(Path.class), any());
+    verify(bundleService, never()).applyAndVerify(any(Path.class), any());
     verifyNoInteractions(auditService);
   }
 
@@ -217,10 +217,11 @@ class DslPromoteHandlerTest {
   void applyMapsPublishedAndFailedCountsFromEntryOutcomes() throws Exception {
     when(bundleService.exportSelected(any(Path.class), nullable(Boolean.class), any()))
             .thenReturn(bundle(entry("A", "process"), entry("B", "process")));
-    when(bundleService.applyToTarget(any(Path.class), any())).thenReturn(List.of(
-            new ImportEntryResult("A", "published", null),
-            new ImportEntryResult("B", "conflict", "target version is newer"),
-            new ImportEntryResult("C", "published", null)));
+    when(bundleService.applyAndVerify(any(Path.class), any())).thenReturn(
+            new BundleApplyResult(List.of(
+                    new ImportEntryResult("A", "published", null),
+                    new ImportEntryResult("B", "conflict", "target version is newer"),
+                    new ImportEntryResult("C", "published", null)), false));
 
     mockMvc.perform(post("/api/dsl/promote")
             .contentType(MediaType.APPLICATION_JSON)
@@ -230,10 +231,37 @@ class DslPromoteHandlerTest {
             .andExpect(jsonPath("$.reloaded").value(false))
             .andExpect(jsonPath("$.published").value(2))
             .andExpect(jsonPath("$.failed").value(1))
+            .andExpect(jsonPath("$.rolledBack").value(false))
             .andExpect(jsonPath("$.results.length()").value(3));
 
-    verify(bundleService).verifyApplied(eq(stagingDir), any(DefinitionBundle.class));
     verify(auditService).record(any(), eq("PROMOTION"), eq("staging"), any(),
+            eq("SUCCESS"), any());
+  }
+
+  @Test
+  void applyRollbackFlagsRolledBackAndAuditsFailure() throws Exception {
+    when(bundleService.exportSelected(any(Path.class), nullable(Boolean.class), any()))
+            .thenReturn(bundle(entry("A", "process"), entry("B", "process")));
+    when(bundleService.applyAndVerify(any(Path.class), any())).thenReturn(
+            new BundleApplyResult(List.of(
+                    new ImportEntryResult("A", "failed", "disk full"),
+                    new ImportEntryResult("B", "skipped", "rolled back")), true));
+
+    mockMvc.perform(post("/api/dsl/promote")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"source\":\"dev\",\"target\":\"staging\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.published").value(0))
+            .andExpect(jsonPath("$.failed").value(2))
+            .andExpect(jsonPath("$.rolledBack").value(true))
+            .andExpect(jsonPath("$.results[0].outcome").value("failed"))
+            .andExpect(jsonPath("$.results[1].outcome").value("skipped"));
+
+    ArgumentCaptor<Object> details = ArgumentCaptor.forClass(Object.class);
+    verify(auditService).record(any(), eq("PROMOTION"), eq("staging"), any(),
+            eq("FAILURE"), details.capture());
+    assertThat(mapper.writeValueAsString(details.getValue())).contains("rolledBack");
+    verify(auditService, never()).record(any(), eq("PROMOTION"), eq("staging"), any(),
             eq("SUCCESS"), any());
   }
 
@@ -241,7 +269,7 @@ class DslPromoteHandlerTest {
   void applyFailureAuditsFailureAndPropagatesAsInternalError() throws Exception {
     when(bundleService.exportSelected(any(Path.class), nullable(Boolean.class), any()))
             .thenReturn(bundle(entry("A", "process")));
-    when(bundleService.applyToTarget(any(Path.class), any()))
+    when(bundleService.applyAndVerify(any(Path.class), any()))
             .thenThrow(new RuntimeException("disk full"));
 
     mockMvc.perform(post("/api/dsl/promote")

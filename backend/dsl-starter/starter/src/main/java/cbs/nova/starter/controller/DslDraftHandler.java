@@ -451,13 +451,34 @@ public class DslDraftHandler {
               .count();
       int skipped = (int) results.stream().filter(r -> "skipped".equals(r.outcome())).count();
       ImportBundleResult result = new ImportBundleResult(true, false, wouldChange, skipped,
-              results, null, null);
+              results, null, null, false);
       log.info("[DSL bundle] dry-run import preview: {} created/updated, {} skipped",
               wouldChange, skipped);
       return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(result);
     }
 
-    List<ImportEntryResult> results = bundleService.applyToTarget(configured.path(), bundle);
+    DslDefinitionBundleService.BundleApplyResult applied = bundleService
+            .applyToTarget(configured.path(), bundle);
+    List<ImportEntryResult> results = applied.results();
+    int published = (int) results.stream()
+            .filter(r -> "published".equals(r.outcome()) || "created".equals(r.outcome()))
+            .count();
+    int failed = results.size() - published;
+    if (applied.rolledBack()) {
+      String error = results.stream()
+              .filter(r -> "failed".equals(r.outcome()))
+              .map(r -> r.name() + ": " + r.message())
+              .findFirst()
+              .orElse("apply rolled back");
+      ImportBundleResult result = new ImportBundleResult(false, false, published, failed,
+              results, null, null, true);
+      support.audit(request, ACTION_DRAFT_BULK_WRITE, bundleTarget(bundle),
+              StarterConstants.OUTCOME_FAILURE,
+              Map.of("count", results.size(), "committed", false, "rolledBack", true,
+                      "error", error));
+      log.warn("[DSL bundle] import rolled back: {}", error);
+      return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(result);
+    }
     support.flushFiles();
 
     List<String> writtenPaths = results.stream()
@@ -483,12 +504,8 @@ public class DslDraftHandler {
     }
 
     ReloadOutcome outcome = reloadOutcome("bundle");
-    int published = (int) results.stream()
-            .filter(r -> "published".equals(r.outcome()) || "created".equals(r.outcome()))
-            .count();
-    int failed = results.size() - published;
     ImportBundleResult result = new ImportBundleResult(false, outcome.reloaded(),
-            published, failed, results, outcome.error(), outcome.diagnostics());
+            published, failed, results, outcome.error(), outcome.diagnostics(), false);
     support.audit(request, ACTION_DRAFT_BULK_WRITE, bundleTarget(bundle),
             StarterConstants.OUTCOME_SUCCESS,
             Map.of("count", results.size(), "committed", committed));

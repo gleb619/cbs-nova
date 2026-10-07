@@ -8,6 +8,7 @@ import cbs.nova.starter.model.VcsModels.DefinitionBundle;
 import cbs.nova.starter.model.VcsModels.DefinitionBundleEntry;
 import cbs.nova.starter.model.VcsModels.DraftRequest;
 import cbs.nova.starter.model.VcsModels.ImportEntryResult;
+import cbs.nova.starter.repository.DslFileRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
@@ -24,6 +25,7 @@ import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -49,6 +51,7 @@ public class DslDefinitionBundleService {
   private final DslProperties dslProperties;
   private final DslSourcePathResolver sourcePathResolver;
   private final ObjectProvider<DslBuilderClient> builderClientProvider;
+  private final DslFileRepository fileRepository;
 
   /**
    * Exports a bundle from the configured DSL workspace. When the target directory is the current
@@ -158,35 +161,39 @@ public class DslDefinitionBundleService {
   }
 
   /**
-   * Writes the bundle's DSL source files into {@code targetDir}. Per-entry failures are reported as
-   * {@code skipped} results and do not abort the remaining entries.
+   * Two-phase atomic apply: every entry is staged to a temp file in its target directory first;
+   * only when all entries staged successfully are they moved into place one by one via
+   * {@code ATOMIC_MOVE}. A failure in phase 1 publishes nothing (staged temp files are discarded);
+   * a failure in phase 2 restores the in-memory pre-images of the entries already moved. Either way
+   * the target is left exactly as before and the result carries {@code rolledBack=true}, with
+   * {@code failed} for the culprit and {@code skipped(rolled back)} for the remaining entries.
+   *
+   * <p>
+   * Cross-file atomicity is best-effort: a filesystem has no multi-file transaction, so if a
+   * pre-image restore itself fails the target can be left partially promoted — such failures are
+   * logged as errors and must be audited.
    */
-  public List<ImportEntryResult> applyToTarget(Path targetDir, DefinitionBundle bundle) {
-    List<ImportEntryResult> results = new ArrayList<>();
-    for (DefinitionBundleEntry entry : bundle.definitions()) {
-      DraftRequest payload = entry == null ? null : entry.definition();
-      if (payload == null || payload.name() == null || payload.name().isBlank()) {
-        results.add(new ImportEntryResult("?", "skipped", "invalid entry: missing or blank name"));
-        continue;
-      }
-      String name = payload.name();
-      Optional<Path> target = resolveTargetPath(targetDir, name);
-      if (target.isEmpty()) {
-        results.add(
-                new ImportEntryResult(name, "skipped", "unknown definition name: no source path"));
-        continue;
-      }
-      try {
-        Path file = target.get();
-        Files.createDirectories(file.getParent());
-        String content = payload.source() == null ? "" : payload.source();
-        Files.writeString(file, content, StandardCharsets.UTF_8);
-        results.add(new ImportEntryResult(name, "published", null));
-      } catch (Exception e) {
-        results.add(new ImportEntryResult(name, "failed", String.valueOf(e.getMessage())));
-      }
+  public BundleApplyResult applyToTarget(Path targetDir, DefinitionBundle bundle) {
+    return applyInternal(targetDir, bundle).result();
+  }
+
+  /**
+   * {@link #applyToTarget} plus the digest check as part of the same transaction: when the
+   * post-apply re-export does not match the bundle digest, pre-images are restored before the
+   * {@code BUNDLE_DIGEST_MISMATCH} exception propagates.
+   */
+  public BundleApplyResult applyAndVerify(Path targetDir, DefinitionBundle bundle) {
+    ApplyExecution execution = applyInternal(targetDir, bundle);
+    if (execution.result().rolledBack()) {
+      return execution.result();
     }
-    return results;
+    try {
+      verifyApplied(targetDir, bundle);
+      return execution.result();
+    } catch (IllegalArgumentException e) {
+      restorePreImages(execution.preImages());
+      throw e;
+    }
   }
 
   public void verifyApplied(Path targetDir, DefinitionBundle bundle) {
@@ -317,6 +324,126 @@ public class DslDefinitionBundleService {
     }
   }
 
+  private ApplyExecution applyInternal(Path targetDir, DefinitionBundle bundle) {
+    List<DefinitionBundleEntry> entries = bundle.definitions();
+    List<ImportEntryResult> results = new ArrayList<>(Collections.nCopies(entries.size(), null));
+    List<StagedEntry> staged = new ArrayList<>();
+    Map<Path, Optional<String>> preImages = new LinkedHashMap<>();
+    // Phase 1: stage every entry to a temp file next to its target and capture pre-images.
+    for (int i = 0; i < entries.size(); i++) {
+      DefinitionBundleEntry entry = entries.get(i);
+      DraftRequest payload = entry == null ? null : entry.definition();
+      if (payload == null || payload.name() == null || payload.name().isBlank()) {
+        results.set(i, new ImportEntryResult("?", "skipped",
+                "invalid entry: missing or blank name"));
+        continue;
+      }
+      String name = payload.name();
+      Optional<Path> target = resolveTargetPath(targetDir, name);
+      if (target.isEmpty()) {
+        results.set(i, new ImportEntryResult(name, "skipped",
+                "unknown definition name: no source path"));
+        continue;
+      }
+      try {
+        Path file = target.get();
+        Files.createDirectories(file.getParent());
+        String content = payload.source() == null ? "" : payload.source();
+        preImages.put(file, Files.isRegularFile(file)
+                ? Optional.of(Files.readString(file, StandardCharsets.UTF_8))
+                : Optional.empty());
+        staged.add(new StagedEntry(i, name, file, stageNextTo(file, content)));
+      } catch (Exception e) {
+        discardStaged(staged);
+        results.set(i, new ImportEntryResult(name, "failed", String.valueOf(e.getMessage())));
+        markRolledBack(entries, i + 1, results);
+        return new ApplyExecution(new BundleApplyResult(results, true), Map.of());
+      }
+    }
+    // Phase 2: publish staged entries one by one; on failure restore pre-images already moved.
+    for (int i = 0; i < staged.size(); i++) {
+      StagedEntry se = staged.get(i);
+      try {
+        DslFileRepository.moveIntoPlace(se.tmp(), se.file());
+        results.set(se.index(), new ImportEntryResult(se.name(), "published", null));
+      } catch (Exception e) {
+        results.set(se.index(), new ImportEntryResult(se.name(), "failed",
+                String.valueOf(e.getMessage())));
+        deleteQuietly(se.tmp());
+        for (int j = i + 1; j < staged.size(); j++) {
+          deleteQuietly(staged.get(j).tmp());
+          StagedEntry remaining = staged.get(j);
+          results.set(remaining.index(), new ImportEntryResult(remaining.name(), "skipped",
+                  "rolled back: apply aborted after earlier failure"));
+        }
+        Map<Path, Optional<String>> moved = new LinkedHashMap<>();
+        for (int j = 0; j < i; j++) {
+          moved.put(staged.get(j).file(), preImages.getOrDefault(staged.get(j).file(),
+                  Optional.empty()));
+        }
+        restorePreImages(moved);
+        return new ApplyExecution(new BundleApplyResult(results, true), Map.of());
+      }
+    }
+    return new ApplyExecution(new BundleApplyResult(results, false), preImages);
+  }
+
+  private Path stageNextTo(Path file, String content) throws IOException {
+    Path tmp = Files.createTempFile(file.getParent(), file.getFileName().toString(), ".tmp");
+    try {
+      Files.writeString(tmp, content, StandardCharsets.UTF_8);
+      return tmp;
+    } catch (IOException e) {
+      Files.deleteIfExists(tmp);
+      throw e;
+    }
+  }
+
+  private void discardStaged(List<StagedEntry> staged) {
+    for (StagedEntry se : staged) {
+      deleteQuietly(se.tmp());
+    }
+    staged.clear();
+  }
+
+  private void markRolledBack(List<DefinitionBundleEntry> entries, int from,
+          List<ImportEntryResult> results) {
+    for (int k = from; k < entries.size(); k++) {
+      DefinitionBundleEntry entry = entries.get(k);
+      DraftRequest payload = entry == null ? null : entry.definition();
+      String name = payload == null || payload.name() == null || payload.name().isBlank()
+              ? "?"
+              : payload.name();
+      if (results.get(k) == null) {
+        results.set(k, new ImportEntryResult(name, "skipped",
+                "rolled back: apply aborted after earlier failure"));
+      }
+    }
+  }
+
+  private void restorePreImages(Map<Path, Optional<String>> preImages) {
+    preImages.forEach((file, preImage) -> {
+      try {
+        if (preImage.isPresent()) {
+          fileRepository.writeAtomic(file, preImage.get());
+        } else {
+          Files.deleteIfExists(file);
+        }
+      } catch (Exception e) {
+        log.error("[DSL bundle] rollback restore failed for {}: {} — target may be left "
+                + "partially promoted; audit required", file, e.getMessage());
+      }
+    });
+  }
+
+  private void deleteQuietly(Path path) {
+    try {
+      Files.deleteIfExists(path);
+    } catch (Exception e) {
+      log.warn("[DSL bundle] failed to discard staged temp file {}: {}", path, e.getMessage());
+    }
+  }
+
   private Optional<Path> resolveTargetPath(Path targetDir, String name) {
     return sourcePathResolver.relativePath(name)
             .map(targetDir::resolve)
@@ -350,6 +477,20 @@ public class DslDefinitionBundleService {
               String v = getClass().getPackage().getImplementationVersion();
               return v != null ? v : "dev";
             });
+  }
+
+  /**
+   * Outcome of a two-phase bundle apply: per-entry results (in bundle order) plus whether a failure
+   * forced a full rollback of the target directory.
+   */
+  public record BundleApplyResult(List<ImportEntryResult> results, boolean rolledBack) {
+  }
+
+  private record StagedEntry(int index, String name, Path file, Path tmp) {
+  }
+
+  private record ApplyExecution(BundleApplyResult result,
+          Map<Path, Optional<String>> preImages) {
   }
 
 }

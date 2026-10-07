@@ -18,6 +18,7 @@ import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.Result;
 import cbs.nova.dsl.model.LoadResult;
 import cbs.nova.dsl.utils.DefinitionLoader;
+import cbs.nova.starter.repository.DslFileRepository;
 import cbs.nova.starter.builder.DslBuilderClient;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.controller.DslDraftHandler;
@@ -98,7 +99,7 @@ class DslDraftResourceTest {
     gitStatusResolver = mock(DslGitStatusResolver.class);
     statusResolver = new DslDefinitionStatusResolver(props, gitStatusResolver, sourcePathResolver);
     bundleService = new DslDefinitionBundleService(mapper, Optional.empty(), props,
-            sourcePathResolver, providerOf(client));
+            sourcePathResolver, providerOf(client), new DslFileRepository());
 
     handler = handler(client);
   }

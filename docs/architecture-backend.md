@@ -116,8 +116,27 @@ created/updated/unchanged/skipped against the target; apply snapshots target his
 published markers, then re-exports the target and fails with `BUNDLE_DIGEST_MISMATCH` unless the
 digests match. Applying requires `Role.OPERATOR` (RBAC) and records a `PROMOTION` row in
 `dsl_audit` with actor, source, target and definition names. The admin UI exposes the workflow on
-the **Promote** page (`/promote`). Cross-host promotion over HTTP and rollback are follow-ups;
+the **Promote** page (`/promote`). Cross-host promotion over HTTP is a follow-up;
 HMAC bundle signing is flagged for `cbs.dsl.bundles.signing-key`.
+
+**Atomicity and failure semantics (T926).** Bundle apply (both environment promotion and the
+`POST /api/dsl/definitions/import` bundle import) is a two-phase, all-or-nothing write:
+
+1. **Stage** — every entry is written to a temp file in its own target directory (via the same
+   temp + `ATOMIC_MOVE` pattern as `DslFileRepository.write`), capturing in-memory pre-images of
+   the files being replaced. A failure here publishes nothing: staged temp files are discarded,
+   the result carries `failed` for the culprit and `skipped(rolled back)` for the rest, and the
+   response/audit are flagged `rolledBack: true` (`OUTCOME_FAILURE`).
+2. **Publish** — staged entries are moved into place one by one with `ATOMIC_MOVE`, so concurrent
+   readers always observe a complete old or new file, never a truncated one. A failure here
+   restores the captured pre-images before returning the same `rolledBack` result shape.
+
+The post-apply digest check (`BUNDLE_DIGEST_MISMATCH`) is part of the same transaction: on
+mismatch the pre-images are restored before the exception propagates. The success path is
+unchanged (fully-applied bundles return the same shape plus the additive `rolledBack: false`).
+Cross-file atomicity is best-effort — a filesystem has no multi-file transaction, so if a
+pre-image restore itself fails the target can be left partially promoted; such failures are
+logged as errors and must be audited.
 
 ## Runtime layers
 

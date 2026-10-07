@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import cbs.nova.starter.repository.DslFileRepository;
 import cbs.nova.starter.builder.DslBuilderClient;
 import cbs.nova.starter.config.properties.CbsNovaWebProperties;
 import cbs.nova.starter.web.RequestBodyLimitFilter;
@@ -81,7 +82,7 @@ class DslPromoteResourceTest {
             ObjectProvider.class);
     when(emptyBuilder.getIfAvailable()).thenReturn(null);
     DslDefinitionBundleService bundleService = new DslDefinitionBundleService(mapper,
-            Optional.empty(), props, sourcePathResolver, emptyBuilder);
+            Optional.empty(), props, sourcePathResolver, emptyBuilder, new DslFileRepository());
     DslPromoteHandler handler = new DslPromoteHandler(
             props,
             bundleService,
@@ -213,7 +214,7 @@ class DslPromoteResourceTest {
     when(emptyBuilder.getIfAvailable()).thenReturn(null);
     DslDefinitionBundleService verifier = new DslDefinitionBundleService(mapper,
             Optional.empty(), DslProperties.bundleServiceDefaults(), sourcePathResolver,
-            emptyBuilder);
+            emptyBuilder, new DslFileRepository());
     var bundle = verifier.export(devDir, false);
     verifier.verifyApplied(stagingDir, bundle);
   }
@@ -290,7 +291,7 @@ class DslPromoteResourceTest {
             ObjectProvider.class);
     when(emptyBuilder.getIfAvailable()).thenReturn(null);
     DslDefinitionBundleService bundleService = new DslDefinitionBundleService(mapper,
-            Optional.empty(), props, sourcePathResolver, emptyBuilder);
+            Optional.empty(), props, sourcePathResolver, emptyBuilder, new DslFileRepository());
     DslPromoteHandler handler = new DslPromoteHandler(props, bundleService,
             mapper, auditProvider());
     MockMvc brokenMvc = mockMvcFor(handler);
