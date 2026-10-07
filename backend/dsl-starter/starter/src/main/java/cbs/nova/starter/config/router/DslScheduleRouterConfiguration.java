@@ -67,6 +67,13 @@ public class DslScheduleRouterConfiguration {
               @ApiResponse(responseCode = "400", description = "Invalid definition name", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
               @ApiResponse(responseCode = "404", description = "Schedule not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
           })),
+      @RouterOperation(path = "/api/dsl/schedules/{definition}/trigger", beanClass = DslScheduleHandler.class, beanMethod = "trigger", method = RequestMethod.POST, operation = @Operation(operationId = "triggerSchedule", summary = "Trigger an out-of-band execution of the Temporal schedule for a DSL definition", tags = {
+          "DSL Schedules"}, responses = {
+              @ApiResponse(responseCode = "200", description = "Schedule triggered", content = @Content(mediaType = "application/json", schema = @Schema(implementation = Map.class))),
+              @ApiResponse(responseCode = "400", description = "Invalid definition name", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+              @ApiResponse(responseCode = "404", description = "Schedule not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+              @ApiResponse(responseCode = "409", description = "Temporal refused the trigger", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+          })),
       @RouterOperation(path = "/api/dsl/schedules/{definition}", beanClass = DslScheduleHandler.class, beanMethod = "delete", method = RequestMethod.DELETE, operation = @Operation(operationId = "deleteSchedule", summary = "Delete the Temporal schedule for a DSL definition", tags = {
           "DSL Schedules"}, responses = {
               @ApiResponse(responseCode = "200", description = "Schedule deleted", content = @Content(mediaType = "application/json", schema = @Schema(implementation = Map.class))),
@@ -87,6 +94,7 @@ public class DslScheduleRouterConfiguration {
             .POST("/api/dsl/schedules/{definition}/pause", handler::pause)
             .POST("/api/dsl/schedules/{definition}/resume", handler::resume)
             .PATCH("/api/dsl/schedules/{definition}", handler::update)
+            .POST("/api/dsl/schedules/{definition}/trigger", handler::trigger)
             .DELETE("/api/dsl/schedules/{definition}", handler::delete)
             .filter(requestBodyLimitFilter)
             .build();

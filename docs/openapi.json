@@ -4305,6 +4305,57 @@
         ]
       }
     },
+    "/api/dsl/schedules/{definition}/trigger": {
+      "post": {
+        "operationId": "triggerSchedule",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Schedule triggered"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid definition name"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Schedule not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Temporal refused the trigger"
+          }
+        },
+        "summary": "Trigger an out-of-band execution of the Temporal schedule for a DSL definition",
+        "tags": [
+          "DSL Schedules"
+        ]
+      }
+    },
     "/api/dsl/signals/{runId}": {
       "post": {
         "operationId": "sendSignal",

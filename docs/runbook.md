@@ -1196,6 +1196,14 @@ curl -sS -X POST http://localhost:3000/api/v1/dsl/schedules/monthly-closing/paus
 
 Returns `200 {"paused":true}`. Resume with `POST /api/v1/dsl/schedules/monthly-closing/resume`.
 
+### Trigger a schedule manually
+
+```bash
+curl -sS -X POST http://localhost:3000/api/v1/dsl/schedules/monthly-closing/trigger
+```
+
+Returns `200 {"triggered":true,"definition":"monthly-closing"}`. This starts an out-of-band workflow execution through the schedule action; the schedule does **not** need to be unpaused to trigger.
+
 ### Common failure cases
 
 | Symptom | HTTP | Cause | Fix |

@@ -3,7 +3,7 @@ import { useSchedules } from '@cbs/admin-ui-plugin/composables/useSchedules'
 import { DslScheduleList } from '@cbs/components'
 import { onMounted } from 'vue'
 
-const { schedules, loading, error, pausing, load, create, remove, pause, resume } = useSchedules()
+const { schedules, loading, error, pausing, triggering, load, create, remove, pause, resume, trigger } = useSchedules()
 
 onMounted(() => {
   void load()
@@ -24,10 +24,12 @@ onMounted(() => {
       :loading="loading"
       :error="error"
       :pausing-definitions="pausing"
+      :triggering-definitions="triggering"
       @create="create"
       @delete="remove"
       @pause="pause"
       @resume="resume"
+      @trigger="trigger"
     />
   </div>
 </template>

@@ -239,6 +239,16 @@ pieces:
         anyOf: [operator, admin]
     failMode: deny
 
+  - id: schedule-trigger
+    target:
+      type: api
+      route: POST /api/dsl/schedules/*/trigger
+    roles: [operator]
+    preCheck:
+      - type: role
+        anyOf: [operator, admin]
+    failMode: deny
+
   - id: api-key-create
     target:
       type: api

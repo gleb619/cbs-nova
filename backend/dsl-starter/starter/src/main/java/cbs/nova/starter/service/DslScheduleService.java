@@ -268,6 +268,28 @@ public class DslScheduleService {
    * Resumes (unpauses) the schedule for a definition. If the schedule does not exist, a
    * {@link DefinitionNotFoundException} is thrown so the caller receives a 404.
    */
+  /**
+   * Triggers an out-of-band execution of the schedule for a definition now. This starts a workflow
+   * execution through the same schedule action, regardless of whether the schedule is currently
+   * paused (Temporal still accepts a manual trigger while paused). If the schedule does not exist,
+   * a {@link DefinitionNotFoundException} is thrown so the caller receives a 404. Any other
+   * Temporal failure is mapped to a {@link ScheduleConflictException} so the caller receives a 409
+   * CONFLICT response.
+   */
+  public void trigger(@NonNull String definition) {
+    String scheduleId = scheduleIdFor(definition);
+    ScheduleHandle handle = scheduleClient.getHandle(scheduleId);
+    try {
+      handle.trigger();
+      log.info("[DSL schedules] triggered {}", scheduleId);
+    } catch (Exception e) {
+      if (isNotFound(e)) {
+        throw new DefinitionNotFoundException(definition);
+      }
+      throw new ScheduleConflictException(scheduleId);
+    }
+  }
+
   public void resume(@NonNull String definition, @Nullable String reason) {
     String scheduleId = scheduleIdFor(definition);
     ScheduleHandle handle = scheduleClient.getHandle(scheduleId);
