@@ -9,6 +9,7 @@ include:
   - path: ./compose/orchestration.yml
   - path: ./compose/app.yml
   - path: ./compose/dsl-builder.yml
+  - path: ./compose/drills.yml
   - path: ./compose/gitea.yml
   - path: ./compose/observability.yml
   - path: ./compose/rabbitmq.yml

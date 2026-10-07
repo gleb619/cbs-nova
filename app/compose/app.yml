@@ -14,9 +14,15 @@ services:
     stop_grace_period: 45s
     environment:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
-      TEMPORAL_ADDRESS: temporal:7233
-      SENTRY_DSN: "${BUGSINK_DSN:-}"
+      # --- Dependency routing for drills ---
+      # Defaults keep direct upstream connectivity. To route Temporal through toxiproxy, set
+      # TEMPORAL_ADDRESS=toxiproxy:7233 and restart spring-app.
+      TEMPORAL_ADDRESS: "${TEMPORAL_ADDRESS:-${TEMPORAL_HOST:-temporal}:${TEMPORAL_PORT:-7233}}"
+      DATABASE_URL: "jdbc:postgresql://${POSTGRES_HOST:-postgres}:${POSTGRES_PORT:-5432}/nova"
       KEYCLOAK_URL: "${KEYCLOAK_URL:-}"
+      OIDC_ISSUER_URI: "${OIDC_ISSUER_URI:-}"
+      CBS_HEALTH_TEMPORAL_FAIL_STATUS: "${CBS_HEALTH_TEMPORAL_FAIL_STATUS:-NONE}"
+      SENTRY_DSN: "${BUGSINK_DSN:-}"
       # --- Tracing (default-on in compose; see docs/architecture-backend.md#observability--operations) ---
       # TracingConfiguration (backend/dsl-starter/.../config/TracingConfiguration.java)
       # builds an OpenTelemetry SDK only when one of these two env values is set:

@@ -2347,6 +2347,151 @@ After rotation, the leaked/revoked id shows `revokedAt`; the replacement shows a
 `lastUsedAt` when exercised; audit lists `API_KEY_CREATE` and `API_KEY_REVOKE` rows for the
 rotation. After lockout recovery, a valid stored key returns `200` from `/api/dsl/auth/keys`.
 
+## 12. Outage drills
+
+Reproduce the three highest-impact runbook incidents on demand with Toxiproxy.
+The `drills` profile is **off by default**; enabling it only starts the proxy.
+Route the app through the proxy with the env overrides below, then restart `spring-app`.
+
+### Enable the drill profile
+
+```bash
+cd app
+docker compose up -d
+docker compose --profile drills up -d
+```
+
+### App-side wiring
+
+The defaults keep direct upstream connectivity. To put a dependency behind Toxiproxy,
+override the matching variable(s) and recreate `spring-app`:
+
+| Dependency | Variable(s) | Drill value | Direct default |
+|---|---|---|---|
+| Temporal | `TEMPORAL_ADDRESS` (or `TEMPORAL_HOST` + `TEMPORAL_PORT`) | `toxiproxy:7233` | `temporal:7233` |
+| Postgres | `POSTGRES_HOST` + `POSTGRES_PORT` | `toxiproxy` / `5432` | `postgres` / `5432` |
+| Keycloak (OIDC) | `SPRING_PROFILES_ACTIVE=production` + `OIDC_ISSUER_URI` | `http://toxiproxy:8080/realms/cbs-nova` | `http://keycloak:8080/realms/cbs-nova` |
+| Readiness gating | `CBS_HEALTH_TEMPORAL_FAIL_STATUS` | `DOWN` | `NONE` |
+
+Apply a wiring change:
+
+```bash
+export TEMPORAL_ADDRESS=toxiproxy:7233 CBS_HEALTH_TEMPORAL_FAIL_STATUS=DOWN
+docker compose -f app/docker-compose.yml --profile drills up -d --force-recreate spring-app
+```
+
+### Recipe 1 — Temporal cutoff
+
+Inject an upstream timeout toxic that drops all gRPC traffic to Temporal:
+
+```bash
+docker compose -f app/docker-compose.yml exec toxiproxy /toxiproxy-cli toxic add \
+  -n temporal_cutoff -t timeout -a timeout=0 -u temporal
+```
+
+Expected observable outcome (wait up to one probe interval):
+
+```bash
+# Readiness reports DOWN because CBS_HEALTH_TEMPORAL_FAIL_STATUS is DOWN
+curl -s http://localhost:8090/actuator/health/readiness | jq .status
+
+# The dsl_temporal_reachable gauge flips to 0
+curl -s http://localhost:8090/actuator/prometheus | grep dsl_temporal_reachable
+```
+
+Prometheus rule `CbsNovaTemporalUnreachable` fires after its 2-minute `for` window.
+Verify the alert reached Alertmanager (T858):
+
+```bash
+curl -s http://localhost:9093/api/v2/alerts | jq '.[] | {alertname, status}'
+```
+
+Restore:
+
+```bash
+docker compose -f app/docker-compose.yml exec toxiproxy /toxiproxy-cli toxic delete -n temporal_cutoff temporal
+```
+
+Recovery checks: `/actuator/health/readiness` returns `UP`, `dsl_temporal_reachable`
+reports `1`, and the alert resolves in Alertmanager.
+
+### Recipe 2 — Postgres latency
+
+Add a downstream latency toxic that delays every Postgres packet by 2 seconds:
+
+```bash
+docker compose -f app/docker-compose.yml exec toxiproxy /toxiproxy-cli toxic add \
+  -n postgres_latency -t latency -a latency=2000 -a jitter=0 -d postgres
+```
+
+Expected observable outcome:
+
+```bash
+# Hikari active/pending climb while requests wait
+# (pool-name NovaHikariPool is exposed as tag `pool`)
+curl -s http://localhost:8090/actuator/prometheus | \
+  grep -E 'hikaricp_connections_(active|pending|idle|max)'
+
+# Postgres-side view from incident #9 confirms aged active rows
+# without any crashed container
+docker exec -i $(docker ps -qf name=postgres) psql -U nova -d nova -c \
+  "SELECT state, count(*) FROM pg_stat_activity WHERE datname='nova' GROUP BY state;"
+```
+
+No data loss: writes still commit; DSL runs complete slower.
+
+Restore:
+
+```bash
+docker compose -f app/docker-compose.yml exec toxiproxy /toxiproxy-cli toxic delete -n postgres_latency postgres
+```
+
+Recovery checks: Hikari active/pending return to baseline, `pg_stat_activity` has no
+aged active rows, and a fresh `POST /api/dsl/run/<name>` succeeds.
+
+### Recipe 3 — Keycloak cutoff
+
+Prerequisite: the default stack has OIDC **off**. Switch to the `production` profile
+and point the issuer at Toxiproxy before recreating the app:
+
+```bash
+export SPRING_PROFILES_ACTIVE=production OIDC_ISSUER_URI=http://toxiproxy:8080/realms/cbs-nova
+docker compose -f app/docker-compose.yml --profile drills up -d --force-recreate spring-app
+```
+
+Acquire a token while Keycloak is healthy, then add an upstream timeout toxic:
+
+```bash
+TOKEN=$(curl -s -X POST http://localhost:8080/realms/cbs-nova/protocol/openid-connect/token \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  -d 'grant_type=client_credentials' \
+  -d 'client_id=cbs-nova-bff' \
+  -d 'client_secret=change_me_in_production' | jq -r '.access_token')
+
+docker compose -f app/docker-compose.yml exec toxiproxy /toxiproxy-cli toxic add \
+  -n keycloak_cutoff -t timeout -a timeout=0 -u keycloak
+```
+
+Expected observable outcome:
+
+```bash
+# OIDC-protected routes fail because the JWT decoder cannot reach Keycloak
+curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $TOKEN" \
+  http://localhost:8090/api/dsl/definitions
+# Anonymous health and springdoc/Swagger paths remain reachable
+curl -s http://localhost:8090/actuator/health/liveness | jq .status
+```
+
+Restore:
+
+```bash
+docker compose -f app/docker-compose.yml exec toxiproxy /toxiproxy-cli toxic delete -n keycloak_cutoff keycloak
+```
+
+Recovery check: fetch a fresh token and call `/api/dsl/definitions` — it returns `200`.
+
+---
+
 ## Maintaining this runbook
 
 Every new ops-relevant change (a scheduled job, a new failure mode, a new external dependency)

@@ -15,6 +15,7 @@ This directory contains the split Compose domain files used by `../docker-compos
 | `observability.yml` | Grafana, Loki, Jaeger, Prometheus, OpenTelemetry Collector |
 | `rabbitmq.yml` | RabbitMQ broker (AMQP `5672`, management UI `15672`) for the `amqpPublish` @Helper demo |
 | `quality.yml` | SonarQube and OWASP Dependency-Track for local code quality and SBOM analysis |
+| `drills.yml` | Toxiproxy chaos-engineering profile for dependency outage drills |
 
 ## Run everything
 
