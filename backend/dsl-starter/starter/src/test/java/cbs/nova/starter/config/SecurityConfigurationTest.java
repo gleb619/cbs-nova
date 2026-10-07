@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import cbs.nova.starter.config.properties.CbsSecurityOidcProperties;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -182,6 +183,44 @@ class SecurityConfigurationTest {
       mockMvc.perform(get("/api/dsl/objects/search"))
               .andExpect(status().isUnauthorized())
               .andExpect(header().exists(HttpHeaders.WWW_AUTHENTICATE));
+    }
+
+    @Test
+    void defaultProtectedPathsCoverTheEntireApiSurface() {
+      CbsSecurityOidcProperties properties = context.getBean(CbsSecurityOidcProperties.class);
+      assertThat(properties.protectedPaths())
+              .as("T923 secure-by-default: the whole /api surface requires a Bearer JWT")
+              .containsExactly("/api/**");
+      assertThat(properties.permitAllPaths())
+              .as("only actuator health stays anonymous by default")
+              .containsExactly("/actuator/health/**");
+    }
+
+    @Test
+    void anonymousVhsAndWebhookReadsAreChallengedWith401() throws Exception {
+      // Security runs before routing, so the 401 proves the filter chain covers these paths even
+      // when the conditional VHS/webhook routers are not registered in this slice.
+      assertThat(httpGet("/api/v1/vhs/tapes").statusCode())
+              .as("GET /api/v1/vhs/tapes must require a Bearer JWT when OIDC is enabled")
+              .isEqualTo(401);
+      assertThat(httpGet("/api/v1/vhs/tapes/abc").statusCode())
+              .as("GET /api/v1/vhs/tapes/{runId} must require a Bearer JWT when OIDC is enabled")
+              .isEqualTo(401);
+      assertThat(httpGet("/api/webhooks/deliveries").statusCode())
+              .as("GET /api/webhooks/deliveries must require a Bearer JWT when OIDC is enabled")
+              .isEqualTo(401);
+    }
+
+    @Test
+    void registeredApiRoutesLeaveNoUnprotectedGap() {
+      OidcProtectedPathAudit audit = context.getBean(OidcProtectedPathAudit.class);
+      assertThat(audit.collectRegisteredApiRoutes())
+              .as("runtime audit must discover annotation-mapped controllers (SSE) too")
+              .contains("/api/executions/{id}/events");
+      assertThat(audit.findUnprotectedApiRoutes())
+              .as("every registered /api/** route must be covered by protected-paths"
+                      + " (or documented permit-all-paths) when OIDC uses the defaults")
+              .isEmpty();
     }
 
     private HttpResponse<String> httpGet(String path) throws Exception {

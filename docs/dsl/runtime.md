@@ -334,8 +334,10 @@ The BFF exposes the same routes under `/api/v1/dsl/definitions/export` and
   `401 UNAUTHORIZED` with a JSON `ErrorResponse`.
 - **OIDC / JWT** — Setting `cbs.security.oidc.enabled=true` (default `false`) switches from the
   default permissive filter chain to a JWT resource-server. By default the protected path patterns
-  are `/api/dsl/**` and `/api/executions/**`; every request under those paths must carry a valid
-  `Authorization: Bearer <jwt>`. `permitAllPaths` defaults to `/actuator/health/**`. Configure
+  are `/api/**` (since T923: the whole REST surface, including `/api/v1/vhs/**` and
+  `/api/webhooks/**`); every request under those paths must carry a valid
+  `Authorization: Bearer <jwt>`. `permitAllPaths` defaults to `/actuator/health/**`; non-`/api`
+  paths (root index, springdoc) stay public. Configures
   `spring.security.oauth2.resourceserver.jwt.issuer-uri` (or `jwk-set-uri`) for the JWT decoder.
 - **Rate limiting** — Setting `cbs.security.ratelimit.enabled=true` (default `false`) enables an
   in-memory token-bucket rate limiter keyed by client IP. Defaults: capacity `20`, refill
