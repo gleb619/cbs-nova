@@ -47,6 +47,15 @@ Class: `CbsNovaCacheProperties` (record). Centralised Caffeine cache tuning. Cac
 | `cbs.nova.cache.overrides.<name>.ttl` | `Duration` | `PT1H` | TTL for the named cache. |
 | `cbs.nova.cache.overrides.<name>.max-size` | `long` | `10000` | Max entry count for the named cache (`@Min(1)`). |
 
+### `cbs.nova.dsl.idempotency`
+
+Read via `@Value` in `TemporalConfiguration`. Controls `Idempotency-Key` dedup of `POST /api/dsl/run/{name}`.
+See `docs/dsl/runtime.md` (Idempotency).
+
+| Key | Type | Default | Effect |
+|-----|------|---------|--------|
+| `cbs.nova.dsl.idempotency.workflow-id-reuse-policy` | `String` | `REJECT_DUPLICATE` | Temporal `WorkflowIdReusePolicy` for keyed runs: `REJECT_DUPLICATE` or `ALLOW_DUPLICATE_FAILED_ONLY`. |
+
 ### `cbs.nova.preview`
 
 Class: `CbsNovaPreviewProperties` (record). Preview (dry-run) execution limits, call-tree depth and result cache.
