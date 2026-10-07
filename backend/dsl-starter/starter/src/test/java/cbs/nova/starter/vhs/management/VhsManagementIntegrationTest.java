@@ -9,6 +9,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import cbs.nova.starter.AuditTestSupport;
+import cbs.nova.starter.config.properties.CbsDslRedactionProperties;
+import cbs.nova.starter.security.JsonRedactor;
 import cbs.nova.starter.config.properties.CbsNovaWebProperties;
 import cbs.nova.starter.web.RequestBodyLimitFilter;
 import cbs.nova.starter.config.properties.CbsVhsProperties;
@@ -54,6 +56,7 @@ class VhsManagementIntegrationTest {
   private static RequestBodyLimitFilter requestBodyLimitFilter;
   private MockMvc mockMvc;
   private ObjectMapper objectMapper;
+  private VhsManagementService service;
 
   @BeforeEach
   void setUp() {
@@ -68,9 +71,9 @@ class VhsManagementIntegrationTest {
 
     LocalFileTapeStore store = new LocalFileTapeStore(properties, objectMapper);
     ObjectProvider<VhsReplayJob> replayProvider = mock(ObjectProvider.class);
-    VhsManagementService service = new VhsManagementService(store, replayProvider);
+    service = new VhsManagementService(store, replayProvider);
     VhsManagementHandler handler = new VhsManagementHandler(service, null, objectMapper,
-            AuditTestSupport.emptyProvider());
+            AuditTestSupport.emptyProvider(), JsonRedactor.disabled());
     VhsManagementRouterConfiguration router = new VhsManagementRouterConfiguration();
 
     AnnotationConfigApplicationContext adviceContext = new AnnotationConfigApplicationContext();
@@ -151,8 +154,60 @@ class VhsManagementIntegrationTest {
             .andExpect(jsonPath("$.code").value("NOT_FOUND"));
   }
 
-  private void writeTape(String runId, String route, String correlationId, Instant recordedAt,
+  @Test
+  void downloadRedactsTapeBodyButLeavesFileOnDiskUnchanged() throws Exception {
+    Path file = writeTape("run-redact", "Ping", "corr-redact", Instant.now(), 1,
+            Map.of("password", "secret"));
+
+    JsonRedactor redactor = new JsonRedactor(objectMapper,
+            new CbsDslRedactionProperties(true, java.util.List.of(), "***", java.util.List.of(),
+                    10_000_000));
+    VhsManagementHandler redactedHandler = new VhsManagementHandler(service, null, objectMapper,
+            AuditTestSupport.emptyProvider(), redactor);
+    MockMvc redactedMvc = buildMockMvc(redactedHandler);
+
+    MvcResult result = redactedMvc.perform(get("/api/v1/vhs/tapes/run-redact"))
+            .andExpect(status().isOk())
+            .andExpect(content().contentType("application/x-jsonl"))
+            .andReturn();
+
+    String body = result.getResponse().getContentAsString();
+    assertThat(body).contains("\"password\":\"***\"");
+    assertThat(body).doesNotContain("secret");
+
+    String onDisk = Files.readString(file);
+    assertThat(onDisk).contains("\"password\":\"secret\"");
+    assertThat(onDisk).doesNotContain("\"password\":\"***\"");
+  }
+
+  private MockMvc buildMockMvc(VhsManagementHandler handler) {
+    VhsManagementRouterConfiguration router = new VhsManagementRouterConfiguration();
+
+    AnnotationConfigApplicationContext adviceContext = new AnnotationConfigApplicationContext();
+    adviceContext.registerBean(DslExceptionHandler.class,
+            () -> new DslExceptionHandler(new DefaultDslExceptionMapper()));
+    adviceContext.refresh();
+
+    ExceptionHandlerExceptionResolver exceptionResolver = new ExceptionHandlerExceptionResolver();
+    exceptionResolver.setApplicationContext(adviceContext);
+    exceptionResolver.setMessageConverters(List.of(new JacksonJsonHttpMessageConverter()));
+    exceptionResolver.afterPropertiesSet();
+
+    return MockMvcBuilders
+            .routerFunctions(router.vhsManagementRouter(handler, requestBodyLimitFilter))
+            .setMessageConverters(new StringHttpMessageConverter(),
+                    new JacksonJsonHttpMessageConverter())
+            .setHandlerExceptionResolvers(exceptionResolver)
+            .build();
+  }
+
+  private Path writeTape(String runId, String route, String correlationId, Instant recordedAt,
           int eventCount) throws IOException {
+    return writeTape(runId, route, correlationId, recordedAt, eventCount, null);
+  }
+
+  private Path writeTape(String runId, String route, String correlationId, Instant recordedAt,
+          int eventCount, Map<String, Object> extraTrailerFields) throws IOException {
     String timestamp = TIMESTAMP_FORMATTER.format(recordedAt);
     String safeRunId = runId.replace('/', '_');
     String safeCorr = correlationId == null ? "none" : correlationId.replace('/', '_');
@@ -192,7 +247,12 @@ class VhsManagementIntegrationTest {
     trailer.put("event_type", "tape_closed");
     trailer.put("timestamp", Instant.now().toString());
     trailer.put("relative_ms", eventCount * 10L);
-    trailer.put("output", Map.of("event_count", eventCount));
+    Map<String, Object> trailerOutput = new HashMap<>();
+    trailerOutput.put("event_count", eventCount);
+    if (extraTrailerFields != null) {
+      trailerOutput.putAll(extraTrailerFields);
+    }
+    trailer.put("output", trailerOutput);
     trailer.put("timing", new java.util.HashMap<String, Object>() {
       {
         put("started_at", null);
@@ -204,5 +264,6 @@ class VhsManagementIntegrationTest {
     trailer.put("metadata", Map.of());
     Files.writeString(file, objectMapper.writeValueAsString(trailer) + "\n",
             java.nio.file.StandardOpenOption.APPEND);
+    return file;
   }
 }

@@ -3,15 +3,19 @@ package cbs.nova.starter.controller;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import cbs.nova.starter.AuditTestSupport;
+import cbs.nova.starter.security.JsonRedactor;
 import cbs.nova.starter.config.router.DslAuditRouterConfiguration;
 import cbs.nova.starter.converter.DefaultDslExceptionMapper;
 import cbs.nova.starter.model.DslAudit;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import cbs.nova.starter.config.properties.CbsDslRedactionProperties;
+import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
@@ -33,7 +37,7 @@ class DslAuditHandlerTest {
   @BeforeEach
   void setUp() {
     audit = AuditTestSupport.h2();
-    DslAuditHandler handler = new DslAuditHandler(audit.service());
+    DslAuditHandler handler = new DslAuditHandler(audit.service(), JsonRedactor.disabled());
     DslAuditRouterConfiguration router = new DslAuditRouterConfiguration();
 
     AnnotationConfigApplicationContext adviceContext = new AnnotationConfigApplicationContext();
@@ -121,6 +125,43 @@ class DslAuditHandlerTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.limit").value(500))
             .andExpect(jsonPath("$.items", hasSize(3)));
+  }
+
+  @Test
+  void listRedactsSensitiveDetailsButLeavesStoredDetailsUnchanged() throws Exception {
+    Instant now = Instant.now();
+    String rawDetails = "{\"password\":\"secret\",\"amount\":100}";
+    audit.append(new DslAudit(null, now, "operator-1", "RUN_RERUN", "target-r",
+            null, "SUCCESS", rawDetails));
+
+    JsonRedactor redactor = new JsonRedactor(new ObjectMapper(),
+            new CbsDslRedactionProperties(true, java.util.List.of(), "***",
+                    java.util.List.of(), 10_000_000));
+    DslAuditHandler redactedHandler = new DslAuditHandler(audit.service(), redactor);
+    DslAuditRouterConfiguration router = new DslAuditRouterConfiguration();
+
+    AnnotationConfigApplicationContext adviceContext = new AnnotationConfigApplicationContext();
+    adviceContext.registerBean(DslExceptionHandler.class,
+            () -> new DslExceptionHandler(new DefaultDslExceptionMapper()));
+    adviceContext.refresh();
+    ExceptionHandlerExceptionResolver exceptionResolver = new ExceptionHandlerExceptionResolver();
+    exceptionResolver.setApplicationContext(adviceContext);
+    exceptionResolver.setMessageConverters(List.of(new JacksonJsonHttpMessageConverter()));
+    exceptionResolver.afterPropertiesSet();
+
+    MockMvc redactedMvc = MockMvcBuilders.routerFunctions(router.dslAuditRouter(redactedHandler))
+            .setMessageConverters(new StringHttpMessageConverter(),
+                    new JacksonJsonHttpMessageConverter())
+            .setHandlerExceptionResolvers(exceptionResolver)
+            .build();
+
+    redactedMvc.perform(get("/api/dsl/audit").param("action", "RUN_RERUN"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.items[0].detailsJson")
+                    .value("{\"password\":\"***\",\"amount\":100}"));
+
+    String stored = audit.service().search("RUN_RERUN", 0, 10).items().get(0).detailsJson();
+    assertThat(stored).contains("\"password\":\"secret\"").doesNotContain("***");
   }
 
   @Test

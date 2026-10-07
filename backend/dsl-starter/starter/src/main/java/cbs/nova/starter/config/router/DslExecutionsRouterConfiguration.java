@@ -32,6 +32,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.servlet.function.RouterFunction;
 import org.springframework.web.servlet.function.RouterFunctions;
 import org.springframework.web.servlet.function.ServerResponse;
+import cbs.nova.starter.security.JsonRedactor;
 import tools.jackson.databind.ObjectMapper;
 
 @Configuration
@@ -44,13 +45,14 @@ public class DslExecutionsRouterConfiguration {
           TemporalDslProcessService temporalDslProcessService,
           TransactionExecutionRepository transactionExecutionRepository,
           RequestQueryConverter requestQueryConverter,
-          ObjectProvider<DslAuditService> auditServiceProvider) {
+          ObjectProvider<DslAuditService> auditServiceProvider,
+          JsonRedactor jsonRedactor) {
     DslRunStatsRepository statsRepository = runRepository instanceof DslRunStatsRepository stats
             ? stats
             : null;
     return new DslExecutionsHandler(runRepository, objectMapper, dslRunCancellationService,
             temporalDslProcessService, statsRepository, transactionExecutionRepository,
-            requestQueryConverter, auditServiceProvider);
+            requestQueryConverter, auditServiceProvider, jsonRedactor);
   }
 
   @Bean

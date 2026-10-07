@@ -17,14 +17,16 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.servlet.function.RouterFunction;
 import org.springframework.web.servlet.function.RouterFunctions;
 import org.springframework.web.servlet.function.ServerResponse;
+import cbs.nova.starter.security.JsonRedactor;
 import tools.jackson.databind.ObjectMapper;
 
 @Configuration
 public class DslEventRouterConfiguration {
 
   @Bean
-  DslEventHandler dslEventHandler(DslEventRepository repository, ObjectMapper objectMapper) {
-    return new DslEventHandler(repository, objectMapper);
+  DslEventHandler dslEventHandler(DslEventRepository repository, ObjectMapper objectMapper,
+          JsonRedactor jsonRedactor) {
+    return new DslEventHandler(repository, objectMapper, jsonRedactor);
   }
 
   @Bean

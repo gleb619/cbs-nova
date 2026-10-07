@@ -6,6 +6,7 @@ import cbs.nova.starter.config.properties.CbsVhsReplayProperties;
 import cbs.nova.starter.controller.VhsManagementHandler;
 import cbs.nova.starter.core.listener.DslExecutionEventBus;
 import cbs.nova.starter.model.PageResponse;
+import cbs.nova.starter.security.JsonRedactor;
 import cbs.nova.starter.service.DslAuditService;
 import cbs.nova.starter.vhs.loadtest.VhsLoadTest;
 import cbs.nova.starter.vhs.management.ReplayRunResponse;
@@ -49,9 +50,9 @@ public class VhsManagementRouterConfiguration {
   @Bean
   VhsManagementHandler vhsManagementHandler(VhsManagementService service,
           ObjectProvider<VhsLoadTest> loadTestProvider, ObjectMapper objectMapper,
-          ObjectProvider<DslAuditService> auditServiceProvider) {
+          ObjectProvider<DslAuditService> auditServiceProvider, JsonRedactor jsonRedactor) {
     return new VhsManagementHandler(service, loadTestProvider.getIfAvailable(), objectMapper,
-            auditServiceProvider);
+            auditServiceProvider, jsonRedactor);
   }
 
   @Bean

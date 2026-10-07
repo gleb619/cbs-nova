@@ -6,6 +6,7 @@ import static cbs.nova.starter.core.StarterConstants.CSV_QUOTE;
 
 import cbs.nova.dsl.history.DslRun;
 import cbs.nova.starter.core.StarterConstants;
+import cbs.nova.starter.security.JsonRedactor;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.List;
@@ -18,6 +19,8 @@ public class ExecutionCsvWriter {
       "startedAt", "finishedAt", "duration", "error", "input", "output"
   };
 
+  private final JsonRedactor redactor;
+
   public record Config(int maxInputOutputChars) {
     public Config {
       if (maxInputOutputChars < 0) {
@@ -28,6 +31,14 @@ public class ExecutionCsvWriter {
     public static Config defaults() {
       return new Config(StarterConstants.DEFAULT_MAX_INPUT_OUTPUT_CHARS);
     }
+  }
+
+  public ExecutionCsvWriter() {
+    this(JsonRedactor.disabled());
+  }
+
+  public ExecutionCsvWriter(JsonRedactor redactor) {
+    this.redactor = redactor;
   }
 
   public void writeCsv(List<DslRun> runs, Appendable out) throws IOException {
@@ -68,11 +79,11 @@ public class ExecutionCsvWriter {
     out.append(CSV_DELIMITER);
     writeField(out, duration(run), false);
     out.append(CSV_DELIMITER);
-    writeField(out, firstLine(run.error()), true);
+    writeField(out, firstLine(redactor.redact(run.error())), true);
     out.append(CSV_DELIMITER);
-    writeField(out, truncate(run.input(), config.maxInputOutputChars()), true);
+    writeField(out, truncate(redactor.redact(run.input()), config.maxInputOutputChars()), true);
     out.append(CSV_DELIMITER);
-    writeField(out, truncate(run.output(), config.maxInputOutputChars()), true);
+    writeField(out, truncate(redactor.redact(run.output()), config.maxInputOutputChars()), true);
     out.append(CSV_LINE_ENDING);
   }
 

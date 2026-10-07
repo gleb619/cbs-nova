@@ -4,6 +4,7 @@ import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.starter.controller.Pagination;
 import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.model.PageResponse;
+import cbs.nova.starter.security.JsonRedactor;
 import cbs.nova.starter.service.DslAuditService;
 import cbs.nova.starter.vhs.loadtest.VhsLoadTest;
 import cbs.nova.starter.vhs.loadtest.VhsLoadTestException;
@@ -62,6 +63,12 @@ public class VhsManagementHandler {
   private final VhsLoadTest loadTest;
   private final ObjectMapper objectMapper;
   private final ObjectProvider<DslAuditService> auditServiceProvider;
+  private final JsonRedactor redactor;
+
+  public VhsManagementHandler(VhsManagementService service, @Nullable VhsLoadTest loadTest,
+          ObjectMapper objectMapper, ObjectProvider<DslAuditService> auditServiceProvider) {
+    this(service, loadTest, objectMapper, auditServiceProvider, JsonRedactor.disabled());
+  }
 
   @NonNull
   public ServerResponse list(ServerRequest request) {
@@ -92,13 +99,32 @@ public class VhsManagementHandler {
       String body = new String(stream.get().readAllBytes(), StandardCharsets.UTF_8);
       return ServerResponse.ok()
               .contentType(MediaType.parseMediaType(CONTENT_TYPE_X_JSONL))
-              .body(body);
+              .body(redactJsonl(body));
     } catch (IOException ex) {
       log.warn("[VHS] failed to read tape for runId={}: {}", runId, ex.getMessage());
       return ServerResponse.status(HttpStatus.INTERNAL_SERVER_ERROR)
               .body(new ErrorResponse("TAPE_READ_ERROR", "Failed to read tape", null, null, null,
                       null, null, null, null));
     }
+  }
+
+  private String redactJsonl(String raw) {
+    if (raw == null || raw.isEmpty()) {
+      return raw;
+    }
+    String[] lines = raw.split("\n", -1);
+    StringBuilder out = new StringBuilder(raw.length());
+    for (int i = 0; i < lines.length; i++) {
+      String line = lines[i];
+      if (!line.isEmpty()) {
+        line = redactor.redact(line);
+      }
+      out.append(line);
+      if (i < lines.length - 1) {
+        out.append('\n');
+      }
+    }
+    return out.toString();
   }
 
   @NonNull

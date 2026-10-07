@@ -33,6 +33,7 @@ import cbs.nova.starter.persistence.DslRunStats;
 import cbs.nova.starter.persistence.DslRunStatsRepository;
 import cbs.nova.starter.persistence.RunTimeseriesBucket;
 import cbs.nova.starter.service.DslAuditService;
+import cbs.nova.starter.security.JsonRedactor;
 import cbs.nova.starter.service.DslRunCancellationService;
 import cbs.nova.starter.service.TemporalDslProcessService;
 import cbs.nova.starter.service.ExecutionCsvWriter;
@@ -90,6 +91,7 @@ public class DslExecutionsHandler {
   private final TransactionExecutionRepository transactionExecutionRepository;
   private final RequestQueryConverter queryConverter;
   private final ObjectProvider<DslAuditService> auditServiceProvider;
+  private final JsonRedactor jsonRedactor;
 
   @Operation(summary = "List DSL execution runs")
   @ApiResponse(responseCode = "200", description = "Matching execution runs", content = @Content(mediaType = "application/json", schema = @Schema(implementation = PageResponse.class)))
@@ -118,7 +120,7 @@ public class DslExecutionsHandler {
             ? result.items().subList(0, CSV_EXPORT_MAX_ROWS)
             : result.items();
     StringWriter writer = new StringWriter();
-    new ExecutionCsvWriter().writeCsv(runs, writer);
+    new ExecutionCsvWriter(jsonRedactor).writeCsv(runs, writer);
     String filename = "executions-" + CSV_FILENAME_FORMATTER.format(LocalDateTime.now()) + ".csv";
     ServerResponse.BodyBuilder response = ServerResponse.ok()
             .contentType(
@@ -197,7 +199,8 @@ public class DslExecutionsHandler {
   public ServerResponse detail(ServerRequest request) throws IOException {
     String id = request.pathVariable("id");
     return runRepository.findByRunId(id)
-            .map(run -> ServerResponse.ok().body(ExecutionDto.fromDetail(run, objectMapper)))
+            .map(run -> ServerResponse.ok()
+                    .body(ExecutionDto.fromDetail(run, objectMapper, jsonRedactor)))
             .orElse(ServerResponse.status(HttpStatus.NOT_FOUND)
                     .body(new ErrorResponse("NOT_FOUND", "Execution run not found: " + id, null, id,
                             null, null, null, null, null)));
@@ -231,7 +234,7 @@ public class DslExecutionsHandler {
   private TransactionExecutionDto toDto(TransactionExecution execution) {
     return new TransactionExecutionDto(
             execution.transactionName(),
-            execution.input(),
+            jsonRedactor.redactValue(execution.input()),
             execution.executedAt().toString(),
             execution.status().name(),
             execution.startedAt().toString(),
@@ -294,7 +297,7 @@ public class DslExecutionsHandler {
       case CANCELLED -> {
         audit(request, ACTION_RUN_CANCEL, id, StarterConstants.OUTCOME_SUCCESS, null);
         yield ServerResponse.ok()
-                .body(ExecutionDto.fromDetail(requireRun(result, id), objectMapper));
+                .body(ExecutionDto.fromDetail(requireRun(result, id), objectMapper, jsonRedactor));
       }
     };
   }

@@ -42,6 +42,8 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import cbs.nova.starter.config.properties.CbsDslRedactionProperties;
+import cbs.nova.starter.security.JsonRedactor;
 import tools.jackson.databind.ObjectMapper;
 
 /**
@@ -61,6 +63,10 @@ class DslExecutionsHandlerTest {
   private final ObjectMapper objectMapper = new ObjectMapper();
 
   private Harness harness() {
+    return harness(JsonRedactor.disabled());
+  }
+
+  private Harness harness(JsonRedactor redactor) {
     DslRunRepository runRepository = mock(DslRunRepository.class);
     TransactionExecutionRepository transactionExecutionRepository = mock(
             TransactionExecutionRepository.class);
@@ -78,7 +84,8 @@ class DslExecutionsHandlerTest {
             statsRepository,
             transactionExecutionRepository,
             queryConverter,
-            auditProvider);
+            auditProvider,
+            redactor);
 
     MockMvc mockMvc = MockMvcBuilders.routerFunctions(
             new DslExecutionsRouterConfiguration().dslExecutionsRouter(handler,
@@ -330,6 +337,38 @@ class DslExecutionsHandlerTest {
             .andExpect(jsonPath("$.code").value("CONFLICT"))
             .andExpect(jsonPath("$.message")
                     .value("Execution run is not terminal: " + RUN_ID + " (status RUNNING)"));
+  }
+
+  @Test
+  void rerunUsesStoredInputWithoutRedaction() throws Exception {
+    String inputJson = "{\"password\":\"secret\",\"amount\":100}";
+    DslRun source = DslRun.builder()
+            .runId(RUN_ID)
+            .processName(PROCESS)
+            .status(DslRunStatus.FAILED.name())
+            .input(inputJson)
+            .startedAt(Instant.now())
+            .finishedAt(Instant.now())
+            .build();
+
+    JsonRedactor redactor = new JsonRedactor(objectMapper,
+            new CbsDslRedactionProperties(true, List.of(), "***", List.of(), 10_000_000));
+    Harness h = harness(redactor);
+    when(h.runRepository.findByRunId(RUN_ID)).thenReturn(Optional.of(source));
+    when(h.processService.isKnownProcess(PROCESS)).thenReturn(true);
+    when(h.processService.startProcess(eq(PROCESS), any(), any(), any(), eq("rerun")))
+            .thenReturn(new TemporalDslProcessService.ProcessRun("run-2", null));
+
+    h.mockMvc.perform(post("/api/dsl/runs/{runId}/rerun", RUN_ID))
+            .andExpect(status().isCreated());
+
+    ArgumentCaptor<Object> inputCaptor = ArgumentCaptor.forClass(Object.class);
+    verify(h.processService).startProcess(eq(PROCESS), inputCaptor.capture(), any(), any(),
+            eq("rerun"));
+    assertThat(objectMapper.writeValueAsString(inputCaptor.getValue()))
+            .isEqualTo(inputJson)
+            .contains("secret")
+            .doesNotContain("***");
   }
 
   private static DslRun run(String runId, String processName, String status, Instant startedAt,

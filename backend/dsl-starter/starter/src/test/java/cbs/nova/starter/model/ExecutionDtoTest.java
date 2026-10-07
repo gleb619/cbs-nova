@@ -6,6 +6,7 @@ import cbs.nova.dsl.ExecutionMode;
 import cbs.nova.dsl.history.DslRun;
 import cbs.nova.dsl.history.DslRunStatus;
 import org.junit.jupiter.api.Test;
+import cbs.nova.starter.security.JsonRedactor;
 import tools.jackson.databind.ObjectMapper;
 
 import java.time.Instant;
@@ -178,5 +179,28 @@ class ExecutionDtoTest {
     assertThat(withHash).contains("\"definitionHash\":\"" + "cd".repeat(32) + "\"");
     assertThat(withoutHash).doesNotContain("definitionHash");
     assertThat(withContent).contains("\"contentHash\":\"" + "gh".repeat(32) + "\"");
+  }
+
+  @Test
+  void fromDetailMasksSensitiveKeysInInputAndOutput() {
+    DslRun run = DslRun.builder()
+            .runId("run-redact")
+            .processName("Loan")
+            .status(DslRunStatus.COMPLETED.name())
+            .input("{\"user\":{\"password\":\"secret\",\"name\":\"Alice\"}}")
+            .output("{\"token\":\"t\"}")
+            .error(null)
+            .startedAt(Instant.parse("2026-01-01T00:00:00Z"))
+            .finishedAt(Instant.parse("2026-01-01T00:00:05Z"))
+            .executionMode(ExecutionMode.RUN.name())
+            .build();
+
+    JsonRedactor redactor = new JsonRedactor(new ObjectMapper(),
+            new cbs.nova.starter.config.properties.CbsDslRedactionProperties(
+                    true, java.util.List.of(), "***", java.util.List.of(), 10_000_000));
+    ExecutionDto dto = ExecutionDto.fromDetail(run, new ObjectMapper(), redactor);
+
+    assertThat(dto.input().toString()).contains("password\":\"***\"").doesNotContain("secret");
+    assertThat(dto.output().toString()).contains("token\":\"***\"").doesNotContain("\"t\"");
   }
 }

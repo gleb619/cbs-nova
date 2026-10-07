@@ -82,6 +82,7 @@ class DslRootAutoConfigurationTest {
             MessagingCallCaptureConfiguration.class,
             PreviewMetricsConfiguration.class,
             DslRouterConfiguration.class,
+            RedactionConfiguration.class,
             WebhookConfiguration.class,
             DslRunRetentionConfiguration.class,
             DslRunReconciliationConfiguration.class,
