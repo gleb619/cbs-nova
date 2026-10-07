@@ -479,22 +479,22 @@ export function useDslApi() {
   }
 
   async function fetchAuditTrail(params: AuditQuery): Promise<AuditPage> {
-  log.info('fetchAuditTrail request', { ...params })
-  const query: Record<string, string> = {
-    limit: String(params.limit),
-    offset: String(params.offset),
+    log.info('fetchAuditTrail request', { ...params })
+    const query: Record<string, string> = {
+      limit: String(params.limit),
+      offset: String(params.offset),
+    }
+    if (params.action?.trim()) query.action = params.action.trim()
+    try {
+      return (await $fetch('/api/v1/dsl/audit', { query })) as AuditPage
+    } catch (err) {
+      const message = extractApiError(err).message
+      log.error('failed to load audit trail', { error: message })
+      throw new Error(message)
+    }
   }
-  if (params.action?.trim()) query.action = params.action.trim()
-  try {
-    return (await $fetch('/api/v1/dsl/audit', { query })) as AuditPage
-  } catch (err) {
-    const message = extractApiError(err).message
-    log.error('failed to load audit trail', { error: message })
-    throw new Error(message)
-  }
-}
 
-async function fetchObjectStructure(
+  async function fetchObjectStructure(
     type: string,
     name: string,
   ): Promise<ObjectStructureDto | null> {

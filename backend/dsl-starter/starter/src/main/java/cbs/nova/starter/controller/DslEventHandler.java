@@ -5,6 +5,7 @@ import cbs.nova.starter.model.DslEventDto;
 import cbs.nova.starter.model.PageResponse;
 import cbs.nova.starter.persistence.DslEventRepository;
 import cbs.nova.starter.persistence.DslEventSearchResult;
+import cbs.nova.starter.security.JsonRedactor;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.List;
@@ -19,6 +20,11 @@ public class DslEventHandler {
 
   private final DslEventRepository repository;
   private final ObjectMapper objectMapper;
+  private final JsonRedactor redactor;
+
+  public DslEventHandler(DslEventRepository repository, ObjectMapper objectMapper) {
+    this(repository, objectMapper, JsonRedactor.disabled());
+  }
 
   public ServerResponse list(ServerRequest request) {
     int limit = Pagination.intParam(request, "limit", StarterConstants.DEFAULT_LIMIT);
@@ -35,7 +41,7 @@ public class DslEventHandler {
     DslEventSearchResult result = repository.search(type, aggregateType, aggregateId,
             correlationId, since, skip, pageSize);
     List<DslEventDto> items = result.items().stream()
-            .map(entity -> DslEventDto.from(entity, objectMapper))
+            .map(entity -> DslEventDto.from(entity, objectMapper, redactor))
             .toList();
     return ServerResponse.ok()
             .contentType(MediaType.APPLICATION_JSON)

@@ -14,7 +14,10 @@ import {
   selectTransaction,
 } from '@cbs/components'
 import { useLivePollingPreference } from '@cbs/admin-ui-plugin/composables/useLivePollingPreference'
-import { useExecutionDeepLink, type ExecutionDetailTab } from '@cbs/admin-ui-plugin/composables/useExecutionDeepLink'
+import {
+  useExecutionDeepLink,
+  type ExecutionDetailTab,
+} from '@cbs/admin-ui-plugin/composables/useExecutionDeepLink'
 import { navigateTo, useRoute } from 'nuxt/app'
 import { $fetch } from 'ofetch'
 import { computed, onUnmounted, ref, watch } from 'vue'
@@ -577,11 +580,15 @@ onUnmounted(() => {
           </button>
         </div>
         <p v-if="signalResult" class="text-sm text-success-600" data-testid="signal-result">
-          {{ signalResult }}<span
+          {{ signalResult
+          }}<span
             v-if="signalObserved !== null"
             :class="['text-sm', signalObserved ? 'text-success-600' : 'text-warning-700']"
             data-testid="signal-result-suffix"
-          >{{ signalObserved ? ' · observed' : ' · not yet observed' }}</span>
+            >{{
+              signalObserved ? ' · observed' : ' · not yet observed'
+            }}</span
+          >
         </p>
         <p v-if="signalError" class="text-sm text-error-600" data-testid="signal-error">
           {{ signalError }}

@@ -57,26 +57,46 @@ const AuditTrailTableProbe = defineComponent({
   setup(props, { emit }) {
     return () =>
       h('div', { 'data-testid': 'audit-trail-table-probe' }, [
-        h('button', {
-          'data-testid': 'probe-apply',
-          onClick: () => emit('applyActionFilter'),
-        }, 'Apply'),
-        h('button', {
-          'data-testid': 'probe-clear',
-          onClick: () => emit('clearActionFilter'),
-        }, 'Clear'),
-        h('button', {
-          'data-testid': 'probe-prev',
-          onClick: () => emit('prev'),
-        }, 'Prev'),
-        h('button', {
-          'data-testid': 'probe-next',
-          onClick: () => emit('next'),
-        }, 'Next'),
-        h('button', {
-          'data-testid': 'probe-refresh',
-          onClick: () => emit('refresh'),
-        }, 'Refresh'),
+        h(
+          'button',
+          {
+            'data-testid': 'probe-apply',
+            onClick: () => emit('applyActionFilter'),
+          },
+          'Apply',
+        ),
+        h(
+          'button',
+          {
+            'data-testid': 'probe-clear',
+            onClick: () => emit('clearActionFilter'),
+          },
+          'Clear',
+        ),
+        h(
+          'button',
+          {
+            'data-testid': 'probe-prev',
+            onClick: () => emit('prev'),
+          },
+          'Prev',
+        ),
+        h(
+          'button',
+          {
+            'data-testid': 'probe-next',
+            onClick: () => emit('next'),
+          },
+          'Next',
+        ),
+        h(
+          'button',
+          {
+            'data-testid': 'probe-refresh',
+            onClick: () => emit('refresh'),
+          },
+          'Refresh',
+        ),
         h('pre', { 'data-testid': 'probe-props' }, JSON.stringify(props)),
       ])
   },
@@ -113,7 +133,16 @@ describe('audit.vue page', () => {
   })
 
   it('wires composable state into AuditTrailTable props', async () => {
-    harness.entries.value = [{ id: 1, occurredAt: '2026-01-01T00:00:00Z', actor: 'a', action: 'A', target: 't', outcome: 'SUCCESS' }]
+    harness.entries.value = [
+      {
+        id: 1,
+        occurredAt: '2026-01-01T00:00:00Z',
+        actor: 'a',
+        action: 'A',
+        target: 't',
+        outcome: 'SUCCESS',
+      },
+    ]
     harness.loading.value = true
     harness.error.value = 'boom'
     harness.total.value = 5

@@ -5,9 +5,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import cbs.nova.dsl.history.DslRun;
 import org.junit.jupiter.api.Test;
 
+import cbs.nova.starter.config.properties.CbsDslRedactionProperties;
+import cbs.nova.starter.security.JsonRedactor;
 import java.io.StringWriter;
 import java.time.Instant;
 import java.util.List;
+import tools.jackson.databind.ObjectMapper;
 
 class ExecutionCsvWriterTest {
 
@@ -198,13 +201,18 @@ class ExecutionCsvWriterTest {
   }
 
   private static String write(List<DslRun> runs, ExecutionCsvWriter.Config config) {
-    StringWriter writer = new StringWriter();
+    return write(runs, config, new ExecutionCsvWriter());
+  }
+
+  private static String write(List<DslRun> runs, ExecutionCsvWriter.Config config,
+          ExecutionCsvWriter writer) {
+    StringWriter out = new StringWriter();
     try {
-      new ExecutionCsvWriter().writeCsv(runs, writer, config);
+      writer.writeCsv(runs, out, config);
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
-    return writer.toString();
+    return out.toString();
   }
 
   private static DslRun.DslRunBuilder run() {
@@ -219,5 +227,23 @@ class ExecutionCsvWriterTest {
             .correlationId("corr-1")
             .input("{}")
             .output("{\"ok\":true}");
+  }
+
+  @Test
+  void inputAndOutputAndErrorColumnsAreRedacted() {
+    JsonRedactor redactor = new JsonRedactor(new ObjectMapper(),
+            new CbsDslRedactionProperties(true, List.of(), "***", List.of(), 10_000_000));
+    DslRun run = run()
+            .input("{\"password\":\"secret\",\"name\":\"x\"}")
+            .output("{\"token\":\"t\"}")
+            .error("{\"apiKey\":\"k\"}")
+            .build();
+
+    String csv = write(List.of(run), ExecutionCsvWriter.Config.defaults(),
+            new ExecutionCsvWriter(redactor));
+
+    assertThat(csv).contains("\"password\"").contains("\"apiKey\"").contains("\"token\"")
+            .contains("***");
+    assertThat(csv).doesNotContain("secret").doesNotContain("\"t\"").doesNotContain("\"k\"");
   }
 }

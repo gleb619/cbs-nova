@@ -2,6 +2,7 @@ package cbs.nova.starter.model;
 
 import cbs.nova.dsl.history.DslRun;
 import cbs.nova.dsl.history.DslRunStatus;
+import cbs.nova.starter.security.JsonRedactor;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.ObjectMapper;
@@ -62,6 +63,11 @@ public record ExecutionDto(
   }
 
   public static ExecutionDto fromDetail(DslRun run, ObjectMapper objectMapper) {
+    return fromDetail(run, objectMapper, JsonRedactor.disabled());
+  }
+
+  public static ExecutionDto fromDetail(DslRun run, ObjectMapper objectMapper,
+          JsonRedactor redactor) {
     ExecutionDto base = from(run);
     return new ExecutionDto(
             base.id(),
@@ -76,20 +82,21 @@ public record ExecutionDto(
             base.triggeredBy(),
             base.correlationId(),
             base.workflowId(),
-            parseJsonOrRaw(run.input(), objectMapper),
-            parseJsonOrRaw(run.output(), objectMapper),
+            parseJsonOrRaw(run.input(), objectMapper, redactor),
+            parseJsonOrRaw(run.output(), objectMapper, redactor),
             toErrors(run.error()),
             toTraceSteps(run.contextJson(), objectMapper),
             base.definitionHash(),
             base.contentHash());
   }
 
-  private static Object parseJsonOrRaw(String raw, ObjectMapper objectMapper) {
+  private static Object parseJsonOrRaw(String raw, ObjectMapper objectMapper,
+          JsonRedactor redactor) {
     if (raw == null) {
       return null;
     }
     try {
-      return objectMapper.readValue(raw, Object.class);
+      return redactor.redact(objectMapper.readTree(raw));
     } catch (Exception malformedJson) {
       return raw;
     }

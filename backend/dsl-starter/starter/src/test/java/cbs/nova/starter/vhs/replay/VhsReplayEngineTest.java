@@ -126,6 +126,7 @@ class VhsReplayEngineTest {
 
   static final class RecordingDriver implements VhsCallDriver {
     final List<String> callIds = new CopyOnWriteArrayList<>();
+    final List<Object> inputs = new CopyOnWriteArrayList<>();
     final AtomicInteger invocations = new AtomicInteger();
     volatile String failOnCallId;
 
@@ -134,6 +135,7 @@ class VhsReplayEngineTest {
       invocations.incrementAndGet();
       String callId = callStartEvent.callMetadata().callId();
       callIds.add(callId);
+      inputs.add(callStartEvent.input());
       if (callId.equals(failOnCallId)) {
         return CallResult.failure("boom: driver instructed to fail " + callId);
       }
@@ -247,6 +249,25 @@ class VhsReplayEngineTest {
     assertThat(report.failedCalls()).isZero();
     assertThat(report.tapes()).hasSize(1);
     assertThat(report.tapes().get(0).isSuccess()).isTrue();
+  }
+
+  @Test
+  void exactReplayUsesRawTapeInputWithoutRedaction() throws Exception {
+    Path tape = recordTape("run-secrets", List.of(
+            new RecordedCall("process", "PingProcess", "run",
+                    Map.of("password", "secret", "amount", 100), 10)));
+
+    RecordingDriver driver = new RecordingDriver();
+    VhsReplayReport report = engine(driver, new RecordingSleeper()).replayExact(tape);
+
+    assertThat(report.successfulCalls()).isEqualTo(1);
+    assertThat(driver.inputs).hasSize(1);
+    assertThat(driver.inputs.get(0)).isEqualTo(Map.of("password", "secret", "amount", 100));
+
+    List<String> lines = Files.readAllLines(tape);
+    assertThat(lines.stream().anyMatch(line -> line.contains("\"password\":\"secret\"")))
+            .as("tape on disk must keep the raw password")
+            .isTrue();
   }
 
   @Test

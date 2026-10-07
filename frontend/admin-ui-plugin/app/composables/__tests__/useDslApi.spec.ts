@@ -667,7 +667,6 @@ describe('useDslApi', () => {
     expect(result).toEqual({ ok: true })
   })
 
-
   it('readDslDoc GETs /api/v1/dsl/docs/by-name/{name} and returns content', async () => {
     fetchMock.mockResolvedValueOnce({ path: 'batch-processing.md', content: '# Batch' })
     const api = useDslApi()

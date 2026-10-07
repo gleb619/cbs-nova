@@ -4,6 +4,7 @@ import cbs.nova.starter.core.StarterConstants;
 import cbs.nova.starter.model.AuditDto;
 import cbs.nova.starter.model.PageResponse;
 import cbs.nova.starter.persistence.DslAuditSearchResult;
+import cbs.nova.starter.security.JsonRedactor;
 import cbs.nova.starter.service.DslAuditService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +21,11 @@ import org.springframework.web.servlet.function.ServerResponse;
 public class DslAuditHandler {
 
   private final DslAuditService service;
+  private final JsonRedactor redactor;
+
+  public DslAuditHandler(DslAuditService service) {
+    this(service, JsonRedactor.disabled());
+  }
 
   public ServerResponse list(ServerRequest request) {
     int limit = Pagination.intParam(request, "limit", StarterConstants.DEFAULT_LIMIT);
@@ -30,7 +36,7 @@ public class DslAuditHandler {
 
     DslAuditSearchResult result = service.search(action, skip, pageSize);
     List<AuditDto> items = result.items().stream()
-            .map(AuditDto::from)
+            .map(audit -> AuditDto.from(audit, redactor))
             .toList();
     return ServerResponse.ok()
             .contentType(MediaType.APPLICATION_JSON)

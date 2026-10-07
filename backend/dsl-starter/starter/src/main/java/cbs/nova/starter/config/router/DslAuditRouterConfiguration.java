@@ -2,6 +2,7 @@ package cbs.nova.starter.config.router;
 
 import cbs.nova.starter.controller.DslAuditHandler;
 import cbs.nova.starter.model.PageResponse;
+import cbs.nova.starter.security.JsonRedactor;
 import cbs.nova.starter.service.DslAuditService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -32,8 +33,8 @@ import org.springframework.web.servlet.function.ServerResponse;
 public class DslAuditRouterConfiguration {
 
   @Bean
-  DslAuditHandler dslAuditHandler(DslAuditService auditService) {
-    return new DslAuditHandler(auditService);
+  DslAuditHandler dslAuditHandler(DslAuditService auditService, JsonRedactor jsonRedactor) {
+    return new DslAuditHandler(auditService, jsonRedactor);
   }
 
   @Bean

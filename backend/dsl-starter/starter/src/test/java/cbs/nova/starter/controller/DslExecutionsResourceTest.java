@@ -51,6 +51,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.transaction.support.TransactionTemplate;
+import cbs.nova.starter.security.JsonRedactor;
 import tools.jackson.databind.ObjectMapper;
 
 import java.time.Clock;
@@ -79,7 +80,8 @@ class DslExecutionsResourceTest {
     TemporalDslProcessService processService = mock(TemporalDslProcessService.class);
     DslExecutionsHandler handler = new DslExecutionsHandler(repository, objectMapper,
             cancellationService, processService, null, transactionExecutionRepository,
-            new RequestQueryConverter(), null);
+            new RequestQueryConverter(), null,
+            JsonRedactor.disabled());
     DslExecutionsRouterConfiguration router = new DslExecutionsRouterConfiguration();
     AnnotationConfigApplicationContext adviceContext = new AnnotationConfigApplicationContext();
     adviceContext.registerBean(DslExceptionHandler.class,
@@ -676,7 +678,8 @@ class DslExecutionsResourceTest {
     DslExecutionsHandler handler = new DslExecutionsHandler(repository, objectMapper,
             cancellationService, mock(TemporalDslProcessService.class), null,
             transactionExecutionRepository, new RequestQueryConverter(),
-            AuditTestSupport.providerOf(audit.service()));
+            AuditTestSupport.providerOf(audit.service()),
+            JsonRedactor.disabled());
     DslExecutionsRouterConfiguration router = new DslExecutionsRouterConfiguration();
     AnnotationConfigApplicationContext adviceContext = new AnnotationConfigApplicationContext();
     adviceContext.registerBean(DslExceptionHandler.class,
@@ -752,7 +755,8 @@ class DslExecutionsResourceTest {
             List.of(new DslRunStats.ProcessRunCount("LoanDisbursement", 20))));
     DslExecutionsHandler handler = new DslExecutionsHandler(repository, objectMapper,
             cancellationService(repository), mock(TemporalDslProcessService.class), statsRepository,
-            transactionExecutionRepository, new RequestQueryConverter(), null);
+            transactionExecutionRepository, new RequestQueryConverter(), null,
+            JsonRedactor.disabled());
     mockMvc = MockMvcBuilders
             .routerFunctions(new DslExecutionsRouterConfiguration().dslExecutionsRouter(handler,
                     requestBodyLimitFilter))
@@ -779,7 +783,8 @@ class DslExecutionsResourceTest {
             0, Map.of(), 0, 0, 0.0, List.of()));
     DslExecutionsHandler handler = new DslExecutionsHandler(repository, objectMapper,
             cancellationService(repository), mock(TemporalDslProcessService.class), statsRepository,
-            transactionExecutionRepository, new RequestQueryConverter(), null);
+            transactionExecutionRepository, new RequestQueryConverter(), null,
+            JsonRedactor.disabled());
     mockMvc = MockMvcBuilders
             .routerFunctions(new DslExecutionsRouterConfiguration().dslExecutionsRouter(handler,
                     requestBodyLimitFilter))
@@ -840,7 +845,8 @@ class DslExecutionsResourceTest {
             });
     DslExecutionsHandler handler = new DslExecutionsHandler(repository, objectMapper,
             cancellationService(repository), mock(TemporalDslProcessService.class), statsRepository,
-            transactionExecutionRepository, new RequestQueryConverter(), null);
+            transactionExecutionRepository, new RequestQueryConverter(), null,
+            JsonRedactor.disabled());
     mockMvc = MockMvcBuilders
             .routerFunctions(new DslExecutionsRouterConfiguration().dslExecutionsRouter(handler,
                     requestBodyLimitFilter))
@@ -1219,7 +1225,7 @@ class DslExecutionsResourceTest {
     DslExecutionsHandler handler = new DslExecutionsHandler(cappedRepository, objectMapper,
             cancellationService, mock(TemporalDslProcessService.class), null,
             transactionExecutionRepository, new RequestQueryConverter(),
-            null);
+            null, JsonRedactor.disabled());
     MockMvc cappedMockMvc = MockMvcBuilders
             .routerFunctions(new DslExecutionsRouterConfiguration().dslExecutionsRouter(handler,
                     requestBodyLimitFilter))

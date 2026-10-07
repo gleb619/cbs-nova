@@ -103,7 +103,13 @@ const componentStubs = {
   ExecutionTrace: makeStub('ExecutionTrace'),
   CompensationLane: makeStub('CompensationLane'),
   CancelExecutionConfirmationModal: makeStub('CancelExecutionConfirmationModal'),
-  ErrorBanner: defineComponent({ name: 'ErrorBanner', props: ['message'], setup(props) { return () => h('div', { 'data-testid': 'ErrorBanner' }, props.message) } }),
+  ErrorBanner: defineComponent({
+    name: 'ErrorBanner',
+    props: ['message'],
+    setup(props) {
+      return () => h('div', { 'data-testid': 'ErrorBanner' }, props.message)
+    },
+  }),
   // These tab components are NOT imported by the page (auto-registered by the
   // Nuxt components dir), so they resolve by their template tag name.
   ExecutionsPayloadTab: makeStub('ExecutionsPayloadTab'),
@@ -771,5 +777,4 @@ describe('executions/[id].vue run-again button', () => {
       expect(queryCalls(fetchMock)).toHaveLength(1)
     })
   })
-
 })

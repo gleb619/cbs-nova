@@ -3,6 +3,7 @@ package cbs.nova.starter.controller;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import cbs.nova.starter.config.router.DslEventRouterConfiguration;
@@ -14,6 +15,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
+import cbs.nova.starter.config.properties.CbsDslRedactionProperties;
 import org.h2.jdbcx.JdbcDataSource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,6 +27,7 @@ import org.springframework.jdbc.datasource.init.ScriptUtils;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver;
+import cbs.nova.starter.security.JsonRedactor;
 import tools.jackson.databind.ObjectMapper;
 
 /**
@@ -50,7 +53,8 @@ class DslEventHandlerTest {
     var repos = CrudRepositories.over(dataSource);
     repository = new DslEventRepository(repos.dslEvents(), repos.dslQueries());
 
-    DslEventHandler handler = new DslEventHandler(repository, new ObjectMapper());
+    DslEventHandler handler = new DslEventHandler(repository, new ObjectMapper(),
+            JsonRedactor.disabled());
     DslEventRouterConfiguration router = new DslEventRouterConfiguration();
 
     AnnotationConfigApplicationContext adviceContext = new AnnotationConfigApplicationContext();
@@ -201,6 +205,43 @@ class DslEventHandlerTest {
   void malformedSinceReturns400() throws Exception {
     mockMvc.perform(get("/api/dsl/events").param("since", "not-an-instant"))
             .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void listRedactsSensitivePayloadFieldsButLeavesStoredPayloadUnchanged() throws Exception {
+    String rawPayload = "{\"password\":\"secret\",\"amount\":100}";
+    repository.insert(new DslEventEntity(null, "RunStarted", "run", "run-redact",
+            null, rawPayload, 1, Instant.now()));
+
+    JsonRedactor redactor = new JsonRedactor(new ObjectMapper(),
+            new CbsDslRedactionProperties(true, java.util.List.of(), "***",
+                    java.util.List.of(), 10_000_000));
+    DslEventHandler redactedHandler = new DslEventHandler(repository, new ObjectMapper(), redactor);
+    DslEventRouterConfiguration router = new DslEventRouterConfiguration();
+
+    AnnotationConfigApplicationContext adviceContext = new AnnotationConfigApplicationContext();
+    adviceContext.registerBean(DslExceptionHandler.class,
+            () -> new DslExceptionHandler(new DefaultDslExceptionMapper()));
+    adviceContext.refresh();
+    ExceptionHandlerExceptionResolver exceptionResolver = new ExceptionHandlerExceptionResolver();
+    exceptionResolver.setApplicationContext(adviceContext);
+    exceptionResolver.setMessageConverters(List.of(new JacksonJsonHttpMessageConverter()));
+    exceptionResolver.afterPropertiesSet();
+
+    MockMvc redactedMvc = MockMvcBuilders.routerFunctions(router.dslEventRouter(redactedHandler))
+            .setMessageConverters(new StringHttpMessageConverter(),
+                    new JacksonJsonHttpMessageConverter())
+            .setHandlerExceptionResolvers(exceptionResolver)
+            .build();
+
+    redactedMvc.perform(get("/api/dsl/events").param("aggregateId", "run-redact"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.items[0].payload.password").value("***"))
+            .andExpect(jsonPath("$.items[0].payload.amount").value(100));
+
+    String stored = repository.search(null, null, "run-redact", null, null, 0, 10)
+            .items().get(0).payloadJson();
+    assertThat(stored).contains("\"password\":\"secret\"").doesNotContain("***");
   }
 
   private void seed(int count) {

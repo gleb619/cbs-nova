@@ -17,6 +17,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import cbs.nova.starter.AuditTestSupport;
 import cbs.nova.starter.config.properties.CbsNovaWebProperties;
 import cbs.nova.starter.web.RequestBodyLimitFilter;
+import cbs.nova.starter.config.properties.CbsDslRedactionProperties;
 import cbs.nova.starter.config.router.VhsManagementRouterConfiguration;
 import cbs.nova.starter.converter.DefaultDslExceptionMapper;
 import cbs.nova.starter.vhs.loadtest.VhsLoadTest;
@@ -41,6 +42,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver;
+import cbs.nova.starter.security.JsonRedactor;
 import tools.jackson.databind.ObjectMapper;
 
 /**
@@ -68,7 +70,7 @@ class VhsManagementHandlerTest {
   void setUp() {
     requestBodyLimitFilter = new RequestBodyLimitFilter(new CbsNovaWebProperties(0L));
     mockMvc = buildMockMvc(new VhsManagementHandler(service, loadTest, objectMapper,
-            AuditTestSupport.emptyProvider()));
+            AuditTestSupport.emptyProvider(), JsonRedactor.disabled()));
   }
 
   // ----- list ---------------------------------------------------------------
@@ -143,6 +145,26 @@ class VhsManagementHandlerTest {
             .andExpect(status().isNotFound())
             .andExpect(jsonPath("$.code").value("NOT_FOUND"))
             .andExpect(jsonPath("$.message").value("Tape not found: no-such-run"));
+  }
+
+  @Test
+  void downloadRedactsSensitiveJsonlFields() throws Exception {
+    String body = "{\"input\":{\"password\":\"secret\"},\"output\":{\"token\":\"t\"}}\n";
+    when(service.openTapeStream("run-redact")).thenReturn(Optional.of(new ByteArrayInputStream(
+            body.getBytes(java.nio.charset.StandardCharsets.UTF_8))));
+    JsonRedactor redactor = new JsonRedactor(objectMapper,
+            new CbsDslRedactionProperties(true, List.of(), "***", List.of(), 10_000_000));
+    MockMvc redactedMvc = buildMockMvc(new VhsManagementHandler(service, null, objectMapper,
+            AuditTestSupport.emptyProvider(), redactor));
+
+    MvcResult result = redactedMvc.perform(get("/api/v1/vhs/tapes/run-redact"))
+            .andExpect(status().isOk())
+            .andExpect(content().contentType("application/x-jsonl"))
+            .andReturn();
+
+    String response = result.getResponse().getContentAsString();
+    assertThat(response).contains("\"password\":\"***\"").contains("\"token\":\"***\"");
+    assertThat(response).doesNotContain("secret").doesNotContain("\"t\"");
   }
 
   // ----- delete -------------------------------------------------------------
@@ -237,7 +259,7 @@ class VhsManagementHandlerTest {
   @Test
   void loadtestReturns503WhenBeanUnavailable() throws Exception {
     mockMvc = buildMockMvc(new VhsManagementHandler(service, null, objectMapper,
-            AuditTestSupport.emptyProvider()));
+            AuditTestSupport.emptyProvider(), JsonRedactor.disabled()));
 
     mockMvc.perform(post("/api/v1/vhs/loadtest")
             .contentType("application/json")

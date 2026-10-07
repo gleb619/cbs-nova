@@ -6,6 +6,7 @@ import cbs.nova.starter.config.properties.CbsSseProperties;
 import cbs.nova.starter.config.properties.SlackProperties;
 import cbs.nova.starter.config.properties.MqEventProperties;
 import cbs.nova.starter.config.router.DslRouterConfiguration;
+import cbs.nova.starter.config.RedactionConfiguration;
 import cbs.nova.starter.security.ProductionSecurityPostureValidator;
 import cbs.nova.starter.security.SecurityPostureReporter;
 import cbs.nova.starter.webhook.WebhookConfiguration;
@@ -57,6 +58,7 @@ import org.springframework.context.annotation.Import;
     DslHealthIndicatorConfiguration.class,
     BuilderClientConfiguration.class,
     VhsConfiguration.class,
+    RedactionConfiguration.class,
     NotificationConfiguration.class,
     EmailNotificationConfiguration.class,
     MqEventConfiguration.class,

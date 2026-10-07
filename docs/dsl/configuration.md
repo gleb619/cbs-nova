@@ -510,6 +510,27 @@ default, and existing deployments see zero behaviour change.
 | `cbs.dsl.auth.rbac.enabled` | `boolean` | `false` | Master switch. When `true`, the RBAC filter enforces a per-route role table on every `/api/**` request. |
 | `cbs.dsl.auth.rbac.claim` | `String` | `roles` | JWT claim name the filter reads roles from when an OIDC principal is authenticated. Standard OAuth 2.0 `scope` / `scp` claims are also consulted when this default claim is in use. Blank values fall back to `roles`. |
 
+#### `cbs.dsl.redaction`
+
+Class: `CbsDslRedactionProperties` (record). Key-based redaction of run input/output data at
+**egress only** (API DTOs, CSV export, VHS tape downloads, domain-event read payloads, and audit
+details). Redaction never changes what is persisted or what internal replay / re-run /
+retention / reconciliation paths read. Stored run data remains in clear unless encryption-at-rest
+(T879) is enabled separately.
+
+| Key | Type | Default | Effect |
+|-----|------|---------|--------|
+| `cbs.dsl.redaction.enabled` | `boolean` | `true` | Master switch. When `false` the redactor is a no-op for all callers. |
+| `cbs.dsl.redaction.keys` | `List<String>` | `["password\|passwd\|secret\|token\|authorization\|api[-_]?key\|private[-_]?key\|credential"]` | Case-insensitive regular expressions matched against every object key at any JSON depth. A key matches when any regex finds a substring. |
+| `cbs.dsl.redaction.replacement` | `String` | `***` | Value substituted for every matching key. |
+| `cbs.dsl.redaction.bypass-roles` | `List<String>` | `["ADMIN", "ROLE_ADMIN"]` | Roles that see raw values. Matching is case-insensitive and tolerates both `ROLE_ADMIN` and `ADMIN` forms. |
+| `cbs.dsl.redaction.max-input-length` | `int` | `10000000` (10 MB) | Size bound: inputs larger than this many characters are returned unchanged so memory and latency stay bounded. |
+
+> **Security note.** Run input and output are still stored as JSON in `dsl_runs.input_json` /
+`output_json` and in VHS tapes unless T879 encrypts them at rest. DSL authors should avoid passing
+live secrets as run input: prefer `httpAuth` headers (not bodies), Temporal payloads encrypted at
+rest, or a secrets manager. The redactor is a operational-safety net, not a secrets store.
+
 #### Opt-in route toggles (`cbs.dsl.docs`, `cbs.dsl.drafts`, `cbs.webhook`)
 
 These toggles gate handler / router registration under the matching `@ConditionalOnProperty`
