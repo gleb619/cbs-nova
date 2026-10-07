@@ -1,0 +1,25 @@
+# Chaos-engineering drills profile.
+# Not started by default; enable with `docker compose -f app/docker-compose.yml --profile drills up -d`.
+# Toxiproxy sits between the app and its upstream dependencies so operators can inject latency
+# or full cutoffs without touching the real services.
+services:
+  toxiproxy:
+    profiles:
+      - "drills"
+    image: ghcr.io/shopify/toxiproxy:2.12.0
+    command:
+      - "-host=0.0.0.0"
+      - "-config=/config/toxiproxy.json"
+    ports:
+      # Toxiproxy HTTP API; use /toxiproxy-cli inside the container or curl from the host.
+      - "8474:8474"
+    volumes:
+      - ./toxiproxy.json:/config/toxiproxy.json:ro
+    # No dependency conditions: the proxy must exist before the app is pointed at it,
+    # but the app is started by the default profile. Operators run the drill after boot.
+    healthcheck:
+      test: ["CMD", "/toxiproxy-cli", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s

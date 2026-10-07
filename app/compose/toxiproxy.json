@@ -1,0 +1,20 @@
+[
+  {
+    "name": "postgres",
+    "listen": "0.0.0.0:5432",
+    "upstream": "postgres:5432",
+    "enabled": true
+  },
+  {
+    "name": "temporal",
+    "listen": "0.0.0.0:7233",
+    "upstream": "temporal:7233",
+    "enabled": true
+  },
+  {
+    "name": "keycloak",
+    "listen": "0.0.0.0:8080",
+    "upstream": "keycloak:8080",
+    "enabled": true
+  }
+]
