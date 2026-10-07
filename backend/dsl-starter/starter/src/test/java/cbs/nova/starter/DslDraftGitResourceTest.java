@@ -13,6 +13,7 @@ import static org.mockito.Mockito.when;
 import cbs.nova.dsl.GlobalManager;
 import cbs.nova.dsl.model.LoadResult;
 import cbs.nova.dsl.utils.DefinitionLoader;
+import cbs.nova.starter.repository.DslFileRepository;
 import cbs.nova.starter.builder.DslBuilderClient;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.controller.DslDraftHandler;
@@ -198,7 +199,8 @@ class DslDraftGitResourceTest {
 
   private DslDraftHandler builderHandler(DslBuilderClient client) {
     DslDefinitionBundleService bundleService = new DslDefinitionBundleService(mapper,
-            Optional.empty(), props, sourcePathResolver, providerOf(client));
+            Optional.empty(), props, sourcePathResolver, providerOf(client),
+            new DslFileRepository());
     DslDraftSupport support = new DslDraftSupport(props,
             providerOf(client), null, null, providerOfBean(sourcePathResolver));
     return new DslDraftHandler(props,

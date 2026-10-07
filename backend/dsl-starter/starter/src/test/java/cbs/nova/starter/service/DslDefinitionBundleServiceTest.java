@@ -12,12 +12,19 @@ import cbs.nova.starter.model.VcsModels.DefinitionBundle;
 import cbs.nova.starter.model.VcsModels.DefinitionBundleEntry;
 import cbs.nova.starter.model.VcsModels.DraftRequest;
 import cbs.nova.starter.model.VcsModels.ImportEntryResult;
+import cbs.nova.starter.repository.DslFileRepository;
+import cbs.nova.starter.service.DslDefinitionBundleService.BundleApplyResult;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.ObjectProvider;
@@ -35,7 +42,8 @@ class DslDefinitionBundleServiceTest {
     @SuppressWarnings("unchecked")
     ObjectProvider<DslBuilderClient> emptyBuilder = mock(ObjectProvider.class);
     when(emptyBuilder.getIfAvailable()).thenReturn(null);
-    return new DslDefinitionBundleService(mapper, Optional.empty(), props, resolver, emptyBuilder);
+    return new DslDefinitionBundleService(mapper, Optional.empty(), props, resolver, emptyBuilder,
+            new DslFileRepository());
   }
 
   @Test
@@ -265,6 +273,198 @@ class DslDefinitionBundleServiceTest {
     assertThat(dir.resolve("dsl/ADsl.java")).exists();
     assertThat(dir.resolve("dsl/BDsl.java")).exists();
     assertThat(dir.resolve("dsl/CDsl.java")).doesNotExist();
+  }
+
+  @Test
+  void applyPublishesAllEntriesAtomically(@TempDir Path dir) throws IOException {
+    writeSource(dir, "A", "process", "old-a");
+    writeSource(dir, "B", "transaction", "old-b");
+    DefinitionBundle bundle = applyBundle(Map.of(
+            "A", sourceBody("A", "process", "new-a"),
+            "B", sourceBody("B", "transaction", "new-b")));
+
+    BundleApplyResult applied = service.applyToTarget(dir, bundle);
+
+    assertThat(applied.rolledBack()).isFalse();
+    assertThat(applied.results()).extracting(ImportEntryResult::outcome)
+            .containsExactly("published", "published");
+    assertThat(Files.readString(dir.resolve("dsl/ADsl.java")))
+            .isEqualTo(sourceBody("A", "process", "new-a"));
+    assertThat(Files.readString(dir.resolve("dsl/BDsl.java")))
+            .isEqualTo(sourceBody("B", "transaction", "new-b"));
+    assertThat(listTmpResidue(dir)).isEmpty();
+  }
+
+  @Test
+  void applyStagingFailureLeavesTargetByteIdenticalWithoutTmpResidue(@TempDir Path dir)
+          throws IOException {
+    writeSource(dir, "A", "process", "old-a");
+    writeSource(dir, "B", "transaction", "old-b");
+    String oldAContent = Files.readString(dir.resolve("dsl/ADsl.java"));
+    String oldBContent = Files.readString(dir.resolve("dsl/BDsl.java"));
+    // read-only dsl/ dir makes temp-file staging fail for every entry (phase 1)
+    Files.setPosixFilePermissions(dir.resolve("dsl"),
+            PosixFilePermissions.fromString("r-xr-xr-x"));
+
+    try {
+      BundleApplyResult applied = service.applyToTarget(dir,
+              applyBundle(Map.of(
+                      "A", sourceBody("A", "process", "new-a"),
+                      "B", sourceBody("B", "transaction", "new-b"))));
+
+      assertThat(applied.rolledBack()).isTrue();
+      assertThat(applied.results()).extracting(ImportEntryResult::outcome)
+              .containsExactly("failed", "skipped");
+      assertThat(applied.results().get(1).message()).contains("rolled back");
+      assertThat(Files.readString(dir.resolve("dsl/ADsl.java"))).isEqualTo(oldAContent);
+      assertThat(Files.readString(dir.resolve("dsl/BDsl.java"))).isEqualTo(oldBContent);
+    } finally {
+      Files.setPosixFilePermissions(dir.resolve("dsl"),
+              PosixFilePermissions.fromString("rwxr-xr-x"));
+    }
+    assertThat(listTmpResidue(dir)).isEmpty();
+  }
+
+  @Test
+  void applyLaterStagingFailureReportsEarlierStagedEntriesAsRolledBackNotNull(@TempDir Path dir)
+          throws IOException {
+    writeSource(dir, "A", "process", "old-a");
+    writeSource(dir, "B", "transaction", "old-b");
+    String oldAContent = Files.readString(dir.resolve("dsl/ADsl.java"));
+    Path bFile = dir.resolve("dsl/BDsl.java");
+    // unreadable pre-image: A stages fine, B's phase-1 pre-image read throws
+    Files.setPosixFilePermissions(bFile, PosixFilePermissions.fromString("---------"));
+    try {
+      BundleApplyResult applied = service.applyToTarget(dir,
+              applyBundle(Map.of(
+                      "A", sourceBody("A", "process", "new-a"),
+                      "B", sourceBody("B", "transaction", "new-b"))));
+
+      assertThat(applied.rolledBack()).isTrue();
+      assertThat(applied.results()).doesNotContainNull();
+      assertThat(applied.results()).extracting(ImportEntryResult::outcome)
+              .containsExactly("skipped", "failed");
+      assertThat(applied.results().get(0).message()).contains("rolled back");
+      assertThat(Files.readString(dir.resolve("dsl/ADsl.java"))).isEqualTo(oldAContent);
+    } finally {
+      Files.setPosixFilePermissions(bFile, PosixFilePermissions.fromString("rw-r--r--"));
+    }
+    assertThat(listTmpResidue(dir)).isEmpty();
+  }
+
+  @Test
+  void applyMoveFailureRestoresPreImagesWithoutTmpResidue(@TempDir Path dir)
+          throws IOException {
+    writeSource(dir, "A", "process", "old-a");
+    String oldAContent = Files.readString(dir.resolve("dsl/ADsl.java"));
+    // B's target path is a non-empty directory: staging succeeds, the phase-2 atomic
+    // move onto it fails with IOException, forcing the pre-image restore path.
+    Path bTarget = dir.resolve("dsl/BDsl.java");
+    Files.createDirectories(bTarget.resolve("nested"));
+    Files.writeString(bTarget.resolve("nested/keep.txt"), "x", StandardCharsets.UTF_8);
+
+    BundleApplyResult applied = service.applyToTarget(dir,
+            applyBundle(Map.of(
+                    "A", sourceBody("A", "process", "new-a"),
+                    "B", sourceBody("B", "transaction", "new-b"))));
+
+    assertThat(applied.rolledBack()).isTrue();
+    assertThat(applied.results()).extracting(ImportEntryResult::outcome)
+            .containsExactly("skipped", "failed");
+    assertThat(applied.results().get(0).message()).contains("rolled back");
+    assertThat(applied.results().get(1).outcome()).isEqualTo("failed");
+    assertThat(Files.readString(dir.resolve("dsl/ADsl.java"))).isEqualTo(oldAContent);
+    assertThat(Files.isDirectory(bTarget)).isTrue();
+    assertThat(listTmpResidue(dir)).isEmpty();
+  }
+
+  @Test
+  void applyAndVerifyRestoresPreImagesWhenDigestMismatch(@TempDir Path dir)
+          throws IOException {
+    writeSource(dir, "A", "process", "old-a");
+    String oldAContent = Files.readString(dir.resolve("dsl/ADsl.java"));
+    // duplicate-name entries pass validation but re-export dedups, so the post-apply
+    // digest cannot match — the digest check must roll the target back.
+    DefinitionBundle bundle = new DefinitionBundle(
+            StarterConstants.BUNDLE_FORMAT_VERSION, "1.0", "now",
+            List.of(
+                    new DefinitionBundleEntry(
+                            new DraftRequest("A", "process", "Published", "v1", "q",
+                                    sourceBody("A", "process", "new-a"), null),
+                            "source"),
+                    new DefinitionBundleEntry(
+                            new DraftRequest("A", "process", "Published", "v2", "q",
+                                    sourceBody("A", "process", "newer-a"), null),
+                            "source")),
+            null);
+
+    assertThatThrownBy(() -> service.applyAndVerify(dir, bundle))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageStartingWith("BUNDLE_DIGEST_MISMATCH");
+    assertThat(Files.readString(dir.resolve("dsl/ADsl.java"))).isEqualTo(oldAContent);
+  }
+
+  @Test
+  void concurrentReaderNeverObservesPartialFile(@TempDir Path dir) throws Exception {
+    writeSource(dir, "A", "process", "old-a");
+    String oldContent = Files.readString(dir.resolve("dsl/ADsl.java"));
+    StringBuilder big = new StringBuilder(sourceBody("A", "process", "new-a"));
+    for (int i = 0; i < 20_000; i++) {
+      big.append("// padding ").append(i).append('\n');
+    }
+    String newContent = big.toString();
+    Path target = dir.resolve("dsl/ADsl.java");
+    AtomicBoolean applied = new AtomicBoolean();
+    AtomicBoolean sawNew = new AtomicBoolean();
+    List<String> violations = java.util.Collections
+            .synchronizedList(new java.util.ArrayList<>());
+
+    Thread reader = new Thread(() -> {
+      while (!applied.get() || !sawNew.get()) {
+        try {
+          String content = Files.readString(target, StandardCharsets.UTF_8);
+          if (!content.equals(oldContent) && !content.equals(newContent)) {
+            violations.add("partial content (" + content.length() + " bytes)");
+            return;
+          }
+          if (content.equals(newContent)) {
+            sawNew.set(true);
+          }
+        } catch (Exception e) {
+          violations.add("read failed: " + e);
+          return;
+        }
+      }
+    });
+    reader.setDaemon(true);
+    reader.start();
+
+    BundleApplyResult result = service.applyToTarget(dir, applyBundle(Map.of("A", newContent)));
+    applied.set(true);
+    reader.join(10_000);
+
+    assertThat(result.rolledBack()).isFalse();
+    assertThat(violations).isEmpty();
+    assertThat(Files.readString(target)).isEqualTo(newContent);
+  }
+
+  private List<Path> listTmpResidue(Path dir) throws IOException {
+    try (Stream<Path> stream = Files.walk(dir)) {
+      return stream.filter(p -> p.getFileName().toString().endsWith(".tmp")).toList();
+    }
+  }
+
+  private DefinitionBundle applyBundle(Map<String, String> sources) {
+    return new DefinitionBundle(
+            StarterConstants.BUNDLE_FORMAT_VERSION, "1.0", "now",
+            sources.entrySet().stream()
+                    .sorted(Map.Entry.comparingByKey())
+                    .map(e -> new DefinitionBundleEntry(
+                            new DraftRequest(e.getKey(), "process", "Published", "v1", "q",
+                                    e.getValue(), null),
+                            "source"))
+                    .toList(),
+            null);
   }
 
   private String sourceBody(String name, String type, String version) {

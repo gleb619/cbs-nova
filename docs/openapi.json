@@ -756,6 +756,9 @@
               "$ref": "#/components/schemas/ImportEntryResult"
             },
             "type": "array"
+          },
+          "rolledBack": {
+            "type": "boolean"
           }
         },
         "type": "object"

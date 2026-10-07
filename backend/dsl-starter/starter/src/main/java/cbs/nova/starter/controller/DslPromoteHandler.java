@@ -12,6 +12,7 @@ import cbs.nova.starter.model.VcsModels.ImportBundleResult;
 import cbs.nova.starter.model.VcsModels.ImportEntryResult;
 import cbs.nova.starter.service.DslAuditService;
 import cbs.nova.starter.service.DslDefinitionBundleService;
+import cbs.nova.starter.service.DslDefinitionBundleService.BundleApplyResult;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -129,29 +130,44 @@ public class DslPromoteHandler {
       log.info("[DSL promote] dry-run {} -> {}: {} created/updated, {} skipped, digest={}",
               body.source(), body.target(), wouldChange, skipped, bundle.digest());
       return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON)
-              .body(new ImportBundleResult(true, false, wouldChange, skipped, results, null, null));
+              .body(new ImportBundleResult(true, false, wouldChange, skipped, results, null, null,
+                      false));
     }
 
     List<ImportEntryResult> results = new ArrayList<>();
+    BundleApplyResult applied;
     try {
-      results.addAll(bundleService.applyToTarget(target.path(), bundle));
-      bundleService.verifyApplied(target.path(), bundle);
+      applied = bundleService.applyAndVerify(target.path(), bundle);
     } catch (RuntimeException e) {
-      audit(request, body, bundle, StarterConstants.OUTCOME_FAILURE, e.getMessage());
+      audit(request, body, bundle, StarterConstants.OUTCOME_FAILURE, e.getMessage(), true);
       throw e;
     }
+    results.addAll(applied.results());
+    boolean rolledBack = applied.rolledBack();
     long published = results.stream().filter(r -> "published".equals(r.outcome())).count();
     long failed = results.size() - published;
-    audit(request, body, bundle, StarterConstants.OUTCOME_SUCCESS, null);
-    log.info("[DSL promote] applied {} -> {}: {} published, {} failed, digest verified={}",
-            body.source(), body.target(), published, failed, bundle.digest());
+    if (rolledBack) {
+      audit(request, body, bundle, StarterConstants.OUTCOME_FAILURE, rollbackError(results), true);
+    } else {
+      audit(request, body, bundle, StarterConstants.OUTCOME_SUCCESS, null, false);
+    }
+    log.info("[DSL promote] applied {} -> {}: {} published, {} failed, rolledBack={}, digest={}",
+            body.source(), body.target(), published, failed, rolledBack, bundle.digest());
     return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON)
             .body(new ImportBundleResult(false, false, (int) published, (int) failed, results,
-                    null, null));
+                    null, null, rolledBack));
+  }
+
+  private String rollbackError(List<ImportEntryResult> results) {
+    return results.stream()
+            .filter(r -> "failed".equals(r.outcome()))
+            .map(r -> r.name() + ": " + r.message())
+            .findFirst()
+            .orElse("apply rolled back");
   }
 
   private void audit(ServerRequest request, PromotionRequest body, DefinitionBundle bundle,
-          String outcome, String error) {
+          String outcome, String error, boolean rolledBack) {
     var provider = auditServiceProvider == null ? null : auditServiceProvider.getIfAvailable();
     if (provider == null) {
       return;
@@ -160,7 +176,8 @@ public class DslPromoteHandler {
             .map(e -> e.definition().name())
             .toList();
     Object details = error != null
-            ? Map.of("source", body.source(), "target", body.target(), "error", error)
+            ? Map.of("source", body.source(), "target", body.target(), "error", error,
+                    "rolledBack", rolledBack)
             : Map.of("source", body.source(), "target", body.target(), "definitions", names,
                     "digest", Optional.ofNullable(bundle.digest()).orElse(""), "count",
                     names.size());

@@ -107,7 +107,8 @@ public final class VcsModels {
           int failed,
           List<ImportEntryResult> results,
           @JsonInclude(JsonInclude.Include.NON_NULL) String reloadError,
-          @JsonInclude(JsonInclude.Include.NON_NULL) List<CompileDiagnostic> diagnostics) {
+          @JsonInclude(JsonInclude.Include.NON_NULL) List<CompileDiagnostic> diagnostics,
+          boolean rolledBack) {
 
   }
 

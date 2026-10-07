@@ -44,20 +44,34 @@ public class DslFileRepository {
    * multiple app replicas sharing one workspace directory (see DslFileService).
    */
   public Path write(Path root, String relativePath, String content) throws IOException {
-    Path file = resolve(root, relativePath);
+    return writeAtomic(resolve(root, relativePath), content);
+  }
+
+  /**
+   * Absolute-path variant of {@link #write(Path, String, String)}: stages the full content in a
+   * temp file next to the target and publishes it via {@code ATOMIC_MOVE}. When the move fails
+   * (e.g. the target directory is not writable) the previous content of {@code file} — if any — is
+   * left intact and the temp file is removed, so neither a failing move nor a crash mid-write can
+   * leave a truncated target or {@code *.tmp} residue behind.
+   */
+  public Path writeAtomic(Path file, String content) throws IOException {
     Files.createDirectories(file.getParent());
     Path tmp = Files.createTempFile(file.getParent(), file.getFileName().toString(), ".tmp");
     try {
       Files.writeString(tmp, content, StandardCharsets.UTF_8);
-      try {
-        Files.move(tmp, file, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
-      } catch (AtomicMoveNotSupportedException e) {
-        Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING);
-      }
+      moveIntoPlace(tmp, file);
     } finally {
       Files.deleteIfExists(tmp);
     }
     return file;
+  }
+
+  public static void moveIntoPlace(Path tmp, Path file) throws IOException {
+    try {
+      Files.move(tmp, file, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+    } catch (AtomicMoveNotSupportedException e) {
+      Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING);
+    }
   }
 
   public List<FileEntry> list(Path root, String prefix) {

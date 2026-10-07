@@ -25,6 +25,7 @@ import cbs.nova.starter.model.VcsModels.DefinitionBundleEntry;
 import cbs.nova.starter.model.VcsModels.DraftRequest;
 import cbs.nova.starter.model.VcsModels.ImportBundleResult;
 import cbs.nova.starter.model.DslFileModels.FileContentResponse;
+import cbs.nova.starter.repository.DslFileRepository;
 import cbs.nova.starter.service.DslDefinitionBundleService;
 import cbs.nova.starter.service.DslDefinitionStatusResolver;
 import cbs.nova.starter.service.DslGitStatusResolver;
@@ -75,7 +76,7 @@ class DslDefinitionBundleResourceTest {
     gitStatusResolver = mock(DslGitStatusResolver.class);
     statusResolver = new DslDefinitionStatusResolver(props, gitStatusResolver, sourcePathResolver);
     bundleService = new DslDefinitionBundleService(mapper, Optional.empty(), props,
-            sourcePathResolver, providerOf(client));
+            sourcePathResolver, providerOf(client), new DslFileRepository());
     handler = handler(client);
   }
 

@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 import cbs.nova.dsl.utils.DefinitionLoader;
 import cbs.nova.dsl.vcs.ChangeType;
 import cbs.nova.dsl.vcs.RepoStatus;
+import cbs.nova.starter.repository.DslFileRepository;
 import cbs.nova.starter.builder.DslBuilderClient;
 import cbs.nova.starter.config.properties.DslProperties;
 import cbs.nova.starter.controller.DslDraftHandler;
@@ -90,7 +91,8 @@ class DslDraftMetadataResourceTest {
     support = new DslDraftSupport(repoProps, providerOf(client), null, null, null);
     DslDraftHandler repoHandler = new DslDraftHandler(repoProps, reloadHandler, mapper,
             new DslDefinitionBundleService(mapper, Optional.empty(), repoProps,
-                    new DslSourcePathResolver(repoProps), providerOf(client)),
+                    new DslSourcePathResolver(repoProps), providerOf(client),
+                    new DslFileRepository()),
             null, providerOf(client), null, null, null,
             null, providerOfBean(gitStatusResolver), null, support);
     RepoStatus status = RepoStatus.of(repoRoot,
@@ -253,7 +255,7 @@ class DslDraftMetadataResourceTest {
   private DslDefinitionBundleService bundleService(DslProperties props) {
     DslSourcePathResolver resolver = new DslSourcePathResolver(props);
     return new DslDefinitionBundleService(mapper, Optional.empty(), props, resolver,
-            providerOf(client));
+            providerOf(client), new DslFileRepository());
   }
 
   @SuppressWarnings("unchecked")
