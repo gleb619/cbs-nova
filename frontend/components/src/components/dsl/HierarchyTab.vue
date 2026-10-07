@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUpdate, ref } from 'vue'
-import { useLocalStorageState } from '../../composables/useLocalStorageState'
 import type { ConstructType } from '../../composables/useConstructSchema'
+import { useLocalStorageState } from '../../composables/useLocalStorageState'
 import { useHierarchyHistory } from '../../composables/usePreviewHistory'
 import type { RunnerOutput, RunnerStatus } from '../../types/runner'
 import HierarchyReportView from './HierarchyReportView.vue'
@@ -236,11 +236,7 @@ const statusLabel = computed(() => {
           </label>
         </header>
         <div class="flex-1 min-h-0 overflow-auto p-3">
-          <HierarchyReportView
-            v-if="output"
-            :output="output"
-            :show-raw="showRawJson"
-          />
+          <HierarchyReportView v-if="output" :output="output" :show-raw="showRawJson" />
           <p v-else class="text-xs text-ink-muted" data-testid="hierarchy-result-empty">
             No result yet. Press Run to fetch the structural snapshot.
           </p>

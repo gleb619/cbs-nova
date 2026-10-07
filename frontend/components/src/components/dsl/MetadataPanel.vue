@@ -3,6 +3,7 @@ import { marked } from 'marked'
 import { computed } from 'vue'
 import { useLocalStorageState } from '../../composables/useLocalStorageState'
 import type { DslConstruct } from '../../types/dsl'
+import { sanitizeHtml } from '../../utils/sanitizeHtml'
 import CbsSpinner from '../CbsSpinner.vue'
 
 const props = defineProps<{ construct: DslConstruct | null; loading?: boolean }>()
@@ -56,7 +57,7 @@ const fields = computed<FieldRow[]>(() => {
 const renderedDescription = computed(() => {
   const raw = editedDescription.value
   if (!raw) return ''
-  return marked.parse(raw, { async: false }) as string
+  return sanitizeHtml(marked.parse(raw, { async: false }) as string)
 })
 </script>
 

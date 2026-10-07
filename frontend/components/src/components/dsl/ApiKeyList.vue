@@ -76,14 +76,14 @@ function formatDate(value?: string | null) {
         data-testid="api-key-secret-banner"
         class="p-3 rounded border border-amber-300 bg-amber-50 text-amber-900 space-y-2"
       >
-        <p class="text-sm font-medium">
-          Key created. Copy it now — it is shown exactly once.
-        </p>
+        <p class="text-sm font-medium">Key created. Copy it now — it is shown exactly once.</p>
         <div class="flex items-center gap-2">
           <code
             data-testid="api-key-secret"
             class="flex-1 block p-2 rounded bg-white border border-amber-200 text-sm break-all"
-            >{{ createdSecret }}</code
+            >{{
+              createdSecret
+            }}</code
           >
           <button
             data-testid="api-key-secret-dismiss"
@@ -118,7 +118,7 @@ function formatDate(value?: string | null) {
             type="text"
             placeholder="e.g. CI deployment"
             class="px-3 py-2 rounded border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-          />
+          >
         </div>
         <div class="flex justify-end">
           <button
@@ -213,9 +213,7 @@ function formatDate(value?: string | null) {
               </td>
             </tr>
             <tr v-if="apiKeys.length === 0">
-              <td colspan="6" class="px-4 py-8 text-center text-gray-500">
-                No API keys found.
-              </td>
+              <td colspan="6" class="px-4 py-8 text-center text-gray-500">No API keys found.</td>
             </tr>
           </tbody>
         </table>

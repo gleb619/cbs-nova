@@ -53,9 +53,10 @@ const hasCompensation = computed(() =>
 const errorCount = computed(() => props.output.errors?.length ?? 0)
 
 function totalCallCount(): number {
-  const counts = report.value && isObject(report.value.callCounts)
-    ? (report.value.callCounts as Record<string, unknown>)
-    : {}
+  const counts =
+    report.value && isObject(report.value.callCounts)
+      ? (report.value.callCounts as Record<string, unknown>)
+      : {}
   return Object.values(counts).reduce((sum, n) => sum + (typeof n === 'number' ? n : 0), 0)
 }
 
@@ -124,14 +125,16 @@ function externalCallLabel(call: Record<string, unknown>): string {
           class="inline-flex items-center rounded bg-success-100 px-2 py-0.5 text-xs font-medium text-success-700"
           data-testid="hierarchy-summary-calls"
         >
-          {{ totalCallCount() }} total call{{ totalCallCount() === 1 ? '' : 's' }}
+          {{ totalCallCount() }}
+          total call{{ totalCallCount() === 1 ? '' : 's' }}
         </span>
         <span
           v-if="errorCount > 0"
           class="inline-flex items-center rounded bg-error-100 px-2 py-0.5 text-xs font-medium text-error-700"
           data-testid="hierarchy-summary-errors"
         >
-          {{ errorCount }} error{{ errorCount === 1 ? '' : 's' }}
+          {{ errorCount }}
+          error{{ errorCount === 1 ? '' : 's' }}
         </span>
       </div>
 
@@ -149,8 +152,7 @@ function externalCallLabel(call: Record<string, unknown>): string {
         class="border border-line rounded-sm bg-white"
         data-testid="hierarchy-children-tree"
       >
-        <summary class="cursor-pointer select-none px-3 py-2 text-xs font-medium text-ink"
-        >
+        <summary class="cursor-pointer select-none px-3 py-2 text-xs font-medium text-ink">
           Children ({{ childReports().length }})
         </summary>
         <div class="px-3 pb-3 space-y-1">
@@ -168,12 +170,10 @@ function externalCallLabel(call: Record<string, unknown>): string {
         class="border border-line rounded-sm bg-white"
         data-testid="hierarchy-external-calls"
       >
-        <summary class="cursor-pointer select-none px-3 py-2 text-xs font-medium text-ink"
-        >
+        <summary class="cursor-pointer select-none px-3 py-2 text-xs font-medium text-ink">
           External calls ({{ externalCalls().length }})
         </summary>
-        <ul class="px-3 pb-3 space-y-1"
-        >
+        <ul class="px-3 pb-3 space-y-1">
           <li
             v-for="(call, idx) in externalCalls()"
             :key="idx"
@@ -190,12 +190,10 @@ function externalCallLabel(call: Record<string, unknown>): string {
         class="border border-line rounded-sm bg-white"
         data-testid="hierarchy-execution-trace"
       >
-        <summary class="cursor-pointer select-none px-3 py-2 text-xs font-medium text-ink"
-        >
+        <summary class="cursor-pointer select-none px-3 py-2 text-xs font-medium text-ink">
           Execution trace ({{ executionTrace().length }})
         </summary>
-        <ol class="px-3 pb-3 list-decimal pl-4 space-y-1"
-        >
+        <ol class="px-3 pb-3 list-decimal pl-4 space-y-1">
           <li
             v-for="(step, idx) in executionTrace()"
             :key="idx"

@@ -62,6 +62,7 @@
     "typecheck": "vue-tsc --noEmit"
   },
   "dependencies": {
+    "dompurify": "3.4.16",
     "marked": "^18.0.14",
     "mermaid": "^12.0.0",
     "monaco-editor": "^0.56.0",

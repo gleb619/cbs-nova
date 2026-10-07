@@ -1,15 +1,19 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
 import { defineComponent, h } from 'vue'
-import AuditTrailTable from '../AuditTrailTable.vue'
 import type { AuditDto } from '../../types/audit'
+import AuditTrailTable from '../AuditTrailTable.vue'
 
 const ErrorBannerStub = defineComponent({
   name: 'ErrorBanner',
   props: ['message', 'retryLabel'],
   emits: ['retry'],
   setup(props, { emit }) {
-    return () => h('div', { 'data-testid': 'error-banner-stub' }, [props.message as string, h('button', { onClick: () => emit('retry') }, 'Retry')])
+    return () =>
+      h('div', { 'data-testid': 'error-banner-stub' }, [
+        props.message as string,
+        h('button', { onClick: () => emit('retry') }, 'Retry'),
+      ])
   },
 })
 
@@ -54,7 +58,9 @@ describe('AuditTrailTable', () => {
 
   it('shows empty state', () => {
     const wrapper = mountTable()
-    expect(wrapper.find('[data-testid="audit-trail-empty"]').text()).toBe('No audit entries recorded.')
+    expect(wrapper.find('[data-testid="audit-trail-empty"]').text()).toBe(
+      'No audit entries recorded.',
+    )
   })
 
   it('shows empty state with filter message when actionFilter is set', () => {

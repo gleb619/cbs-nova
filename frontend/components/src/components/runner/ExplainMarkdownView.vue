@@ -2,6 +2,7 @@
 import { marked } from 'marked'
 import { computed, onMounted, onUpdated, ref } from 'vue'
 import { useMermaidRender } from '../../composables/useMermaidRender'
+import { sanitizeHtml } from '../../utils/sanitizeHtml'
 
 defineOptions({ name: 'ExplainMarkdownView' })
 
@@ -30,12 +31,17 @@ const computedHtml = computed(() => {
   if (!raw) return ''
   const source = raw.trim()
   if (props.mermaid && !source.includes('\u0060\u0060\u0060') && MERMAID_FIRST_LINE.test(source)) {
-    return marked.parse(`\u0060\u0060\u0060mermaid\n${source}\n\u0060\u0060\u0060`, {
-      async: false,
-    }) as string
+    return sanitizeHtml(
+      marked.parse(`\u0060\u0060\u0060mermaid\n${source}\n\u0060\u0060\u0060`, {
+        async: false,
+      }) as string,
+      'markdown',
+    ) as string
   }
-  return marked.parse(raw, { async: false }) as string
+  return sanitizeHtml(marked.parse(raw, { async: false }) as string, 'markdown') as string
 })
+
+const safeHtml = computed(() => sanitizeHtml(props.rendered ?? computedHtml.value, 'markdown'))
 
 async function renderMermaidDiagrams() {
   if (!props.mermaid || unavailable.value || !root.value) return
@@ -52,7 +58,7 @@ async function renderMermaidDiagrams() {
       container.setAttribute('data-testid', 'explain-mermaid-diagram')
       container.style.width = '100%'
       container.style.overflow = 'auto'
-      container.innerHTML = svg
+      container.innerHTML = sanitizeHtml(svg, 'svg')
       const renderedSvg = container.querySelector('svg')
       if (renderedSvg) {
         // Let each diagram keep its natural viewBox size so it does not get
@@ -95,12 +101,8 @@ onUpdated(() => {
 
 <template>
   <div ref="root" data-testid="explain-markdown-view" class="markdown-body">
-    <slot v-if="(rendered ?? computedHtml)" name="rendered" :html="rendered ?? computedHtml">
-      <div
-        data-testid="explain-markdown-rendered"
-        class="markdown-rendered"
-        v-html="rendered ?? computedHtml"
-      />
+    <slot v-if="(safeHtml)" name="rendered" :html="safeHtml">
+      <div data-testid="explain-markdown-rendered" class="markdown-rendered" v-html="safeHtml" />
     </slot>
     <slot v-else name="empty">
       <p data-testid="explain-markdown-empty" class="text-ink-muted text-sm">

@@ -11,6 +11,7 @@ import {
   renameDocTitle,
   serializeMarkdownDoc,
 } from '../../utils/markdownDoc'
+import { sanitizeHtml } from '../../utils/sanitizeHtml'
 import HotkeyTooltip from '../HotkeyTooltip.vue'
 import MarkdownBodyEditor from './MarkdownBodyEditor.vue'
 import MonacoEditor from './MonacoEditor.vue'
@@ -145,7 +146,7 @@ const parsed = computed(() => parseMarkdownDoc(localDoc.value))
 
 const renderedView = computed(() => {
   const body = parsed.value.body || ''
-  return marked.parse(body, { async: false }) as string
+  return sanitizeHtml(marked.parse(body, { async: false }) as string)
 })
 
 function updateDoc(next: string) {

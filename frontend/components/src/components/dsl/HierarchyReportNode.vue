@@ -34,11 +34,7 @@ const indentStyle = computed(() => ({
 </script>
 
 <template>
-  <div
-    class="border-l border-line"
-    data-testid="hierarchy-report-node"
-    :style="indentStyle"
-  >
+  <div class="border-l border-line" data-testid="hierarchy-report-node" :style="indentStyle">
     <button
       type="button"
       class="w-full flex items-center gap-2 py-1 px-1 text-left hover:bg-surface rounded"
@@ -52,7 +48,8 @@ const indentStyle = computed(() => ({
         class="ml-auto text-xs rounded px-1.5 py-0.5 bg-accent-500/10 text-accent-600"
         data-testid="hierarchy-report-node-count"
       >
-        {{ callCount() }} call{{ callCount() === 1 ? '' : 's' }}
+        {{ callCount() }}
+        call{{ callCount() === 1 ? '' : 's' }}
       </span>
     </button>
 
