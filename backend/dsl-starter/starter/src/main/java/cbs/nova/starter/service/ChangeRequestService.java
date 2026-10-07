@@ -31,13 +31,13 @@ import tools.jackson.databind.ObjectMapper;
 /**
  * Change-request lifecycle (T568): submit snapshots the current DSL source file, approve validates
  * the approver (AUTHOR rank, no self-approval below ADMIN) and delegates the actual publish to
- * {@link DslDraftHandler#publishPayload} so the publish flow is not duplicated. Every outcome is
- * audited through {@link DslAuditService} (fail-safe by design).
+ * {@link DslDraftHandler#publishPayload}. Every outcome is audited through {@link DslAuditService}
+ * (fail-safe by design).
  *
  * <p>
- * There is no surrounding DB transaction: the draft filesystem write is the state change itself
- * (same convention as {@code DslDraftHandler}), so the status update and the publish are
- * best-effort sequential steps.
+ * Approval is compare-and-set: the row is claimed PENDING->APPROVED by the database update itself;
+ * if publishing fails the request is reverted to PENDING so it can be retried. A lost decision race
+ * (concurrent approve/reject) is rejected with the existing CONFLICT response.
  */
 @Slf4j
 @RequiredArgsConstructor
@@ -93,35 +93,73 @@ public class ChangeRequestService {
    *
    * @return the publish response produced by the draft handler.
    * @throws ChangeRequestException
-   *           {@code NOT_FOUND} / {@code CONFLICT} (not pending) / {@code FORBIDDEN} (rank or
-   *           self-approval).
+   *           {@code NOT_FOUND} / {@code CONFLICT} (not pending or publish failed) /
+   *           {@code FORBIDDEN} (rank or self-approval).
+   * @throws IOException
+   *           when the draft handler throws while publishing.
    */
   public ServerResponse approve(long id, String actor, Role role, @Nullable String comment,
           ServerRequest request) throws IOException {
     ChangeRequestEntity row = requirePending(id, actor, role, request,
             StarterConstants.ACTION_CHANGE_REQUEST_APPROVE);
-    repository.updateStatus(id, Status.APPROVED, actor, Instant.now(), comment);
-    audit(request, StarterConstants.ACTION_CHANGE_REQUEST_APPROVE, id, actor, OUTCOME_SUCCESS,
-            Map.of("definitionName", row.definitionName()));
     DslDraftHandler draftHandler = draftHandlerProvider.getIfAvailable();
     if (draftHandler == null) {
+      audit(request, StarterConstants.ACTION_CHANGE_REQUEST_APPROVE, id, actor, OUTCOME_FAILURE,
+              Map.of("definitionName", row.definitionName(),
+                      "error", "Draft publishing is not available"));
       throw new ChangeRequestException("CONFLICT", "Draft publishing is not available");
     }
-    DraftRequest snapshot = objectMapper.readValue(row.draftContent(), DraftRequest.class);
-    DraftRequest payload = new DraftRequest(snapshot.name(), snapshot.type(), "Published",
-            snapshot.version(), snapshot.taskQueue(), snapshot.source(), snapshot.savedAt());
-    return draftHandler.publishPayload(request, row.definitionName(), payload);
+    Instant decidedAt = Instant.now();
+    boolean claimed = repository.transition(id, Status.PENDING, Status.APPROVED, actor, decidedAt,
+            comment);
+    if (!claimed) {
+      throwNoLongerPending(id, row, request, actor,
+              StarterConstants.ACTION_CHANGE_REQUEST_APPROVE);
+    }
+    ServerResponse response;
+    try {
+      DraftRequest snapshot = objectMapper.readValue(row.draftContent(), DraftRequest.class);
+      DraftRequest payload = new DraftRequest(snapshot.name(), snapshot.type(), "Published",
+              snapshot.version(), snapshot.taskQueue(), snapshot.source(), snapshot.savedAt());
+      response = draftHandler.publishPayload(request, row.definitionName(), payload);
+    } catch (IOException e) {
+      revertToPending(id, row);
+      audit(request, StarterConstants.ACTION_CHANGE_REQUEST_APPROVE, id, actor, OUTCOME_FAILURE,
+              Map.of("definitionName", row.definitionName(), "error", e.getMessage()));
+      throw e;
+    } catch (RuntimeException e) {
+      revertToPending(id, row);
+      audit(request, StarterConstants.ACTION_CHANGE_REQUEST_APPROVE, id, actor, OUTCOME_FAILURE,
+              Map.of("definitionName", row.definitionName(), "error", e.getMessage()));
+      throw e;
+    }
+    if (!response.statusCode().is2xxSuccessful()) {
+      int status = response.statusCode().value();
+      revertToPending(id, row);
+      audit(request, StarterConstants.ACTION_CHANGE_REQUEST_APPROVE, id, actor, OUTCOME_FAILURE,
+              Map.of("definitionName", row.definitionName(),
+                      "error", "Publish failed: HTTP " + status));
+      throw new ChangeRequestException("CONFLICT", "Publish failed: HTTP " + status);
+    }
+    audit(request, StarterConstants.ACTION_CHANGE_REQUEST_APPROVE, id, actor, OUTCOME_SUCCESS,
+            Map.of("definitionName", row.definitionName()));
+    return response;
   }
 
   /**
    * Rejects a PENDING change request. Same rank and self-approval guards as {@link #approve}; never
-   * publishes.
+   * publishes. Uses compare-and-set so a concurrent decision race produces a single winner.
    */
   public ChangeRequestEntity reject(long id, String actor, Role role, @Nullable String comment,
           ServerRequest request) {
     ChangeRequestEntity row = requirePending(id, actor, role, request,
             StarterConstants.ACTION_CHANGE_REQUEST_REJECT);
-    repository.updateStatus(id, Status.REJECTED, null, null, comment);
+    boolean rejected = repository.transition(id, Status.PENDING, Status.REJECTED, null, null,
+            comment);
+    if (!rejected) {
+      throwNoLongerPending(id, row, request, actor,
+              StarterConstants.ACTION_CHANGE_REQUEST_REJECT);
+    }
     audit(request, StarterConstants.ACTION_CHANGE_REQUEST_REJECT, id, actor, OUTCOME_SUCCESS,
             Map.of("definitionName", row.definitionName()));
     return new ChangeRequestEntity(row.id(), row.definitionName(), row.draftContent(),
@@ -159,6 +197,24 @@ public class ChangeRequestService {
     }
     audit(request, action, id, actor, OUTCOME_FAILURE, Map.of("error", failure.getMessage()));
     throw failure;
+  }
+
+  private void throwNoLongerPending(long id, ChangeRequestEntity row, ServerRequest request,
+          String actor, String action) {
+    ChangeRequestEntity current = repository.findById(id).orElse(row);
+    String message = "Change request " + id + " is " + current.status()
+            + " and can no longer be decided";
+    audit(request, action, id, actor, OUTCOME_FAILURE,
+            Map.of("definitionName", row.definitionName(), "error", message));
+    throw new ChangeRequestException("CONFLICT", message);
+  }
+
+  private void revertToPending(long id, ChangeRequestEntity row) {
+    boolean reverted = repository.transition(id, Status.APPROVED, Status.PENDING, null, null, null);
+    if (!reverted) {
+      log.warn("[DSL change-requests] failed to revert change request {} to PENDING after "
+              + "publish failure for {}", id, row.definitionName());
+    }
   }
 
   private String readDraftSnapshot(String definitionName) {
