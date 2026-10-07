@@ -17,7 +17,7 @@ import org.springframework.test.context.jdbc.Sql;
 
 /**
  * H2 round-trip tests for {@link ChangeRequestRepository} (T568): generated keys, pending lookup,
- * filtered listings newest first, and status transitions.
+ * filtered listings newest first, status transitions, and compare-and-set semantics.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, classes = NotificationTestApplication.class)
 @Sql(scripts = {"classpath:db/migration/h2/V1__init.sql",
@@ -108,6 +108,66 @@ class ChangeRequestRepositoryTest {
     assertThat(rejected.approvedBy()).isNull();
     assertThat(rejected.approvedAt()).isNull();
     assertThat(rejected.comment()).isEqualTo("no");
+  }
+
+  @Test
+  void transitionApprovesOnlyFromPending() {
+    long id = repository.insert(request("LoanA", "alice", Status.PENDING));
+    Instant decidedAt = Instant.now();
+
+    boolean claimed = repository.transition(id, Status.PENDING, Status.APPROVED, "carol",
+            decidedAt, "ok");
+
+    assertThat(claimed).isTrue();
+    ChangeRequestEntity approved = repository.findById(id).orElseThrow();
+    assertThat(approved.status()).isEqualTo(Status.APPROVED);
+    assertThat(approved.approvedBy()).isEqualTo("carol");
+    assertThat(approved.comment()).isEqualTo("ok");
+  }
+
+  @Test
+  void transitionFromWrongStatusLeavesRowUnchanged() {
+    long id = repository.insert(request("LoanA", "alice", Status.PENDING));
+    repository.updateStatus(id, Status.APPROVED, "carol", Instant.now(), "ok");
+
+    boolean claimed = repository.transition(id, Status.PENDING, Status.APPROVED, "bob",
+            Instant.now(), "retry");
+
+    assertThat(claimed).isFalse();
+    ChangeRequestEntity current = repository.findById(id).orElseThrow();
+    assertThat(current.status()).isEqualTo(Status.APPROVED);
+    assertThat(current.approvedBy()).isEqualTo("carol");
+    assertThat(current.comment()).isEqualTo("ok");
+  }
+
+  @Test
+  void transitionRevertsApprovedBackToPending() {
+    long id = repository.insert(request("LoanA", "alice", Status.PENDING));
+    repository.transition(id, Status.PENDING, Status.APPROVED, "carol", Instant.now(), "ok");
+
+    boolean reverted = repository.transition(id, Status.APPROVED, Status.PENDING, null, null, null);
+
+    assertThat(reverted).isTrue();
+    ChangeRequestEntity current = repository.findById(id).orElseThrow();
+    assertThat(current.status()).isEqualTo(Status.PENDING);
+    assertThat(current.approvedBy()).isNull();
+    assertThat(current.approvedAt()).isNull();
+    assertThat(current.comment()).isNull();
+  }
+
+  @Test
+  void transitionRejectWinsOnlyOnce() {
+    long id = repository.insert(request("LoanA", "alice", Status.PENDING));
+
+    boolean rejected = repository.transition(id, Status.PENDING, Status.REJECTED, null, null,
+            "no");
+
+    assertThat(rejected).isTrue();
+    boolean second = repository.transition(id, Status.PENDING, Status.APPROVED, "bob",
+            Instant.now(), "retry");
+    assertThat(second).isFalse();
+    ChangeRequestEntity current = repository.findById(id).orElseThrow();
+    assertThat(current.status()).isEqualTo(Status.REJECTED);
   }
 
   private static ChangeRequestEntity request(String definitionName, String requestedBy,

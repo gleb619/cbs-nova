@@ -114,6 +114,11 @@ public class ChangeRequestRepository {
     crud.updateStatus(id, status.name(), approvedBy, approvedAt, comment);
   }
 
+  public boolean transition(long id, Status from, Status to, @Nullable String approvedBy,
+          @Nullable Instant approvedAt, @Nullable String comment) {
+    return crud.transition(id, from.name(), to.name(), approvedBy, approvedAt, comment) > 0;
+  }
+
   public long count() {
     var r = T.refer();
     ExtendedSelectQuery query = dslQueries.select()
