@@ -326,6 +326,33 @@ class DslDefinitionBundleServiceTest {
   }
 
   @Test
+  void applyLaterStagingFailureReportsEarlierStagedEntriesAsRolledBackNotNull(@TempDir Path dir)
+          throws IOException {
+    writeSource(dir, "A", "process", "old-a");
+    writeSource(dir, "B", "transaction", "old-b");
+    String oldAContent = Files.readString(dir.resolve("dsl/ADsl.java"));
+    Path bFile = dir.resolve("dsl/BDsl.java");
+    // unreadable pre-image: A stages fine, B's phase-1 pre-image read throws
+    Files.setPosixFilePermissions(bFile, PosixFilePermissions.fromString("---------"));
+    try {
+      BundleApplyResult applied = service.applyToTarget(dir,
+              applyBundle(Map.of(
+                      "A", sourceBody("A", "process", "new-a"),
+                      "B", sourceBody("B", "transaction", "new-b"))));
+
+      assertThat(applied.rolledBack()).isTrue();
+      assertThat(applied.results()).doesNotContainNull();
+      assertThat(applied.results()).extracting(ImportEntryResult::outcome)
+              .containsExactly("skipped", "failed");
+      assertThat(applied.results().get(0).message()).contains("rolled back");
+      assertThat(Files.readString(dir.resolve("dsl/ADsl.java"))).isEqualTo(oldAContent);
+    } finally {
+      Files.setPosixFilePermissions(bFile, PosixFilePermissions.fromString("rw-r--r--"));
+    }
+    assertThat(listTmpResidue(dir)).isEmpty();
+  }
+
+  @Test
   void applyMoveFailureRestoresPreImagesWithoutTmpResidue(@TempDir Path dir)
           throws IOException {
     writeSource(dir, "A", "process", "old-a");
@@ -343,7 +370,8 @@ class DslDefinitionBundleServiceTest {
 
     assertThat(applied.rolledBack()).isTrue();
     assertThat(applied.results()).extracting(ImportEntryResult::outcome)
-            .containsExactly("published", "failed");
+            .containsExactly("skipped", "failed");
+    assertThat(applied.results().get(0).message()).contains("rolled back");
     assertThat(applied.results().get(1).outcome()).isEqualTo("failed");
     assertThat(Files.readString(dir.resolve("dsl/ADsl.java"))).isEqualTo(oldAContent);
     assertThat(Files.isDirectory(bTarget)).isTrue();

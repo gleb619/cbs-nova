@@ -354,6 +354,10 @@ public class DslDefinitionBundleService {
                 : Optional.empty());
         staged.add(new StagedEntry(i, name, file, stageNextTo(file, content)));
       } catch (Exception e) {
+        for (StagedEntry se : staged) {
+          results.set(se.index(), new ImportEntryResult(se.name(), "skipped",
+                  "rolled back: apply aborted after later failure"));
+        }
         discardStaged(staged);
         results.set(i, new ImportEntryResult(name, "failed", String.valueOf(e.getMessage())));
         markRolledBack(entries, i + 1, results);
@@ -378,6 +382,9 @@ public class DslDefinitionBundleService {
         }
         Map<Path, Optional<String>> moved = new LinkedHashMap<>();
         for (int j = 0; j < i; j++) {
+          StagedEntry done = staged.get(j);
+          results.set(done.index(), new ImportEntryResult(done.name(), "skipped",
+                  "rolled back: pre-image restored after later failure"));
           moved.put(staged.get(j).file(), preImages.getOrDefault(staged.get(j).file(),
                   Optional.empty()));
         }
