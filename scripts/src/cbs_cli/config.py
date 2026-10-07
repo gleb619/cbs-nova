@@ -6,7 +6,9 @@ from typing import List
 
 class Config:
     ROOT_DIR: Path = Path(__file__).resolve().parents[3]
-    COMPOSE_CMD: List[str] = shlex.split(os.environ.get("COMPOSE", "docker compose"))
+    COMPOSE_CMD: List[str] = shlex.split(
+        os.environ.get("COMPOSE", f"docker compose -f {ROOT_DIR / 'app' / 'docker-compose.yml'}")
+    )
     _gradlew_raw = Path(os.environ.get("GRADLEW", str(ROOT_DIR / "backend" / "dsl-platform" / "gradlew")))
     GRADLEW: Path = (_gradlew_raw if _gradlew_raw.is_absolute() else ROOT_DIR / _gradlew_raw).resolve()
     BACKEND_BUILDS: List[str] = os.environ.get(

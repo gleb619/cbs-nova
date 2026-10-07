@@ -171,3 +171,4 @@ __pycache__/
 /frontend/admin-ui-plugin/@cbs/components/.nuxt/
 /.playwright-mcp/
 /arms_cache/
+/backups/

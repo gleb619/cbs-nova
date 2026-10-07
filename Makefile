@@ -7,7 +7,7 @@
 SHELL := /usr/bin/env bash
 SCRIPT := scripts/cbs_cli.py
 
-export COMPOSE := docker compose
+export COMPOSE := docker compose -f app/docker-compose.yml
 export BACKEND_BUILDS := dsl-platform dsl-starter dsl-plugins
 export GRADLEW := backend/dsl-platform/gradlew
 
@@ -228,6 +228,15 @@ runbook-verify: ## Verify read-only curl examples in docs/runbook.md (set SERVER
 .PHONY: loadtest
 loadtest: ## Load-test read-only BFF endpoints and report latency percentiles + error rate
 	@python3 $(SCRIPT) loadtest
+
+.PHONY: db-backup
+db-backup: ## Back up Postgres databases via cbs-cli (OUT=... SERVICES=... optional)
+	@python3 $(SCRIPT) db backup $(if $(OUT),--out "$(OUT)") $(if $(SERVICES),--services "$(SERVICES)")
+
+.PHONY: db-restore
+db-restore: ## Restore a Postgres database via cbs-cli (FILE=... required)
+	@test -n "$(FILE)" || (echo "FILE is required" && exit 1)
+	@python3 $(SCRIPT) db restore --file "$(FILE)"
 
 # -----------------------------------------------------------------------------
 # Kanban CLI — Markdown AST manipulation via unified/remark
