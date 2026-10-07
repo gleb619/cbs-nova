@@ -547,6 +547,11 @@ const expectedProxies: readonly ExpectedProxy[] = [
     backendPath: '/api/executions/{id}/cancel',
     bffPath: '/api/v1/executions/{id}/cancel',
   },
+  {
+    method: 'POST',
+    backendPath: '/api/dsl/runs/{runId}/rerun',
+    bffPath: '/api/v1/dsl/runs/{runId}/rerun',
+  },
   // VhsManagementRouterConfiguration (T840)
   {
     method: 'GET',

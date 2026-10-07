@@ -12,7 +12,10 @@ const STASH_KEY = 'cbs.nova.run-again'
 
 const { useExecutionsMock, useExecutionsApiMock, navigateTo, execApi } = vi.hoisted(() => {
   const navigateToSpy = vi.fn()
-  const execApi = { getTransactions: vi.fn().mockResolvedValue([]) }
+  const execApi = {
+    getTransactions: vi.fn().mockResolvedValue([]),
+    rerun: vi.fn().mockResolvedValue({ runId: 'new-run-id', rerunOf: 'exec-1' }),
+  }
   const useExecutionsMockFn = vi.fn(() => {
     const harness = (globalThis as unknown as { __execDetailHarness?: unknown }).__execDetailHarness
     if (!harness) throw new Error('execution detail harness not installed yet')
@@ -100,7 +103,7 @@ const componentStubs = {
   ExecutionTrace: makeStub('ExecutionTrace'),
   CompensationLane: makeStub('CompensationLane'),
   CancelExecutionConfirmationModal: makeStub('CancelExecutionConfirmationModal'),
-  ErrorBanner: makeStub('ErrorBanner'),
+  ErrorBanner: defineComponent({ name: 'ErrorBanner', props: ['message'], setup(props) { return () => h('div', { 'data-testid': 'ErrorBanner' }, props.message) } }),
   // These tab components are NOT imported by the page (auto-registered by the
   // Nuxt components dir), so they resolve by their template tag name.
   ExecutionsPayloadTab: makeStub('ExecutionsPayloadTab'),
@@ -175,6 +178,8 @@ describe('executions/[id].vue run-again button', () => {
     harness.startPolling.mockClear()
     execApi.getTransactions.mockReset()
     execApi.getTransactions.mockResolvedValue([])
+    execApi.rerun.mockReset()
+    execApi.rerun.mockResolvedValue({ runId: 'new-run-id', rerunOf: 'exec-1' })
     navigateTo.mockClear()
     window.sessionStorage.clear()
   })
@@ -243,6 +248,58 @@ describe('executions/[id].vue run-again button', () => {
       path: '/runner',
       query: { name: 'c1', mode: 'explain' },
     })
+
+    wrapper.unmount()
+  })
+
+  it('shows the Re-run button for terminal statuses', async () => {
+    for (const status of ['Completed', 'Failed', 'Cancelled'] as const) {
+      harness.selectedExecution.value = detail({ status })
+      const wrapper = mountPage()
+      await flush()
+      expect(wrapper.find('[data-testid="rerun-execution-button"]').exists()).toBe(true)
+      wrapper.unmount()
+    }
+  })
+
+  it('hides the Re-run button for non-terminal statuses', async () => {
+    for (const status of ['Running', 'Stale'] as const) {
+      harness.selectedExecution.value = detail({ status })
+      const wrapper = mountPage()
+      await flush()
+      expect(wrapper.find('[data-testid="rerun-execution-button"]').exists()).toBe(false)
+      wrapper.unmount()
+    }
+  })
+
+  it('clicking Re-run navigates to the new run detail', async () => {
+    harness.selectedExecution.value = detail({ status: 'Failed' })
+
+    const wrapper = mountPage()
+    await flush()
+
+    await wrapper.find('[data-testid="rerun-execution-button"]').trigger('click')
+    await nextTick()
+
+    expect(execApi.rerun).toHaveBeenCalledWith('exec-1')
+    expect(navigateTo).toHaveBeenCalledWith({ path: '/executions/new-run-id' })
+
+    wrapper.unmount()
+  })
+
+  it('surfaces a rerun error without navigating', async () => {
+    execApi.rerun.mockRejectedValue(new Error('definition unpublished'))
+    harness.selectedExecution.value = detail({ status: 'Failed' })
+
+    const wrapper = mountPage()
+    await flush()
+
+    await wrapper.find('[data-testid="rerun-execution-button"]').trigger('click')
+    await flush()
+
+    expect(wrapper.find('[data-testid="rerun-execution-button"]').attributes('disabled')).toBe('')
+    expect(wrapper.text()).toContain('definition unpublished')
+    expect(navigateTo).not.toHaveBeenCalled()
 
     wrapper.unmount()
   })

@@ -392,6 +392,7 @@ public class StarterConstants {
   public static final String CSV_FILENAME_PATTERN = "yyyyMMdd-HHmmss";
   public static final int CSV_EXPORT_MAX_ROWS = 50_000;
   public static final String ACTION_RUN_CANCEL = "RUN_CANCEL";
+  public static final String ACTION_RUN_RERUN = "RUN_RERUN";
   public static final int STATS_WINDOW_HOURS = 24;
   public static final int DEFAULT_TOP_PROCESSES = 5;
   public static final int MAX_TOP_PROCESSES = 20;

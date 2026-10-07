@@ -61,6 +61,21 @@ pieces:
     failMode: deny
 
   # --- AUTHOR: reload / manifest reload / draft authoring / change requests / file writes / import ---
+  - id: execution-rerun
+    target:
+      type: api
+      route: POST /api/dsl/runs/*/rerun
+    roles: [runner]
+    preCheck:
+      - type: role
+        anyOf: [runner, admin]
+      - type: rate-class
+        class: run-mutations
+    postCheck:
+      - type: audit-write
+        action: RUN_RERUN
+    failMode: deny
+
   - id: dsl-reload
     target:
       type: api

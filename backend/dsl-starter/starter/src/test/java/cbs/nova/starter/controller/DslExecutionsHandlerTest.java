@@ -22,11 +22,13 @@ import cbs.nova.dsl.history.TransactionExecutionRepository;
 import cbs.nova.starter.config.router.DslExecutionsRouterConfiguration;
 import cbs.nova.starter.converter.RequestQueryConverter;
 import cbs.nova.starter.core.StarterConstants;
+import cbs.nova.starter.model.RunStartResponse;
 import cbs.nova.starter.persistence.DslRunStats;
 import cbs.nova.starter.persistence.DslRunStatsRepository;
 import cbs.nova.starter.persistence.RunTimeseriesBucket;
 import cbs.nova.starter.service.DslAuditService;
 import cbs.nova.starter.service.DslRunCancellationService;
+import cbs.nova.starter.service.TemporalDslProcessService;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Collections;
@@ -64,6 +66,7 @@ class DslExecutionsHandlerTest {
             TransactionExecutionRepository.class);
     DslRunStatsRepository statsRepository = mock(DslRunStatsRepository.class);
     DslRunCancellationService cancellationService = mock(DslRunCancellationService.class);
+    TemporalDslProcessService processService = mock(TemporalDslProcessService.class);
     @SuppressWarnings("unchecked")
     ObjectProvider<DslAuditService> auditProvider = mock(ObjectProvider.class);
 
@@ -71,6 +74,7 @@ class DslExecutionsHandlerTest {
             runRepository,
             objectMapper,
             cancellationService,
+            processService,
             statsRepository,
             transactionExecutionRepository,
             queryConverter,
@@ -83,7 +87,7 @@ class DslExecutionsHandlerTest {
             .build();
 
     return new Harness(runRepository, transactionExecutionRepository, statsRepository,
-            cancellationService, auditProvider, mockMvc);
+            cancellationService, processService, auditProvider, mockMvc);
   }
 
   private record Harness(
@@ -91,6 +95,7 @@ class DslExecutionsHandlerTest {
           TransactionExecutionRepository transactionExecutionRepository,
           DslRunStatsRepository statsRepository,
           DslRunCancellationService cancellationService,
+          TemporalDslProcessService processService,
           ObjectProvider<DslAuditService> auditProvider,
           MockMvc mockMvc) {
   }
@@ -252,12 +257,93 @@ class DslExecutionsHandlerTest {
             .andExpect(status().isNotFound());
   }
 
+  @Test
+  void rerunReturnsCreatedFromFailedSource() throws Exception {
+    Harness h = harness();
+    DslRun source = run(RUN_ID, PROCESS, DslRunStatus.FAILED.name(), Instant.now(), Instant.now(),
+            "{\"amount\":100}");
+    when(h.runRepository.findByRunId(RUN_ID)).thenReturn(Optional.of(source));
+    when(h.processService.isKnownProcess(PROCESS)).thenReturn(true);
+    TemporalDslProcessService.ProcessRun newRun = mock(TemporalDslProcessService.ProcessRun.class);
+    when(newRun.runId()).thenReturn("new-run-id");
+    when(h.processService.startProcess(eq(PROCESS), any(), any(), any(), eq("rerun")))
+            .thenReturn(newRun);
+
+    h.mockMvc.perform(post("/api/dsl/runs/{runId}/rerun", RUN_ID))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.runId").value("new-run-id"))
+            .andExpect(jsonPath("$.rerunOf").value(RUN_ID));
+  }
+
+  @Test
+  void rerunReturnsCreatedFromCancelledSource() throws Exception {
+    Harness h = harness();
+    DslRun source = run(RUN_ID, PROCESS, DslRunStatus.CANCELLED.name(), Instant.now(),
+            Instant.now(),
+            "{\"amount\":100}");
+    when(h.runRepository.findByRunId(RUN_ID)).thenReturn(Optional.of(source));
+    when(h.processService.isKnownProcess(PROCESS)).thenReturn(true);
+    TemporalDslProcessService.ProcessRun newRun = mock(TemporalDslProcessService.ProcessRun.class);
+    when(newRun.runId()).thenReturn("new-run-id");
+    when(h.processService.startProcess(eq(PROCESS), any(), any(), any(), eq("rerun")))
+            .thenReturn(newRun);
+
+    h.mockMvc.perform(post("/api/dsl/runs/{runId}/rerun", RUN_ID))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.runId").value("new-run-id"))
+            .andExpect(jsonPath("$.rerunOf").value(RUN_ID));
+  }
+
+  @Test
+  void rerunReturnsNotFoundForUnknownRun() throws Exception {
+    Harness h = harness();
+    when(h.runRepository.findByRunId(RUN_ID)).thenReturn(Optional.empty());
+
+    h.mockMvc.perform(post("/api/dsl/runs/{runId}/rerun", RUN_ID))
+            .andExpect(status().isNotFound());
+  }
+
+  @Test
+  void rerunReturnsNotFoundForUnpublishedDefinition() throws Exception {
+    Harness h = harness();
+    DslRun source = run(RUN_ID, PROCESS, DslRunStatus.FAILED.name(), Instant.now(), Instant.now(),
+            "{\"amount\":100}");
+    when(h.runRepository.findByRunId(RUN_ID)).thenReturn(Optional.of(source));
+    when(h.processService.isKnownProcess(PROCESS)).thenReturn(false);
+
+    h.mockMvc.perform(post("/api/dsl/runs/{runId}/rerun", RUN_ID))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.code").value("NOT_FOUND"))
+            .andExpect(jsonPath("$.message")
+                    .value("DSL definition no longer published: " + PROCESS));
+  }
+
+  @Test
+  void rerunReturnsConflictForRunningSource() throws Exception {
+    Harness h = harness();
+    DslRun source = run(RUN_ID, PROCESS, DslRunStatus.RUNNING.name(), Instant.now(), null,
+            "{\"amount\":100}");
+    when(h.runRepository.findByRunId(RUN_ID)).thenReturn(Optional.of(source));
+
+    h.mockMvc.perform(post("/api/dsl/runs/{runId}/rerun", RUN_ID))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.code").value("CONFLICT"))
+            .andExpect(jsonPath("$.message")
+                    .value("Execution run is not terminal: " + RUN_ID + " (status RUNNING)"));
+  }
+
   private static DslRun run(String runId, String processName, String status, Instant startedAt,
           Instant finishedAt) {
+    return run(runId, processName, status, startedAt, finishedAt, null);
+  }
+
+  private static DslRun run(String runId, String processName, String status, Instant startedAt,
+          Instant finishedAt, String inputJson) {
     return DslRun.builder()
             .runId(runId)
             .processName(processName)
             .status(status)
+            .input(inputJson)
             .startedAt(startedAt)
             .finishedAt(finishedAt)
             .build();
