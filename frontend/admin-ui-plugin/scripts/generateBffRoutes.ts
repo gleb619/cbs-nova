@@ -182,6 +182,10 @@ const EXCLUDED_OPERATIONS: Record<string, { reason: string; handRoute: string }>
     reason: 'plain proxy but kept hand-written alongside notifications surface',
     handRoute: 'dsl/notifications/rules/[id].delete.ts',
   },
+  triggerSchedule: {
+    reason: 'hand-written alongside the schedule admin surface',
+    handRoute: 'dsl/schedules/[definition]/trigger.post.ts',
+  },
   getNotificationRule: {
     reason: 'plain proxy but kept hand-written alongside notifications surface',
     handRoute: 'dsl/notifications/rules/[id].get.ts',

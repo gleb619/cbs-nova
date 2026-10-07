@@ -42,6 +42,7 @@ public class DslScheduleHandler {
   static final String ACTION_SCHEDULE_PAUSE = "schedule.paused";
   static final String ACTION_SCHEDULE_RESUME = "schedule.resumed";
   static final String ACTION_SCHEDULE_UPDATE = "schedule.updated";
+  static final String ACTION_SCHEDULE_TRIGGER = "schedule.trigger";
 
   private final DslScheduleService service;
   private final ObjectMapper objectMapper;
@@ -155,6 +156,31 @@ public class DslScheduleHandler {
               .body(Map.of("updated", true));
     } catch (RuntimeException e) {
       audit(request, ACTION_SCHEDULE_UPDATE, definition, StarterConstants.OUTCOME_FAILURE,
+              Map.of("error", String.valueOf(e.getMessage())));
+      throw e;
+    }
+  }
+
+  /**
+   * Triggers an out-of-band execution of the schedule for a definition immediately. Temporal's
+   * manual trigger starts a workflow execution through the schedule's action; the schedule's paused
+   * state does not prevent a manual trigger.
+   *
+   * <p>
+   * Returns {@code 200 {triggered: true, definition}}. A 404 is returned when the schedule is
+   * absent. Any Temporal-side refusal is mapped to a 409 CONFLICT response.
+   */
+  public ServerResponse trigger(ServerRequest request) {
+    String definition = request.pathVariable("definition");
+    try {
+      service.trigger(definition);
+      audit(request, ACTION_SCHEDULE_TRIGGER, definition, StarterConstants.OUTCOME_SUCCESS,
+              Map.of("definition", definition));
+      return ServerResponse.ok()
+              .contentType(MediaType.APPLICATION_JSON)
+              .body(Map.of("triggered", true, "definition", definition));
+    } catch (RuntimeException e) {
+      audit(request, ACTION_SCHEDULE_TRIGGER, definition, StarterConstants.OUTCOME_FAILURE,
               Map.of("error", String.valueOf(e.getMessage())));
       throw e;
     }

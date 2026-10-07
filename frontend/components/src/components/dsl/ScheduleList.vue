@@ -15,6 +15,7 @@ const emit = defineEmits<{
   delete: [definition: string]
   pause: [definition: string]
   resume: [definition: string]
+  trigger: [definition: string]
 }>()
 
 const definition = ref('')
@@ -35,6 +36,14 @@ const canCreate = computed(() => definition.value.trim().length > 0 && cron.valu
 
 function isPausing(definition: string) {
   return !!props.pausingDefinitions?.[definition]
+}
+
+function isTriggering(definition: string) {
+  return !!props.triggeringDefinitions?.[definition]
+}
+
+function onTrigger(schedule: ScheduleSummary) {
+  emit('trigger', schedule.definition)
 }
 
 function onTogglePause(schedule: ScheduleSummary) {
@@ -251,6 +260,18 @@ function onPendingKeydown(event: KeyboardEvent) {
               {{ schedule.note }}
             </div>
           </div>
+          <button
+            type="button"
+            data-testid="schedule-trigger"
+            :disabled="isTriggering(schedule.definition)"
+            class="p-1.5 rounded border border-gray-300 text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+            title="Trigger schedule now"
+            @click="onTrigger(schedule)"
+          >
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M5 3l14 9-14 9V3z" />
+            </svg>
+          </button>
           <button
             type="button"
             data-testid="schedule-pause-toggle"

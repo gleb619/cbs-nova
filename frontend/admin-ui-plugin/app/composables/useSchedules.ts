@@ -17,6 +17,7 @@ export function useSchedules() {
   const loading = ref(false)
   const error = ref<string | null>(null)
   const pausing = ref<Record<string, boolean>>({})
+  const triggering = ref<Record<string, boolean>>({})
 
   async function load() {
     loading.value = true
@@ -68,15 +69,29 @@ export function useSchedules() {
     }
   }
 
+  async function trigger(definition: string) {
+    triggering.value = { ...triggering.value, [definition]: true }
+    try {
+      await api.triggerSchedule(definition)
+      await load()
+    } finally {
+      const next = { ...triggering.value }
+      delete next[definition]
+      triggering.value = next
+    }
+  }
+
   return {
     schedules,
     loading,
     error,
     pausing,
+    triggering,
     load,
     create,
     remove,
     pause,
     resume,
+    trigger,
   }
 }

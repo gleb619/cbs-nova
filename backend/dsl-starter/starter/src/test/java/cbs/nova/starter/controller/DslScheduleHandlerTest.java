@@ -272,6 +272,51 @@ class DslScheduleHandlerTest {
     assertThat(row.target()).isEqualTo("A");
   }
 
+  // ----- trigger ------------------------------------------------------------
+
+  @Test
+  void triggerReturns200WithDefinitionOnSuccess() throws Exception {
+    mockMvc.perform(post("/api/dsl/schedules/A/trigger"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.triggered").value(true))
+            .andExpect(jsonPath("$.definition").value("A"));
+
+    verify(service).trigger("A");
+  }
+
+  @Test
+  void triggerReturns404ForMissingSchedule() throws Exception {
+    doThrow(new DefinitionNotFoundException("ghost")).when(service).trigger("ghost");
+
+    mockMvc.perform(post("/api/dsl/schedules/ghost/trigger"))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.code").value("NOT_FOUND"));
+  }
+
+  @Test
+  void triggerMapsTemporalFailureToConflict() throws Exception {
+    doThrow(new ScheduleConflictException("sched-A")).when(service).trigger("A");
+
+    mockMvc.perform(post("/api/dsl/schedules/A/trigger"))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.code").value("CONFLICT"));
+  }
+
+  @Test
+  void triggerWritesAuditRowOnSuccess() throws Exception {
+    var audit = AuditTestSupport.h2();
+    mockMvc = buildMockMvc(new DslScheduleHandler(service, objectMapper,
+            AuditTestSupport.providerOf(audit.service())));
+
+    mockMvc.perform(post("/api/dsl/schedules/A/trigger"))
+            .andExpect(status().isOk());
+
+    var row = audit.service().search(null, 0, 10).items().get(0);
+    assertThat(row.action()).isEqualTo("schedule.trigger");
+    assertThat(row.outcome()).isEqualTo("SUCCESS");
+    assertThat(row.target()).isEqualTo("A");
+  }
+
   // ----- update -------------------------------------------------------------
 
   @Test

@@ -158,7 +158,7 @@ The five realm roles exported in the local Keycloak realm line up with the backe
 | `VIEWER` | 0 | All read routes: `GET /api/dsl/**`, `GET /api/executions/**`, `GET /api/dsl/change-requests`, actuator health detail. |
 | `RUNNER` | 10 | `VIEWER` + `POST /api/dsl/run/**`, `POST /api/dsl/preview/**`, `POST /api/dsl/explain/**`, `POST /api/dsl/signals/**`, `POST /api/executions/*/cancel`. |
 | `AUTHOR` | 20 | `RUNNER` + `POST /api/dsl/reload`, `POST /api/dsl/manifest/reload`, `POST /api/dsl/drafts/*/save`, `POST /api/dsl/drafts/*/publish`, `DELETE /api/dsl/drafts/*`, `POST /api/dsl/files/**`, `POST /api/dsl/definitions/import`, change-request approve/reject. |
-| `OPERATOR` | 30 | `AUTHOR` + `POST /api/dsl/promote/**`, `POST /api/dsl/schedules`, `DELETE /api/dsl/schedules/*`, `POST /api/dsl/schedules/*/pause`, `POST /api/dsl/schedules/*/resume`, `POST /api/dsl/auth/keys`, `DELETE /api/dsl/auth/keys/*`. |
+| `OPERATOR` | 30 | `AUTHOR` + `POST /api/dsl/promote/**`, `POST /api/dsl/schedules`, `DELETE /api/dsl/schedules/*`, `POST /api/dsl/schedules/*/pause`, `POST /api/dsl/schedules/*/resume`, `POST /api/dsl/schedules/*/trigger`, `POST /api/dsl/auth/keys`, `DELETE /api/dsl/auth/keys/*`. |
 | `ADMIN` | max | Satisfies every route; API-key principals are also mapped to `ADMIN`. |
 
 

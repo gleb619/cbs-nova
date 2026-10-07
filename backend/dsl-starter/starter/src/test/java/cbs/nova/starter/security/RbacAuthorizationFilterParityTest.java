@@ -96,6 +96,7 @@ class RbacAuthorizationFilterParityTest {
             Arguments.of("DELETE", "/api/dsl/schedules/foo", Role.OPERATOR),
             Arguments.of("POST", "/api/dsl/schedules/foo/pause", Role.OPERATOR),
             Arguments.of("POST", "/api/dsl/schedules/foo/resume", Role.OPERATOR),
+            Arguments.of("POST", "/api/dsl/schedules/foo/trigger", Role.OPERATOR),
             Arguments.of("POST", "/api/dsl/auth/keys", Role.OPERATOR),
             Arguments.of("DELETE", "/api/dsl/auth/keys/1", Role.OPERATOR));
   }

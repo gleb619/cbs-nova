@@ -256,6 +256,11 @@ const expectedProxies: readonly ExpectedProxy[] = [
     backendPath: '/api/dsl/schedules/{definition}/resume',
     bffPath: '/api/v1/dsl/schedules/{definition}/resume',
   },
+  {
+    method: 'POST',
+    backendPath: '/api/dsl/schedules/{definition}/trigger',
+    bffPath: '/api/v1/dsl/schedules/{definition}/trigger',
+  },
 
   // DslReloadRouterConfiguration
   {
