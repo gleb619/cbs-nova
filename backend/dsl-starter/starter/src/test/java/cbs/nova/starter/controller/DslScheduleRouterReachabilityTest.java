@@ -101,7 +101,7 @@ class DslScheduleRouterReachabilityTest {
   @Test
   void getSchedulesReachesHandlerNotFound() throws Exception {
     when(mockService().list()).thenReturn(List.of(
-            new ScheduleSummary("sched-A", "A", "0 9 * * *", "UTC", "daily", null, false)));
+            new ScheduleSummary("sched-A", "A", "0 9 * * *", "UTC", "daily", null, false, null)));
 
     mockMvc.perform(get("/api/dsl/schedules"))
             .andExpect(status().isOk())

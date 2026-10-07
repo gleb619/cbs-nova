@@ -702,7 +702,8 @@ The BFF exposes the same surface under `/api/v1/dsl/schedules`.
   "cron": "0 9 * * *",
   "timezone": "UTC",
   "input": { "amount": 100 },
-  "note": "Daily morning run"
+  "note": "Daily morning run",
+  "executionTimeout": "PT10M"
 }
 ```
 
@@ -710,14 +711,31 @@ The BFF exposes the same surface under `/api/v1/dsl/schedules`.
 - `cron` is required.
 - `timezone` defaults to `UTC` and is validated with `ZoneId.of`.
 - `input` defaults to an empty object.
+- `executionTimeout` is optional. When given it must be a positive ISO-8601 duration (e.g.
+  `PT10M`) and overrides the global default for this schedule only. It is persisted in the
+  schedule action's workflow memo so `GET /api/dsl/schedules` shows the effective value.
 
 **Schedule configuration:**
 
 - Schedule id: `sched-<definition>`.
 - Per-fire workflow id is assigned by Temporal (form `<scheduleId>-<scheduled-time>`) because we do
   not pin a fixed workflow id.
+- Workflow execution timeout: `temporal.execution-timeout` (default `30s`) unless overridden per
+  schedule via `executionTimeout`.
+- Workflow task timeout: `temporal.task-timeout` (default `5s`), shared with API-launched runs.
+- Retry policy: `maximumAttempts: 1`, shared with API-launched runs.
 - Overlap policy: `SKIP`.
 - Catchup window: 1 minute.
+
+**Hung runs and schedule health:**
+
+Because the overlap policy is `SKIP`, a single scheduled run that never terminates (e.g. waiting
+for a signal that never arrives, or a stuck downstream call) blocks every later scheduled fire
+until the hung workflow is terminated or times out. T925 wires the same execution/task timeouts to
+schedule-fired runs that API-launched runs use, so Temporal eventually marks the run `TIMED_OUT`.
+`DslRunReconciliationService` maps `TIMED_OUT` to `dsl_run.status = FAILED`, making the failure
+observable in the execution history. Existing schedules created before this change keep their stored
+action options until they are updated or recreated.
 
 **Availability:**
 

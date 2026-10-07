@@ -152,8 +152,8 @@ class DslScheduleResourceTest {
   @Test
   void listReturnsPaginatedEnvelope() throws Exception {
     when(service.list()).thenReturn(List.of(
-            new ScheduleSummary("sched-A", "A", "0 9 * * *", "UTC", "daily", null, false),
-            new ScheduleSummary("sched-B", "B", "0 10 * * *", "UTC", "hourly", null, false)));
+            new ScheduleSummary("sched-A", "A", "0 9 * * *", "UTC", "daily", null, false, null),
+            new ScheduleSummary("sched-B", "B", "0 10 * * *", "UTC", "hourly", null, false, null)));
 
     mockMvc.perform(get("/api/dsl/schedules"))
             .andExpect(status().isOk())
@@ -170,8 +170,8 @@ class DslScheduleResourceTest {
   @Test
   void listHonoursOffsetAndLimit() throws Exception {
     when(service.list()).thenReturn(List.of(
-            new ScheduleSummary("sched-A", "A", "0 9 * * *", "UTC", "daily", null, false),
-            new ScheduleSummary("sched-B", "B", "0 10 * * *", "UTC", "hourly", null, false)));
+            new ScheduleSummary("sched-A", "A", "0 9 * * *", "UTC", "daily", null, false, null),
+            new ScheduleSummary("sched-B", "B", "0 10 * * *", "UTC", "hourly", null, false, null)));
 
     mockMvc.perform(get("/api/dsl/schedules").param("limit", "1").param("offset", "1"))
             .andExpect(status().isOk())

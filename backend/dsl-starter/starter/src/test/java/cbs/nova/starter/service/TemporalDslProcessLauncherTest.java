@@ -75,7 +75,10 @@ class TemporalDslProcessLauncherTest {
   @Test
   void launchBuildsExpectedWorkflowOptions() {
     String name = unique("tl-opts");
-    registerDescriptor(name);
+    GlobalManager.globalManager().registerGeneratedClass(
+            new GeneratedClassDescriptor(
+                    name, DslType.PROCESS, "1.0", "task-queue-1",
+                    LauncherTestProcess.class, LauncherTestProcessImpl.class, null, null, "{}"));
     SimpleContext<String> ctx = new SimpleContext<>("payload", Map.of(), ExecutionMode.RUN,
             "rid-launch-1", TransactionRouting.LOCAL, null, null, null, null, null);
     LauncherTestProcessImpl impl = new LauncherTestProcessImpl();

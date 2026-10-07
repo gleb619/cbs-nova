@@ -135,8 +135,8 @@ class DslScheduleHandlerTest {
   @Test
   void listReturnsPageResponseEnvelopeByDefault() throws Exception {
     when(service.list()).thenReturn(List.of(
-            new ScheduleSummary("sched-A", "A", "0 9 * * *", "UTC", "daily", null, false),
-            new ScheduleSummary("sched-B", "B", "0 10 * * *", "UTC", "hourly", null, true)));
+            new ScheduleSummary("sched-A", "A", "0 9 * * *", "UTC", "daily", null, false, null),
+            new ScheduleSummary("sched-B", "B", "0 10 * * *", "UTC", "hourly", null, true, null)));
 
     mockMvc.perform(get("/api/dsl/schedules"))
             .andExpect(status().isOk())
@@ -155,9 +155,9 @@ class DslScheduleHandlerTest {
   @Test
   void listHonoursLimitAndOffset() throws Exception {
     when(service.list()).thenReturn(List.of(
-            new ScheduleSummary("sched-A", "A", "0 9 * * *", "UTC", null, null, false),
-            new ScheduleSummary("sched-B", "B", "0 10 * * *", "UTC", null, null, false),
-            new ScheduleSummary("sched-C", "C", "0 11 * * *", "UTC", null, null, false)));
+            new ScheduleSummary("sched-A", "A", "0 9 * * *", "UTC", null, null, false, null),
+            new ScheduleSummary("sched-B", "B", "0 10 * * *", "UTC", null, null, false, null),
+            new ScheduleSummary("sched-C", "C", "0 11 * * *", "UTC", null, null, false, null)));
 
     mockMvc.perform(get("/api/dsl/schedules").param("limit", "2").param("offset", "1"))
             .andExpect(status().isOk())
