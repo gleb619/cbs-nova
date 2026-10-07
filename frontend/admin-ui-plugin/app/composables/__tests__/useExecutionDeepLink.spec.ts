@@ -9,7 +9,10 @@ vi.mock('nuxt/app', () => ({
 
 import { mount } from '@vue/test-utils'
 import { defineComponent, h, nextTick, reactive, ref } from 'vue'
-import { type ExecutionDetailTab, useExecutionDeepLink } from '../useExecutionDeepLink'
+import {
+  type ExecutionDetailTab,
+  useExecutionDeepLink,
+} from '../useExecutionDeepLink'
 
 function buildHarness(
   initialQuery: Record<string, string | string[]>,
@@ -82,7 +85,10 @@ describe('useExecutionDeepLink — param parsing', () => {
   })
 
   it('falls back to payload when the requested tab is unavailable', () => {
-    const { result } = buildHarness({ activeTab: 'logs' }, ['payload', 'metadata', 'errors'])
+    const { result } = buildHarness(
+      { activeTab: 'logs' },
+      ['payload', 'metadata', 'errors'],
+    )
     expect(result.activeTab.value).toBe('logs')
     expect(result.visibleTab.value).toBe('payload')
   })

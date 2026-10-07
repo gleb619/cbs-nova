@@ -43,13 +43,7 @@ describe('useApiKeys', () => {
   it('DELETEs by id to revoke and reloads the list', async () => {
     fetchMock.mockResolvedValueOnce(undefined)
     fetchMock.mockResolvedValueOnce([
-      {
-        id: 1,
-        label: 'ci',
-        prefix: 'ak_ci',
-        createdAt: '2026-09-01T00:00:00Z',
-        revokedAt: '2026-09-02T00:00:00Z',
-      },
+      { id: 1, label: 'ci', prefix: 'ak_ci', createdAt: '2026-09-01T00:00:00Z', revokedAt: '2026-09-02T00:00:00Z' },
     ])
 
     const { revoke, keys } = useApiKeys()

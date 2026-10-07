@@ -3,19 +3,7 @@ import { useSchedules } from '@cbs/admin-ui-plugin/composables/useSchedules'
 import { DslScheduleList } from '@cbs/components'
 import { onMounted } from 'vue'
 
-const {
-  schedules,
-  loading,
-  error,
-  pausing,
-  triggering,
-  load,
-  create,
-  remove,
-  pause,
-  resume,
-  trigger,
-} = useSchedules()
+const { schedules, loading, error, pausing, triggering, load, create, remove, pause, resume, trigger } = useSchedules()
 
 onMounted(() => {
   void load()

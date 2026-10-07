@@ -109,9 +109,7 @@ async function stubExecutionDetail(
   })
 }
 
-test('signal panel: select declared chip, send, and render observed query state', async ({
-  page,
-}) => {
+test('signal panel: select declared chip, send, and render observed query state', async ({ page }) => {
   const tracker = { cancelCalls: 0, signalCalls: 0 }
   const execution = makeRunningExecution()
   await stubExecutionDetail(page, execution, tracker, {
@@ -131,9 +129,7 @@ test('signal panel: select declared chip, send, and render observed query state'
   expect(tracker.signalCalls).toBe(1)
 })
 
-test('undeclared signal name shows inline warning but send is still permitted', async ({
-  page,
-}) => {
+test('undeclared signal name shows inline warning but send is still permitted', async ({ page }) => {
   const tracker = { cancelCalls: 0, signalCalls: 0 }
   const execution = makeRunningExecution()
   await stubExecutionDetail(page, execution, tracker, {
