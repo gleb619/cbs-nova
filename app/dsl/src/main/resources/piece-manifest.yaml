@@ -225,6 +225,19 @@ pieces:
         anyOf: [viewer, runner, author, operator, admin]
     failMode: deny
 
+  # --- ADMIN: dsl_audit hash-chain verify (T880) — explicit piece so the role is pinned in the
+  # manifest instead of falling back to the GET->VIEWER default. The verify endpoint walks every
+  # post-migration row, so an operator/audit role is appropriate. ---
+  - id: audit-chain-verify
+    target:
+      type: api
+      route: GET /api/dsl/audit/verify
+    roles: [admin]
+    preCheck:
+      - type: role
+        anyOf: [operator, admin]
+    failMode: deny
+
   # --- OPERATOR: environment promotion / schedule admin / API-key admin ---
   - id: dsl-promote
     target:

@@ -11,7 +11,9 @@ public record AuditDto(
         String target,
         @Nullable String correlationId,
         String outcome,
-        @Nullable String detailsJson) {
+        @Nullable String detailsJson,
+        @Nullable String prevHash,
+        @Nullable String entryHash) {
 
   public static AuditDto from(DslAudit audit) {
     return from(audit, JsonRedactor.disabled());
@@ -26,6 +28,8 @@ public record AuditDto(
             audit.target(),
             audit.correlationId(),
             audit.outcome(),
-            redactor.redact(audit.detailsJson()));
+            redactor.redact(audit.detailsJson()),
+            audit.prevHash(),
+            audit.entryHash());
   }
 }

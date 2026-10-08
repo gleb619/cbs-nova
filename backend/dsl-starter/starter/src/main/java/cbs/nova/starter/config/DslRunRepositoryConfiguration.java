@@ -100,8 +100,8 @@ public class DslRunRepositoryConfiguration {
   @Bean
   @ConditionalOnBean(DataSource.class)
   public DslAuditStore dslAuditStore(DslAuditCrudRepository auditRepository,
-          DslAuditMapper mapper) {
-    return new DslAuditStore(auditRepository, mapper);
+          DslAuditMapper mapper, ObjectProvider<TransactionTemplate> transactionTemplateProvider) {
+    return new DslAuditStore(auditRepository, mapper, transactionTemplateProvider.getIfAvailable());
   }
 
   @Bean

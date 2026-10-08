@@ -118,6 +118,6 @@ class DslAuditStorePurgeIntegrationTest {
     boolean isOld = occurredAt.isBefore(Instant.now().minus(30, ChronoUnit.DAYS));
     return new DslAudit(null, occurredAt, "op-test", "DEFINITION_PUBLISH",
             isOld ? "t-old" : "t-recent-" + System.nanoTime(),
-            null, "SUCCESS", null);
+            null, "SUCCESS", null, null, null);
   }
 }

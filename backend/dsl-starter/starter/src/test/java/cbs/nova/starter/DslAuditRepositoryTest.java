@@ -16,6 +16,7 @@ import org.springframework.test.context.jdbc.Sql;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, classes = DslAuditRepositoryTest.TestApplication.class)
 @Sql(scripts = {"classpath:db/migration/h2/V1__init.sql",
+    "classpath:db/migration/h2/V4__dsl_audit_hash_chain.sql",
     "classpath:sql/truncate-dsl-audit.sql"})
 @TestPropertySource(properties = {
     "cbs.dsl.worker.enabled=false"
@@ -87,7 +88,7 @@ class DslAuditRepositoryTest {
   private static DslAudit row(String actor, String action, String target,
           Instant occurredAt) {
     return new DslAudit(null, occurredAt, actor, action, target, null, "SUCCESS",
-            "{\"n\":1}");
+            "{\"n\":1}", null, null);
   }
 
   @SpringBootApplication
