@@ -40,7 +40,7 @@ public class DslAuditService {
     try {
       String detailsJson = details != null ? objectMapper.writeValueAsString(details) : null;
       store.append(new DslAudit(null, Instant.now(), actor, action, target,
-              correlationId, outcome, detailsJson));
+              correlationId, outcome, detailsJson, null, null));
     } catch (Exception e) {
       log.warn("[DSL audit] failed to record {} on target '{}': {}", action, target,
               e.getMessage());

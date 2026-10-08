@@ -1,7 +1,10 @@
 package cbs.nova.starter.config.router;
 
+import cbs.nova.dsl.model.ErrorResponse;
 import cbs.nova.starter.controller.DslAuditHandler;
+import cbs.nova.starter.model.AuditChainVerification;
 import cbs.nova.starter.model.PageResponse;
+import cbs.nova.starter.persistence.DslAuditStore;
 import cbs.nova.starter.security.JsonRedactor;
 import cbs.nova.starter.service.DslAuditService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -20,7 +23,8 @@ import org.springframework.web.servlet.function.RouterFunctions;
 import org.springframework.web.servlet.function.ServerResponse;
 
 /**
- * Registers the read side of the append-only audit log under {@code GET /api/dsl/audit}.
+ * Registers the read side of the append-only audit log under {@code GET /api/dsl/audit} and the
+ * T880 hash-chain verify endpoint under {@code GET /api/dsl/audit/verify}.
  *
  * <p>
  * Requires a {@link DslAuditService} bean (created when a {@code DataSource} is present), the same
@@ -33,8 +37,9 @@ import org.springframework.web.servlet.function.ServerResponse;
 public class DslAuditRouterConfiguration {
 
   @Bean
-  DslAuditHandler dslAuditHandler(DslAuditService auditService, JsonRedactor jsonRedactor) {
-    return new DslAuditHandler(auditService, jsonRedactor);
+  DslAuditHandler dslAuditHandler(DslAuditService auditService, DslAuditStore auditStore,
+          JsonRedactor jsonRedactor) {
+    return new DslAuditHandler(auditService, auditStore, jsonRedactor);
   }
 
   @Bean
@@ -43,12 +48,16 @@ public class DslAuditRouterConfiguration {
           "DSL Audit"}, parameters = {
               @Parameter(name = "action", in = ParameterIn.QUERY, description = "Optional exact action filter (e.g. DEFINITION_PUBLISH)"),
               @Parameter(name = "limit", in = ParameterIn.QUERY, description = "Maximum number of entries to return"),
-              @Parameter(name = "offset", in = ParameterIn.QUERY, description = "Number of matching entries to skip before returning results")
-          }, responses = @ApiResponse(responseCode = "200", content = @Content(mediaType = "application/json", schema = @Schema(implementation = PageResponse.class)))))
+              @Parameter(name = "offset", in = ParameterIn.QUERY, description = "Number of matching entries to skip before returning results")}, responses = @ApiResponse(responseCode = "200", content = @Content(mediaType = "application/json", schema = @Schema(implementation = PageResponse.class))))),
+      @RouterOperation(path = "/api/dsl/audit/verify", beanClass = DslAuditHandler.class, beanMethod = "verify", method = RequestMethod.GET, operation = @Operation(operationId = "verifyAuditChain", summary = "Walk the dsl_audit tamper-evident hash chain and report the first divergence (T880)", tags = {
+          "DSL Audit"}, responses = {
+              @ApiResponse(responseCode = "200", description = "Chain walked end-to-end; body names the first divergence when ok is false", content = @Content(mediaType = "application/json", schema = @Schema(implementation = AuditChainVerification.class))),
+              @ApiResponse(responseCode = "500", description = "Verify walker failed", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))}))
   })
   public RouterFunction<ServerResponse> dslAuditRouter(DslAuditHandler handler) {
     return RouterFunctions.route()
             .GET("/api/dsl/audit", handler::list)
+            .GET("/api/dsl/audit/verify", handler::verify)
             .build();
   }
 }

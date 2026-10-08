@@ -104,9 +104,9 @@ class DslAuditHandlerTest {
   void actionFilterNarrowsResults() throws Exception {
     Instant now = Instant.now();
     audit.append(new DslAudit(null, now.minus(1, ChronoUnit.MINUTES),
-            "operator-1", "DRAFT_WRITE", "target-a", null, "SUCCESS", null));
+            "operator-1", "DRAFT_WRITE", "target-a", null, "SUCCESS", null, null, null));
     audit.append(new DslAudit(null, now, "operator-1",
-            "DEFINITION_PUBLISH", "target-b", "corr-1", "FAILURE", "{\"x\":1}"));
+            "DEFINITION_PUBLISH", "target-b", "corr-1", "FAILURE", "{\"x\":1}", null, null));
 
     mockMvc.perform(get("/api/dsl/audit").param("action", "DEFINITION_PUBLISH"))
             .andExpect(status().isOk())
@@ -132,7 +132,7 @@ class DslAuditHandlerTest {
     Instant now = Instant.now();
     String rawDetails = "{\"password\":\"secret\",\"amount\":100}";
     audit.append(new DslAudit(null, now, "operator-1", "RUN_RERUN", "target-r",
-            null, "SUCCESS", rawDetails));
+            null, "SUCCESS", rawDetails, null, null));
 
     JsonRedactor redactor = new JsonRedactor(new ObjectMapper(),
             new CbsDslRedactionProperties(true, java.util.List.of(), "***",
@@ -175,7 +175,7 @@ class DslAuditHandlerTest {
     for (int i = 0; i < count; i++) {
       audit.append(new DslAudit(null,
               now.minus(count - i, ChronoUnit.MINUTES), "operator-1", "DRAFT_WRITE",
-              "target-" + i, null, "SUCCESS", null));
+              "target-" + i, null, "SUCCESS", null, null, null));
     }
   }
 }

@@ -82,11 +82,22 @@ class DslAuditStoreTest {
     DslAudit row = domain(4L);
     DslAuditEntity entity = entity(4L);
     when(mapper.toEntity(row)).thenReturn(entity);
+    when(repository.save(entity)).thenReturn(entity);
+    when(repository.findTail()).thenReturn(java.util.Optional.empty());
 
     store.append(row);
 
     verify(mapper).toEntity(row);
     verify(repository).save(entity);
+    verify(repository).findTail();
+    org.mockito.ArgumentCaptor<String> prevCaptor = org.mockito.ArgumentCaptor
+            .forClass(String.class);
+    org.mockito.ArgumentCaptor<String> entryCaptor = org.mockito.ArgumentCaptor
+            .forClass(String.class);
+    verify(repository).setHashes(org.mockito.ArgumentMatchers.eq(entity.id()),
+            prevCaptor.capture(), entryCaptor.capture());
+    assertThat(prevCaptor.getValue()).isNull();
+    assertThat(entryCaptor.getValue()).matches("[0-9a-f]{64}");
   }
 
   @Test
@@ -130,11 +141,13 @@ class DslAuditStoreTest {
 
   private DslAuditEntity entity(long id) {
     return new DslAuditEntity(id, Instant.parse("2026-09-17T10:00:00Z"),
-            "operator-1", "DEFINITION_PUBLISH", "LoanFlow", null, "SUCCESS", null);
+            "operator-1", "DEFINITION_PUBLISH", "LoanFlow", null, "SUCCESS", null,
+            null, null);
   }
 
   private DslAudit domain(long id) {
     return new DslAudit(id, Instant.parse("2026-09-17T10:00:00Z"),
-            "operator-1", "DEFINITION_PUBLISH", "LoanFlow", null, "SUCCESS", null);
+            "operator-1", "DEFINITION_PUBLISH", "LoanFlow", null, "SUCCESS", null,
+            null, null);
   }
 }

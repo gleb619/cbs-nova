@@ -18,7 +18,7 @@ class DslAuditMapperTest {
   void mapsDomainToEntityFieldForField() {
     DslAudit audit = new DslAudit(
             null, OCCURRED_AT, "admin", "PUBLISH", "OrderFlow", "corr-1", "SUCCESS",
-            "{\"detail\":1}");
+            "{\"detail\":1}", null, null);
 
     DslAuditEntity entity = mapper.toEntity(audit);
 
@@ -30,12 +30,15 @@ class DslAuditMapperTest {
     assertThat(entity.correlationId()).isEqualTo("corr-1");
     assertThat(entity.outcome()).isEqualTo("SUCCESS");
     assertThat(entity.detailsJson()).isEqualTo("{\"detail\":1}");
+    assertThat(entity.prevHash()).isNull();
+    assertThat(entity.entryHash()).isNull();
   }
 
   @Test
   void mapsEntityToDomainFieldForField() {
     DslAuditEntity entity = new DslAuditEntity(
-            9L, OCCURRED_AT, "system", "EXECUTE", "Ping", null, "FAILED", null);
+            9L, OCCURRED_AT, "system", "EXECUTE", "Ping", null, "FAILED", null,
+            "prev", "entry");
 
     DslAudit audit = mapper.toDomain(entity);
 
@@ -47,12 +50,15 @@ class DslAuditMapperTest {
     assertThat(audit.correlationId()).isNull();
     assertThat(audit.outcome()).isEqualTo("FAILED");
     assertThat(audit.detailsJson()).isNull();
+    assertThat(audit.prevHash()).isEqualTo("prev");
+    assertThat(audit.entryHash()).isEqualTo("entry");
   }
 
   @Test
   void roundTripPreservesAllFields() {
     DslAudit original = new DslAudit(
-            5L, OCCURRED_AT, "admin", "DELETE", "OldFlow", "corr-9", "SUCCESS", "{}");
+            5L, OCCURRED_AT, "admin", "DELETE", "OldFlow", "corr-9", "SUCCESS", "{}",
+            "prev", "entry");
 
     DslAudit roundTrip = mapper.toDomain(mapper.toEntity(original));
 
@@ -62,12 +68,15 @@ class DslAuditMapperTest {
   @Test
   void nullableFieldsMapAsNulls() {
     DslAudit audit = new DslAudit(
-            null, OCCURRED_AT, "admin", "LOGIN", "admin-ui", null, "SUCCESS", null);
+            null, OCCURRED_AT, "admin", "LOGIN", "admin-ui", null, "SUCCESS", null,
+            null, null);
 
     DslAuditEntity entity = mapper.toEntity(audit);
 
     assertThat(entity.id()).isNull();
     assertThat(entity.correlationId()).isNull();
     assertThat(entity.detailsJson()).isNull();
+    assertThat(entity.prevHash()).isNull();
+    assertThat(entity.entryHash()).isNull();
   }
 }
