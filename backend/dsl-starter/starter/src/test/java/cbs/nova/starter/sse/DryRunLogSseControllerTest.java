@@ -10,6 +10,8 @@ import cbs.nova.starter.config.properties.CbsSseProperties;
 import cbs.nova.starter.controller.DslExceptionHandler;
 import cbs.nova.starter.converter.DefaultDslExceptionMapper;
 import cbs.nova.starter.converter.DslExceptionMapper;
+import cbs.nova.starter.logging.DryRunLogBufferRegistry;
+import cbs.nova.starter.service.EmptyObjectProvider;
 import java.util.List;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,9 +28,11 @@ class DryRunLogSseControllerTest {
   private static final DslExceptionMapper NO_OP_MAPPER = (ex, req) -> null;
 
   private final DryRunLogSseService sseService = new DryRunLogSseService(
-          new CbsSseProperties(1));
+          new CbsSseProperties(1, 1000),
+          EmptyObjectProvider.of(DryRunLogBufferRegistry.class));
   private final DryRunLogSseService sseServiceHighCap = new DryRunLogSseService(
-          new CbsSseProperties(500));
+          new CbsSseProperties(500, 1000),
+          EmptyObjectProvider.of(DryRunLogBufferRegistry.class));
   private MockMvc mockMvc;
 
   @BeforeEach
@@ -89,6 +93,24 @@ class DryRunLogSseControllerTest {
             .accept(MediaType.TEXT_EVENT_STREAM)).andExpect(status().isOk());
 
     Assertions.assertThat(sseServiceHighCap.activeSubscriberCount()).isEqualTo(1);
+  }
+
+  @Test
+  void lastEventIdHeaderIsAcceptedAndStreamOpens() throws Exception {
+    mockMvc.perform(get("/api/dsl/dry-run/trace-resume/logs")
+            .header("Last-Event-ID", "7")
+            .accept(MediaType.TEXT_EVENT_STREAM))
+            .andExpect(status().isOk());
+
+    Assertions.assertThat(sseService.subscriberCount("trace-resume")).isEqualTo(1);
+  }
+
+  @Test
+  void malformedLastEventIdHeaderReturns400() throws Exception {
+    mockMvc.perform(get("/api/dsl/dry-run/trace-bad/logs")
+            .header("Last-Event-ID", "abc")
+            .accept(MediaType.TEXT_EVENT_STREAM, MediaType.APPLICATION_JSON))
+            .andExpect(status().isBadRequest());
   }
 
   private static ExceptionHandlerExceptionResolver buildExceptionResolver(

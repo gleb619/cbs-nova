@@ -57,7 +57,7 @@ class DryRunLogbackAppenderMdcTest {
   }
 
   private DryRunLogBuffer registerBuffer(String runId) {
-    Deque<DryRunLogEvent> queue = new LinkedBlockingDeque<>(MAX_EVENTS);
+    Deque<DryRunLogBuffer.Entry> queue = new LinkedBlockingDeque<>(MAX_EVENTS);
     DryRunLogBuffer buffer = new DryRunLogBuffer(MAX_EVENTS, queue);
     registry.register(runId, buffer);
     return buffer;

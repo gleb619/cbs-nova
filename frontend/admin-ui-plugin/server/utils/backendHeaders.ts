@@ -14,6 +14,7 @@ export const DEFAULT_FORWARDED_HEADERS: Record<string, string> = {
   authorization: 'Authorization',
   'idempotency-key': 'Idempotency-Key',
   'x-correlation-id': 'X-Correlation-Id',
+  'last-event-id': 'Last-Event-ID',
 }
 
 /** Array-safe inbound header accessor — unwraps string[] to its first value. */

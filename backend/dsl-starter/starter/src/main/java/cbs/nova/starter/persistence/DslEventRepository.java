@@ -39,6 +39,44 @@ public class DslEventRepository {
   }
 
   /**
+   * Returns up to {@code limit} rows for the given aggregate whose {@code id} is strictly greater
+   * than {@code sinceId}, ordered by {@code id} ascending. Used by the SSE {@code Last-Event-ID}
+   * backfill path: a reconnecting EventSource resends the last id it saw and the controller replays
+   * the gap from {@code dsl_events} before the live stream resumes.
+   *
+   * <p>
+   * The combination of {@code (aggregate_type, aggregate_id, id > sinceId)} is supported by the
+   * {@code idx_dsl_events_aggregate} index; the {@code ORDER BY id ASC LIMIT N} tail is bounded by
+   * the index's natural order on the leading column.
+   */
+  public List<DslEventEntity> findByAggregateSince(
+          String aggregateType, String aggregateId, long sinceId, int limit) {
+    if (aggregateType == null || aggregateType.isBlank()) {
+      throw new IllegalArgumentException("aggregateType must not be blank");
+    }
+    if (aggregateId == null || aggregateId.isBlank()) {
+      throw new IllegalArgumentException("aggregateId must not be blank");
+    }
+    if (sinceId < 0) {
+      throw new IllegalArgumentException("sinceId must be non-negative, was " + sinceId);
+    }
+    if (limit <= 0) {
+      throw new IllegalArgumentException("limit must be positive, was " + limit);
+    }
+    var r = T.refer();
+    ExtendedSelectQuery query = dslQueries.select()
+            .select(DslEventQueryCriteria.fullSelection(T, r))
+            .from(r)
+            .where(DslEventQueryCriteria.matchesAggregateType(T, r, aggregateType))
+            .where(DslEventQueryCriteria.matchesAggregateId(T, r, aggregateId))
+            .where(DslEventQueryCriteria.idGreaterThan(T, r, sinceId))
+            .orderByAsc(r.get(T.id()))
+            .limit(limit)
+            .build();
+    return dslQueries.query(query, ROW_MAPPER);
+  }
+
+  /**
    * Returns up to {@code limit} rows that have not yet been successfully published to the MQ sink.
    */
   public List<DslEventEntity> findUnpublished(int limit) {
