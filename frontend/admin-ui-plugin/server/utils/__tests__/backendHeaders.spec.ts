@@ -127,6 +127,18 @@ describe('buildBackendHeaders', () => {
       expect(headers['X-Correlation-Id']).toBeUndefined()
       expect(correlationId).toBeUndefined()
     })
+
+    it('forwards inbound last-event-id as Last-Event-ID', () => {
+      const event = makeEvent({ 'last-event-id': '42' })
+      const { headers } = buildBackendHeaders(event)
+      expect(headers['Last-Event-ID']).toBe('42')
+    })
+
+    it('omits Last-Event-ID when inbound is absent', () => {
+      const event = makeEvent()
+      const { headers } = buildBackendHeaders(event)
+      expect(headers['Last-Event-ID']).toBeUndefined()
+    })
   })
 
   describe('array-safe header access', () => {

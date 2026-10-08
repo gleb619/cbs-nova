@@ -42,6 +42,10 @@ public class DslEventQueryCriteria {
     return Criteria.equal(r.get(t.mqPublished()), Literal.of(false));
   }
 
+  public static Criteria idGreaterThan(DslEventTableColumns t, TableReference r, long sinceId) {
+    return Criteria.greater(r.get(t.id()), Literal.of(sinceId));
+  }
+
   public static List<Selectable> fullSelection(DslEventTableColumns t, TableReference r) {
     return List.of(
             r.get(t.id()),

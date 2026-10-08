@@ -34,7 +34,7 @@ public final class DryRunLogStage implements DslPipeStage {
       return next.proceed(context);
     }
 
-    Deque<DryRunLogEvent> queue = new LinkedBlockingDeque<>(maxEventsPerRun);
+    Deque<DryRunLogBuffer.Entry> queue = new LinkedBlockingDeque<>(maxEventsPerRun);
     DryRunLogBuffer buffer = new DryRunLogBuffer(maxEventsPerRun, queue);
     String runId = context.runId();
     bufferRegistry.register(runId, buffer);

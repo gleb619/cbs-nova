@@ -15,11 +15,18 @@ import org.springframework.validation.annotation.Validated;
  * entry) — only the heartbeat noticing a dead socket frees them.
  *
  * <p>
+ * The backfill cap bounds how many events a reconnecting client can ask for in a single
+ * {@code Last-Event-ID} replay. Execution events backfill from {@code dsl_events}; dry-run log
+ * events backfill from the in-memory per-run buffer. The cap keeps a stale or hostile
+ * {@code Last-Event-ID} from dragging the whole table or buffer into one response.
+ *
+ * <p>
  * Example YAML:
  *
  * <pre>
  * cbs.sse:
  *   max-subscribers: 500
+ *   last-event-id-backfill-max: 1000
  * </pre>
  *
  * <p>
@@ -31,11 +38,15 @@ import org.springframework.validation.annotation.Validated;
 @Validated
 @ConfigurationProperties(prefix = "cbs.sse")
 public record CbsSseProperties(
-        @DefaultValue("500") @Min(1) int maxSubscribers) {
+        @DefaultValue("500") @Min(1) int maxSubscribers,
+        @DefaultValue("1000") @Min(1) int lastEventIdBackfillMax) {
 
   public CbsSseProperties {
     if (maxSubscribers < 1) {
       maxSubscribers = 500;
+    }
+    if (lastEventIdBackfillMax < 1) {
+      lastEventIdBackfillMax = 1000;
     }
   }
 }

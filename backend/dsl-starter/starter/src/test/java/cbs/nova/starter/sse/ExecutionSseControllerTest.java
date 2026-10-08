@@ -13,6 +13,8 @@ import cbs.nova.starter.config.properties.CbsSseProperties;
 import cbs.nova.starter.controller.DslExceptionHandler;
 import cbs.nova.starter.converter.DefaultDslExceptionMapper;
 import cbs.nova.starter.converter.DslExceptionMapper;
+import cbs.nova.starter.persistence.DslEventRepository;
+import cbs.nova.starter.service.EmptyObjectProvider;
 import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,6 +25,7 @@ import org.springframework.http.converter.json.MappingJackson2HttpMessageConvert
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver;
+import tools.jackson.databind.ObjectMapper;
 
 class ExecutionSseControllerTest {
 
@@ -30,9 +33,12 @@ class ExecutionSseControllerTest {
 
   private final InMemoryDslRunRepository repository = new InMemoryDslRunRepository(
           InMemoryDslRunRepository.NO_OP_EVICTION);
-  private final ExecutionSseService sseService = new ExecutionSseService(new CbsSseProperties(1));
+  private final ExecutionSseService sseService = new ExecutionSseService(
+          new CbsSseProperties(1, 1000),
+          EmptyObjectProvider.of(DslEventRepository.class), new ObjectMapper());
   private final ExecutionSseService sseServiceHighCap = new ExecutionSseService(
-          new CbsSseProperties(500));
+          new CbsSseProperties(500, 1000),
+          EmptyObjectProvider.of(DslEventRepository.class), new ObjectMapper());
   private MockMvc mockMvc;
 
   @BeforeEach
@@ -130,6 +136,56 @@ class ExecutionSseControllerTest {
             .accept(MediaType.TEXT_EVENT_STREAM)).andExpect(status().isOk());
 
     assertThat(sseServiceHighCap.activeSubscriberCount()).isEqualTo(1);
+  }
+
+  @Test
+  void lastEventIdHeaderIsAcceptedAndStreamStillOpens() throws Exception {
+    repository.save(DslRun.builder()
+            .runId("run-resume")
+            .processName("Loan")
+            .status("RUNNING")
+            .startedAt(Instant.now())
+            .executionMode("RUN")
+            .build());
+
+    mockMvc.perform(get("/api/executions/run-resume/events")
+            .header("Last-Event-ID", "42")
+            .accept(MediaType.TEXT_EVENT_STREAM))
+            .andExpect(status().isOk())
+            .andExpect(content().contentType(MediaType.TEXT_EVENT_STREAM_VALUE));
+
+    assertThat(sseService.subscriberCount("run-resume")).isEqualTo(1);
+  }
+
+  @Test
+  void missingLastEventIdHeaderOpensStreamNormally() throws Exception {
+    repository.save(DslRun.builder()
+            .runId("run-fresh")
+            .processName("Loan")
+            .status("RUNNING")
+            .startedAt(Instant.now())
+            .executionMode("RUN")
+            .build());
+
+    mockMvc.perform(get("/api/executions/run-fresh/events")
+            .accept(MediaType.TEXT_EVENT_STREAM))
+            .andExpect(status().isOk());
+  }
+
+  @Test
+  void malformedLastEventIdHeaderReturns400() throws Exception {
+    repository.save(DslRun.builder()
+            .runId("run-bad")
+            .processName("Loan")
+            .status("RUNNING")
+            .startedAt(Instant.now())
+            .executionMode("RUN")
+            .build());
+
+    mockMvc.perform(get("/api/executions/run-bad/events")
+            .header("Last-Event-ID", "not-a-number")
+            .accept(MediaType.TEXT_EVENT_STREAM, MediaType.APPLICATION_JSON))
+            .andExpect(status().isBadRequest());
   }
 
   /**
