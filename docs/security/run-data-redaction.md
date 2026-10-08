@@ -40,3 +40,11 @@ and inside JSON strings that themselves contain serialized JSON.
 Redaction is an egress control only. Run input/output remain stored in clear in `dsl_runs` and
 VHS tapes unless encryption-at-rest (T879) is enabled. DSL authors should still avoid placing
 live secrets in run input: use `httpAuth` headers, encrypted Temporal payloads, or a secrets manager.
+
+## Search-by-payload
+
+`DslRunRepository.search` only filters on `processName`, `status`, `mode`, and `correlationId`;
+`input_json`, `output_json`, `context_json`, and `error_message` are not searchable. With
+encryption-at-rest enabled (T879) this remains the only supported search shape — payload
+content cannot be matched against ciphertext, and the repository does not attempt server-side
+decryption to filter on it.
