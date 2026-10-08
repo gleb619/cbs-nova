@@ -127,7 +127,8 @@ class EncryptedRunRepositoryTest {
   void findByProcessNameDecryptsEveryReturnedRow() {
     encryptedRepository.save(run("p-1", "RUNNING", INPUT_JSON, null, null, CONTEXT_JSON));
     encryptedRepository.save(run("p-2", "RUNNING", INPUT_JSON, null, null, CONTEXT_JSON));
-    encryptedRepository.save(run("other", "RUNNING", "Other", INPUT_JSON, null, null, CONTEXT_JSON));
+    encryptedRepository
+            .save(run("other", "RUNNING", "Other", INPUT_JSON, null, null, CONTEXT_JSON));
 
     List<DslRun> payments = encryptedRepository.findByProcessName("Payments");
 
@@ -290,9 +291,7 @@ class EncryptedRunRepositoryTest {
             .build();
   }
   @Configuration
-  @EnableJdbcRepositories(basePackages = "cbs.nova.starter.persistence",
-          includeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE,
-                  classes = DslRunJdbcRepository.class))
+  @EnableJdbcRepositories(basePackages = "cbs.nova.starter.persistence", includeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = DslRunJdbcRepository.class))
   static class RepositoryConfig extends AbstractJdbcConfiguration {
   }
 }
