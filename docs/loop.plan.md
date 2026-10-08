@@ -122,6 +122,21 @@ Pick the **top 1**. Discard the rest.
 
 ---
 
+## Agent Feedback
+
+If a delegated `at` run (plan stubs, plan files, discovery) misbehaves or you spot a concrete improvement that would make
+planning faster or more reliable, record it before moving on:
+
+```bash
+at feedback add "<what happened + expected>" -k bug|improvement|note -a <agent> -r <runId> -T <tag> --context "<error text / repro>"
+```
+
+- One entry per distinct issue; check `at feedback list --status open` first to avoid duplicates.
+- Include repro and exact error text; `-r <runId>` auto-fills agent/tier.
+- Launch long runs detached (`nohup at ... &`) and stop leftovers by PID (never `pkill -f`); `at stop` can leave the
+  agent's child process alive.
+- Fix any instruction in this file that caused the slip in the same commit.
+
 ## Hard Constraints
 
 - **ONLY ADD TASKS — NEVER IMPLEMENT** — this loop's sole goal is appending task rows to `docs/kanban.md` plus stub

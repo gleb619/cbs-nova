@@ -162,6 +162,33 @@ Triggered when all tasks in the current batch are `Done` or `Blocked`:
 
 ---
 
+## Delegation Tips (learned)
+
+- Launch detached from the loop shell: `nohup at -t 2 -p "..." >/tmp/at-<ID>.out 2>&1 &`, then `sleep 15; tail /tmp/at-<ID>.out`
+  for agent/PID/log. Plain `at -p` can block past the tool timeout.
+- Fresh worktrees lack gitignored `docs/plans/*`: `cp` the task's plan file into the worktree before delegating.
+- Agent logs are near-silent; judge progress with `git -C <worktree> status --short` and `ps -p <PID>`.
+- Stop an agent with `at stop`, then `pgrep -P <PID>` and `kill` leftover children by PID (never `pkill -f`).
+- Agents commit unformatted/uncompiled work. In VERIFY run `:starter:test` and `spotlessCheck` separately and check each
+  exit code (`cmd >log 2>&1; echo $?`), never through `| grep`/`| tail`, before merging.
+- Known starter baseline failures (ignore, any other failure blocks): `RouterOperationConsistencyTest` (RootIndex `GET /`),
+  `UnreliableApiDslExplainTest`, `*PurgeIntegrationTest.purgeOlderThanUsesStrictLessThan`.
+- After a task that adds routes/migrations, run `make lint` on main once.
+
+## Agent Feedback
+
+Whenever an `at` run misbehaves (wrong output, flag ignored, orphaned process, silent log, bad routing, startup
+failure) or you see a concrete improvement that would make the loop faster or safer, record it before moving on:
+
+```bash
+at feedback add "<what happened + expected>" -k bug|improvement|note -a <agent> -r <runId> -T <tag> --context "<error text / repro>"
+```
+
+- One entry per distinct issue; check `at feedback list --status open` first to avoid duplicates.
+- Include repro and exact error text; use `-r <runId>` so agent/tier auto-fill.
+- Do this in addition to the retry/Blocked handling above — feedback is not a substitute for fixing the task.
+- Also record when the loop's own process (this file) caused a slip: fix the instruction here in the same commit.
+
 ## Hard Constraints
 
 - **Implement only — never plan** — no writing/editing plan files, no decomposing new task batches. That's
