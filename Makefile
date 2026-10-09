@@ -238,6 +238,10 @@ db-restore: ## Restore a Postgres database via cbs-cli (FILE=... required)
 	@test -n "$(FILE)" || (echo "FILE is required" && exit 1)
 	@python3 $(SCRIPT) db restore --file "$(FILE)"
 
+.PHONY: db-restore-verify
+db-restore-verify: ## Verify a Postgres dump is restorable (FILE=... optional; uses latest ./backups/*.dump otherwise)
+	@python3 $(SCRIPT) restore-verify $(if $(FILE),--file "$(FILE)")
+
 # -----------------------------------------------------------------------------
 # Kanban CLI — Markdown AST manipulation via unified/remark
 # -----------------------------------------------------------------------------

@@ -452,6 +452,26 @@ Ran on `2026-10-06` against `docker compose -f app/docker-compose.yml up -d post
 
 8. Ran `make doctor` while only Postgres + Temporal were running; it failed on app/BFF checks as expected. With the full stack up it is the correct end-to-end sanity check.
 
+### Restore verification
+
+Backups are only real once they restore cleanly. Run the automated restore verifier against the dump before trusting it:
+
+```bash
+# Latest dump under ./backups/
+make db-restore-verify
+
+# Or point at a specific dump
+make db-restore-verify FILE=/var/backups/cbs-nova/postgres/nova_20261007-120000.dump
+```
+
+The command starts a throwaway `postgres:16` container on an isolated port with a temporary Docker volume, restores the dump, and asserts:
+
+1. Core tables exist (`dsl_runs`, `dsl_audit`, `dsl_events`, `dsl_api_keys`, ...).
+2. Each core table has rows when the source had data.
+3. `flyway_schema_history` reports the expected schema version.
+
+It prints a verdict line such as `RESTORE VERIFY OK — 14 tables, flyway V4` and exits non-zero on failure. Add `--json` for CI consumption. The scratch container and volume are removed even if the restore or assertions fail.
+
 ## 4. Stuck-RUNNING reconciliation lag  — P2
 
 **Symptom.** Executions list shows runs `RUNNING` for hours that Temporal UI reports as

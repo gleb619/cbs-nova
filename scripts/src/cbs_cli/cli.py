@@ -16,6 +16,7 @@ from .commands.openapi_diff import OpenApiDiffCommand
 from .commands.openapi_diff_test import OpenApiDiffTestCommand
 from .commands.openapi_fetch import OpenApiFetchCommand
 from .commands.runbook_verify import RunbookVerifyCommand
+from .commands.restore_verify import RestoreVerifyCommand
 from .commands.quality import QualityCommand
 from .commands.seed import SeedCommand
 from .commands.seed_history import SeedHistoryCommand
@@ -109,6 +110,11 @@ class CLI:
         p = subparsers.add_parser("db", help="Postgres backup and restore commands")
         DbCommand.register(p)
         p.set_defaults(handler=DbCommand)
+
+        # Restore verify
+        p = subparsers.add_parser("restore-verify", help="Restore a dump to a scratch Postgres container and verify integrity")
+        RestoreVerifyCommand.register(p)
+        p.set_defaults(handler=RestoreVerifyCommand)
 
         # Security / OpenAPI
         p = subparsers.add_parser("cve-scan", help="Check pnpm audit against an allowlist")
