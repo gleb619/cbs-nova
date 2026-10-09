@@ -124,7 +124,7 @@ class BuilderResilienceEquivalenceTest {
             .isInstanceOfAny(CompletionException.class,
                     ExecutionException.class)
             .rootCause()
-            .isInstanceOf(IllegalStateException.class)
+            .isInstanceOf(BuilderClientBusyException.class)
             .hasMessageContaining("bulkhead saturated");
 
     release.countDown();

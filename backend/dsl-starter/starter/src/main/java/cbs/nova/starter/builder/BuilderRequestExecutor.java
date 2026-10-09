@@ -46,7 +46,7 @@ public class BuilderRequestExecutor {
     try {
       return bulkhead.executeCallable(call);
     } catch (BulkheadFullException e) {
-      throw new IllegalStateException("builder client bulkhead saturated");
+      throw new BuilderClientBusyException("builder client bulkhead saturated");
     }
   }
 
