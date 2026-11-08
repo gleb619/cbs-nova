@@ -1,6 +1,6 @@
 [versions]
 java = "25"
-temporal = "1.39.0"
+temporal = "1.40.0"
 avaje-jsonb = "3.16"
 avaje-jsonb-generator = "3.16"
 junit = "6.1.3"
