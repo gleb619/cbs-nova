@@ -11,6 +11,7 @@ refactoring), then create a task and plan file to **implements** later with qual
 Invoke before any work, every fire:
 
 - `codegraph` — reindex + survey + dedup. Never grep when `codegraph_*` tools available.
+- `i-have-adhd` — shape output for minimal token consumption 
 - `brainstorming` — generate candidate ideas, refine the winner.
 - `caveman` — compressed communication throughout.
 - `cbs-nova-kanban` — when reading or appending `docs/kanban.md`; always use `make kanban-*` commands.

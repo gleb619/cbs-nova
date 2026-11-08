@@ -16,6 +16,7 @@ of tier; only the build, test, and convention checks change between backend and 
 Invoke before any work:
 
 - `caveman` — compressed communication throughout all sessions
+- `i-have-adhd` — shape output for minimal token consumption
 - `codegraph` — codebase exploration; never grep when `codegraph_*` tools are available
 - `delegate-with-at` — delegate code writing to subagents via the `at` CLI
 - `cbs-nova-kanban` — when reading or updating `docs/kanban.md`; always use `make kanban-*` commands
