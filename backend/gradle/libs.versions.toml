@@ -1,59 +1,59 @@
 [versions]
 java = "25"
-jspecify = "1.0.0"
-orgjson = "20240303"
-junit = "5.12.2"
-assertj = "3.27.3"
-jqwik = "1.9.3"
-temporal = "1.27.0"
-javaparser = "3.28.1"
-openfeign = "13.6"
+jspecify = "1.0.1"
+orgjson = "20260814"
+junit = "6.1.3"
+assertj = "3.27.7"
+jqwik = "1.10.2"
+temporal = "1.40.0"
+javaparser = "3.28.2"
+openfeign = "13.18"
 wiremock = "3.13.2"
-testcontainers = "1.21.3"
-slf4j = "2.0.16"
-mockito = "5.23.0"
+testcontainers = "1.21.4"
+slf4j = "2.0.20"
+mockito = "5.24.0"
 awaitility = "4.3.0"
-sentry = "8.26.0"
-lombok = "1.18.46"
+sentry = "8.64.0"
+lombok = "1.18.48"
 mapstruct = "1.6.3"
-opentelemetry = "1.55.0"
+opentelemetry = "1.68.0"
 # T842: matches the OTel 1.55.0 API used by libs.opentelemetry.*
-opentelemetry-instrumentation-logback-appender = "2.21.0-alpha"
-mvel = "2.5.2.Final"
-keycloak-admin-client = "22.0.0"
-rest-assured = "5.5.0"
-springdoc-openapi = "3.0.2"
-swagger-annotations = "2.2.43"
-avaje-jsonb = "3.4"
-avaje-jsonb-generator = "3.4"
-h2 = "2.4.240"
-caffeine = "3.1.8"
-resilience4j = "2.3.0"
+opentelemetry-instrumentation-logback-appender = "2.33.1-alpha"
+mvel = "2.6.0.Final"
+keycloak-admin-client = "26.0.12"
+rest-assured = "6.3.0"
+springdoc-openapi = "3.2.0"
+swagger-annotations = "2.2.55"
+avaje-jsonb = "3.16"
+avaje-jsonb-generator = "3.16"
+h2 = "2.5.252"
+caffeine = "3.3.1"
+resilience4j = "2.4.0"
 squigglesql = "4.2.1"
-awssdk = "2.34.0"
-nats = "2.20.5"
+awssdk = "2.58.0"
+nats = "2.26.4"
 
-jgit = "7.1.0.202411261347-r"
+jgit = "7.8.1.202611041320-r"
 jtokkit = "1.1.0"
 junit4 = "4.13.2"
-junit-vintage = "5.12.2"
-gradle-tooling-api = "9.4.1"
+junit-vintage = "6.1.3"
+gradle-tooling-api = "9.9.1"
 flexmark = "0.64.8"
 
 # plugins
-spring-boot = "4.0.4"
-spring-cloud = "2025.1.1"
+spring-boot = "4.1.2"
+spring-cloud = "2025.1.4"
 spring-dm = "1.1.7"
-spotless = "7.0.2"
-spotbugs = "6.0.26"
-sonarqube = "6.0.1.5171"
+spotless = "8.11.0"
+spotbugs = "6.5.13"
+sonarqube = "7.5.0.8588"
 test-logger = "4.0.0"
-gradle-git-properties = "2.5.2"
-sentry-plugin = "6.19.0"
+gradle-git-properties = "4.0.1"
+sentry-plugin = "6.26.0"
 
 # supply-chain tooling (T414): pinned SBOM + CVE-scan plugins
-cyclonedx-bom = "3.4.1"
-dependency-check = "12.1.5"
+cyclonedx-bom = "3.5.1"
+dependency-check = "13.0.0"
 
 [libraries]
 # -- Resilience4j (T498) --
@@ -68,7 +68,7 @@ temporal-testing = { module = "io.temporal:temporal-testing", version.ref = "tem
 avaje-jsonb = { module = "io.avaje:avaje-jsonb", version.ref = "avaje-jsonb" }
 avaje-jsonb-generator = { module = "io.avaje:avaje-jsonb-generator", version.ref = "avaje-jsonb-generator" }
 orgjson = { module = "org.json:json", version.ref = "orgjson" }
-jackson-databind3 = { module = "tools.jackson.core:jackson-databind", version = "3.1.0" }
+jackson-databind3 = { module = "tools.jackson.core:jackson-databind", version = "3.3.0" }
 
 # -- JTokkit (token counting for LLM/AI adapters in starter) --
 jtokkit = { module = "com.knuddels:jtokkit", version.ref = "jtokkit" }
@@ -186,7 +186,7 @@ jgit = { module = "org.eclipse.jgit:org.eclipse.jgit", version.ref = "jgit" }
 squigglesql = { module = "com.github.squigglesql:squigglesql", version.ref = "squigglesql" }
 
 # -- YAML --
-snakeyaml = { module = "org.yaml:snakeyaml", version = "2.3" }
+snakeyaml = { module = "org.yaml:snakeyaml", version = "2.7" }
 
 # -- Flexmark (YAML front-matter parser for explain markdown, T600) --
 flexmark = { module = "com.vladsch.flexmark:flexmark", version.ref = "flexmark" }
